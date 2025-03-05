@@ -1,12 +1,15 @@
 backend:
-  name: github
-  repo: eito1011-JP/Handbook  # あなたのGitHubユーザー名/リポジトリ名
+  name: git-gateway
   branch: main  # メインブランチ
-  base_url: https://api.netlify.com
-  auth_endpoint: auth
-  open_authoring: true  # これによりPRが作成されます
+  repo: eito1011-JP/Handbook  # あなたのGitHubユーザー名/リポジトリ名
+  open_authoring: true  # PRワークフローを有効化
 
-publish_mode: editorial_workflow  # 編集ワークフローを有効化
+# サイトURL
+site_url: https://handbookapp.netlify.app
+display_url: https://handbookapp.netlify.app
+
+# 編集ワークフローを有効化
+publish_mode: editorial_workflow
 
 media_folder: static/img
 public_folder: /img

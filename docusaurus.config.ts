@@ -31,6 +31,12 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
+  scripts: [
+    {
+      src: 'https://identity.netlify.com/v1/netlify-identity-widget.js',
+      async: true,
+    },
+  ],
 
   // plugins: [
   //   [
