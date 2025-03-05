@@ -7,5 +7,38 @@
   </head>
   <body>
     <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <script>
+      window.CMS_MANUAL_INIT = true;
+      CMS.init({
+        config: {
+          backend: {
+            name: "git-gateway",
+            branch: "main",
+            repo: "eito1011-JP/Handbook",
+            open_authoring: true
+          },
+          site_url: "https://handbookapp.netlify.app",
+          display_url: "https://handbookapp.netlify.app",
+          publish_mode: "editorial_workflow",
+          media_folder: "static/img",
+          public_folder: "/img",
+          collections: [
+            {
+              name: "docs",
+              label: "Documentation",
+              folder: "docs",
+              create: true,
+              slug: "{{slug}}",
+              fields: [
+                {label: "ID", name: "id", widget: "string"},
+                {label: "Title", name: "title", widget: "string"},
+                {label: "Sidebar Label", name: "sidebar_label", widget: "string", required: false},
+                {label: "Body", name: "body", widget: "markdown"}
+              ]
+            }
+          ]
+        }
+      });
+    </script>
   </body>
 </html>
