@@ -1,12 +1,15 @@
 backend:
-  name: git-gateway
-  branch: main  # メインブランチ
+  name: github
   repo: eito1011-JP/Handbook  # あなたのGitHubユーザー名/リポジトリ名
-  open_authoring: true  # PRワークフローを有効化
+  branch: main  # メインブランチ
+  # GitHub認証を使用
+  auth_type: implicit
+  # GitHubのOAuth App ID（後で作成）
+  app_id: あなたのGitHub_OAuth_App_ID
 
-# サイトURL
-site_url: https://handbookapp.netlify.app
-display_url: https://handbookapp.netlify.app
+# サイトURL（GitHub Pages URL）
+site_url: https://eito1011-jp.github.io/Handbook
+display_url: https://eito1011-jp.github.io/Handbook
 
 # 編集ワークフローを有効化
 publish_mode: editorial_workflow
