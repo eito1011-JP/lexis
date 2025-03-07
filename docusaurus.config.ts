@@ -11,7 +11,7 @@ const config: Config = {
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
-  url: 'https://eito1011-JP.github.io', // あなたのGitHubユーザー名/組織名に変更
+  url: 'https://eito1011-jp.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/Handbook/', // リポジトリ名に変更
@@ -32,26 +32,21 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
-  scripts: [
-    {
-      src: 'https://identity.netlify.com/v1/netlify-identity-widget.js',
-      async: true,
-    },
-  ],
 
-  // plugins: [
-  //   [
-  //     '@docusaurus/plugin-client-redirects',
-  //     {
-  //       redirects: [
-  //         {
-  //           from: '/admin',
-  //           to: '/admin/',
-  //         },
-  //       ],
-  //     },
-  //   ],
-  // ] as PluginConfig[],
+  // 管理画面へのリンクを追加するプラグイン
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        redirects: [
+          {
+            from: '/admin',
+            to: '/admin/',
+          },
+        ],
+      },
+    ],
+  ] as PluginConfig[],
 
   presets: [
     [
@@ -83,8 +78,79 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // 残りの設定は変更なし
-    // ...
+    // Replace with your project's social card
+    image: 'img/docusaurus-social-card.jpg',
+    navbar: {
+      title: 'My Site',
+      logo: {
+        alt: 'My Site Logo',
+        src: 'img/logo.svg',
+      },
+      items: [
+        {
+          type: 'docSidebar',
+          sidebarId: 'tutorialSidebar',
+          position: 'left',
+          label: 'Tutorial',
+        },
+        {
+          href: 'https://github.com/eito1011-JP/Handbook',
+          label: 'GitHub',
+          position: 'right',
+        },
+        // 管理画面へのリンクを追加
+        {
+          href: '/Handbook/admin/',
+          label: '管理画面',
+          position: 'right',
+        },
+      ],
+    },
+    footer: {
+      style: 'dark',
+      links: [
+        {
+          title: 'Docs',
+          items: [
+            {
+              label: 'Tutorial',
+              to: '/docs/intro',
+            },
+          ],
+        },
+        {
+          title: 'Community',
+          items: [
+            {
+              label: 'Stack Overflow',
+              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
+            },
+            {
+              label: 'Discord',
+              href: 'https://discordapp.com/invite/docusaurus',
+            },
+            {
+              label: 'X',
+              href: 'https://x.com/docusaurus',
+            },
+          ],
+        },
+        {
+          title: 'More',
+          items: [
+            {
+              label: 'GitHub',
+              href: 'https://github.com/eito1011-JP/Handbook',
+            },
+          ],
+        },
+      ],
+      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+    },
+    prism: {
+      theme: prismThemes.github,
+      darkTheme: prismThemes.dracula,
+    },
   } satisfies Preset.ThemeConfig,
 };
 
