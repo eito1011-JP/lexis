@@ -9,19 +9,11 @@ const config: Config = {
   title: 'My Site',
   tagline: 'Dinosaurs are cool',
   favicon: 'img/favicon.ico',
-
-  // Set the production url of your site here
   url: 'https://eito1011-jp.github.io',
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/Handbook/', // リポジトリ名に変更
-
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'eito1011-JP', // あなたのGitHubユーザー名/組織名
-  projectName: 'Handbook', // リポジトリ名
-  trailingSlash: false, // GitHub Pagesの場合はfalseに設定
-
+  baseUrl: '/Handbook/',
+  organizationName: 'eito1011-JP',
+  projectName: 'Handbook',
+  trailingSlash: false,
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
 
@@ -29,24 +21,9 @@ const config: Config = {
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
   i18n: {
-    defaultLocale: 'en',
-    locales: ['en'],
+    defaultLocale: 'ja',
+    locales: ['ja'],
   },
-
-  // 管理画面へのリンクを追加するプラグイン
-  plugins: [
-    [
-      '@docusaurus/plugin-client-redirects',
-      {
-        redirects: [
-          {
-            from: '/admin',
-            to: '/admin/',
-          },
-        ],
-      },
-    ],
-  ] as PluginConfig[],
 
   presets: [
     [

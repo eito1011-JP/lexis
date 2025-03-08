@@ -4,23 +4,37 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Content Manager</title>
+    <link rel="stylesheet" href="https://unpkg.com/@staticcms/app@3.3.4/dist/main.css" />
   </head>
   <body>
-    <!-- 開発環境用の設定 -->
-    <script src="/admin/dev-config.js"></script>
-    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <div id="nc-root"></div>
+    <script src="https://unpkg.com/@staticcms/app@3.3.4/dist/static-cms-app.js"></script>
     <script>
-      // 環境に応じて設定を切り替え
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      
-      if (isLocal && window.CMS_CONFIG) {
-        // ローカル環境ではJavaScriptの設定を使用
-        window.CMS_MANUAL_INIT = true;
-        CMS.init({ config: window.CMS_CONFIG });
-      } else {
-        // 本番環境ではconfig.ymlを使用
-        CMS.init();
-      }
+      window.CMS.init({
+        config: {
+          backend: {
+            name: "github",
+            repo: "eito1011-JP/Handbook",
+            branch: "main",
+            auth_type: "implicit",
+            app_id: "Ov23liAZfY9EcarUr9jm"
+          },
+          media_folder: "static/img",
+          public_folder: "/img",
+          collections: [
+            {
+              name: "docs",
+              label: "Documentation",
+              folder: "docs",
+              create: true,
+              fields: [
+                {label: "Title", name: "title", widget: "string"},
+                {label: "Body", name: "body", widget: "markdown"}
+              ]
+            }
+          ]
+        }
+      });
     </script>
   </body>
 </html>
