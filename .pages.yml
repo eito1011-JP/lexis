@@ -1,1 +1,10 @@
 media: files
+content: 
+ - name: documents
+   lable: Documents
+   type: collection
+   path: docs
+   fields:
+     - { name: id, label: Id, type: string }
+     - { name: title, label: Title, type: string }
+     - { name: sidebar_label, label: Sidebar Label, type: string }
