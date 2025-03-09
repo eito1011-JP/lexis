@@ -22,4 +22,3 @@ jobs:
             差分を確認の上、マージしてください。
           commit-message: "Update docs from Pages CMS"
           labels: "documentation, cms-update"
-          delete-branch-on-merge: true
