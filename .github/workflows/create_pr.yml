@@ -8,53 +8,55 @@ on:
 jobs:
   create-pr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           ref: cms-edits
-          fetch-depth: 0  # 全履歴を取得
+          fetch-depth: 0
       
-      - name: Check if changes exist between cms-edits and main
+      - name: Check for changes
         id: check_changes
         run: |
           git fetch origin main
-          DIFF_COUNT=$(git diff --name-only origin/main | wc -l)
-          echo "Difference count: $DIFF_COUNT"
-          git diff --name-only origin/main
-          
-          if [ "$DIFF_COUNT" -eq "0" ]; then
-            echo "No changes found between cms-edits and main"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "Changes found between cms-edits and main ($DIFF_COUNT files)"
+          git diff --name-only origin/main > changed_files.txt
+          if [ -s changed_files.txt ]; then
+            echo "Changes detected in the following files:"
+            cat changed_files.txt
             echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
       
-      - name: Debug - Show full diff
+      - name: Create Pull Request using GitHub CLI
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
-          git diff origin/main
-      
-      - name: Create Pull Request
-        if: steps.check_changes.outputs.has_changes == 'true'
-        id: cpr
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update docs from Pages CMS"
-          committer: GitHub <noreply@github.com>
-          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-          branch: cms-edits-pr
-          delete-branch: true
-          title: "Docs Update from Pages CMS [${{ github.event.head_commit.message }}]"
-          body: |
-            Pages CMSで編集されたドキュメントの更新です。
-            差分を確認の上、マージしてください。
-          labels: "documentation, cms-update"
-          base: main
-      
-      - name: Check outputs
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
-          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
+          # Check if PR already exists
+          gh auth setup-git
+          gh pr list --head cms-edits --base main --json number > existing_prs.json
+          
+          if [ "$(cat existing_prs.json | jq 'length')" -eq "0" ]; then
+            echo "Creating new PR..."
+            
+            # First push any changes to ensure branch is up to date
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            
+            # Create PR
+            gh pr create \
+              --title "Docs Update from Pages CMS [$(date +%Y-%m-%d)]" \
+              --body "Pages CMSで編集されたドキュメントの更新です。差分を確認の上、マージしてください。" \
+              --base main \
+              --head cms-edits \
+              --label "documentation" \
+              --label "cms-update"
+            
+            echo "Pull Request created successfully!"
+          else
+            echo "PR already exists between cms-edits and main"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
