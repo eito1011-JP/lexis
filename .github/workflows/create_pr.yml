@@ -10,6 +10,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: cms-edits
+          fetch-depth: 0  # 全履歴を取得
+      - name: Debug - Check branch and diff
+        run: |
+          git branch
+          git log -1 --oneline
+          git diff origin/main || echo "No differences found between cms-edits and main"
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
