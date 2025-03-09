@@ -4,6 +4,7 @@ content:
     label: Documents
     type: collection
     path: docs
+    branch: cms-edits
     fields:
       - { name: slug, label: Slug, type: string }
       - { name: sidebar_label, label: Sidebar Label, type: string }
