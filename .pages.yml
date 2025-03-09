@@ -1,13 +1,11 @@
 media: files
-content:
-  - name: Documents
-    label: ドキュメント
-    type: collection
-    path: docs
-    fields:
-      - { name: slug, label: スラッグ, type: string }
-      - { name: sidebar_label, label: サイドバーラベル, type: string }
-      - { name: body, label: 本文, type: rich-text }
-      - { name: category, label: カテゴリー, type: select, options: [] }
-      - { name: tags, label: タグ, type: list }
-      - { name: order, label: 表示順, type: number, required: false }
+content: 
+ - name: Documents
+   lable: documents
+   type: collection
+   path: docs
+   fields:
+     - { name: category, label: カテゴリー, type: select, options: [] }
+     - { name: slug, label: Slug, type: string }
+     - { name: sidebar_label, label: Sidebar Label, type: string }
+     - { name: body, label: Body, type: rich-text }
