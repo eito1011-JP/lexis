@@ -1,0 +1,25 @@
+name: Create Pull Request from CMS Edits
+
+on:
+  push:
+    branches:
+      - cms-edits
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: cms-edits
+          base: main
+          title: "Docs Update from Pages CMS [${{ github.event.head_commit.message }}]"
+          body: |
+            Pages CMSで編集されたドキュメントの更新です。
+            差分を確認の上、マージしてください。
+          commit-message: "Update docs from Pages CMS"
+          labels: "documentation, cms-update"
+          delete-branch-on-merge: true
