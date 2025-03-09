@@ -4,7 +4,7 @@ sidebar_label: cms-edits
 ---
 # 好きなもの
 
-おもち
+おもちです
 
 ## 嫌いなもの
 
