@@ -4,10 +4,7 @@ content:
    lable: Documents
    type: collection
    path: docs
-   view:
-     fields: [ title, date ]
    fields:
-     - { name: id, label: Id, type: string }
-     - { name: title, label: Title, type: string }
+     - { name: slug, label: Slug, type: string }
      - { name: sidebar_label, label: Sidebar Label, type: string }
      - { name: body, label: Body, type: rich-text }
