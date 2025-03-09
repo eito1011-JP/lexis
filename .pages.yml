@@ -1,76 +1,51 @@
-# Pages CMS設定ファイル
-# リポジトリ設定 - 正確な大文字小文字を使用
+# Pages CMS設定ファイル - 最新のフォーマットに準拠
 repository:
-  name: eito1011-JP/Handbook
+  owner: eito1011-JP
+  name: Handbook
   branch: main
-  base_url: https://eito1011-jp.github.io/Handbook
-  site_domain: eito1011-jp.github.io
 
 # コンテンツ設定
-content:
-  collections:
-    - name: docs
-      label: ドキュメント
-      path: docs
-      extension: md
-      format: frontmatter
-      create: true
-      schema:
-        - id: id
-          label: ID
-          type: string
-          required: true
-        - id: title
-          label: タイトル
-          type: string
-          required: true
-        - id: sidebar_label
-          label: サイドバーラベル
-          type: string
-          required: false
-        - id: sidebar_position
-          label: サイドバー位置
-          type: number
-          required: false
-        - id: description
-          label: 説明
-          type: text
-          required: false
-        - id: tags
-          label: タグ
-          type: list
-          required: false
-        - id: body
-          label: 本文
-          type: markdown
-          required: true
+collections:
+  - name: docs
+    label: ドキュメント
+    folder: docs
+    create: true
+    fields:
+      - name: id
+        label: ID
+        widget: string
+        required: true
+      - name: title
+        label: タイトル
+        widget: string
+        required: true
+      - name: sidebar_label
+        label: サイドバーラベル
+        widget: string
+        required: false
+      - name: sidebar_position
+        label: サイドバー位置
+        widget: number
+        required: false
+      - name: description
+        label: 説明
+        widget: text
+        required: false
+      - name: tags
+        label: タグ
+        widget: list
+        required: false
+      - name: body
+        label: 本文
+        widget: markdown
+        required: true
 
 # メディア設定
-media:
-  path: static/img
-  public_path: /img
-  extensions:
-    - jpg
-    - jpeg
-    - png
-    - gif
-    - svg
+media_folder: static/img
+public_folder: /img
 
 # 編集ワークフロー設定
-workflow:
-  # プルリクエストベースのワークフロー
-  editorial:
-    enabled: true
-    branch_prefix: pages-cms-edit
-    review_required: true
+publish_mode: editorial_workflow
 
 # UI設定
-ui:
-  language: ja
-  theme: light
-  branding:
-    title: Handbook 管理システム
-    logo: /img/logo.png
-  editor:
-    preview: true
-    live_preview: true
+locale: ja
