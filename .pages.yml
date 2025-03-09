@@ -1,11 +1,11 @@
 media: files
-content: 
- - name: Documents
-   lable: documents
-   type: collection
-   path: docs
-   fields:
-     - { name: category, label: カテゴリー, type: select, options: [] }
-     - { name: slug, label: Slug, type: string }
-     - { name: sidebar_label, label: Sidebar Label, type: string }
-     - { name: body, label: Body, type: rich-text }
+content:
+  - name: Documents
+    label: documents
+    type: collection
+    path: docs
+    fields:
+      - { name: slug, label: Slug, type: string }
+      - { name: category, label: Category, type: string, hint: "カテゴリーを自由に入力してください（例: getting-started, guides）" }
+      - { name: sidebar_label, label: Sidebar Label, type: string }
+      - { name: body, label: Body, type: rich-text }
