@@ -6,6 +6,5 @@ content:
     path: docs
     fields:
       - { name: slug, label: Slug, type: string }
-      - { name: category, label: Category, type: string, hint: "カテゴリーを自由に入力してください（例: getting-started, guides）" }
       - { name: sidebar_label, label: Sidebar Label, type: string }
       - { name: body, label: Body, type: rich-text }
