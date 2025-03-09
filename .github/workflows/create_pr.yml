@@ -30,17 +30,31 @@ jobs:
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
       
+      - name: Debug - Show full diff
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git diff origin/main
+      
       - name: Create Pull Request
         if: steps.check_changes.outputs.has_changes == 'true'
+        id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: cms-edits
-          base: main
-          branch-suffix: timestamp
+          commit-message: "Update docs from Pages CMS"
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          branch: cms-edits-pr
+          delete-branch: true
           title: "Docs Update from Pages CMS [${{ github.event.head_commit.message }}]"
           body: |
             Pages CMSで編集されたドキュメントの更新です。
             差分を確認の上、マージしてください。
-          commit-message: "Update docs from Pages CMS"
           labels: "documentation, cms-update"
+          base: main
+      
+      - name: Check outputs
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+          echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
