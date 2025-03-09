@@ -18,11 +18,15 @@ jobs:
         id: check_changes
         run: |
           git fetch origin main
-          if [ -z "$(git diff --name-only origin/main)" ]; then
+          DIFF_COUNT=$(git diff --name-only origin/main | wc -l)
+          echo "Difference count: $DIFF_COUNT"
+          git diff --name-only origin/main
+          
+          if [ "$DIFF_COUNT" -eq "0" ]; then
             echo "No changes found between cms-edits and main"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
-            echo "Changes found between cms-edits and main"
+            echo "Changes found between cms-edits and main ($DIFF_COUNT files)"
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
       
@@ -33,6 +37,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: cms-edits
           base: main
+          branch-suffix: timestamp
           title: "Docs Update from Pages CMS [${{ github.event.head_commit.message }}]"
           body: |
             Pages CMSで編集されたドキュメントの更新です。
