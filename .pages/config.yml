@@ -1,0 +1,102 @@
+# GitHubリポジトリ設定
+repository:
+  name: eito1011-JP/Handbook
+  branch: main
+  base_path: /
+
+# コンテンツ設定
+content:
+  - name: docs
+    label: ドキュメント
+    path: docs
+    extension: md
+    format: frontmatter
+    create: true
+    schema:
+      - id: id
+        label: ID
+        type: string
+        required: true
+      - id: title
+        label: タイトル
+        type: string
+        required: true
+      - id: sidebar_label
+        label: サイドバーラベル
+        type: string
+        required: false
+      - id: sidebar_position
+        label: サイドバー位置
+        type: number
+        required: false
+      - id: description
+        label: 説明
+        type: text
+        required: false
+      - id: tags
+        label: タグ
+        type: list
+        required: false
+      - id: body
+        label: 本文
+        type: markdown
+        required: true
+
+  - name: blog
+    label: ブログ記事
+    path: blog
+    extension: md
+    format: frontmatter
+    create: true
+    schema:
+      - id: title
+        label: タイトル
+        type: string
+        required: true
+      - id: date
+        label: 投稿日
+        type: datetime
+        required: true
+        date_format: YYYY-MM-DD
+      - id: authors
+        label: 著者
+        type: list
+        required: true
+      - id: tags
+        label: タグ
+        type: list
+        required: false
+      - id: body
+        label: 本文
+        type: markdown
+        required: true
+
+# メディア設定
+media:
+  path: static/img
+  public_path: /img
+  extensions:
+    - jpg
+    - jpeg
+    - png
+    - gif
+    - svg
+
+# 編集ワークフロー設定
+workflow:
+  # プルリクエストベースのワークフロー
+  editorial:
+    enabled: true
+    branch_prefix: pages-cms-edit
+    review_required: true
+
+# UI設定
+ui:
+  language: ja
+  theme: light
+  branding:
+    title: Handbook 管理システム
+    logo: /img/logo.png
+  editor:
+    preview: true
+    live_preview: true
