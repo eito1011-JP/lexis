@@ -1,6 +1,6 @@
 ---
 slug: eito morohashi
-sidebar_label: 諸橋 瑛音のテストです
+sidebar_label: cms-edits
 ---
 # 好きなもの
 
