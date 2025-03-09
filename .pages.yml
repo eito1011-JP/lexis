@@ -1,6 +1,6 @@
 media: files
 content:
-  - name: documents
+  - name: Documents
     label: Documents
     type: collection
     path: docs
