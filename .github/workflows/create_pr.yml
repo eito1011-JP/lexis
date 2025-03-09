@@ -13,12 +13,21 @@ jobs:
         with:
           ref: cms-edits
           fetch-depth: 0  # 全履歴を取得
-      - name: Debug - Check branch and diff
+      
+      - name: Check if changes exist between cms-edits and main
+        id: check_changes
         run: |
-          git branch
-          git log -1 --oneline
-          git diff origin/main || echo "No differences found between cms-edits and main"
+          git fetch origin main
+          if [ -z "$(git diff --name-only origin/main)" ]; then
+            echo "No changes found between cms-edits and main"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes found between cms-edits and main"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Create Pull Request
+        if: steps.check_changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
