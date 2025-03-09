@@ -1,7 +1,7 @@
 media: files
 content: 
  - name: Documents
-   lable: documents
+   lable: Documents
    type: collection
    path: docs
    fields:
