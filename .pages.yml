@@ -6,6 +6,6 @@ content:
     path: docs
     branch: cms-edits
     fields:
-      - { name: slug, label: Slug, type: string }
-      - { name: sidebar_label, label: Sidebar Label, type: string }
-      - { name: body, label: Body, type: rich-text }
+      - { name: slug, label: スラグ, type: string }
+      - { name: sidebar_label, label: タイトル, type: string }
+      - { name: body, label: 内容, type: rich-text }
