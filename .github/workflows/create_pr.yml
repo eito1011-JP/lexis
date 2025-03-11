@@ -1,62 +1,38 @@
-name: Create Pull Request from CMS Edits
+name: Create PR from cms-edits to main
 
 on:
   push:
-    branches:
-      - cms-edits
+    branches: [ cms-edits ]
 
 jobs:
-  create-pr:
+  create-cms-to-main-pr:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: cms-edits
           fetch-depth: 0
       
-      - name: Check for changes
-        id: check_changes
+      - name: Check Differences Between Branches
+        id: check_diff
         run: |
-          git fetch origin main
-          git diff --name-only origin/main > changed_files.txt
-          if [ -s changed_files.txt ]; then
-            echo "Changes detected in the following files:"
-            cat changed_files.txt
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "No changes detected"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          fi
-      
-      - name: Create Pull Request using GitHub CLI
-        if: steps.check_changes.outputs.has_changes == 'true'
-        run: |
-          # Check if PR already exists
-          gh auth setup-git
-          gh pr list --head cms-edits --base main --json number > existing_prs.json
+          # コミットメッセージを取得
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          echo "message=${COMMIT_MESSAGE}" >> "$GITHUB_OUTPUT"
           
-          if [ "$(cat existing_prs.json | jq 'length')" -eq "0" ]; then
-            echo "Creating new PR..."
-            
-            # First push any changes to ensure branch is up to date
-            git config --global user.name "GitHub Actions"
-            git config --global user.email "actions@github.com"
-            
-            # Create PR
-            gh pr create \
-              --title "Docs Update from Pages CMS [$(date +%Y-%m-%d)]" \
-              --body "Pages CMSで編集されたドキュメントの更新です。差分を確認の上、マージしてください。" \
-              --base main \
-              --head cms-edits \
-              --label "documentation" \
-              --label "cms-update"
-            
-            echo "Pull Request created successfully!"
-          else
-            echo "PR already exists between cms-edits and main"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # mainブランチとcms-editsブランチの差分を確認
+          git fetch origin main:main
+          DIFF_COUNT=$(git rev-list --count main..cms-edits)
+          echo "diff_count=${DIFF_COUNT}" >> "$GITHUB_OUTPUT"
+      
+      - name: Create Pull Request
+        if: ${{ steps.check_diff.outputs.diff_count != '0' }}
+        run: |
+          # 新しいPRを作成
+          gh pr create \
+            -B main \
+            -H cms-edits \
+            -t "【CMS更新】${{ steps.check_diff.outputs.message }}" \
+            -a ${{ github.actor }} \
+            -b "このPRはcms-editsブランチからの更新を含みます。" || echo "PRの作成をスキップしました（既に存在する可能性があります）"
