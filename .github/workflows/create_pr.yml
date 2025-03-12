@@ -1,16 +1,13 @@
-name: CMS Workflow and Deployment
+name: Create PR from cms-edits to main and Deploy GitHub Pages
 
 on:
-  # cms-editsへのプッシュ
   push:
-    branches: [ cms-edits, main ]
-  # mainへのPRがクローズされた時
+    branches: [ cms-edits ]
   pull_request:
     types: [ closed ]
     branches: [ main ]
 
 jobs:
-  # cms-editsからmainへのPR作成
   create-cms-to-main-pr:
     if: github.event_name == 'push' && github.ref == 'refs/heads/cms-edits'
     runs-on: ubuntu-latest
@@ -44,45 +41,36 @@ jobs:
             -a ${{ github.actor }} \
             -b "このPRはcms-editsブランチからの更新を含みます。" || echo "PRの作成をスキップしました（既に存在する可能性があります）"
 
-  # ビルドとデプロイ（直接mainへのプッシュ、またはPRマージ時に実行）
-  build-and-deploy:
-    if: |
-      (github.event_name == 'push' && github.ref == 'refs/heads/main') || 
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
+  deploy-github-pages:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
-      contents: read
       pages: write
       id-token: write
-    concurrency:
-      group: "pages"
-      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main  # mainブランチを使用
-
-      - name: Setup Node
+          ref: main
+      
+      # もしビルドステップが必要な場合はここに追加
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          cache: npm
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
+          node-version: '16'
       - name: Install dependencies
         run: npm ci
-
-      - name: Build Docusaurus website
+      - name: Build
         run: npm run build
-
+      
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./build
-
+          path: '.'  # デプロイするディレクトリ（ビルド出力がある場合は変更）
+      
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
