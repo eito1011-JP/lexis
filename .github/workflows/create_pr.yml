@@ -1,13 +1,16 @@
-name: Create PR from cms-edits to main and Update gh-pages
+name: CMS Workflow and Deployment
 
 on:
+  # cms-editsへのプッシュ
   push:
-    branches: [ cms-edits ]
+    branches: [ cms-edits, main ]
+  # mainへのPRがクローズされた時
   pull_request:
     types: [ closed ]
     branches: [ main ]
 
 jobs:
+  # cms-editsからmainへのPR作成
   create-cms-to-main-pr:
     if: github.event_name == 'push' && github.ref == 'refs/heads/cms-edits'
     runs-on: ubuntu-latest
@@ -41,35 +44,45 @@ jobs:
             -a ${{ github.actor }} \
             -b "このPRはcms-editsブランチからの更新を含みます。" || echo "PRの作成をスキップしました（既に存在する可能性があります）"
 
-  update-gh-pages:
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+  # ビルドとデプロイ（直接mainへのプッシュ、またはPRマージ時に実行）
+  build-and-deploy:
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') || 
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
     runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          ref: main
-      
-      - name: Setup Git User
-        run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-      
-      - name: Update gh-pages Branch
-        run: |
-          # gh-pagesブランチをフェッチ
-          git fetch origin gh-pages:gh-pages || git checkout -b gh-pages
-          
-          # mainの変更をgh-pagesにマージ
-          git checkout gh-pages
-          git merge main -m "Merge main into gh-pages after CMS update" || {
-            echo "Merge conflict occurred. Using main content."
-            git checkout --theirs .
-            git add .
-            git commit -m "Resolve conflicts in favor of main content"
-          }
-          
-          # gh-pagesブランチをプッシュ
-          git push origin gh-pages
+          ref: main  # mainブランチを使用
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Docusaurus website
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: ./build
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
