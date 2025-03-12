@@ -1,11 +1,15 @@
-name: Create PR from cms-edits to main
+name: Create PR from cms-edits to main and Update gh-pages
 
 on:
   push:
     branches: [ cms-edits ]
+  pull_request:
+    types: [ closed ]
+    branches: [ main ]
 
 jobs:
   create-cms-to-main-pr:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/cms-edits'
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
