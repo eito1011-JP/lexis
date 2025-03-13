@@ -4,10 +4,14 @@ on:
   pull_request:
     types: [ closed ]
     branches: [ main ]
+  push:
+    branches: [ main ]
 
 jobs:
   deploy-github-pages:
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     environment:
       name: github-pages
