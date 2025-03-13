@@ -1,11 +1,8 @@
-name: Create PR from cms-edits to main and Deploy GitHub Pages
+name: Create PR from cms-edits to main
 
 on:
   push:
     branches: [ cms-edits ]
-  pull_request:
-    types: [ closed ]
-    branches: [ main ]
 
 jobs:
   create-cms-to-main-pr:
@@ -40,37 +37,3 @@ jobs:
             -t "【CMS更新】${{ steps.check_diff.outputs.message }}" \
             -a ${{ github.actor }} \
             -b "このPRはcms-editsブランチからの更新を含みます。" || echo "PRの作成をスキップしました（既に存在する可能性があります）"
-
-  deploy-github-pages:
-    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    permissions:
-      pages: write
-      id-token: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: main
-      
-      # もしビルドステップが必要な場合はここに追加
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '16'
-      - name: Install dependencies
-        run: npm ci
-      - name: Build
-        run: npm run build
-      
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'  # デプロイするディレクトリ（ビルド出力がある場合は変更）
-      
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
