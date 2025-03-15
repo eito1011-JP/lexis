@@ -1,6 +1,6 @@
 ---
 slug: eito morohashi
-sidebar_label: cms-edits
+sidebar_label: 私の自己消化い
 ---
 # 好きなもの
 
