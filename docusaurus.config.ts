@@ -77,7 +77,7 @@ const config: Config = {
         },
         // 管理画面へのリンクを追加
         {
-          href: '/Handbook/admin/',
+          href: 'https://app.pagescms.org/eito1011-jp/handbook/main/collection/Documents',
           label: '管理画面',
           position: 'right',
         },
