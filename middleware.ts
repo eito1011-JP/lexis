@@ -14,6 +14,7 @@ export default function middleware(request) {
     // if (user == process.env.BASIC_AUTH_USER && password == process.env.BASIC_AUTH_PASSWORD) {
     //   return next();
     // }
+    console.log(user, password);
     return next();
   }
 
