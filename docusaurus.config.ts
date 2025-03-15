@@ -10,7 +10,7 @@ const config: Config = {
   tagline: 'Dinosaurs are cool',
   favicon: 'img/favicon.ico',
   url: 'https://eito1011-jp.github.io',
-  baseUrl: '/Handbook/',
+  baseUrl: '/',
   organizationName: 'eito1011-JP',
   projectName: 'Handbook',
   trailingSlash: false,
