@@ -19,12 +19,18 @@
     "@docusaurus/plugin-client-redirects": "^3.7.0",
     "@docusaurus/preset-classic": "3.7.0",
     "@mdx-js/react": "^3.0.0",
+    "@tailwindcss/cli": "^4.0.14",
+    "@tiptap/extension-document": "^2.11.5",
+    "@tiptap/extension-paragraph": "^2.11.5",
+    "@tiptap/extension-text": "^2.11.5",
+    "@tiptap/react": "^2.11.5",
     "@vercel/edge": "^1.2.1",
     "clsx": "^2.0.0",
     "decap-cms-app": "^3.6.2",
     "prism-react-renderer": "^2.3.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.0"
+    "react-dom": "^18.3.0",
+    "tailwindcss": "^4.0.14"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.7.0",
