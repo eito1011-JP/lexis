@@ -56,12 +56,7 @@ const config: Config = {
           label: 'Tutorial',
         },
         {
-          href: 'https://github.com/eito1011-JP/Handbook',
-          label: 'GitHub',
-          position: 'right',
-        },
-        {
-          href: '/admin',
+          href: '/admin/docs',
           label: '管理画面',
           position: 'right',
         },
