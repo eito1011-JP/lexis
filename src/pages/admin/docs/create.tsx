@@ -16,7 +16,7 @@ export default function AdminPage(): JSX.Element {
       description="ドキュメント管理ページ"
     >
       <div className="container margin-vert--lg">
-        <h1>ドキュメント管理</h1>
+        <h1>新規のドキュメントを作成</h1>
         <div className="row">
           <div className="col col--8">
             <div className="card">

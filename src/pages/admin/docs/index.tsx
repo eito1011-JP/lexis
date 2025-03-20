@@ -5,11 +5,6 @@ import React from 'react';
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function AdminPage(): JSX.Element {
-  // 新規エントリー追加ハンドラー
-  const handleAddEntry = () => {
-    console.log('新規エントリーを追加します');
-    // 実装: 新規ドキュメント作成ロジック
-  };
 
   return (
     <AdminLayout title="ドキュメント管理">
@@ -19,12 +14,14 @@ export default function AdminPage(): JSX.Element {
           
           {/* 検索とアクションエリア */}
           <div className="flex items-center justify-between mb-6">
-            <button
-              className="ml-auto bg-white text-black rounded-md px-4 py-2 font-medium"
-              onClick={handleAddEntry}
+            <button 
+              className="ml-auto flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              onClick={() => {
+                window.location.href = '/admin/docs/create';
+              }}
             >
               新規ドキュメントを作成
-            </button>
+              </button>
           </div>
           
           {/* テーブルヘッダー */}
