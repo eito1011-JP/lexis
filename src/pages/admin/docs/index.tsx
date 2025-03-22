@@ -1,10 +1,27 @@
 import AdminLayout from '@site/src/components/admin/layout';
-import React from 'react';
+import React, { useState } from 'react';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function AdminPage(): JSX.Element {
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [folderName, setFolderName] = useState('');
+
+  const handleCreateImageFolder = () => {
+    setShowFolderModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowFolderModal(false);
+    setFolderName('');
+  };
+
+  const handleCreateFolder = () => {
+    console.log('フォルダを作成:', folderName);
+    
+    handleCloseModal();
+  };
 
   return (
     <AdminLayout title="ドキュメント管理">
@@ -14,14 +31,25 @@ export default function AdminPage(): JSX.Element {
           
           {/* 検索とアクションエリア */}
           <div className="flex items-center justify-between mb-6">
-            <button 
-              className="ml-auto flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              onClick={() => {
-                window.location.href = '/admin/docs/create';
-              }}
-            >
-              新規ドキュメントを作成
+            <div className="flex items-center gap-4 ml-auto">
+              <button 
+                className="bg-gray-900 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-700"
+                onClick={handleCreateImageFolder}
+                title="フォルダ作成"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
               </button>
+              <button 
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                onClick={() => {
+                  window.location.href = '/admin/docs/create';
+                }}
+              >
+                新規ドキュメントを作成
+              </button>
+            </div>
           </div>
           
           {/* テーブルヘッダー */}
@@ -53,6 +81,49 @@ export default function AdminPage(): JSX.Element {
             </div>
           </div>
         </div>
+
+        {/* フォルダ作成モーダル */}
+        {showFolderModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md border border-gray-800">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold">フォルダを作成</h3>
+                <button 
+                  onClick={handleCloseModal}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-gray-400 mb-4">フォルダー名を入力してください</p>
+              <input
+                type="text"
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                className="w-full p-2 mb-4 bg-black border border-gray-700 rounded text-white"
+                placeholder="フォルダ名を入力"
+                autoFocus
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={handleCloseModal}
+                  className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleCreateFolder}
+                  className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200"
+                  disabled={!folderName.trim()}
+                >
+                  作成
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
