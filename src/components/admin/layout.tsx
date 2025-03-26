@@ -10,9 +10,10 @@ import { useHistory } from '@docusaurus/router';
 interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
+  sidebar?: boolean;
 }
 
-export default function AdminLayout({ children, title }: AdminLayoutProps): JSX.Element {
+export default function AdminLayout({ children, title, sidebar = true }: AdminLayoutProps): JSX.Element {
   const {siteConfig} = useDocusaurusContext();
   const history = useHistory();
   
@@ -64,21 +65,22 @@ export default function AdminLayout({ children, title }: AdminLayoutProps): JSX.
       <div className="min-h-screen flex flex-col">
         <Header />
         <div className="flex flex-1">
-          {/* サイドバー */}
-          <div className="w-60 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
-            <nav className="flex-1 py-4">
-              {navItems.map((item) => (
-                <div 
-                  key={item.path}
-                  className={`flex items-center px-4 py-3 cursor-pointer ${currentPath === item.path ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                  onClick={() => navigateTo(item.path)}
-                >
-                  {item.icon}
-                  <span className="ml-3">{item.label}</span>
-                </div>
-              ))}
-            </nav>
-          </div>
+          {sidebar && (
+            <div className="w-60 min-h-screen bg-gray-900 border-r border-gray-800 flex flex-col">
+              <nav className="flex-1 py-4">
+                {navItems.map((item) => (
+                  <div 
+                    key={item.path}
+                    className={`flex items-center px-4 py-3 cursor-pointer ${currentPath === item.path ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+                    onClick={() => navigateTo(item.path)}
+                  >
+                    {item.icon}
+                    <span className="ml-3">{item.label}</span>
+                  </div>
+                ))}
+              </nav>
+            </div>
+          )}
           
           {/* メインコンテンツ */}
           <main className="flex-1 bg-black">
