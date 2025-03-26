@@ -28,7 +28,6 @@ export default function AdminPage(): JSX.Element {
       <div className="flex flex-col h-full">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-4">ドキュメント</h1>
-          
           {/* 検索とアクションエリア */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 ml-auto">
