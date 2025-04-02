@@ -1,3 +1,5 @@
+import { apiClient } from '@site/src/components/admin/api/client';
+import { API_CONFIG } from '@site/src/components/admin/api/config';
 import AdminLayout from '@site/src/components/admin/layout';
 import React, { useState, FormEvent } from 'react';
 
@@ -8,34 +10,25 @@ export default function AdminPage(): JSX.Element {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const handleSubmit = async (e: FormEvent) => {
+const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      const response = await fetch('/api/admin/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const data = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNUP, { 
+        email, 
+        password 
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(data.message || '登録が完了しました');
-        // フォームをリセット
-        setEmail('');
-        setPassword('');
-      } else {
-        setError(data.error || 'エラーが発生しました');
-      }
+      
+      setSuccess(data.message || '登録が完了しました');
+      // フォームをリセット
+      setEmail('');
+      setPassword('');
     } catch (err) {
       console.error('Error:', err);
-      setError('通信エラーが発生しました');
+      setError(err instanceof Error ? err.message : '通信エラーが発生しました');
     } finally {
       setLoading(false);
     }
