@@ -1,20 +1,12 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '@vercel/kv';
+import { Router, Request, Response } from 'express';
 import { hash } from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
-import { API_ERRORS, SUCCESS_MESSAGES, HTTP_STATUS } from '../const/errors';
+import { API_ERRORS, SUCCESS_MESSAGES, HTTP_STATUS } from '../../const/errors';
+import { userService } from '@site/src/services/userService';
 
-export default async function handler(
-  req: VercelRequest,
-  res: VercelResponse
-) {
-  // POSTリクエスト以外は許可しない
-  if (req.method !== 'POST') {
-    return res.status(HTTP_STATUS.METHOD_NOT_ALLOWED).json({ 
-      error: API_ERRORS.AUTH.INVALID_METHOD 
-    });
-  }
+const router = Router();
 
+router.post('/signup', async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -40,9 +32,10 @@ export default async function handler(
       });
     }
 
-    // 既存ユーザーの確認
-    const existingUser = await kv.get(`user:${email}`);
-    if (existingUser) {
+    // 既存ユーザーの確認 - データベースから
+    const userExists = await userService.checkUserExists(email);
+    console.log('ユーザー存在確認:', userExists);
+    if (userExists) {
       return res.status(HTTP_STATUS.CONFLICT).json({ 
         error: API_ERRORS.AUTH.EMAIL_EXISTS 
       });
@@ -55,20 +48,10 @@ export default async function handler(
     // ユーザーIDを生成
     const userId = uuidv4();
 
-    // ユーザー情報の保存
-    const user = {
-      id: userId,
-      email,
-      password: hashedPassword,
-      createdAt: new Date().toISOString()
-    };
-
-    // メールアドレスとIDの両方からアクセスできるように保存
-    await kv.set(`user:${email}`, JSON.stringify(user));
-    await kv.set(`userid:${userId}`, email);
-
-    // レスポンスにはパスワードを含めない
-    const { password: _, ...userWithoutPassword } = user;
+    // データベースにユーザーを保存
+    const userWithoutPassword = await userService.createUser(email, hashedPassword, userId);
+    
+    console.log('ユーザー登録成功:', email);
     
     return res.status(HTTP_STATUS.CREATED).json({ 
       success: true, 
@@ -81,4 +64,6 @@ export default async function handler(
       error: API_ERRORS.SERVER.INTERNAL_ERROR 
     });
   }
-}
+});
+
+export const signupRouter = router;

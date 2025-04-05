@@ -6,7 +6,7 @@ export const apiClient = {
    */
   async request(endpoint: string, options: RequestInit = {}) {
     const url = `${API_CONFIG.BASE_URL}${endpoint}`;
-    
+
     const defaultHeaders = {
       'Content-Type': 'application/json',
     };
@@ -44,6 +44,7 @@ export const apiClient = {
   },
   
   async post(endpoint: string, body: any, options = {}) {
+    console.log('POSTリクエスト:', endpoint, body);
     return this.request(endpoint, {
       ...options,
       method: 'POST',

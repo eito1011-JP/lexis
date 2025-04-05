@@ -21,7 +21,7 @@ const handleSubmit = async (e: FormEvent) => {
         email, 
         password 
       });
-      
+
       setSuccess(data.message || '登録が完了しました');
       // フォームをリセット
       setEmail('');
