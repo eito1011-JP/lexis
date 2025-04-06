@@ -9,7 +9,6 @@ const AUTH_TOKEN = process.env.NODE_ENV === "production"
   ? process.env.TURSO_AUTH_TOKEN    // 本番: 認証トークン
   : undefined;                      // 開発: 不要
 
-  console.log("DB_URL:", DB_URL);
 // データベースクライアントの作成
 export const db = createClient({
   url: DB_URL,
