@@ -11,7 +11,7 @@ export const sessionService = {
     
     try {
       await db.execute({
-        sql: 'INSERT INTO sessions (id, user_id, expire_at) VALUES (?, ?, ?)',
+        sql: 'INSERT INTO sessions (id, user_id, expired_at) VALUES (?, ?, ?)',
         args: [sessionId, userId, expireAt.toISOString()]
       });
       
@@ -26,7 +26,7 @@ export const sessionService = {
   async getSessionUser(sessionId: string) {
     try {
       const result = await db.execute({
-        sql: 'SELECT user_id FROM sessions WHERE id = ? AND expire_at > ?',
+        sql: 'SELECT user_id FROM sessions WHERE id = ? AND expired_at > ?',
         args: [sessionId, new Date().toISOString()]
       });
       
@@ -61,7 +61,7 @@ export const sessionService = {
   async cleanupSessions(): Promise<void> {
     try {
       await db.execute({
-        sql: 'DELETE FROM sessions WHERE expire_at < ?',
+        sql: 'DELETE FROM sessions WHERE expired_at < ?',
         args: [new Date().toISOString()]
       });
     } catch (error) {

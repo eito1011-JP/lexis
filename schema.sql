@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
   sess TEXT NOT NULL,
-  expired DATETIME NOT NULL
+  expired_at DATETIME NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS sessions_expired_idx ON sessions (expired);

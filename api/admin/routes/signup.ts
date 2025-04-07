@@ -3,6 +3,7 @@ import { hash } from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { API_ERRORS, SUCCESS_MESSAGES, HTTP_STATUS } from '../../const/errors';
 import { userService } from '@site/src/services/userService';
+import { sessionService } from '@site/src/services/sessionService';
 
 const router = Router();
 
@@ -30,7 +31,7 @@ router.post('/signup', async (req: Request, res: Response) => {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
         error: API_ERRORS.VALIDATION.PASSWORD_TOO_SHORT 
       });
-    }
+    };
 
     // 既存ユーザーの確認 - データベースから
     const userExists = await userService.checkUserExists(email);
@@ -51,12 +52,21 @@ router.post('/signup', async (req: Request, res: Response) => {
     // データベースにユーザーを保存
     const userWithoutPassword = await userService.createUser(email, hashedPassword, userId);
     
-    console.log('ユーザー登録成功:', email);
+    // セッションを作成してセッションIDを取得
+    const sessionId = await sessionService.createSession(userId, email);
     
+    // クッキーにセッションIDを設定
+    res.cookie('sid', sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 90 * 60 * 60 * 1000 // 90日
+    });
+
     return res.status(HTTP_STATUS.CREATED).json({ 
       success: true, 
       message: SUCCESS_MESSAGES.AUTH.SIGNUP_SUCCESS,
-      user: userWithoutPassword
+      user: userWithoutPassword,
+      isAuthenticated: true
     });
   } catch (error) {
     console.error('Signup error:', error);
