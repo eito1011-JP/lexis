@@ -5,12 +5,11 @@ import React, { useState, FormEvent, ReactElement } from 'react';
 import { useHistory } from '@docusaurus/router';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 
-export default function AdminPage(): ReactElement {
+export default function LoginPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const history = useHistory();
 
   // すでにログインしている場合はダッシュボードにリダイレクト
@@ -20,15 +19,13 @@ export default function AdminPage(): ReactElement {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccess('');
 
     try {
-      const data = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNUP, {
+      const data = await apiClient.post(API_CONFIG.ENDPOINTS.LOGIN, {
         email,
         password,
       });
 
-      setSuccess(data.message || '登録が完了しました');
       // フォームをリセット
       setEmail('');
       setPassword('');
@@ -38,24 +35,22 @@ export default function AdminPage(): ReactElement {
       }, 1000);
     } catch (err) {
       console.error('Error:', err);
-      setError(err instanceof Error ? err.message : '通信エラーが発生しました');
+      setError(err instanceof Error ? err.message : 'ログインに失敗しました');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AdminLayout title="メディア" sidebar={false}>
+    <AdminLayout title="ログイン" sidebar={false}>
       <div className="bg-black min-h-screen flex items-center justify-center">
         <div className="w-full max-w-md bg-[#0A0A0A] border-[1px] border-[#B1B1B1] rounded-xl p-8 pt-[3rem]">
           <div className="text-center mb-8">
             <h1 className="text-white text-3xl font-bold mb-2">Lexis</h1>
-            <h2 className="text-white text-2xl">新規登録</h2>
+            <h2 className="text-white text-2xl">ログイン</h2>
           </div>
 
           {error && <div className="mb-4 p-3 bg-red-500 text-white rounded-lg">{error}</div>}
-
-          {success && <div className="mb-4 p-3 bg-green-500 text-white rounded-lg">{success}</div>}
 
           <form className="mb-[1rem]" onSubmit={handleSubmit}>
             <div className="mb-2">
@@ -85,7 +80,6 @@ export default function AdminPage(): ReactElement {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                minLength={8}
               />
             </div>
 
@@ -94,7 +88,7 @@ export default function AdminPage(): ReactElement {
               className="border-none w-full font-bold bg-[#3832A5] hover:bg-indigo-800 text-white py-4 rounded-lg text-center transition duration-200"
               disabled={loading}
             >
-              {loading ? '処理中...' : '登録する'}
+              {loading ? '処理中...' : 'ログインする'}
             </button>
           </form>
         </div>

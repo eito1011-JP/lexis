@@ -12,12 +12,12 @@ type Props = WrapperProps<typeof FooterType>;
  */
 export default function FooterWrapper(props: Props): JSX.Element | null {
   const location = useLocation();
-  
+
   // /admin パスではフッターを表示しない
   if (location.pathname.startsWith('/admin')) {
     return null;
   }
-  
+
   // それ以外のパスでは通常のフッターを表示
   return <OriginalFooter {...props} />;
 }

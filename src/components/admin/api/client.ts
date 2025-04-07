@@ -10,7 +10,7 @@ export const apiClient = {
     const defaultHeaders = {
       'Content-Type': 'application/json',
     };
-    
+
     const config = {
       ...options,
       credentials: 'include' as const,
@@ -19,31 +19,31 @@ export const apiClient = {
         ...options.headers,
       },
     };
-    
+
     try {
       const response = await fetch(url, config);
-      
+
       // レスポンスをJSONとしてパース
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || `Error: ${response.status}`);
       }
-      
+
       return data;
     } catch (error) {
       console.error('API request failed:', error);
       throw error;
     }
   },
-  
+
   /**
    * 各種HTTPメソッド用のヘルパー関数
    */
   async get(endpoint: string, options = {}) {
     return this.request(endpoint, { ...options, method: 'GET' });
   },
-  
+
   async post(endpoint: string, body: any, options = {}) {
     console.log('POSTリクエスト:', endpoint, body);
     return this.request(endpoint, {
@@ -52,7 +52,7 @@ export const apiClient = {
       body: JSON.stringify(body),
     });
   },
-  
+
   async put(endpoint: string, body: any, options = {}) {
     return this.request(endpoint, {
       ...options,
@@ -60,7 +60,7 @@ export const apiClient = {
       body: JSON.stringify(body),
     });
   },
-  
+
   async delete(endpoint: string, options = {}) {
     return this.request(endpoint, { ...options, method: 'DELETE' });
   },

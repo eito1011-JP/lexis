@@ -2,7 +2,10 @@ import { useEffect } from 'react';
 import { useHistory } from '@docusaurus/router';
 import { apiClient } from '@site/src/components/admin/api/client';
 
-export const useSessionCheck = (redirectPath: string = '/admin/signup', shouldRedirectIfAuthenticated: boolean = true) => {
+export const useSessionCheck = (
+  redirectPath: string = '/admin/signup',
+  shouldRedirectIfAuthenticated: boolean = true
+) => {
   const history = useHistory();
 
   useEffect(() => {
@@ -24,4 +27,4 @@ export const useSessionCheck = (redirectPath: string = '/admin/signup', shouldRe
 
     checkSession();
   }, [history, redirectPath, shouldRedirectIfAuthenticated]);
-}; 
+};

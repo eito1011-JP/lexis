@@ -3,6 +3,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import cookieParser from 'cookie-parser';
 import { signupRouter } from './routes/signup';
+import { loginRouter } from './routes/login';
 import { middleware } from './routes/middleware';
 import { sessionService } from '../../src/services/sessionService';
 
@@ -24,6 +25,7 @@ middleware.forEach(mw => app.use(mw));
 
 // ルートの登録
 app.use('/api/admin', signupRouter);
+app.use('/api/admin', loginRouter);
 
 // セッション確認
 app.get('/api/auth/session', async (req, res) => {

@@ -19,7 +19,7 @@ export default function AdminPage(): JSX.Element {
 
   const handleCreateFolder = () => {
     console.log('フォルダを作成:', folderName);
-    
+
     handleCloseModal();
   };
 
@@ -31,16 +31,27 @@ export default function AdminPage(): JSX.Element {
           {/* 検索とアクションエリア */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 ml-auto">
-              <button 
+              <button
                 className="bg-gray-900 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-700"
                 onClick={handleCreateImageFolder}
                 title="フォルダ作成"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
                 </svg>
               </button>
-              <button 
+              <button
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 onClick={() => {
                   window.location.href = '/admin/docs/create';
@@ -50,7 +61,7 @@ export default function AdminPage(): JSX.Element {
               </button>
             </div>
           </div>
-          
+
           {/* テーブルヘッダー */}
           <div className="grid grid-cols-12 border-b border-gray-700 pb-2 text-sm text-gray-400">
             <div className="col-span-4 flex items-center">
@@ -67,14 +78,36 @@ export default function AdminPage(): JSX.Element {
           <h2 className="text-xl font-bold mb-4">フォルダー</h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800">
-              <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+              <svg
+                className="w-5 h-5 mr-2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                ></path>
               </svg>
               <span>tutorial-basics</span>
             </div>
             <div className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800">
-              <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+              <svg
+                className="w-5 h-5 mr-2 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                ></path>
               </svg>
               <span>tutorial-extras</span>
             </div>
@@ -87,12 +120,20 @@ export default function AdminPage(): JSX.Element {
             <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md border border-gray-800">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">フォルダを作成</h3>
-                <button 
-                  onClick={handleCloseModal}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <button onClick={handleCloseModal} className="text-gray-400 hover:text-white">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -100,7 +141,7 @@ export default function AdminPage(): JSX.Element {
               <input
                 type="text"
                 value={folderName}
-                onChange={(e) => setFolderName(e.target.value)}
+                onChange={e => setFolderName(e.target.value)}
                 className="w-full p-2 mb-4 bg-black border border-gray-700 rounded text-white"
                 placeholder="フォルダ名を入力"
                 autoFocus

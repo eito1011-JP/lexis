@@ -1,0 +1,13 @@
+node_modules
+build
+dist
+.next
+.git
+*.md
+*.json
+*.sql
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.local 

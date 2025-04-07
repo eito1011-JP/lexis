@@ -1,8 +1,8 @@
-import Document from '@tiptap/extension-document'
-import Paragraph from '@tiptap/extension-paragraph'
-import Text from '@tiptap/extension-text'
-import { EditorContent, useEditor } from '@tiptap/react'
-import React, { useEffect, useRef, useState } from 'react'
+import Document from '@tiptap/extension-document';
+import Paragraph from '@tiptap/extension-paragraph';
+import Text from '@tiptap/extension-text';
+import { EditorContent, useEditor } from '@tiptap/react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface TiptapEditorProps {
   initialContent: string;
@@ -14,11 +14,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onChange })
   const editorRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
-    extensions: [
-      Document,
-      Paragraph,
-      Text,
-    ],
+    extensions: [Document, Paragraph, Text],
     content: initialContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -45,16 +41,15 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onChange })
     <div className="flex w-full font-mono relative">
       <div className="w-10 pt-2 bg-gray-800 text-gray-500 text-right select-none border-r border-gray-700">
         {Array.from({ length: lineCount }, (_, i) => (
-          <div key={i} className="h-6 pr-2 text-sm leading-6">{i + 1}</div>
+          <div key={i} className="h-6 pr-2 text-sm leading-6">
+            {i + 1}
+          </div>
         ))}
       </div>
       <div className="flex-grow pl-2" ref={editorRef}>
-        <EditorContent 
-          editor={editor} 
-          className="outline-none"
-        />
+        <EditorContent editor={editor} className="outline-none" />
       </div>
-      
+
       <style jsx global>{`
         .ProseMirror {
           outline: none;
