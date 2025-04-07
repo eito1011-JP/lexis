@@ -87,7 +87,6 @@ export default function LoginPage(): ReactElement {
                 required
               />
             </div>
-
             <button
               type="submit"
               className="border-none w-full font-bold bg-[#3832A5] hover:bg-indigo-800 text-white py-4 rounded-lg text-center transition duration-200"
@@ -95,6 +94,14 @@ export default function LoginPage(): ReactElement {
             >
               {loading ? '処理中...' : 'ログインする'}
             </button>
+            <div className="flex justify-center mt-4">
+              <p className="text-white text-[0.8rem]">
+                アカウントをお持ちでない方
+                <a href="/admin/signup" className="text-white hover:underline ml-8">
+                  新規登録
+                </a>
+              </p>
+            </div>
           </form>
         </div>
       </div>
