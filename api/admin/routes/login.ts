@@ -19,6 +19,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // ユーザーの存在確認
     const user = await userService.getUserByEmail(email);
+
     if (!user) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
         error: API_ERRORS.AUTH.INVALID_CREDENTIALS 

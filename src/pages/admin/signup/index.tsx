@@ -4,13 +4,15 @@ import AdminLayout from '@site/src/components/admin/layout';
 import React, { useState, FormEvent, ReactElement } from 'react';
 import { useHistory } from '@docusaurus/router';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
+import { Toast } from '@site/src/components/admin/Toast';
 
 export default function AdminPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const history = useHistory();
 
   // すでにログインしている場合はダッシュボードにリダイレクト
@@ -19,16 +21,17 @@ export default function AdminPage(): ReactElement {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
 
     try {
-      const data = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNUP, {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNUP, {
         email,
         password,
       });
 
-      setSuccess(data.message || '登録が完了しました');
+      setToastMessage(response.message || '登録が完了しました');
+      setToastType('success');
+      setShowToast(true);
+
       // フォームをリセット
       setEmail('');
       setPassword('');
@@ -38,7 +41,9 @@ export default function AdminPage(): ReactElement {
       }, 1000);
     } catch (err) {
       console.error('Error:', err);
-      setError(err instanceof Error ? err.message : '通信エラーが発生しました');
+      setToastMessage(err instanceof Error ? err.message : '通信エラーが発生しました');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setLoading(false);
     }
@@ -52,10 +57,6 @@ export default function AdminPage(): ReactElement {
             <h1 className="text-white text-3xl font-bold mb-2">Lexis</h1>
             <h2 className="text-white text-2xl">新規登録</h2>
           </div>
-
-          {error && <div className="mb-4 p-3 bg-red-500 text-white rounded-lg">{error}</div>}
-
-          {success && <div className="mb-4 p-3 bg-green-500 text-white rounded-lg">{success}</div>}
 
           <form className="mb-[1rem]" onSubmit={handleSubmit}>
             <div className="mb-2">
@@ -99,6 +100,9 @@ export default function AdminPage(): ReactElement {
           </form>
         </div>
       </div>
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
+      )}
     </AdminLayout>
   );
 }

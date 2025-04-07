@@ -4,27 +4,32 @@ import AdminLayout from '@site/src/components/admin/layout';
 import React, { useState, FormEvent, ReactElement } from 'react';
 import { useHistory } from '@docusaurus/router';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
+import { Toast } from '@site/src/components/admin/Toast';
 
 export default function LoginPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const history = useHistory();
 
-  // すでにログインしている場合はダッシュボードにリダイレクト
   useSessionCheck('/admin/documents', true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
-      const data = await apiClient.post(API_CONFIG.ENDPOINTS.LOGIN, {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.LOGIN, {
         email,
         password,
       });
+
+      setToastMessage(response.message || 'ログインに成功しました');
+      setToastType('success');
+      setShowToast(true);
 
       // フォームをリセット
       setEmail('');
@@ -35,7 +40,9 @@ export default function LoginPage(): ReactElement {
       }, 1000);
     } catch (err) {
       console.error('Error:', err);
-      setError(err instanceof Error ? err.message : 'ログインに失敗しました');
+      setToastMessage(err instanceof Error ? err.message : 'ログインに失敗しました');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setLoading(false);
     }
@@ -49,8 +56,6 @@ export default function LoginPage(): ReactElement {
             <h1 className="text-white text-3xl font-bold mb-2">Lexis</h1>
             <h2 className="text-white text-2xl">ログイン</h2>
           </div>
-
-          {error && <div className="mb-4 p-3 bg-red-500 text-white rounded-lg">{error}</div>}
 
           <form className="mb-[1rem]" onSubmit={handleSubmit}>
             <div className="mb-2">
@@ -93,6 +98,9 @@ export default function LoginPage(): ReactElement {
           </form>
         </div>
       </div>
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
+      )}
     </AdminLayout>
   );
 }
