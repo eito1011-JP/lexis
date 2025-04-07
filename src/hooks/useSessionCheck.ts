@@ -1,30 +1,25 @@
 import { useEffect } from 'react';
 import { useHistory } from '@docusaurus/router';
-import { apiClient } from '@site/src/components/admin/api/client';
+import { useSession } from '@site/src/contexts/SessionContext';
 
 export const useSessionCheck = (
   redirectPath: string = '/admin/signup',
   shouldRedirectIfAuthenticated: boolean = true
 ) => {
   const history = useHistory();
+  const { isAuthenticated, checkSession } = useSession();
 
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        const response = await apiClient.get('/auth/session');
-        if (shouldRedirectIfAuthenticated && response.authenticated) {
-          history.push(redirectPath);
-        } else if (!shouldRedirectIfAuthenticated && !response.authenticated) {
-          history.push(redirectPath);
-        }
-      } catch (err) {
-        console.error('セッション確認エラー:', err);
-        if (!shouldRedirectIfAuthenticated) {
-          history.push(redirectPath);
-        }
-      }
-    };
-
     checkSession();
-  }, [history, redirectPath, shouldRedirectIfAuthenticated]);
+  }, [checkSession]);
+
+  useEffect(() => {
+    if (shouldRedirectIfAuthenticated && isAuthenticated) {
+      history.push(redirectPath);
+    } else if (!shouldRedirectIfAuthenticated && !isAuthenticated) {
+      history.push(redirectPath);
+    }
+  }, [isAuthenticated, history, redirectPath, shouldRedirectIfAuthenticated]);
+
+  return { isAuthenticated };
 };

@@ -1,10 +1,13 @@
 import AdminLayout from '@site/src/components/admin/layout';
 import React, { useState } from 'react';
+import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function AdminPage(): JSX.Element {
+  useSessionCheck('/admin/login', false);
+
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderName, setFolderName] = useState('');
 

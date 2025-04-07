@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import Layout from '@theme/Layout';
 import TiptapEditor from '@site/src/components/admin/editor/TiptapEditor';
 import AdminLayout from '@site/src/components/admin/layout';
+import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 
 export default function AdminPage(): JSX.Element {
+  useSessionCheck('/admin/login', false);
+
   const [content, setContent] = useState('<p>ここにドキュメントを作成してください...</p>');
   const [slug, setSlug] = useState('');
   const [sidebarLabel, setSidebarLabel] = useState('');
