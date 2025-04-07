@@ -13,6 +13,7 @@ export const apiClient = {
     
     const config = {
       ...options,
+      credentials: 'include' as const,
       headers: {
         ...defaultHeaders,
         ...options.headers,

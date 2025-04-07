@@ -1,16 +1,22 @@
 import { apiClient } from '@site/src/components/admin/api/client';
 import { API_CONFIG } from '@site/src/components/admin/api/config';
 import AdminLayout from '@site/src/components/admin/layout';
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, ReactElement } from 'react';
+import { useHistory } from '@docusaurus/router';
+import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 
-export default function AdminPage(): JSX.Element {
+export default function AdminPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const history = useHistory();
 
-const handleSubmit = async (e: FormEvent) => {
+  // すでにログインしている場合はダッシュボードにリダイレクト
+  useSessionCheck('/admin/documents', true);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -26,6 +32,10 @@ const handleSubmit = async (e: FormEvent) => {
       // フォームをリセット
       setEmail('');
       setPassword('');
+
+      setTimeout(() => {
+        history.push('/admin/documents');
+      }, 1000);
     } catch (err) {
       console.error('Error:', err);
       setError(err instanceof Error ? err.message : '通信エラーが発生しました');
