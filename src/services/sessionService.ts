@@ -9,10 +9,17 @@ export const sessionService = {
     const expireAt = new Date();
     expireAt.setDate(expireAt.getDate() + 90); // 90日後に期限切れ
     
+    const sessionData = {
+      userId,
+      email,
+      createdAt: new Date().toISOString(),
+      lastActivity: new Date().toISOString()
+    };
+    
     try {
       await db.execute({
-        sql: 'INSERT INTO sessions (id, user_id, expired_at) VALUES (?, ?, ?)',
-        args: [sessionId, userId, expireAt.toISOString()]
+        sql: 'INSERT INTO sessions (id, user_id, sess, expired_at) VALUES (?, ?, ?, ?)',
+        args: [sessionId, userId, JSON.stringify(sessionData), expireAt.toISOString()]
       });
       
       return sessionId;
@@ -26,7 +33,7 @@ export const sessionService = {
   async getSessionUser(sessionId: string) {
     try {
       const result = await db.execute({
-        sql: 'SELECT user_id FROM sessions WHERE id = ? AND expired_at > ?',
+        sql: 'SELECT user_id, sess FROM sessions WHERE id = ? AND expired_at > ?',
         args: [sessionId, new Date().toISOString()]
       });
       
@@ -34,9 +41,11 @@ export const sessionService = {
         return null;
       }
       
+      const sessionData = JSON.parse(result.rows[0].sess as string);
       return {
-        userId: result.rows[0].user_id,
-        email: result.rows[0].email
+        userId: sessionData.userId,
+        email: sessionData.email,
+        lastActivity: sessionData.lastActivity
       };
     } catch (error) {
       console.error('セッション検証エラー:', error);
