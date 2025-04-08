@@ -36,14 +36,14 @@ function AdminContent(): JSX.Element {
         <div className="flex gap-2 rounded-lg">
           <button
             onClick={() => navigateTo(PATHS.HOME)}
-            className="font-bold border border-[#DEDEDE] bg-transparent hover:bg-gray-100 text-white py-2.5 rounded text-sm transition-colors w-32"
+            className="font-bold border border-[#DEDEDE] bg-transparent hover:bg-gray-100 text-white py-2 rounded text-sm transition-colors w-32"
           >
             ユーザー画面へ
           </button>
           {!isAuthenticated && (
             <button
               onClick={() => navigateTo(PATHS.ADMIN_LOGIN)}
-              className="font-bold border border-[#DEDEDE] bg-transparent hover:bg-gray-100 text-white py-2.5 rounded text-sm transition-colors w-32"
+              className="font-bold border border-[#DEDEDE] bg-transparent hover:bg-gray-100 text-white py-2 rounded text-sm transition-colors w-32"
             >
               ログイン
             </button>
