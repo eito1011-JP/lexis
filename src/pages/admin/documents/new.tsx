@@ -11,6 +11,7 @@ export default function NewDocumentPage(): React.ReactElement {
   const [publicOption, setPublicOption] = useState('公開する');
   const [hierarchy, setHierarchy] = useState('');
   const [reviewer, setReviewer] = useState('');
+  const [isHierarchyModalOpen, setIsHierarchyModalOpen] = useState(false);
 
   const handleEditorChange = (html: string) => {
     setContent(html);
@@ -63,14 +64,13 @@ export default function NewDocumentPage(): React.ReactElement {
         <h1 className="text-2xl font-bold m-0">新規のドキュメント</h1>
         <div className="ml-auto">
           <button
-            className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200"
+            className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200 border-none"
             onClick={handleSave}
           >
             保存
           </button>
         </div>
       </div>
-
       <div className="mb-6">
         <label className="block mb-2 font-bold">階層</label>
         <div className="relative">
@@ -78,22 +78,14 @@ export default function NewDocumentPage(): React.ReactElement {
             type="text"
             value={hierarchy}
             onChange={e => setHierarchy(e.target.value)}
-            className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-10"
+            className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-24"
             placeholder="日本国憲法"
           />
-          <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
+          <button
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 bg-[#3832A5] text-white rounded hover:bg-opacity-80 text-sm border-none"
+            onClick={() => setIsHierarchyModalOpen(true)}
+          >
+            選択
           </button>
         </div>
       </div>
@@ -145,8 +137,7 @@ export default function NewDocumentPage(): React.ReactElement {
           <textarea
             value={reviewer}
             onChange={e => setReviewer(e.target.value)}
-            className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-10"
-            rows={2}
+            className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-10 resize-none h-[42px] leading-none flex items-center"
             placeholder="sample1@example.com"
           />
           <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
@@ -186,6 +177,79 @@ export default function NewDocumentPage(): React.ReactElement {
           </div>
         </div>
       </div>
+
+      {isHierarchyModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[#1A1A1A] p-6 rounded-lg w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">階層選択</h2>
+              <button
+                onClick={() => setIsHierarchyModalOpen(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="border border-gray-700 rounded p-4">
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+              </div>
+              <div className="border border-gray-700 rounded p-4">
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
+                  日本国憲法
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <button
+                onClick={() => setIsHierarchyModalOpen(false)}
+                className="px-4 py-2 text-white rounded hover:bg-gray-700"
+              >
+                戻る
+              </button>
+              <button
+                onClick={() => setIsHierarchyModalOpen(false)}
+                className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80"
+              >
+                選択
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
