@@ -1,5 +1,5 @@
 import AdminLayout from '@site/src/components/admin/layout';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
@@ -14,6 +14,27 @@ export default function DocumentsPage(): JSX.Element {
   const [folderName, setFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [folders, setFolders] = useState<string[]>([]);
+  const [foldersLoading, setFoldersLoading] = useState(true);
+
+  useEffect(() => {
+    // フォルダー一覧を取得
+    const fetchFolders = async () => {
+      try {
+        const response = await apiClient.get('/admin/documents/folders');
+        console.log('フォルダー取得レスポンス:', response);
+        if (response.folders) {
+          setFolders(response.folders);
+        }
+      } catch (err) {
+        console.error('フォルダー取得エラー:', err);
+      } finally {
+        setFoldersLoading(false);
+      }
+    };
+
+    fetchFolders();
+  }, []);
 
   const handleCreateImageFolder = () => {
     setShowFolderModal(true);
@@ -32,8 +53,10 @@ export default function DocumentsPage(): JSX.Element {
 
     try {
       await apiClient.post('/admin/documents/create-folder', { folderName });
-
-      window.location.reload();
+      
+      // フォルダーリストを更新
+      setFolders(prev => [...prev, folderName]);
+      handleCloseModal();
     } catch (err) {
       console.error('フォルダ作成エラー:', err);
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
@@ -52,6 +75,49 @@ export default function DocumentsPage(): JSX.Element {
       </AdminLayout>
     );
   }
+
+  // フォルダーセクション
+  const renderFolderSection = () => {
+    if (foldersLoading) {
+      return (
+        <div className="flex justify-center py-6">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
+        </div>
+      );
+    }
+
+    if (folders.length === 0) {
+      return <p className="text-gray-400 py-4">フォルダーがありません</p>;
+    }
+
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        {folders.map((folder, index) => (
+          <div 
+            key={index} 
+            className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
+            onClick={() => window.location.href = `/admin/documents/folder/${folder}`}
+          >
+            <svg
+              className="w-5 h-5 mr-2 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+              ></path>
+            </svg>
+            <span>{folder}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <AdminLayout title="ドキュメント管理">
@@ -106,42 +172,7 @@ export default function DocumentsPage(): JSX.Element {
         {/* フォルダーセクション */}
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4">フォルダー</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800">
-              <svg
-                className="w-5 h-5 mr-2 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                ></path>
-              </svg>
-              <span>tutorial-basics</span>
-            </div>
-            <div className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800">
-              <svg
-                className="w-5 h-5 mr-2 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                ></path>
-              </svg>
-              <span>tutorial-extras</span>
-            </div>
-          </div>
+          {renderFolderSection()}
         </div>
 
         {/* フォルダ作成モーダル */}

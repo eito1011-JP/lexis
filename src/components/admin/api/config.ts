@@ -12,6 +12,7 @@ export const API_CONFIG = {
     LOGIN: '/admin/login',
     DOCUMENTS: {
       CREATE_FOLDER: '/admin/documents/create-folder',
+      GET_FOLDERS: '/admin/documents/folders',
     },
   },
 };
