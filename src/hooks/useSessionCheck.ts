@@ -7,11 +7,7 @@ export const useSessionCheck = (
   shouldRedirectIfAuthenticated: boolean = true
 ) => {
   const history = useHistory();
-  const { isAuthenticated, checkSession } = useSession();
-
-  useEffect(() => {
-    checkSession();
-  }, [checkSession]);
+  const { isAuthenticated } = useSession();
 
   useEffect(() => {
     if (shouldRedirectIfAuthenticated && isAuthenticated) {

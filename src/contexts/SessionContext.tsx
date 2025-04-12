@@ -1,17 +1,19 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useCallback, useRef, useEffect } from 'react';
 import { apiClient } from '@site/src/components/admin/api/client';
+
+interface User {
+  userId: string;
+  email: string;
+  lastActivity: string;
+}
 
 interface SessionContextType {
   isAuthenticated: boolean;
-  user: {
-    id: string;
-    email: string;
-    createdAt: string;
-  } | null;
+  user: User | null;
   checkSession: () => Promise<void>;
 }
 
-const SessionContext = createContext<SessionContextType>({
+export const SessionContext = createContext<SessionContextType>({
   isAuthenticated: false,
   user: null,
   checkSession: async () => {},
@@ -21,13 +23,12 @@ export const useSession = () => useContext(SessionContext);
 
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<SessionContextType['user']>(null);
-  const [lastCheck, setLastCheck] = useState<number>(0);
+  const [user, setUser] = useState<User | null>(null);
+  const lastCheckRef = useRef<number>(0);
 
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     const now = Date.now();
-    // 前回のチェックから5秒以上経過している場合のみAPIを呼び出す
-    if (now - lastCheck < 5000) {
+    if (now - lastCheckRef.current < 5000) {
       return;
     }
 
@@ -35,18 +36,26 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const response = await apiClient.get('/auth/session');
       setIsAuthenticated(response.authenticated);
       setUser(response.user || null);
-      setLastCheck(now);
+      lastCheckRef.current = now;
     } catch (err) {
       console.error('セッション確認エラー:', err);
       setIsAuthenticated(false);
       setUser(null);
-      setLastCheck(now);
+      lastCheckRef.current = now;
     }
-  };
+  }, []);
 
+  // アプリケーションの起動時に一度だけセッション確認を行う
   useEffect(() => {
     checkSession();
-  }, []);
+    
+    // オプション: 定期的なセッション確認
+    const interval = setInterval(() => {
+      checkSession();
+    }, 300000); // 5分ごとに確認
+    
+    return () => clearInterval(interval);
+  }, [checkSession]);
 
   return (
     <SessionContext.Provider value={{ isAuthenticated, user, checkSession }}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useHistory } from '@docusaurus/router';
-import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
+import { useSession } from '@site/src/contexts/SessionContext';
 
 const PATHS = {
   HOME: '/',
@@ -23,7 +23,7 @@ export default function AdminPage(): JSX.Element {
  */
 function AdminContent(): JSX.Element {
   const history = useHistory();
-  const { isAuthenticated } = useSessionCheck();
+  const { isAuthenticated } = useSession();
 
   const navigateTo = (path: string) => {
     history.push(path);
