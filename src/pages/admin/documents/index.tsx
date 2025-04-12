@@ -27,6 +27,7 @@ export default function DocumentsPage(): JSX.Element {
   const handleCreateFolder = async () => {
     if (!folderName.trim()) return;
 
+    console.log('フォルダ名:', folderName);
     setIsCreating(true);
     setError(null);
 
