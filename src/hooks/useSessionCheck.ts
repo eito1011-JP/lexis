@@ -7,15 +7,20 @@ export const useSessionCheck = (
   shouldRedirectIfAuthenticated: boolean = true
 ) => {
   const history = useHistory();
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated, isLoading } = useSession();
 
   useEffect(() => {
+    // セッション確認が完了するまでリダイレクトしない
+    if (isLoading) {
+      return;
+    }
+
     if (shouldRedirectIfAuthenticated && isAuthenticated) {
       history.push(redirectPath);
     } else if (!shouldRedirectIfAuthenticated && !isAuthenticated) {
       history.push(redirectPath);
     }
-  }, [isAuthenticated, history, redirectPath, shouldRedirectIfAuthenticated]);
+  }, [isAuthenticated, isLoading, history, redirectPath, shouldRedirectIfAuthenticated]);
 
-  return { isAuthenticated };
+  return { isAuthenticated, isLoading };
 };

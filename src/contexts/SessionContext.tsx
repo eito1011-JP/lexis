@@ -11,12 +11,14 @@ interface SessionContextType {
   isAuthenticated: boolean;
   user: User | null;
   checkSession: () => Promise<void>;
+  isLoading: boolean;
 }
 
 export const SessionContext = createContext<SessionContextType>({
   isAuthenticated: false,
   user: null,
   checkSession: async () => {},
+  isLoading: true,
 });
 
 export const useSession = () => useContext(SessionContext);
@@ -24,6 +26,7 @@ export const useSession = () => useContext(SessionContext);
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const lastCheckRef = useRef<number>(0);
 
   const checkSession = useCallback(async () => {
@@ -31,6 +34,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (now - lastCheckRef.current < 5000) {
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const response = await apiClient.get('/auth/session');
@@ -42,6 +47,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setIsAuthenticated(false);
       setUser(null);
       lastCheckRef.current = now;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -58,7 +65,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [checkSession]);
 
   return (
-    <SessionContext.Provider value={{ isAuthenticated, user, checkSession }}>
+    <SessionContext.Provider value={{ isAuthenticated, user, checkSession, isLoading }}>
       {children}
     </SessionContext.Provider>
   );

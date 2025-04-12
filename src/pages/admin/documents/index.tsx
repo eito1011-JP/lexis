@@ -7,7 +7,7 @@ import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
-  useSessionCheck('/admin/login', false);
+  const { isLoading } = useSessionCheck('/admin/login', false);
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -26,6 +26,17 @@ export default function DocumentsPage(): JSX.Element {
 
     handleCloseModal();
   };
+
+  // セッション確認中はローディング表示
+  if (isLoading) {
+    return (
+      <AdminLayout title="読み込み中...">
+        <div className="flex flex-col items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="ドキュメント管理">
@@ -58,7 +69,7 @@ export default function DocumentsPage(): JSX.Element {
               <button
                 className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md hover:bg-gray-100"
                 onClick={() => {
-                  window.location.href = '/admin/documents/create';
+                  window.location.href = '/admin/documents/new';
                 }}
               >
                 新規ドキュメント作成

@@ -17,7 +17,7 @@ export default function LoginPage(): ReactElement {
   const history = useHistory();
   const { checkSession } = useSession();
 
-  useSessionCheck('/admin/documents', true);
+  const { isLoading } = useSessionCheck('/admin/documents', true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,6 +53,19 @@ export default function LoginPage(): ReactElement {
       setLoading(false);
     }
   };
+
+  // セッション確認中はローディング表示
+  if (isLoading) {
+    return (
+      <AdminLayout title="読み込み中..." sidebar={false}>
+        <div className="bg-black min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout title="ログイン" sidebar={false}>
