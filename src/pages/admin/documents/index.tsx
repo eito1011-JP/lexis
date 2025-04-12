@@ -53,7 +53,7 @@ export default function DocumentsPage(): JSX.Element {
 
     try {
       await apiClient.post('/admin/documents/create-folder', { folderName });
-      
+
       // フォルダーリストを更新
       setFolders(prev => [...prev, folderName]);
       handleCloseModal();
@@ -93,10 +93,10 @@ export default function DocumentsPage(): JSX.Element {
     return (
       <div className="grid grid-cols-2 gap-4">
         {folders.map((folder, index) => (
-          <div 
-            key={index} 
+          <div
+            key={index}
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
-            onClick={() => window.location.href = `/admin/documents/folder/${folder}`}
+            onClick={() => (window.location.href = `/admin/documents/folder/${folder}`)}
           >
             <svg
               className="w-5 h-5 mr-2 text-gray-400"
