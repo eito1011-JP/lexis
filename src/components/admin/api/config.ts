@@ -10,5 +10,8 @@ export const API_CONFIG = {
   ENDPOINTS: {
     SIGNUP: '/admin/signup',
     LOGIN: '/admin/login',
+    DOCUMENTS: {
+      CREATE_FOLDER: '/admin/documents/create-folder',
+    },
   },
 };

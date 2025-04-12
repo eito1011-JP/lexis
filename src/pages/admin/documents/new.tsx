@@ -132,7 +132,7 @@ export default function NewDocumentPage(): React.ReactElement {
       </div>
 
       <div className="mb-6">
-        <label className="block mb-2 font-bold">レビュアー</label>
+        <label className="block mb-2 font-bold">レビュー担当者</label>
         <div className="relative">
           <textarea
             value={reviewer}

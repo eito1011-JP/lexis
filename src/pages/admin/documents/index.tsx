@@ -2,6 +2,8 @@ import AdminLayout from '@site/src/components/admin/layout';
 import React, { useState } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
+import { apiClient } from '@site/src/components/admin/api/client';
+import { API_CONFIG } from '@site/src/components/admin/api/config';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
@@ -11,6 +13,8 @@ export default function DocumentsPage(): JSX.Element {
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderName, setFolderName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreateImageFolder = () => {
     setShowFolderModal(true);
@@ -21,10 +25,25 @@ export default function DocumentsPage(): JSX.Element {
     setFolderName('');
   };
 
-  const handleCreateFolder = () => {
-    console.log('フォルダを作成:', folderName);
-
-    handleCloseModal();
+  const handleCreateFolder = async () => {
+    if (!folderName.trim()) return;
+    
+    setIsCreating(true);
+    setError(null);
+    
+    try {
+      const response = await apiClient.post(
+        '/admin/documents/create-folder',
+        { folderName }
+      );
+      
+      window.location.reload();
+    } catch (err) {
+      console.error('フォルダ作成エラー:', err);
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   // セッション確認中はローディング表示
@@ -132,48 +151,37 @@ export default function DocumentsPage(): JSX.Element {
         {/* フォルダ作成モーダル */}
         {showFolderModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-900 rounded-lg p-6 w-full max-w-md border border-gray-800">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">フォルダを作成</h3>
-                <button onClick={handleCloseModal} className="text-gray-400 hover:text-white">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <p className="text-gray-400 mb-4">フォルダー名を入力してください</p>
+            <div className="bg-[#0A0A0A] rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold text-center mb-12">ドキュメントフォルダを作成</h3>
+              {error && (
+                <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
+                  {error}
+                </div>
+              )}
               <input
                 type="text"
                 value={folderName}
                 onChange={e => setFolderName(e.target.value)}
-                className="w-full p-2 mb-4 bg-black border border-gray-700 rounded text-white"
-                placeholder="フォルダ名を入力"
+                className="w-full p-4 mb-8 bg-transparent border border-gray-700 rounded-md text-white"
+                placeholder="フォルダ名"
                 autoFocus
               />
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
-                >
-                  キャンセル
-                </button>
+              <div className="flex flex-col gap-4 items-center">
                 <button
                   onClick={handleCreateFolder}
-                  className="px-4 py-2 bg-white text-black rounded hover:bg-gray-200"
-                  disabled={!folderName.trim()}
+                  className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center"
+                  disabled={!folderName.trim() || isCreating}
                 >
-                  作成
+                  {isCreating ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                  ) : '作成'}
+                </button>
+                <button
+                  onClick={handleCloseModal}
+                  className="w-48 py-3 bg-gray-500 text-white rounded-md hover:bg-opacity-90"
+                  disabled={isCreating}
+                >
+                  戻る
                 </button>
               </div>
             </div>
