@@ -1,20 +1,34 @@
 import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
+import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 import React, { useEffect, useRef, useState } from 'react';
 
 interface TiptapEditorProps {
   initialContent: string;
   onChange: (html: string) => void;
+  placeholder?: string;
 }
 
-const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onChange }) => {
+const TiptapEditor: React.FC<TiptapEditorProps> = ({
+  initialContent,
+  onChange,
+  placeholder = 'ここにドキュメントを作成してください',
+}) => {
   const [lineCount, setLineCount] = useState<number>(1);
   const editorRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
-    extensions: [Document, Paragraph, Text],
+    extensions: [
+      Document,
+      Paragraph,
+      Text,
+      Placeholder.configure({
+        placeholder,
+        emptyEditorClass: 'is-editor-empty',
+      }),
+    ],
     content: initialContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
@@ -60,6 +74,13 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({ initialContent, onChange })
           padding: 0;
           line-height: 1.5rem;
           min-height: 1.5rem;
+        }
+        .ProseMirror.is-editor-empty:first-child::before {
+          content: attr(data-placeholder);
+          float: left;
+          color: #666;
+          pointer-events: none;
+          height: 0;
         }
       `}</style>
     </div>

@@ -7,10 +7,10 @@ export default function NewDocumentPage(): React.ReactElement {
   const { isLoading } = useSessionCheck('/admin/login', false);
 
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('<p>ここにドキュメントを作成してください</p>');
+  const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
-  const [hierarchy, setHierarchy] = useState('日本国憲法');
-  const [reviewer, setReviewer] = useState('eito-morohashi@nexis-inc.com\neito.55855@gmail.com');
+  const [hierarchy, setHierarchy] = useState('');
+  const [reviewer, setReviewer] = useState('');
 
   const handleEditorChange = (html: string) => {
     setContent(html);
@@ -79,6 +79,7 @@ export default function NewDocumentPage(): React.ReactElement {
             value={hierarchy}
             onChange={e => setHierarchy(e.target.value)}
             className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-10"
+            placeholder="日本国憲法"
           />
           <button className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white">
             <svg
@@ -146,6 +147,7 @@ export default function NewDocumentPage(): React.ReactElement {
             onChange={e => setReviewer(e.target.value)}
             className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-10"
             rows={2}
+            placeholder="sample1@example.com"
           />
           <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
             <svg
@@ -170,7 +172,11 @@ export default function NewDocumentPage(): React.ReactElement {
         <div>
           <label className="block mb-2 font-bold">本文</label>
           <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
-            <TiptapEditor initialContent={content} onChange={handleEditorChange} />
+            <TiptapEditor
+              initialContent=""
+              onChange={handleEditorChange}
+              placeholder="ここにドキュメントを作成してください"
+            />
           </div>
         </div>
         <div>
