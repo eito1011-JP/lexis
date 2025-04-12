@@ -8,6 +8,8 @@ export const API_ERRORS = {
       INVALID_CREDENTIALS: 'メールアドレスまたはパスワードが正しくありません',
       UNAUTHORIZED: '認証が必要です',
       SESSION_EXPIRED: 'セッションの有効期限が切れました。再度ログインしてください',
+      NO_SESSION: 'セッションがありません',
+      INVALID_SESSION: '無効なセッションです',
     },
     
     // バリデーション関連

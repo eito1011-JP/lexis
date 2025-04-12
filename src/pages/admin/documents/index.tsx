@@ -27,12 +27,11 @@ export default function DocumentsPage(): JSX.Element {
   const handleCreateFolder = async () => {
     if (!folderName.trim()) return;
 
-    console.log('フォルダ名:', folderName);
     setIsCreating(true);
     setError(null);
 
     try {
-      const response = await apiClient.post('/admin/documents/create-folder', { folderName });
+      await apiClient.post('/admin/documents/create-folder', { folderName });
 
       window.location.reload();
     } catch (err) {
