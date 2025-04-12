@@ -5,6 +5,7 @@ import React, { useState, FormEvent, ReactElement } from 'react';
 import { useHistory } from '@docusaurus/router';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { Toast } from '@site/src/components/admin/Toast';
+import { useSession } from '@site/src/contexts/SessionContext';
 
 export default function AdminPage(): ReactElement {
   const [email, setEmail] = useState('');
@@ -14,6 +15,7 @@ export default function AdminPage(): ReactElement {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const history = useHistory();
+  const { checkSession } = useSession();
 
   // すでにログインしている場合はダッシュボードにリダイレクト
   useSessionCheck('/admin/documents', true);
@@ -36,6 +38,10 @@ export default function AdminPage(): ReactElement {
       setEmail('');
       setPassword('');
 
+      // セッション状態を更新
+      await checkSession();
+
+      // 状態の更新を待ってからリダイレクト
       setTimeout(() => {
         history.push('/admin/documents');
       }, 1000);
