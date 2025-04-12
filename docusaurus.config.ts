@@ -56,7 +56,7 @@ const config: Config = {
           label: 'Tutorial',
         },
         {
-          href: '/admin/docs',
+          href: '/admin/documents',
           label: '管理画面',
           position: 'right',
         },

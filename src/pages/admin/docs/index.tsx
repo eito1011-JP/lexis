@@ -1,5 +1,6 @@
 import AdminLayout from '@site/src/components/admin/layout';
 import React, { useState } from 'react';
+import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 
 /**
@@ -55,7 +56,7 @@ export default function AdminPage(): JSX.Element {
                 </svg>
               </button>
               <button
-                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md hover:bg-gray-100"
                 onClick={() => {
                   window.location.href = '/admin/docs/create';
                 }}

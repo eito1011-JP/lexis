@@ -48,12 +48,12 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // アプリケーションの起動時に一度だけセッション確認を行う
   useEffect(() => {
     checkSession();
-    
+
     // オプション: 定期的なセッション確認
     const interval = setInterval(() => {
       checkSession();
     }, 300000); // 5分ごとに確認
-    
+
     return () => clearInterval(interval);
   }, [checkSession]);
 
