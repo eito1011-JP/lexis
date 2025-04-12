@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
-import { API_CONFIG } from '@site/src/components/admin/api/config';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
@@ -27,16 +26,13 @@ export default function DocumentsPage(): JSX.Element {
 
   const handleCreateFolder = async () => {
     if (!folderName.trim()) return;
-    
+
     setIsCreating(true);
     setError(null);
-    
+
     try {
-      const response = await apiClient.post(
-        '/admin/documents/create-folder',
-        { folderName }
-      );
-      
+      const response = await apiClient.post('/admin/documents/create-folder', { folderName });
+
       window.location.reload();
     } catch (err) {
       console.error('フォルダ作成エラー:', err);
@@ -150,7 +146,7 @@ export default function DocumentsPage(): JSX.Element {
 
         {/* フォルダ作成モーダル */}
         {showFolderModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-[#0A0A0A] rounded-lg p-6 w-full max-w-md">
               <h3 className="text-xl font-bold text-center mb-12">ドキュメントフォルダを作成</h3>
               {error && (
@@ -174,7 +170,9 @@ export default function DocumentsPage(): JSX.Element {
                 >
                   {isCreating ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                  ) : '作成'}
+                  ) : (
+                    '作成'
+                  )}
                 </button>
                 <button
                   onClick={handleCloseModal}

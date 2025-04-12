@@ -179,7 +179,7 @@ export default function NewDocumentPage(): React.ReactElement {
       </div>
 
       {isHierarchyModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-[#B1B1B1]/50 flex items-center justify-center z-50">
           <div className="bg-[#1A1A1A] p-6 rounded-lg w-full max-w-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">階層選択</h2>

@@ -43,12 +43,12 @@ function AdminContent(): React.ReactElement {
 /**
  * 認証済みユーザー向けヘッダーコンポーネント
  */
-function AuthenticatedHeader({ 
-  email, 
-  navigateTo 
-}: { 
-  email?: string; 
-  navigateTo: (path: string) => void 
+function AuthenticatedHeader({
+  email,
+  navigateTo,
+}: {
+  email?: string;
+  navigateTo: (path: string) => void;
 }): React.ReactElement {
   return (
     <header className="sticky top-0 z-10 bg-[#0A0A0A] dark:bg-gray-800 text-white shadow-md">
@@ -71,10 +71,10 @@ function AuthenticatedHeader({
 /**
  * 未認証ユーザー向けヘッダーコンポーネント
  */
-function UnauthenticatedHeader({ 
-  navigateTo 
-}: { 
-  navigateTo: (path: string) => void 
+function UnauthenticatedHeader({
+  navigateTo,
+}: {
+  navigateTo: (path: string) => void;
 }): React.ReactElement {
   return (
     <header className="sticky top-0 z-10 bg-[#0A0A0A] dark:bg-gray-800 text-white shadow-md">
