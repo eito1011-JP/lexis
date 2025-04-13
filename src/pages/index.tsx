@@ -1,3 +1,4 @@
+import React from 'react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import clsx from 'clsx';
@@ -83,38 +84,30 @@ function HomepageHeader() {
           <Link className="button button--secondary button--lg mr-4" to="/docs/intro">
             Docusaurus Tutorial - 5min ⏱️
           </Link>
-          
+
           {/* 編集開始ボタン */}
-          <button
-            className="button button--primary button--lg"
-            onClick={handleStartEditing}
-          >
+          <button className="button button--primary button--lg" onClick={handleStartEditing}>
             編集を開始
           </button>
         </div>
-        
-        {statusMessage && (
-          <div className="alert alert--success mt-4">
-            {statusMessage}
-          </div>
-        )}
-        
-        {error && (
-          <div className="alert alert--danger mt-4">
-            {error}
-          </div>
-        )}
-        
+
+        {statusMessage && <div className="alert alert--success mt-4">{statusMessage}</div>}
+
+        {error && <div className="alert alert--danger mt-4">{error}</div>}
+
         {/* ブランチ作成確認モーダル */}
         {showBranchModal && (
-          <div className="modal-backdrop fade show" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            className="modal-backdrop fade show"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
             <div className="modal-dialog">
               <div className="modal-content">
                 <div className="modal-header">
                   <h5 className="modal-title">差分を作成しますか？</h5>
-                  <button 
-                    type="button" 
-                    className="close" 
+                  <button
+                    type="button"
+                    className="close"
                     onClick={() => setShowBranchModal(false)}
                     disabled={isBranchCreating}
                   >
@@ -125,17 +118,17 @@ function HomepageHeader() {
                   <p>現在のブランチには変更がありません。新しい作業ブランチを作成しますか？</p>
                 </div>
                 <div className="modal-footer">
-                  <button 
-                    type="button" 
-                    className="button button--secondary" 
+                  <button
+                    type="button"
+                    className="button button--secondary"
                     onClick={() => setShowBranchModal(false)}
                     disabled={isBranchCreating}
                   >
                     キャンセル
                   </button>
-                  <button 
-                    type="button" 
-                    className="button button--primary" 
+                  <button
+                    type="button"
+                    className="button button--primary"
                     onClick={handleCreateBranch}
                     disabled={isBranchCreating}
                   >

@@ -70,7 +70,8 @@ router.post('/create-branch', async (req, res) => {
  * 現在のブランチからPull Requestを作成するエンドポイント
  */
 router.post('/create-pr', async (req, res) => {
-  const { title = '更新内容の提出', description = 'このPRはハンドブックの更新を含みます。' } = req.body;
+  const { title = '更新内容の提出', description = 'このPRはハンドブックの更新を含みます。' } =
+    req.body;
 
   try {
     // 現在のブランチ名を取得
@@ -111,7 +112,8 @@ router.post('/create-pr', async (req, res) => {
       res.status(202).json({
         success: true,
         partial: true,
-        message: 'コードの変更はプッシュされましたが、PRの作成に失敗しました。GitHubウェブサイトから手動でPRを作成してください。',
+        message:
+          'コードの変更はプッシュされましたが、PRの作成に失敗しました。GitHubウェブサイトから手動でPRを作成してください。',
         branch: currentBranch,
       });
     }

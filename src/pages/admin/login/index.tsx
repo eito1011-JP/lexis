@@ -2,7 +2,7 @@ import { apiClient } from '@site/src/components/admin/api/client';
 import { API_CONFIG } from '@site/src/components/admin/api/config';
 import AdminLayout from '@site/src/components/admin/layout';
 import React, { useState, FormEvent, ReactElement } from 'react';
-import { useHistory } from '@docusaurus/router';
+import { useNavigate } from 'react-router-dom';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { Toast } from '@site/src/components/admin/Toast';
 import { useSession } from '@site/src/contexts/SessionContext';
@@ -14,7 +14,7 @@ export default function LoginPage(): ReactElement {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const history = useHistory();
+  const navigate = useNavigate();
   const { checkSession } = useSession();
 
   const { isLoading } = useSessionCheck('/admin/documents', true);
@@ -42,7 +42,7 @@ export default function LoginPage(): ReactElement {
 
       // 状態の更新を待ってからリダイレクト
       setTimeout(() => {
-        history.push('/admin/documents');
+        navigate('/admin/documents');
       }, 1000);
     } catch (err) {
       console.error('Error:', err);

@@ -154,21 +154,23 @@ export default function DocumentsPage(): JSX.Element {
   // 差分を提出するハンドラー
   const handleSubmitDiff = async () => {
     if (isSubmitting) return;
-    
+
     setSubmitSuccess(null);
     setSubmitError(null);
     setIsSubmitting(true);
-    
+
     try {
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.GIT.CREATE_PR, {
         title: '更新内容の提出',
-        description: 'このPRはハンドブックの更新を含みます。'
+        description: 'このPRはハンドブックの更新を含みます。',
       });
-      
+
       if (response.success) {
         setSubmitSuccess('差分が正常に提出されました。Pull Requestが作成されました。');
       } else if (response.partial) {
-        setSubmitSuccess('変更は保存されましたが、Pull Requestの自動作成に失敗しました。GitHubから手動で作成してください。');
+        setSubmitSuccess(
+          '変更は保存されましたが、Pull Requestの自動作成に失敗しました。GitHubから手動で作成してください。'
+        );
       } else {
         setSubmitError('差分の提出に失敗しました。');
       }
@@ -269,17 +271,17 @@ export default function DocumentsPage(): JSX.Element {
           {submitSuccess && (
             <div className="mb-4 p-3 bg-green-900/50 border border-green-800 rounded-md text-green-200">
               <div className="flex items-center">
-                <svg 
-                  className="w-5 h-5 mr-2 text-green-300" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className="w-5 h-5 mr-2 text-green-300"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M5 13l4 4L19 7" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
                   />
                 </svg>
                 <span>{submitSuccess}</span>
@@ -291,17 +293,17 @@ export default function DocumentsPage(): JSX.Element {
           {submitError && (
             <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
               <div className="flex items-center">
-                <svg 
-                  className="w-5 h-5 mr-2 text-red-300" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className="w-5 h-5 mr-2 text-red-300"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth="2" 
-                    d="M6 18L18 6M6 6l12 12" 
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
                   />
                 </svg>
                 <span>{submitError}</span>

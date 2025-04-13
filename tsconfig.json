@@ -2,9 +2,10 @@
   // This file is not used in compilation. It is here just for a nice editor experience.
   "compilerOptions": {
     "baseUrl": ".",
-    "module": "esnext",
+    "module": "node16",
     "jsx": "react",
     "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node16",
     "paths": {
       "@site/*": ["./*"]
     }
