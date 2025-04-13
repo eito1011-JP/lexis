@@ -66,4 +66,62 @@ router.post('/create-branch', async (req, res) => {
   }
 });
 
+/**
+ * 現在のブランチからPull Requestを作成するエンドポイント
+ */
+router.post('/create-pr', async (req, res) => {
+  const { title = '更新内容の提出', description = 'このPRはハンドブックの更新を含みます。' } = req.body;
+
+  try {
+    // 現在のブランチ名を取得
+    const { stdout: branchStdout } = await execAsync('git branch --show-current', { cwd: rootDir });
+    const currentBranch = branchStdout.trim();
+
+    if (currentBranch === 'main' || currentBranch === 'master') {
+      return res.status(400).json({
+        success: false,
+        error: 'メインブランチからのPRは作成できません',
+      });
+    }
+
+    // 変更をコミット
+    await execAsync('git add .', { cwd: rootDir });
+    await execAsync(`git commit -m "${title}"`, { cwd: rootDir });
+
+    // リモートにプッシュ
+    await execAsync(`git push -u origin ${currentBranch}`, { cwd: rootDir });
+
+    // GitHub CLI を使用してPRを作成 (GitHub CLIがインストールされていることが前提)
+    try {
+      await execAsync(
+        `gh pr create --base main --head ${currentBranch} --title "${title}" --body "${description}"`,
+        { cwd: rootDir }
+      );
+      res.json({
+        success: true,
+        message: 'Pull Requestが作成されました',
+        pullRequest: {
+          branch: currentBranch,
+          title,
+        },
+      });
+    } catch (prError) {
+      console.error('PR作成エラー:', prError);
+      // PRの作成に失敗しても、変更はプッシュされている
+      res.status(202).json({
+        success: true,
+        partial: true,
+        message: 'コードの変更はプッシュされましたが、PRの作成に失敗しました。GitHubウェブサイトから手動でPRを作成してください。',
+        branch: currentBranch,
+      });
+    }
+  } catch (error) {
+    console.error('Git PR creation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Pull Requestの作成に失敗しました',
+    });
+  }
+});
+
 export default router;

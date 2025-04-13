@@ -4,6 +4,7 @@ import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
 import { useSession } from '@site/src/contexts/SessionContext';
+import { API_CONFIG } from '@site/src/components/admin/api/config';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
@@ -22,6 +23,9 @@ export default function DocumentsPage(): JSX.Element {
   const [isBranchCreating, setIsBranchCreating] = useState(false);
   const [branchError, setBranchError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     // フォルダー一覧を取得
@@ -147,6 +151,35 @@ export default function DocumentsPage(): JSX.Element {
     }
   };
 
+  // 差分を提出するハンドラー
+  const handleSubmitDiff = async () => {
+    if (isSubmitting) return;
+    
+    setSubmitSuccess(null);
+    setSubmitError(null);
+    setIsSubmitting(true);
+    
+    try {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.GIT.CREATE_PR, {
+        title: '更新内容の提出',
+        description: 'このPRはハンドブックの更新を含みます。'
+      });
+      
+      if (response.success) {
+        setSubmitSuccess('差分が正常に提出されました。Pull Requestが作成されました。');
+      } else if (response.partial) {
+        setSubmitSuccess('変更は保存されましたが、Pull Requestの自動作成に失敗しました。GitHubから手動で作成してください。');
+      } else {
+        setSubmitError('差分の提出に失敗しました。');
+      }
+    } catch (err) {
+      console.error('差分提出エラー:', err);
+      setSubmitError(err instanceof Error ? err.message : '予期しないエラーが発生しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // セッション確認中はローディング表示
   if (isLoading) {
     return (
@@ -232,6 +265,50 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           )}
 
+          {/* 差分提出の成功メッセージ */}
+          {submitSuccess && (
+            <div className="mb-4 p-3 bg-green-900/50 border border-green-800 rounded-md text-green-200">
+              <div className="flex items-center">
+                <svg 
+                  className="w-5 h-5 mr-2 text-green-300" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth="2" 
+                    d="M5 13l4 4L19 7" 
+                  />
+                </svg>
+                <span>{submitSuccess}</span>
+              </div>
+            </div>
+          )}
+
+          {/* 差分提出のエラーメッセージ */}
+          {submitError && (
+            <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
+              <div className="flex items-center">
+                <svg 
+                  className="w-5 h-5 mr-2 text-red-300" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth="2" 
+                    d="M6 18L18 6M6 6l12 12" 
+                  />
+                </svg>
+                <span>{submitError}</span>
+              </div>
+            </div>
+          )}
+
           {/* 検索とアクションエリア */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 ml-auto">
@@ -279,6 +356,20 @@ export default function DocumentsPage(): JSX.Element {
         <div className="mt-8">
           <h2 className="text-xl font-bold mb-4">フォルダー</h2>
           {renderFolderSection()}
+        </div>
+
+        {/* 差分を提出するボタン（画面下部に固定） */}
+        <div className="fixed bottom-8 right-8">
+          <button
+            onClick={handleSubmitDiff}
+            disabled={isSubmitting}
+            className="border-none px-6 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center shadow-lg"
+          >
+            {isSubmitting ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+            ) : null}
+            差分を提出する
+          </button>
         </div>
 
         {/* フォルダ作成モーダル */}
