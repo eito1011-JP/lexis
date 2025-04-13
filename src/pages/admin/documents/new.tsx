@@ -223,9 +223,10 @@ export default function NewDocumentPage(): React.ReactElement {
           <input
             type="text"
             value={hierarchy}
-            onChange={e => setHierarchy(e.target.value)}
-            className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-24"
-            placeholder="日本国憲法"
+            readOnly
+            className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-24 cursor-pointer"
+            placeholder="階層を選択してください"
+            onClick={() => setIsHierarchyModalOpen(true)}
           />
           <button
             className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 bg-[#3832A5] text-white rounded hover:bg-opacity-80 text-sm border-none"
