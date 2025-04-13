@@ -28,7 +28,7 @@ export const sessionService = {
           sql: 'UPDATE sessions SET sess = ?, expired_at = ? WHERE user_id = ?',
           args: [JSON.stringify(sessionData), expireAt.toISOString(), userId],
         });
-        
+
         return existingSession.rows[0].id as string;
       } else {
         // 新規セッションの作成
@@ -36,7 +36,7 @@ export const sessionService = {
           sql: 'INSERT INTO sessions (id, user_id, sess, expired_at) VALUES (?, ?, ?, ?)',
           args: [sessionId, userId, JSON.stringify(sessionData), expireAt.toISOString()],
         });
-        
+
         return sessionId;
       }
     } catch (error) {
