@@ -12,6 +12,7 @@ import usersRouter from './routes/users';
 import { checkDiffRouter } from './routes/git/check-diff';
 import { createBranchRouter } from './routes/git/create-branch';
 import { createPRRouter } from './routes/git/create-pr';
+import { getCurrentBranchRouter } from './routes/git/get-current-branch';
 
 // Expressアプリの初期化
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/git', checkDiffRouter);
 app.use('/api/admin/git', createBranchRouter);
 app.use('/api/admin/git', createPRRouter);
+app.use('/api/admin/git', getCurrentBranchRouter);
 
 // セッション確認
 app.get('/api/auth/session', async (req, res) => {
@@ -97,7 +99,7 @@ function startServer() {
 }
 
 // エントリーポイント
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (require.main === module) {
   startServer();
 }
 
