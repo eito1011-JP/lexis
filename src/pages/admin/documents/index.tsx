@@ -11,7 +11,7 @@ import { API_CONFIG } from '@site/src/components/admin/api/config';
  */
 export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/admin/login', false);
-  const { user } = useSession();
+  const { user, updateActiveBranch } = useSession();
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -100,6 +100,11 @@ export default function DocumentsPage(): JSX.Element {
         });
 
         if (response && response.success) {
+          // ブランチ情報をセッションに更新
+          if (response.branch) {
+            updateActiveBranch(response.branch);
+          }
+          
           // 成功したら新規ドキュメント作成ページへ遷移
           window.location.href = '/admin/documents/new';
         } else {

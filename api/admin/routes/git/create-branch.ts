@@ -2,6 +2,7 @@ import express from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { sessionService } from '../../../../src/services/sessionService';
+import { branchService } from '../../../../src/services/branchService';
 
 const execAsync = promisify(exec);
 const router = express.Router();
@@ -45,11 +46,29 @@ router.post('/create-branch', async (req, res) => {
         // 新しいブランチを作成して切り替え
         await execAsync(`git checkout -b ${branchName}`);
 
-        return res.json({ success: true, branchName });
+        // データベースにブランチ情報を保存
+        const branchRecord = await branchService.createBranch(user.userId, branchName);
+
+        if (!branchRecord) {
+          console.error('ブランチ情報のデータベース保存に失敗しました');
+        }
+
+        return res.json({ 
+          success: true, 
+          branchName,
+          branch: branchRecord 
+        });
       } catch (gitError) {
         console.error('Git操作エラー:', gitError);
         // Gitコマンドが失敗した場合でもブランチ作成に成功したと返す
-        return res.json({ success: true, branchName, mock: true });
+        // 開発モード用のモックレスポンス
+        const mockBranch = await branchService.createBranch(user.userId, branchName);
+        return res.json({ 
+          success: true, 
+          branchName, 
+          mock: true,
+          branch: mockBranch
+        });
       }
     } catch (error) {
       console.error('ブランチ作成エラー:', error);
