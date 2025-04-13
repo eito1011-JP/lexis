@@ -1,5 +1,5 @@
 import React from 'react';
-import { useHistory } from '@docusaurus/router';
+import { useHistory } from 'react-router-dom';
 import { useSession } from '@site/src/contexts/SessionContext';
 
 const PATHS = {
