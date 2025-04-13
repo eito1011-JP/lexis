@@ -90,28 +90,58 @@ export default function NewDocumentPage(): React.ReactElement {
       <div className="grid grid-cols-2 gap-4">
         <div className="p-4">
           {leftColumnFolders.map((folder, index) => (
-            <button 
-              key={`left-${index}`}
-              className={`w-full text-left p-2 rounded mb-1 ${
-                selectedFolder === folder ? 'bg-[#3832A5]' : 'hover:bg-[#3832A5]/50'
-              }`}
-              onClick={() => handleSelectFolder(folder)}
-            >
-              {folder}
-            </button>
+            <div key={`left-${index}`} className="flex items-center mb-4">
+              <button 
+                className={`w-full text-left p-2 rounded flex items-center ${
+                  selectedFolder === folder ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]' : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
+                } border border-solid border-2`}
+                onClick={() => handleSelectFolder(folder)}
+              >
+                <svg
+                  className="w-5 h-5 mr-2 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  ></path>
+                </svg>
+                {folder}
+              </button>
+            </div>
           ))}
         </div>
         <div className="p-4">
           {rightColumnFolders.map((folder, index) => (
-            <button 
-              key={`right-${index}`}
-              className={`w-full text-left p-2 rounded mb-1 ${
-                selectedFolder === folder ? 'bg-[#3832A5]' : 'hover:bg-[#3832A5]/50'
-              }`}
-              onClick={() => handleSelectFolder(folder)}
-            >
-              {folder}
-            </button>
+            <div key={`right-${index}`} className="flex items-center mb-4">
+              <button 
+                className={`w-full text-left p-2 rounded flex items-center ${
+                  selectedFolder === folder ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]' : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
+                } border border-solid border-3`}
+                onClick={() => handleSelectFolder(folder)}
+              >
+                <svg
+                  className="w-5 h-5 mr-2 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                  ></path>
+                </svg>
+                {folder}
+              </button>
+            </div>
           ))}
         </div>
       </div>
