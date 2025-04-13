@@ -130,9 +130,8 @@ export default function DocumentsPage(): JSX.Element {
       try {
         const response = await apiClient.get('/admin/git/check-diff');
 
-        console.log('response', response);
         if (response && response.hasDiff) {
-          // 変更がある場合は直接遷移
+          // 変更がある場合は直接遷移（モーダルを表示しない）
           window.location.href = '/admin/documents/new';
         } else {
           // 変更がない場合はモーダルを表示
