@@ -89,8 +89,9 @@ export default function DocumentsPage(): JSX.Element {
     try {
       // タイムスタンプの作成
       const timestamp = Math.floor(Date.now() / 1000);
+      const formattedDate = new Date(timestamp * 1000).toISOString().slice(0, 10).replace(/-/g, '');
       const email = user?.email || 'unknown';
-      const branchName = `feature/${email}_${timestamp}`;
+      const branchName = `feature/${email}_${formattedDate}`;
 
       try {
         const response = await apiClient.post('/admin/git/create-branch', {
