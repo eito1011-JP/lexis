@@ -16,12 +16,29 @@ export const sessionService = {
     };
 
     try {
-      await db.execute({
-        sql: 'INSERT INTO sessions (id, user_id, sess, expired_at) VALUES (?, ?, ?, ?)',
-        args: [sessionId, userId, JSON.stringify(sessionData), expireAt.toISOString()],
+      // 既存のセッションを確認
+      const existingSession = await db.execute({
+        sql: 'SELECT id FROM sessions WHERE user_id = ?',
+        args: [userId],
       });
 
-      return sessionId;
+      if (existingSession.rows.length > 0) {
+        // 既存のセッションがある場合は更新
+        await db.execute({
+          sql: 'UPDATE sessions SET sess = ?, expired_at = ? WHERE user_id = ?',
+          args: [JSON.stringify(sessionData), expireAt.toISOString(), userId],
+        });
+        
+        return existingSession.rows[0].id as string;
+      } else {
+        // 新規セッションの作成
+        await db.execute({
+          sql: 'INSERT INTO sessions (id, user_id, sess, expired_at) VALUES (?, ?, ?, ?)',
+          args: [sessionId, userId, JSON.stringify(sessionData), expireAt.toISOString()],
+        });
+        
+        return sessionId;
+      }
     } catch (error) {
       console.error('セッション作成エラー:', error);
       throw error;
