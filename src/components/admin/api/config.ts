@@ -14,5 +14,8 @@ export const API_CONFIG = {
       CREATE_FOLDER: '/admin/documents/create-folder',
       GET_FOLDERS: '/admin/documents/folders',
     },
+    USERS: {
+      GET_ALL: '/admin/users',
+    },
   },
 };

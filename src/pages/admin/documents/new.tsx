@@ -4,6 +4,12 @@ import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import TiptapEditor from '@site/src/components/admin/editor/TiptapEditor';
 import { apiClient } from '@site/src/components/admin/api/client';
 
+// ユーザー型定義を追加
+interface User {
+  id: string;
+  email: string;
+}
+
 export default function NewDocumentPage(): React.ReactElement {
   const { isLoading } = useSessionCheck('/admin/login', false);
 
@@ -16,6 +22,9 @@ export default function NewDocumentPage(): React.ReactElement {
   const [folders, setFolders] = useState<string[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  // ユーザー関連の状態を追加
+  const [users, setUsers] = useState<User[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
 
   useEffect(() => {
     // フォルダー一覧を取得
@@ -34,6 +43,23 @@ export default function NewDocumentPage(): React.ReactElement {
     };
 
     fetchFolders();
+
+    // ユーザー一覧を取得
+    const fetchUsers = async () => {
+      try {
+        const response = await apiClient.get('/admin/users');
+        console.log('ユーザー取得レスポンス:', response);
+        if (response.users) {
+          setUsers(response.users);
+        }
+      } catch (err) {
+        console.error('ユーザー取得エラー:', err);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   const handleEditorChange = (html: string) => {
@@ -254,12 +280,25 @@ export default function NewDocumentPage(): React.ReactElement {
       <div className="mb-6">
         <label className="block mb-2 font-bold">レビュー担当者</label>
         <div className="relative">
-          <textarea
-            value={reviewer}
-            onChange={e => setReviewer(e.target.value)}
-            className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-10 resize-none h-[42px] leading-none flex items-center"
-            placeholder="sample1@example.com"
-          />
+          {usersLoading ? (
+            <div className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white">
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2 inline-block"></div>
+              <span className="text-gray-400">ユーザー読み込み中...</span>
+            </div>
+          ) : (
+            <select
+              value={reviewer}
+              onChange={e => setReviewer(e.target.value)}
+              className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white appearance-none"
+            >
+              <option value="">レビュー担当者を選択してください</option>
+              {users.map(user => (
+                <option key={user.id} value={user.email}>
+                  {user.email}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
             <svg
               className="w-5 h-5 text-white"

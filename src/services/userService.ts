@@ -49,4 +49,22 @@ export const userService = {
     console.log(result);
     return result.rows.length > 0;
   },
+
+  // 全ユーザー取得
+  async getAllUsers(): Promise<Omit<User, 'password'>[]> {
+    try {
+      const result = await db.execute({
+        sql: 'SELECT id, email, created_at as createdAt FROM users ORDER BY created_at DESC',
+      });
+
+      return result.rows.map(row => ({
+        id: row.id as string,
+        email: row.email as string,
+        createdAt: row.createdAt as string,
+      }));
+    } catch (error) {
+      console.error('ユーザー一覧取得エラー:', error);
+      return [];
+    }
+  },
 };
