@@ -100,11 +100,7 @@ export default function NewDocumentPage(): React.ReactElement {
     }
 
     if (folders.length === 0) {
-      return (
-        <div className="p-4 text-center text-gray-400">
-          フォルダが存在しません
-        </div>
-      );
+      return <div className="p-4 text-center text-gray-400">フォルダが存在しません</div>;
     }
 
     // 画像のような2列表示のためにフォルダを分割
@@ -117,9 +113,11 @@ export default function NewDocumentPage(): React.ReactElement {
         <div className="p-4">
           {leftColumnFolders.map((folder, index) => (
             <div key={`left-${index}`} className="flex items-center mb-4">
-              <button 
+              <button
                 className={`w-full text-left p-2 rounded flex items-center ${
-                  selectedFolder === folder ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]' : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
+                  selectedFolder === folder
+                    ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]'
+                    : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
                 } border border-solid border-2`}
                 onClick={() => handleSelectFolder(folder)}
               >
@@ -145,9 +143,11 @@ export default function NewDocumentPage(): React.ReactElement {
         <div className="p-4">
           {rightColumnFolders.map((folder, index) => (
             <div key={`right-${index}`} className="flex items-center mb-4">
-              <button 
+              <button
                 className={`w-full text-left p-2 rounded flex items-center ${
-                  selectedFolder === folder ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]' : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
+                  selectedFolder === folder
+                    ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]'
+                    : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
                 } border border-solid border-3`}
                 onClick={() => handleSelectFolder(folder)}
               >
