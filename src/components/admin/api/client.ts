@@ -23,6 +23,15 @@ export const apiClient = {
     try {
       const response = await fetch(url, config);
 
+      // レスポンスの内容タイプをチェック
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        if (!response.ok) {
+          throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
+        }
+        return { success: false, error: 'JSONではないレスポンスを受信しました' };
+      }
+
       // レスポンスをJSONとしてパース
       const data = await response.json();
 

@@ -48,7 +48,6 @@ export default function NewDocumentPage(): React.ReactElement {
     const fetchUsers = async () => {
       try {
         const response = await apiClient.get('/admin/users');
-        console.log('ユーザー取得レスポンス:', response);
         if (response.users) {
           setUsers(response.users);
         }
