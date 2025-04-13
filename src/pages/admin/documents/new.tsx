@@ -303,37 +303,18 @@ export default function NewDocumentPage(): React.ReactElement {
           <div className="bg-[#1A1A1A] p-6 rounded-lg w-full max-w-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">階層選択</h2>
-              <button
-                onClick={() => setIsHierarchyModalOpen(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
             </div>
             {renderFolderList()}
-            <div className="flex justify-end gap-4 mt-6">
+            <div className="px-4 flex justify-end gap-4 mt-6">
               <button
                 onClick={() => setIsHierarchyModalOpen(false)}
-                className="px-4 py-2 text-white rounded hover:bg-gray-700"
+                className="border-none px-4 py-2 bg-[#B1B1B1] text-white rounded hover:bg-gray-700"
               >
                 戻る
               </button>
               <button
                 onClick={handleConfirmHierarchy}
-                className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80"
+                className="border-none px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80"
                 disabled={!selectedFolder}
               >
                 選択
