@@ -40,7 +40,7 @@ router.post('/create-branch', async (req, res) => {
         await execAsync(`git checkout ${baseBranch}`);
 
         // 最新の変更を取得
-        await execAsync('git pull origin ${baseBranch}');
+        await execAsync(`git pull origin ${baseBranch}`);
 
         // 新しいブランチを作成して切り替え
         await execAsync(`git checkout -b ${branchName}`);
