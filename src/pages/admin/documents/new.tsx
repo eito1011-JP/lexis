@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '@site/src/components/admin/layout';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import TiptapEditor from '@site/src/components/admin/editor/TiptapEditor';
+import { apiClient } from '@site/src/components/admin/api/client';
 
 export default function NewDocumentPage(): React.ReactElement {
   const { isLoading } = useSessionCheck('/admin/login', false);
@@ -12,6 +13,28 @@ export default function NewDocumentPage(): React.ReactElement {
   const [hierarchy, setHierarchy] = useState('');
   const [reviewer, setReviewer] = useState('');
   const [isHierarchyModalOpen, setIsHierarchyModalOpen] = useState(false);
+  const [folders, setFolders] = useState<string[]>([]);
+  const [foldersLoading, setFoldersLoading] = useState(true);
+  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+
+  useEffect(() => {
+    // フォルダー一覧を取得
+    const fetchFolders = async () => {
+      try {
+        const response = await apiClient.get('/admin/documents/folders');
+        console.log('フォルダー取得レスポンス:', response);
+        if (response.folders) {
+          setFolders(response.folders);
+        }
+      } catch (err) {
+        console.error('フォルダー取得エラー:', err);
+      } finally {
+        setFoldersLoading(false);
+      }
+    };
+
+    fetchFolders();
+  }, []);
 
   const handleEditorChange = (html: string) => {
     setContent(html);
@@ -26,6 +49,73 @@ export default function NewDocumentPage(): React.ReactElement {
       reviewer,
     });
     // ここに保存処理を追加する
+  };
+
+  const handleSelectFolder = (folder: string) => {
+    setSelectedFolder(folder);
+  };
+
+  const handleConfirmHierarchy = () => {
+    if (selectedFolder) {
+      setHierarchy(selectedFolder);
+      setIsHierarchyModalOpen(false);
+    }
+  };
+
+  // フォルダーを複数列に分割する関数
+  const renderFolderList = () => {
+    if (foldersLoading) {
+      return (
+        <div className="p-4 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mx-auto"></div>
+          <p className="mt-2 text-gray-400">フォルダ読み込み中...</p>
+        </div>
+      );
+    }
+
+    if (folders.length === 0) {
+      return (
+        <div className="p-4 text-center text-gray-400">
+          フォルダが存在しません
+        </div>
+      );
+    }
+
+    // 画像のような2列表示のためにフォルダを分割
+    const midPoint = Math.ceil(folders.length / 2);
+    const leftColumnFolders = folders.slice(0, midPoint);
+    const rightColumnFolders = folders.slice(midPoint);
+
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        <div className="p-4">
+          {leftColumnFolders.map((folder, index) => (
+            <button 
+              key={`left-${index}`}
+              className={`w-full text-left p-2 rounded mb-1 ${
+                selectedFolder === folder ? 'bg-[#3832A5]' : 'hover:bg-[#3832A5]/50'
+              }`}
+              onClick={() => handleSelectFolder(folder)}
+            >
+              {folder}
+            </button>
+          ))}
+        </div>
+        <div className="p-4">
+          {rightColumnFolders.map((folder, index) => (
+            <button 
+              key={`right-${index}`}
+              className={`w-full text-left p-2 rounded mb-1 ${
+                selectedFolder === folder ? 'bg-[#3832A5]' : 'hover:bg-[#3832A5]/50'
+              }`}
+              onClick={() => handleSelectFolder(folder)}
+            >
+              {folder}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   // セッション確認中はローディング表示
@@ -203,36 +293,7 @@ export default function NewDocumentPage(): React.ReactElement {
                 </svg>
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="border border-gray-700 rounded p-4">
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-              </div>
-              <div className="border border-gray-700 rounded p-4">
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-                <button className="w-full text-left p-2 hover:bg-[#3832A5] rounded">
-                  日本国憲法
-                </button>
-              </div>
-            </div>
+            {renderFolderList()}
             <div className="flex justify-end gap-4 mt-6">
               <button
                 onClick={() => setIsHierarchyModalOpen(false)}
@@ -241,8 +302,9 @@ export default function NewDocumentPage(): React.ReactElement {
                 戻る
               </button>
               <button
-                onClick={() => setIsHierarchyModalOpen(false)}
+                onClick={handleConfirmHierarchy}
                 className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80"
+                disabled={!selectedFolder}
               >
                 選択
               </button>
