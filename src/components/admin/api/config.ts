@@ -16,6 +16,11 @@ export const API_CONFIG = {
     },
     USERS: {
       GET_ALL: '/admin/users',
+      GET_CURRENT: '/admin/user/current',
+    },
+    GIT: {
+      CHECK_DIFF: '/admin/git/check-diff',
+      CREATE_BRANCH: '/admin/git/create-branch',
     },
   },
 };

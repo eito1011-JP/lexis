@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { verifyPassword } from '../../utils/password';
 import { API_ERRORS, SUCCESS_MESSAGES, HTTP_STATUS } from '../../const/errors';
-import { userService } from '@site/src/services/userService';
-import { sessionService } from '@site/src/services/sessionService';
+import { userService } from '../../../src/services/userService';
+import { sessionService } from '../../../src/services/sessionService';
 
 const router = Router();
 

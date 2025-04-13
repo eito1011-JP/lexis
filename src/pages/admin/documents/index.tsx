@@ -16,6 +16,10 @@ export default function DocumentsPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
+  const [showBranchModal, setShowBranchModal] = useState(false);
+  const [isBranchCreating, setIsBranchCreating] = useState(false);
+  const [branchError, setBranchError] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
     // フォルダー一覧を取得
@@ -34,6 +38,20 @@ export default function DocumentsPage(): JSX.Element {
     };
 
     fetchFolders();
+
+    // ユーザー情報の取得
+    const fetchUserInfo = async () => {
+      try {
+        const response = await apiClient.get('/admin/user/current');
+        if (response.email) {
+          setCurrentUserEmail(response.email);
+        }
+      } catch (err) {
+        console.error('ユーザー情報取得エラー:', err);
+      }
+    };
+
+    fetchUserInfo();
   }, []);
 
   const handleCreateImageFolder = () => {
@@ -43,6 +61,11 @@ export default function DocumentsPage(): JSX.Element {
   const handleCloseModal = () => {
     setShowFolderModal(false);
     setFolderName('');
+  };
+
+  const handleCloseBranchModal = () => {
+    setShowBranchModal(false);
+    setBranchError(null);
   };
 
   const handleCreateFolder = async () => {
@@ -62,6 +85,56 @@ export default function DocumentsPage(): JSX.Element {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  // ブランチの作成とページ遷移を行う関数
+  const handleCreateBranch = async () => {
+    setIsBranchCreating(true);
+    setBranchError(null);
+
+    try {
+      // タイムスタンプの作成
+      const timestamp = Math.floor(Date.now() / 1000);
+      const email = currentUserEmail || 'unknown';
+      const branchName = `feature/${email}_${timestamp}`;
+
+      const response = await apiClient.post('/admin/git/create-branch', {
+        branchName,
+        fromBranch: 'main',
+      });
+
+      if (response.success) {
+        // 成功したら新規ドキュメント作成ページへ遷移
+        window.location.href = '/admin/documents/new';
+      } else {
+        setBranchError('ブランチの作成に失敗しました');
+      }
+    } catch (err) {
+      console.error('ブランチ作成エラー:', err);
+      setBranchError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    } finally {
+      setIsBranchCreating(false);
+    }
+  };
+
+  // 新規ドキュメント作成ボタンのクリックハンドラ
+  const handleNewDocumentClick = async () => {
+    try {
+      // 現在のブランチの変更状態を確認
+      const response = await apiClient.get('/admin/git/check-diff');
+      
+      if (response.hasDiff) {
+        // 変更がある場合は直接遷移
+        window.location.href = '/admin/documents/new';
+      } else {
+        // 変更がない場合はモーダルを表示
+        setShowBranchModal(true);
+      }
+    } catch (err) {
+      console.error('Git状態確認エラー:', err);
+      // エラーが発生した場合も直接遷移
+      window.location.href = '/admin/documents/new';
     }
   };
 
@@ -149,9 +222,7 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md hover:bg-gray-100"
-                onClick={() => {
-                  window.location.href = '/admin/documents/new';
-                }}
+                onClick={handleNewDocumentClick}
               >
                 新規ドキュメント作成
               </button>
@@ -209,6 +280,40 @@ export default function DocumentsPage(): JSX.Element {
                   onClick={handleCloseModal}
                   className="w-48 py-3 bg-gray-500 text-white rounded-md hover:bg-opacity-90"
                   disabled={isCreating}
+                >
+                  戻る
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ブランチ作成確認モーダル */}
+        {showBranchModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-[#0A0A0A] rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-xl font-bold text-center mb-8">差分を作成しますか？</h3>
+              {branchError && (
+                <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
+                  {branchError}
+                </div>
+              )}
+              <div className="flex flex-col gap-4 items-center">
+                <button
+                  onClick={handleCreateBranch}
+                  className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center"
+                  disabled={isBranchCreating}
+                >
+                  {isBranchCreating ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+                  ) : (
+                    'はい'
+                  )}
+                </button>
+                <button
+                  onClick={handleCloseBranchModal}
+                  className="w-48 py-3 bg-gray-500 text-white rounded-md hover:bg-opacity-90"
+                  disabled={isBranchCreating}
                 >
                   戻る
                 </button>

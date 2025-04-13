@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '@site/src/lib/db';
+import { db } from '../lib/db';
 
 export const sessionService = {
   // セッションの作成
