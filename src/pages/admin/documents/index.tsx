@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
+import { useSession } from '@site/src/contexts/SessionContext';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/admin/login', false);
+  const { user } = useSession();
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -19,7 +21,6 @@ export default function DocumentsPage(): JSX.Element {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [isBranchCreating, setIsBranchCreating] = useState(false);
   const [branchError, setBranchError] = useState<string | null>(null);
-  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,25 +41,6 @@ export default function DocumentsPage(): JSX.Element {
     };
 
     fetchFolders();
-
-    // ユーザー情報の取得
-    const fetchUserInfo = async () => {
-      try {
-        const response = await apiClient.get('/admin/user/current');
-        if (response.email) {
-          setCurrentUserEmail(response.email);
-        } else {
-          // レスポンスにemailが含まれていない場合
-          setCurrentUserEmail('unknown');
-        }
-      } catch (err) {
-        console.error('ユーザー情報取得エラー:', err);
-        // エラー時はフォールバック値を設定
-        setCurrentUserEmail('unknown');
-      }
-    };
-
-    fetchUserInfo();
   }, []);
 
   const handleCreateImageFolder = () => {
@@ -103,7 +85,7 @@ export default function DocumentsPage(): JSX.Element {
     try {
       // タイムスタンプの作成
       const timestamp = Math.floor(Date.now() / 1000);
-      const email = currentUserEmail || 'unknown';
+      const email = user?.email || 'unknown';
       const branchName = `feature/${email}_${timestamp}`;
 
       try {
