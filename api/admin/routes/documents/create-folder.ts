@@ -22,26 +22,26 @@ const router = Router();
 router.post('/create-folder', async (req: Request, res: Response) => {
   try {
     const sessionId = req.cookies.sid;
-    
+
     if (!sessionId) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-        error: API_ERRORS.AUTH.NO_SESSION
+        error: API_ERRORS.AUTH.NO_SESSION,
       });
     }
-    
+
     const user = await sessionService.getSessionUser(sessionId);
-    
+
     if (!user) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-        error: API_ERRORS.AUTH.INVALID_SESSION
+        error: API_ERRORS.AUTH.INVALID_SESSION,
       });
     }
 
     const { folderName } = req.body;
-    
+
     if (!folderName || typeof folderName !== 'string') {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'フォルダ名が指定されていないか、無効です'
+        error: 'フォルダ名が指定されていないか、無効です',
       });
     }
 
@@ -51,7 +51,7 @@ router.post('/create-folder', async (req: Request, res: Response) => {
 
     if (fs.existsSync(newFolderPath)) {
       return res.status(HTTP_STATUS.CONFLICT).json({
-        error: '同名のフォルダが既に存在します'
+        error: '同名のフォルダが既に存在します',
       });
     }
 
@@ -60,14 +60,14 @@ router.post('/create-folder', async (req: Request, res: Response) => {
     return res.status(HTTP_STATUS.CREATED).json({
       message: 'フォルダが作成されました',
       folderName,
-      path: newFolderPath
+      path: newFolderPath,
     });
   } catch (error) {
     console.error('フォルダ作成エラー:', error);
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
-      error: API_ERRORS.SERVER.INTERNAL_ERROR
+      error: API_ERRORS.SERVER.INTERNAL_ERROR,
     });
   }
 });
 
-export const createFolderRouter = router; 
+export const createFolderRouter = router;

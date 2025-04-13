@@ -1,5 +1,5 @@
-import {themes as prismThemes} from 'prism-react-renderer';
-import type {Config} from '@docusaurus/types';
+import { themes as prismThemes } from 'prism-react-renderer';
+import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
@@ -27,7 +27,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           editUrl: 'https://github.com/eito1011-JP/Handbook/tree/main/',
           routeBasePath: 'docs',
-          sidebarItemsGenerator: async function ({defaultSidebarItemsGenerator, ...args}) {
+          sidebarItemsGenerator: async function ({ defaultSidebarItemsGenerator, ...args }) {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
             return sidebarItems;
           },
@@ -39,7 +39,7 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-  plugins: ["./src/plugins/tailwind-config.js"],
+  plugins: ['./src/plugins/tailwind-config.js'],
   themeConfig: {
     image: 'img/docusaurus-social-card.jpg',
     navbar: {

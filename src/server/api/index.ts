@@ -8,4 +8,4 @@ const router = Router();
 router.use('/admin/git', gitRouter);
 router.use('/admin/user', userRouter);
 
-export default router; 
+export default router;

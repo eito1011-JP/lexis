@@ -30,9 +30,9 @@ export function isStrongPassword(password: string): boolean {
   if (password.length < 8) {
     return false;
   }
-  
+
   // 必要に応じて追加の強度要件をここに追加
   // 例: 大文字、小文字、数字、特殊文字を含むなど
-  
+
   return true;
 }

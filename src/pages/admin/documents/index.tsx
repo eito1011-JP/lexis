@@ -123,7 +123,7 @@ export default function DocumentsPage(): JSX.Element {
     try {
       // 現在のブランチの変更状態を確認
       const response = await apiClient.get('/admin/git/check-diff');
-      
+
       if (response.hasDiff) {
         // 変更がある場合は直接遷移
         window.location.href = '/admin/documents/new';

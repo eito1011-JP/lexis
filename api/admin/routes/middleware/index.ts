@@ -12,12 +12,9 @@ export const errorHandler = (err: Error, req: Request, res: Response, next: Next
   console.error('エラー発生:', err);
   res.status(500).json({
     error: '内部サーバーエラーが発生しました',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
   });
 };
 
 // すべてのミドルウェアをまとめたもの
-export const middleware = [
-  requestLogger,
-  errorHandler
-];
+export const middleware = [requestLogger, errorHandler];

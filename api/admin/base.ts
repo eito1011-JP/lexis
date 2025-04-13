@@ -14,12 +14,13 @@ import usersRouter from './routes/users';
 const app = express();
 
 // ミドルウェアの設定
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://yourdomain.com'
-    : 'http://localhost:3000',
-  credentials: true // クッキーを含むリクエストを許可
-}));
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === 'production' ? 'https://yourdomain.com' : 'http://localhost:3000',
+    credentials: true, // クッキーを含むリクエストを許可
+  })
+);
 app.use(bodyParser.json());
 app.use(cookieParser());
 
@@ -36,46 +37,49 @@ app.use('/api/admin/users', usersRouter);
 // セッション確認
 app.get('/api/auth/session', async (req, res) => {
   const sessionId = req.cookies.sid;
-  
+
   if (!sessionId) {
     return res.json({
       authenticated: false,
-      message: 'セッションがありません'
+      message: 'セッションがありません',
     });
   }
-  
+
   try {
     const user = await sessionService.getSessionUser(sessionId);
-    
+
     if (!user) {
       return res.json({
         authenticated: false,
-        message: 'セッションが無効または期限切れです'
+        message: 'セッションが無効または期限切れです',
       });
     }
-    
+
     return res.json({
       authenticated: true,
-      user
+      user,
     });
   } catch (error) {
     console.error('セッション確認エラー:', error);
     return res.status(500).json({
       authenticated: false,
-      error: 'セッション確認中にエラーが発生しました'
+      error: 'セッション確認中にエラーが発生しました',
     });
   }
 });
 
 // 定期的に期限切れセッションをクリーンアップ
-setInterval(async () => {
-  try {
-    await sessionService.cleanupSessions();
-    console.log('期限切れセッションをクリーンアップしました');
-  } catch (error) {
-    console.error('セッションクリーンアップエラー:', error);
-  }
-}, 90 * 60 * 60 * 1000); // 90日ごとに実行
+setInterval(
+  async () => {
+    try {
+      await sessionService.cleanupSessions();
+      console.log('期限切れセッションをクリーンアップしました');
+    } catch (error) {
+      console.error('セッションクリーンアップエラー:', error);
+    }
+  },
+  90 * 60 * 60 * 1000
+); // 90日ごとに実行
 
 // サーバーの起動
 const PORT = process.env.API_PORT || 3001;

@@ -1,24 +1,24 @@
-import { next } from "@vercel/edge";
+import { next } from '@vercel/edge';
 
 export const config = {
-    matcher: ["/(.*)", "/api/:path*"],
-  };
+  matcher: ['/(.*)', '/api/:path*'],
+};
 
 export default function middleware(request) {
-  const authorizationHeader = request.headers.get("authorization");
+  const authorizationHeader = request.headers.get('authorization');
 
   if (authorizationHeader) {
-    const basicAuth = authorizationHeader.split(" ")[1];
-    const [user, password] = atob(basicAuth).toString().split(":");
+    const basicAuth = authorizationHeader.split(' ')[1];
+    const [user, password] = atob(basicAuth).toString().split(':');
 
     console.log(user, password);
     return next();
   }
 
-  return new Response("Basic Auth required", {
+  return new Response('Basic Auth required', {
     status: 401,
     headers: {
-      "WWW-Authenticate": 'Basic realm="Secure Area"',
+      'WWW-Authenticate': 'Basic realm="Secure Area"',
     },
   });
 }

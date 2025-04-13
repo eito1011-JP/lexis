@@ -8,12 +8,13 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ミドルウェアの設定
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://yourdomain.com' 
-    : 'http://localhost:3000',
-  credentials: true
-}));
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === 'production' ? 'https://yourdomain.com' : 'http://localhost:3000',
+    credentials: true,
+  })
+);
 app.use(bodyParser.json());
 app.use(cookieParser());
 
@@ -25,4 +26,4 @@ app.listen(PORT, () => {
   console.log(`サーバーが起動しました http://localhost:${PORT}`);
 });
 
-export default app; 
+export default app;
