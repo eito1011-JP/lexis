@@ -57,6 +57,10 @@ router.post('/create-folder', async (req: Request, res: Response) => {
 
     fs.mkdirSync(newFolderPath, { recursive: true });
 
+    // 空のフォルダをGitで追跡するために.gitkeepファイルを作成
+    const gitkeepPath = path.join(newFolderPath, '.gitkeep');
+    fs.writeFileSync(gitkeepPath, '');
+
     return res.status(HTTP_STATUS.CREATED).json({
       message: 'フォルダが作成されました',
       folderName,
