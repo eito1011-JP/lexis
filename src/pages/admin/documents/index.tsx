@@ -50,20 +50,6 @@ export default function DocumentsPage(): JSX.Element {
     fetchFolders();
   }, []);
 
-  // 差分の有無を確認するuseEffect
-  useEffect(() => {
-    const checkDiff = async () => {
-      try {
-        const response = await apiClient.get('/admin/git/check-diff');
-        setShowSubmitButton(response.hasDiff);
-      } catch (err) {
-        console.error('差分確認エラー:', err);
-        setShowSubmitButton(false);
-      }
-    };
-
-    checkDiff();
-  }, []);
 
   const handleCreateImageFolder = () => {
     setShowFolderModal(true);
