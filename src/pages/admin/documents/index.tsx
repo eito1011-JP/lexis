@@ -23,9 +23,12 @@ export default function DocumentsPage(): JSX.Element {
   const [isBranchCreating, setIsBranchCreating] = useState(false);
   const [branchError, setBranchError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showSubmitButton, setShowSubmitButton] = useState(false);
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [isSwitchingBranch, setIsSwitchingBranch] = useState(false);
 
   useEffect(() => {
     // フォルダー一覧を取得
@@ -45,6 +48,21 @@ export default function DocumentsPage(): JSX.Element {
     };
 
     fetchFolders();
+  }, []);
+
+  // 差分の有無を確認するuseEffect
+  useEffect(() => {
+    const checkDiff = async () => {
+      try {
+        const response = await apiClient.get('/admin/git/check-diff');
+        setShowSubmitButton(response.hasDiff);
+      } catch (err) {
+        console.error('差分確認エラー:', err);
+        setShowSubmitButton(false);
+      }
+    };
+
+    checkDiff();
   }, []);
 
   const handleCreateImageFolder = () => {
@@ -156,32 +174,28 @@ export default function DocumentsPage(): JSX.Element {
     }
   };
 
-  // 差分を提出するハンドラー
+  // 差分提出のハンドラー
   const handleSubmitDiff = async () => {
-    if (isSubmitting) return;
-
-    setSubmitSuccess(null);
-    setSubmitError(null);
     setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(null);
 
     try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.GIT.CREATE_PR, {
+      const response = await apiClient.post('/admin/git/create-pr', {
         title: '更新内容の提出',
         description: 'このPRはハンドブックの更新を含みます。',
       });
 
       if (response.success) {
-        setSubmitSuccess('差分が正常に提出されました。Pull Requestが作成されました。');
-      } else if (response.partial) {
-        setSubmitSuccess(
-          '変更は保存されましたが、Pull Requestの自動作成に失敗しました。GitHubから手動で作成してください。'
-        );
+        setShowSubmitModal(false);
+        setShowSubmitButton(false);
+        setSubmitSuccess('差分の提出が完了しました');
       } else {
-        setSubmitError('差分の提出に失敗しました。');
+        setSubmitError(response.message || '差分の提出に失敗しました');
       }
     } catch (err) {
       console.error('差分提出エラー:', err);
-      setSubmitError(err instanceof Error ? err.message : '予期しないエラーが発生しました');
+      setSubmitError('差分の提出中にエラーが発生しました');
     } finally {
       setIsSubmitting(false);
     }
@@ -340,7 +354,7 @@ export default function DocumentsPage(): JSX.Element {
                 </svg>
               </button>
               <button
-                className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md hover:bg-gray-100"
+                className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md"
                 onClick={handleNewDocumentClick}
               >
                 新規ドキュメント作成
@@ -365,19 +379,48 @@ export default function DocumentsPage(): JSX.Element {
           {renderFolderSection()}
         </div>
 
-        {/* 差分を提出するボタン（画面下部に固定） */}
-        <div className="fixed bottom-8 right-8">
-          <button
-            onClick={handleSubmitDiff}
-            disabled={isSubmitting}
-            className="border-none px-6 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center shadow-lg"
-          >
-            {isSubmitting ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-            ) : null}
-            差分を提出する
-          </button>
-        </div>
+        {/* 差分提出ボタン */}
+        {showSubmitButton && (
+          <div className="fixed bottom-8 right-8">
+            <button
+              onClick={() => setShowSubmitModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              差分を提出する
+            </button>
+          </div>
+        )}
+
+        {/* 差分提出確認モーダル */}
+        {showSubmitModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg max-w-md w-full">
+              <h2 className="text-xl font-bold mb-4">差分の提出</h2>
+              <p className="mb-4">現在の変更を提出しますか？</p>
+              {submitError && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                  {submitError}
+                </div>
+              )}
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => setShowSubmitModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  disabled={isSubmitting}
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleSubmitDiff}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? '提出中...' : '提出する'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* フォルダ作成モーダル */}
         {showFolderModal && (

@@ -41,7 +41,7 @@ function AuthenticatedHeader({ email }: { email?: string }): React.ReactElement 
           <span>{email}でログイン中</span>
           <Link
             to={PATHS.HOME}
-            className="font-bold border text-center border-[#DEDEDE] bg-transparent hover:bg-gray-100 text-white py-2 rounded text-sm transition-colors w-32"
+            className="font-bold border text-center border-[#DEDEDE] bg-transparent text-white py-2 rounded text-sm transition-colors w-32"
           >
             ユーザー画面へ
           </Link>
@@ -62,13 +62,13 @@ function UnauthenticatedHeader(): React.ReactElement {
         <div className="flex gap-2 rounded-lg">
           <Link
             to={PATHS.HOME}
-            className="font-bold border border-[#DEDEDE] bg-transparent hover:bg-gray-100 text-white py-2 rounded text-sm transition-colors w-32"
+            className="font-bold text-center border border-[#DEDEDE] bg-transparent text-white py-2 rounded text-sm transition-colors w-32"
           >
             ユーザー画面へ
           </Link>
           <Link
             to={PATHS.ADMIN_LOGIN}
-            className="font-bold border border-[#DEDEDE] bg-transparent hover:bg-gray-100 text-white py-2 rounded text-sm transition-colors w-32"
+            className="font-bold text-center border border-[#DEDEDE] bg-transparent text-white py-2 rounded text-sm transition-colors w-32"
           >
             ログイン
           </Link>
