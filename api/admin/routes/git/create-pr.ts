@@ -48,12 +48,6 @@ router.post('/create-pr', async (req, res) => {
           const prUrl = prResult.trim();
           const prNumber = prUrl.split('/').pop();
 
-          console.log('PR作成レスポンス:', prResult);
-          console.log('PR作成レスポンス:', prUrl);
-          console.log('PR作成レスポンス:', description);
-          console.log('PR作成レスポンス:', title);
-          console.log('PR作成レスポンス:', branch);
-
           return res.json({
             success: true,
             pr: {
