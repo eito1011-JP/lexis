@@ -372,9 +372,6 @@ export default function DocumentsPage(): JSX.Element {
             disabled={isSubmitting}
             className="border-none px-6 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center shadow-lg"
           >
-            {isSubmitting ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-            ) : null}
             差分を提出する
           </button>
         </div>
