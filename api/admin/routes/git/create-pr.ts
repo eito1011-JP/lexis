@@ -6,6 +6,64 @@ import { sessionService } from '../../../../src/services/sessionService';
 const execAsync = promisify(exec);
 const router = express.Router();
 
+interface GitOperationsResult {
+  success: boolean;
+  pr?: {
+    number: string;
+    url: string;
+  };
+  partial?: boolean;
+  mock?: boolean;
+  message?: string;
+}
+
+async function handleGitOperations(title: string, description: string): Promise<GitOperationsResult> {
+  try {
+    // 1. 現在のブランチを取得
+    const { stdout: currentBranch } = await execAsync('git rev-parse --abbrev-ref HEAD');
+    const branch = currentBranch.trim();
+
+    // 2. 変更をコミット
+    await execAsync('git add .');
+    await execAsync(`git commit -m "${title || '更新内容の提出'}"`);
+
+    // 3. リモートにプッシュ
+    await execAsync(`git push -u origin ${branch}`);
+
+    try {
+      // 4. PRを作成
+      const prCommand = `gh pr create --title "${title || '更新内容の提出'}" --body "${description || ''}" --base main --head ${branch}`;
+      const { stdout: prResult } = await execAsync(prCommand);
+      const prUrl = prResult.trim();
+      const prNumber = prUrl.split('/').pop();
+
+      // 5. mainブランチに戻る
+      await execAsync('git checkout main');
+
+      return {
+        success: true,
+        pr: {
+          number: prNumber,
+          url: prUrl,
+        },
+      };
+    } catch (prError) {
+      console.error('PR作成エラー:', prError);
+      return {
+        success: false,
+        partial: true,
+        message: '変更は保存されましたが、Pull Requestの自動作成に失敗しました',
+      };
+    }
+  } catch (gitError) {
+    console.error('Git操作エラー:', gitError);
+    return {
+      success: false,
+      message: 'Git操作中にエラーが発生しました',
+    };
+  }
+}
+
 /**
  * 現在のブランチからPull Requestを作成するエンドポイント
  */
@@ -23,63 +81,8 @@ router.post('/create-pr', async (req, res) => {
     }
 
     const { title, description } = req.body;
-
-    try {
-      // 現在のブランチを取得
-      try {
-        const { stdout: currentBranch } = await execAsync('git rev-parse --abbrev-ref HEAD');
-        const branch = currentBranch.trim();
-
-        // ファイルの変更をステージに追加
-        await execAsync('git add .');
-
-        // 変更をコミット
-        await execAsync(`git commit -m "${title || '更新内容の提出'}"`);
-
-        // リモートブランチにプッシュ
-        await execAsync(`git push -u origin ${branch}`);
-
-        // GitHub CLIを使用してPRを作成する（GitHub CLIがインストールされている場合）
-        try {
-          const prCommand = `gh pr create --title "${title || '更新内容の提出'}" --body "${description || ''}" --base main --head ${branch}`;
-          const { stdout: prResult } = await execAsync(prCommand);
-
-          // PRのURLを抽出
-          const prUrl = prResult.trim();
-          const prNumber = prUrl.split('/').pop();
-
-          return res.json({
-            success: true,
-            pr: {
-              number: prNumber,
-              url: prUrl,
-            },
-          });
-        } catch (prError) {
-          console.error('PR作成エラー:', prError);
-          // PRの作成に失敗しても、変更は保存されているため部分的に成功とみなす
-          return res.json({
-            success: false,
-            partial: true,
-            message: '変更は保存されましたが、Pull Requestの自動作成に失敗しました',
-          });
-        }
-      } catch (gitError) {
-        console.error('Git操作エラー:', gitError);
-        // Gitコマンドが失敗した場合はモックレスポンスを返す
-        return res.json({
-          success: true,
-          mock: true,
-          pr: {
-            number: 123,
-            url: 'https://github.com/yourusername/yourrepo/pull/123',
-          },
-        });
-      }
-    } catch (error) {
-      console.error('Create-PR APIエラー:', error);
-      return res.status(500).json({ error: '内部サーバーエラー' });
-    }
+    const result = await handleGitOperations(title, description);
+    return res.json(result);
   } catch (error) {
     console.error('Create-PR APIエラー:', error);
     return res.status(500).json({ error: '内部サーバーエラー' });
