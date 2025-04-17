@@ -170,6 +170,8 @@ export default function DocumentsPage(): JSX.Element {
         description: 'このPRはハンドブックの更新を含みます。',
       });
 
+      console.log('差分提出レスポンス:', response);
+
       if (response.success) {
         setSubmitSuccess('差分が正常に提出されました。Pull Requestが作成されました。');
       } else if (response.partial) {
