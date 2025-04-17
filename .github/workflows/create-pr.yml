@@ -1,0 +1,55 @@
+name: Create Pull Request
+
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: 'Pull Requestのタイトル'
+        required: true
+      description:
+        description: 'Pull Requestの説明'
+        required: true
+      branch:
+        description: 'Pull Requestを作成するブランチ'
+        required: true
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: ブランチの切り替え
+        run: |
+          git fetch origin
+          git checkout ${{ github.event.inputs.branch }}
+
+      - name: 変更のコミット
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add .
+          git commit -m "${{ github.event.inputs.title }}"
+
+      - name: ブランチのプッシュ
+        run: |
+          git push origin ${{ github.event.inputs.branch }}
+
+      - name: Pull Requestの作成
+        uses: peter-evans/create-pull-request@v4
+        with:
+          title: ${{ github.event.inputs.title }}
+          body: ${{ github.event.inputs.description }}
+          base: main
+          branch: ${{ github.event.inputs.branch }}
+          delete-branch: true
+          commit-message: ${{ github.event.inputs.title }}
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          labels: automated-pr
+          draft: false
+          team-reviewers: |
+            maintainers
+            reviewers 
