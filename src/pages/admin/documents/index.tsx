@@ -26,6 +26,8 @@ export default function DocumentsPage(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showSubmitButton, setShowSubmitButton] = useState(true);
+  const [isSwitchingBranch, setIsSwitchingBranch] = useState(false);
 
   useEffect(() => {
     // フォルダー一覧を取得
@@ -173,11 +175,27 @@ export default function DocumentsPage(): JSX.Element {
       console.log('差分提出レスポンス:', response);
 
       if (response.success) {
-        setSubmitSuccess('差分が正常に提出されました。Pull Requestが作成されました。');
-      } else if (response.partial) {
-        setSubmitSuccess(
-          '変更は保存されましたが、Pull Requestの自動作成に失敗しました。GitHubから手動で作成してください。'
-        );
+        setSubmitSuccess('差分が正常に提出されました。');
+        
+        // PR作成成功後、mainブランチに切り替え
+        setIsSwitchingBranch(true);
+        try {
+          const switchResponse = await apiClient.post(API_CONFIG.ENDPOINTS.GIT.SWITCH_BRANCH, {
+            branchName: 'main'
+          });
+
+          if (switchResponse.success) {
+            setShowSubmitButton(false);
+            setSubmitSuccess('差分が提出され、mainブランチに切り替えました。');
+          } else {
+            setSubmitError('差分は提出されましたが、ブランチの切り替えに失敗しました。手動でmainブランチに切り替えてください。');
+          }
+        } catch (switchError) {
+          console.error('ブランチ切り替えエラー:', switchError);
+          setSubmitError('差分は提出されましたが、ブランチの切り替えに失敗しました。手動でmainブランチに切り替えてください。');
+        } finally {
+          setIsSwitchingBranch(false);
+        }
       } else {
         setSubmitError('差分の提出に失敗しました。');
       }
@@ -368,15 +386,21 @@ export default function DocumentsPage(): JSX.Element {
         </div>
 
         {/* 差分を提出するボタン（画面下部に固定） */}
-        <div className="fixed bottom-8 right-8">
-          <button
-            onClick={handleSubmitDiff}
-            disabled={isSubmitting}
-            className="border-none px-6 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center shadow-lg"
-          >
-            差分を提出する
-          </button>
-        </div>
+        {showSubmitButton && (
+          <div className="fixed bottom-8 right-8">
+            <button
+              onClick={handleSubmitDiff}
+              disabled={isSubmitting || isSwitchingBranch}
+              className="border-none px-6 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center shadow-lg"
+            >
+              {isSubmitting || isSwitchingBranch ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+              ) : (
+                '差分を提出する'
+              )}
+            </button>
+          </div>
+        )}
 
         {/* フォルダ作成モーダル */}
         {showFolderModal && (

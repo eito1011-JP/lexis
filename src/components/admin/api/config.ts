@@ -18,6 +18,7 @@ export const API_CONFIG = {
       CHECK_DIFF: '/admin/git/check-diff',
       CREATE_BRANCH: '/admin/git/create-branch',
       CREATE_PR: '/admin/git/create-pr',
+      SWITCH_BRANCH: '/admin/git/switch-branch',
     },
   },
 };
