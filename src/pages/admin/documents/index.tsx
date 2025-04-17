@@ -340,7 +340,7 @@ export default function DocumentsPage(): JSX.Element {
                 </svg>
               </button>
               <button
-                className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md hover:bg-gray-100"
+                className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md"
                 onClick={handleNewDocumentClick}
               >
                 新規ドキュメント作成
