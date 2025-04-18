@@ -11,18 +11,14 @@ interface User {
 interface SessionContextType {
   isAuthenticated: boolean;
   user: User | null;
-  activeBranch: UserBranch | null;
   checkSession: () => Promise<void>;
-  updateActiveBranch: (branch: UserBranch | null) => void;
   isLoading: boolean;
 }
 
 export const SessionContext = createContext<SessionContextType>({
   isAuthenticated: false,
   user: null,
-  activeBranch: null,
   checkSession: async () => {},
-  updateActiveBranch: () => {},
   isLoading: true,
 });
 
@@ -52,30 +48,10 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const response = await apiClient.get('/auth/session');
       setIsAuthenticated(response.authenticated);
       setUser(response.user || null);
-      
-      // アクティブブランチの情報も取得
-      if (response.authenticated && response.user) {
-        try {
-          const branchResponse = await apiClient.get('/admin/git/current-branch');
-          if (branchResponse.success && branchResponse.branch) {
-            setActiveBranch(branchResponse.branch);
-          } else {
-            setActiveBranch(null);
-          }
-        } catch (branchError) {
-          console.error('アクティブブランチ取得エラー:', branchError);
-          setActiveBranch(null);
-        }
-      } else {
-        setActiveBranch(null);
-      }
-      
-      lastCheckRef.current = now;
     } catch (err) {
       console.error('セッション確認エラー:', err);
       setIsAuthenticated(false);
-      setUser(null);
-      setActiveBranch(null);
+      setUser(null);  
       lastCheckRef.current = now;
     } finally {
       setIsLoading(false);
