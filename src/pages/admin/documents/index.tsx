@@ -3,15 +3,12 @@ import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
-import { useSession } from '@site/src/contexts/SessionContext';
-import { API_CONFIG } from '@site/src/components/admin/api/config';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/admin/login', false);
-  const { user, updateActiveBranch } = useSession();
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderName, setFolderName] = useState('');
@@ -20,7 +17,6 @@ export default function DocumentsPage(): JSX.Element {
   const [folders, setFolders] = useState<string[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const [isBranchCreating, setIsBranchCreating] = useState(false);
   const [branchError, setBranchError] = useState<string | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
@@ -28,7 +24,6 @@ export default function DocumentsPage(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [isSwitchingBranch, setIsSwitchingBranch] = useState(false);
 
   useEffect(() => {
     // フォルダー一覧を取得
@@ -85,43 +80,6 @@ export default function DocumentsPage(): JSX.Element {
     }
   };
 
-  // ブランチの作成とページ遷移を行う関数
-  const handleCreateBranch = async () => {
-    setIsBranchCreating(true);
-    setBranchError(null);
-
-    try {
-      // タイムスタンプの作成
-      const timestamp = Math.floor(Date.now() / 1000);
-      const formattedDate = new Date(timestamp * 1000).toISOString().slice(0, 10).replace(/-/g, '');
-      const email = user?.email || 'unknown';
-
-  // 新規ドキュメント作成ボタンのクリックハンドラ
-  const handleNewDocumentClick = async () => {
-    try {
-      // 現在のブランチの変更状態を確認
-      try {
-        const response = await apiClient.get('/admin/git/check-diff');
-
-        if (response && response.hasDiff) {
-          // 変更がある場合は直接遷移（モーダルを表示しない）
-          window.location.href = '/admin/documents/new';
-        } else {
-          // 変更がない場合はモーダルを表示
-          setShowBranchModal(true);
-        }
-      } catch (err) {
-        console.error('Git状態確認エラー:', err);
-        // エラー時はモーダルを表示
-        setShowBranchModal(true);
-      }
-    } catch (err) {
-      console.error('予期しないエラー:', err);
-      setApiError('予期しないエラーが発生しました');
-      // ダミーデータを使用して続行
-      setShowBranchModal(true);
-    }
-  };
 
   // 差分提出のハンドラー
   const handleSubmitDiff = async () => {
@@ -304,7 +262,7 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md"
-                onClick={handleNewDocumentClick}
+                onClick={() => {}}
               >
                 新規ドキュメント作成
               </button>
@@ -425,11 +383,11 @@ export default function DocumentsPage(): JSX.Element {
               )}
               <div className="flex flex-col gap-4 items-center">
                 <button
-                  onClick={handleCreateBranch}
+                  onClick={() => {}}
                   className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center"
-                  disabled={isBranchCreating}
+                  disabled={false}
                 >
-                  {isBranchCreating ? (
+                  {false ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
                   ) : (
                     'はい'
@@ -438,7 +396,7 @@ export default function DocumentsPage(): JSX.Element {
                 <button
                   onClick={handleCloseBranchModal}
                   className="w-48 py-3 bg-gray-500 text-white rounded-md hover:bg-opacity-90"
-                  disabled={isBranchCreating}
+                  disabled={false}
                 >
                   戻る
                 </button>
