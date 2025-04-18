@@ -33,7 +33,7 @@ router.post('/create-folder', async (req: Request, res: Response) => {
     // ログインユーザーを取得
     const loginUser = await getAuthenticatedUser(sessionId);
 
-    // check diff
+    // ブランチが存在しない場合は作成
     const hasDraft = await checkUserDraft(loginUser.userId);
 
     if (!hasDraft) {

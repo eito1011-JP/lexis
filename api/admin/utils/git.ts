@@ -33,7 +33,11 @@ export async function checkUserDraft(userId: string): Promise<boolean> {
 export async function createBranch(userId: string, email: string): Promise<void> {
   const snapshotCommit = await findLatestCommit();
 
-  const timestamp = Math.floor(Date.now() / 1000);
+  const timestamp = new Date()
+  .toISOString()
+  .slice(0, 10)
+  .replace(/-/g, '');
+
   const branchName = `feature/${email}_${timestamp}`;
   const id = uuidv4();
 

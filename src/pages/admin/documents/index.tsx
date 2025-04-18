@@ -15,9 +15,7 @@ export default function DocumentsPage(): JSX.Element {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
-  const [foldersLoading, setFoldersLoading] = useState(true);
-  const [showBranchModal, setShowBranchModal] = useState(false);
-  const [branchError, setBranchError] = useState<string | null>(null);
+  const [foldersLoading, setFoldersLoading] = useState(true); 
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -55,10 +53,6 @@ export default function DocumentsPage(): JSX.Element {
     setFolderName('');
   };
 
-  const handleCloseBranchModal = () => {
-    setShowBranchModal(false);
-    setBranchError(null);
-  };
 
   const handleCreateFolder = async () => {
     if (!folderName.trim()) return;
@@ -105,23 +99,6 @@ export default function DocumentsPage(): JSX.Element {
       setSubmitError('差分の提出中にエラーが発生しました');
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  // 差分チェックのハンドラー
-  const handleCheckDiff = async () => {
-    try {
-      const hasUserDraft = await apiClient.get('/admin/git/check-diff');
-      
-      if (hasUserDraft.exists) {
-        setShowBranchModal(true);
-      } else {
-        // 差分がない場合は直接新規作成ページへ遷移
-        window.location.href = '/admin/documents/new';
-      }
-    } catch (err) {
-      console.error('差分チェックエラー:', err);
-      setSubmitError('差分の確認中にエラーが発生しました');
     }
   };
 
@@ -279,7 +256,9 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md"
-                onClick={handleCheckDiff}
+                onClick={() => {
+                  window.location.href = '/admin/documents/new';
+                }}
               >
                 新規ドキュメント作成
               </button>
@@ -370,52 +349,12 @@ export default function DocumentsPage(): JSX.Element {
                   className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center border-none font-bold justify-center"
                   disabled={!folderName.trim() || isCreating}
                 >
-                  {isCreating ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                  ) : (
-                    '作成'
-                  )}
+                  作成
                 </button>
                 <button
                   onClick={handleCloseModal}
                   className="w-48 py-3 bg-gray-500 text-white rounded-md border-none hover:bg-opacity-90 font-bold"
                   disabled={isCreating}
-                >
-                  戻る
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ブランチ作成確認モーダル */}
-        {showBranchModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-[#0A0A0A] rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold text-center mb-8">差分を作成しますか？</h3>
-              {branchError && (
-                <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
-                  {branchError}
-                </div>
-              )}
-              <div className="flex flex-col gap-4 items-center">
-                <button
-                  onClick={() => {
-                    handleCloseBranchModal();
-                  }}
-                  className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center"
-                  disabled={false}
-                >
-                  {false ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
-                  ) : (
-                    'はい'
-                  )}
-                </button>
-                <button
-                  onClick={handleCloseBranchModal}
-                  className="w-48 py-3 bg-gray-500 text-white rounded-md hover:bg-opacity-90"
-                  disabled={false}
                 >
                   戻る
                 </button>
