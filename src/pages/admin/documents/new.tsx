@@ -3,7 +3,6 @@ import AdminLayout from '@site/src/components/admin/layout';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import TiptapEditor from '@site/src/components/admin/editor/TiptapEditor';
 import { apiClient } from '@site/src/components/admin/api/client';
-import { useSession } from '@site/src/contexts/SessionContext';
 
 // ユーザー型定義を追加
 interface User {
@@ -13,7 +12,6 @@ interface User {
 
 export default function NewDocumentPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/admin/login', false);
-  const { activeBranch } = useSession();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -186,34 +184,11 @@ export default function NewDocumentPage(): JSX.Element {
     );
   }
 
-  // ブランチがない場合のメッセージ
-  const BranchWarning = () => {
-    if (!activeBranch) {
-      return (
-        <div className="bg-yellow-900/50 border border-yellow-800 text-yellow-200 p-4 rounded-md mb-6">
-          <div className="flex items-center mb-2">
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            <span className="font-semibold">作業ブランチがありません</span>
-          </div>
-          <p className="text-sm">
-            現在、アクティブな作業ブランチがありません。ドキュメント一覧に戻って新しいブランチを作成することをお勧めします。
-          </p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <AdminLayout title="新規ドキュメント作成">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-4">新規ドキュメント作成</h1>
-          
-          <BranchWarning />
-          
+          <h1 className="text-2xl font-bold mb-4">新規ドキュメント作成</h1>          
           <div className="flex items-center gap-4 mb-6">
             <button
               className="bg-gray-900 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-700"
