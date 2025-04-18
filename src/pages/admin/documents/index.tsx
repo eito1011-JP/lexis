@@ -95,43 +95,6 @@ export default function DocumentsPage(): JSX.Element {
       const timestamp = Math.floor(Date.now() / 1000);
       const formattedDate = new Date(timestamp * 1000).toISOString().slice(0, 10).replace(/-/g, '');
       const email = user?.email || 'unknown';
-      const branchName = `feature/${email}_${formattedDate}`;
-
-      try {
-        const response = await apiClient.post('/admin/git/create-branch', {
-          branchName,
-          fromBranch: 'main',
-        });
-
-        if (response && response.success) {
-          // ブランチ情報をセッションに更新
-          if (response.branch) {
-            updateActiveBranch(response.branch);
-          }
-          
-          // 成功したら新規ドキュメント作成ページへ遷移
-          window.location.href = '/admin/documents/new';
-        } else {
-          setBranchError('ブランチの作成に失敗しました');
-          console.warn('ブランチ作成：APIが成功を返しませんでした。開発モードでは続行します');
-          // 開発モードでは続行
-          if (process.env.NODE_ENV === 'development') {
-            window.location.href = '/admin/documents/new';
-          }
-        }
-      } catch (err) {
-        console.error('ブランチ作成エラー:', err);
-        setBranchError(err instanceof Error ? err.message : '不明なエラーが発生しました');
-        // 開発モードでは続行
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('開発モードのため、エラーにもかかわらず続行します');
-          window.location.href = '/admin/documents/new';
-        }
-      }
-    } finally {
-      setIsBranchCreating(false);
-    }
-  };
 
   // 新規ドキュメント作成ボタンのクリックハンドラ
   const handleNewDocumentClick = async () => {
