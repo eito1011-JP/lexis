@@ -1,15 +1,16 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../../../../../src/lib/db';
+import { getAuthenticatedUser } from '../../../utils/auth';
 
 const router = Router();
 
 router.get('/check-diff', async (req: Request, res: Response) => {
-  const { userId } = req.body;
-
   try {
+    const loginUser = await getAuthenticatedUser(req.cookies.sid);
+
     const hasUserDraft = await db.execute({
       sql: 'SELECT EXISTS (SELECT 1 FROM document_versions WHERE user_id = ? AND status = ?) as exists',
-      args: [userId, 'draft'],
+      args: [loginUser.userId, 'draft'],
     });
 
     return res.json({ 

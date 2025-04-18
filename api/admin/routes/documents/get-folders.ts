@@ -34,7 +34,6 @@ router.get('/folders', async (req: Request, res: Response) => {
     let user = null;
     if (sessionId) {
       user = await sessionService.getSessionUser(sessionId);
-      console.log('GET /folders - ユーザー:', user ? '認証済み' : '認証されていません');
     }
 
     if (!user && !skipAuthCheck) {

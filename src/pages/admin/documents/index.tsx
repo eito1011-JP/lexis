@@ -30,7 +30,7 @@ export default function DocumentsPage(): JSX.Element {
     const fetchFolders = async () => {
       try {
         const response = await apiClient.get('/admin/documents/folders');
-        console.log('フォルダー取得レスポンス:', response);
+
         if (response.folders) {
           setFolders(response.folders);
         }
@@ -112,11 +112,12 @@ export default function DocumentsPage(): JSX.Element {
   const handleCheckDiff = async () => {
     try {
       const hasUserDraft = await apiClient.get('/admin/git/check-diff');
-
+      console.log('hasUserDraft:', hasUserDraft);
       if (hasUserDraft.exists) {
-
+        setShowBranchModal(true);
       } else {
-
+        // 差分がない場合は直接新規作成ページへ遷移
+        window.location.href = '/admin/documents/new';
       }
     } catch (err) {
       console.error('差分チェックエラー:', err);
@@ -399,7 +400,9 @@ export default function DocumentsPage(): JSX.Element {
               )}
               <div className="flex flex-col gap-4 items-center">
                 <button
-                  onClick={() => {}}
+                  onClick={() => {
+                    handleCloseBranchModal();
+                  }}
                   className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center"
                   disabled={false}
                 >

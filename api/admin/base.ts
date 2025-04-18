@@ -9,11 +9,7 @@ import { getFoldersRouter } from './routes/documents/get-folders';
 import { middleware } from './routes/middleware';
 import { sessionService } from '../../src/services/sessionService';
 import usersRouter from './routes/users';
-import { checkDiffRouter } from './routes/git/check-diff';
-import { createBranchRouter } from './routes/git/create-branch';
-import { createPRRouter } from './routes/git/create-pr';
-import { getCurrentBranchRouter } from './routes/git/get-current-branch';
-import { switchBranchRouter } from './routes/git/switch-branch';
+import checkDiffRouter from './routes/documents/git/check-dif';
 
 // Expressアプリの初期化
 const app = express();
@@ -39,10 +35,6 @@ app.use('/api/admin/documents', createFolderRouter);
 app.use('/api/admin/documents', getFoldersRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/git', checkDiffRouter);
-app.use('/api/admin/git', createBranchRouter);
-app.use('/api/admin/git', createPRRouter);
-app.use('/api/admin/git', getCurrentBranchRouter);
-app.use('/api/admin/git', switchBranchRouter);
 
 // セッション確認
 app.get('/api/auth/session', async (req, res) => {
