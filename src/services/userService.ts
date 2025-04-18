@@ -4,22 +4,22 @@ import { User } from '../types/user';
 export const userService = {
   async createUser(
     email: string,
-    hashedPassword: string,
-    userId: string
+    hashedPassword: string, 
   ): Promise<Omit<User, 'password'>> {
-    console.log('Creating user:', email, hashedPassword, userId);
-    console.log('DB URL:', db);
+    try {
+      const result = await db.execute({
+        sql: 'INSERT INTO users (email, password, created_at) VALUES (?, ?, ?) RETURNING id, email',
+        args: [email, hashedPassword, new Date().toISOString()],
+      });
 
-    await db.execute({
-      sql: 'INSERT INTO users (id, email, password, created_at) VALUES (?, ?, ?, ?)',
-      args: [userId, email, hashedPassword, new Date().toISOString()],
-    });
-
-    return {
-      id: userId,
-      email,
-      createdAt: new Date().toISOString(),
-    };
+      return {
+        id: Number(result.rows[0].id),
+        email: result.rows[0].email as string,
+      };
+    } catch (error) {
+      console.error('ユーザー作成エラー:', error);
+      throw error;
+    }
   },
 
   async getUserByEmail(email: string): Promise<User | null> {
@@ -34,10 +34,9 @@ export const userService = {
 
     const row = result.rows[0];
     return {
-      id: row.id as string,
+      id: row.id as number,
       email: row.email as string,
       password: row.password as string,
-      createdAt: row.createdAt as string,
     };
   },
 
@@ -54,13 +53,12 @@ export const userService = {
   async getAllUsers(): Promise<Omit<User, 'password'>[]> {
     try {
       const result = await db.execute({
-        sql: 'SELECT id, email, created_at as createdAt FROM users ORDER BY created_at DESC',
+        sql: 'SELECT id, email, created_at FROM users ORDER BY created_at DESC',
       });
 
       return result.rows.map(row => ({
-        id: row.id as string,
+        id: row.id as number,
         email: row.email as string,
-        createdAt: row.createdAt as string,
       }));
     } catch (error) {
       console.error('ユーザー一覧取得エラー:', error);

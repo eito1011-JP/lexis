@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
+import { checkUserDraft } from '@site/api/admin/utils/git';
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
@@ -19,6 +20,7 @@ export default function DocumentsPage(): JSX.Element {
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
@@ -27,10 +29,16 @@ export default function DocumentsPage(): JSX.Element {
     // フォルダー一覧を取得
     const fetchFolders = async () => {
       try {
-        const response = await apiClient.get('/admin/documents/folders');
+        const folders = await apiClient.get('/admin/documents/folders');
 
-        if (response.folders) {
-          setFolders(response.folders);
+        if (folders.folders) {
+          setFolders(folders.folders);
+        }
+
+        const hasUserDraft = await apiClient.get('/admin/git/check-diff');
+
+        if (hasUserDraft.exists) {
+          setShowPrSubmitButton(true);
         }
       } catch (err) {
         console.error('フォルダー取得エラー:', err);
@@ -283,10 +291,10 @@ export default function DocumentsPage(): JSX.Element {
         </div>
 
         {/* 差分提出ボタン */}
-        {showSubmitButton && (
+          {showPrSubmitButton && (
           <div className="fixed bottom-8 right-8">
             <button
-              onClick={() => setShowSubmitModal(true)}
+                onClick={handleSubmitDiff}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
             >
               差分を提出する

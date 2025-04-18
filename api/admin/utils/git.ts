@@ -1,6 +1,6 @@
 import { db } from "@site/src/lib/db";
 import { GITHUB_TOKEN, GITHUB_REPO, GITHUB_OWNER } from "../config";
-import { v4 as uuidv4 } from 'uuid';
+
 const initOctokit = async () => {
   const { Octokit } = await import('@octokit/rest');
   return new Octokit({
@@ -39,12 +39,11 @@ export async function createBranch(userId: string, email: string): Promise<void>
   .replace(/-/g, '');
 
   const branchName = `feature/${email}_${timestamp}`;
-  const id = uuidv4();
 
   // user branchの状態を記録
   await db.execute({
-    sql: 'INSERT INTO user_branches (id, user_id, branch_name, snapshot_commit, is_active, pr_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    args: [id, userId, branchName, snapshotCommit, 1, 'none', timestamp, timestamp],
+    sql: 'INSERT INTO user_branches (user_id, branch_name, snapshot_commit, is_active, pr_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    args: [userId, branchName, snapshotCommit, 1, 'none', timestamp, timestamp],
   });
 }
 

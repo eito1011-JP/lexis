@@ -1,10 +1,8 @@
-import { v4 as uuidv4 } from 'uuid';
 import { db } from '../lib/db';
 
 export const sessionService = {
   // セッションの作成
-  async createSession(userId: string, email: string): Promise<string> {
-    const sessionId = uuidv4();
+  async createSession(userId: number, email: string): Promise<number> {
     const expireAt = new Date();
     expireAt.setDate(expireAt.getDate() + 90); // 90日後に期限切れ
 
@@ -26,18 +24,18 @@ export const sessionService = {
         // 既存のセッションがある場合は更新
         await db.execute({
           sql: 'UPDATE sessions SET sess = ?, expired_at = ? WHERE user_id = ?',
-          args: [JSON.stringify(sessionData), expireAt.toISOString(), userId],
+          args: [JSON.stringify(sessionData), expireAt, userId],
         });
 
-        return existingSession.rows[0].id as string;
+          return existingSession.rows[0].id as number;
       } else {
         // 新規セッションの作成
-        await db.execute({
-          sql: 'INSERT INTO sessions (id, user_id, sess, expired_at) VALUES (?, ?, ?, ?)',
-          args: [sessionId, userId, JSON.stringify(sessionData), expireAt.toISOString()],
+        const result = await db.execute({
+          sql: 'INSERT INTO sessions (user_id, sess, expired_at) VALUES (?, ?, ?)',
+          args: [userId, JSON.stringify(sessionData), expireAt],
         });
 
-        return sessionId;
+          return result.rows[0].id as number;
       }
     } catch (error) {
       console.error('セッション作成エラー:', error);

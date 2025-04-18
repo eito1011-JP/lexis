@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { hash } from 'bcrypt';
-import { v4 as uuidv4 } from 'uuid';
 import { API_ERRORS, SUCCESS_MESSAGES, HTTP_STATUS } from '../../const/errors';
 import { userService } from '../../../src/services/userService';
 import { sessionService } from '../../../src/services/sessionService';
@@ -46,14 +45,11 @@ router.post('/signup', async (req: Request, res: Response) => {
     const saltRounds = 10;
     const hashedPassword = await hash(password, saltRounds);
 
-    // ユーザーIDを生成
-    const userId = uuidv4();
-
     // データベースにユーザーを保存
-    const userWithoutPassword = await userService.createUser(email, hashedPassword, userId);
+    const userWithoutPassword = await userService.createUser(email, hashedPassword);
 
     // セッションを作成してセッションIDを取得
-    const sessionId = await sessionService.createSession(userId, email);
+    const sessionId = await sessionService.createSession(userWithoutPassword.id, userWithoutPassword.email);
 
     // クッキーにセッションIDを設定
     res.cookie('sid', sessionId, {
