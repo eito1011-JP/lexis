@@ -112,7 +112,7 @@ export default function DocumentsPage(): JSX.Element {
   const handleCheckDiff = async () => {
     try {
       const hasUserDraft = await apiClient.get('/admin/git/check-diff');
-      console.log('hasUserDraft:', hasUserDraft);
+
       if (hasUserDraft.exists) {
         setShowBranchModal(true);
       } else {
@@ -367,7 +367,7 @@ export default function DocumentsPage(): JSX.Element {
               <div className="flex flex-col gap-4 items-center">
                 <button
                   onClick={handleCreateFolder}
-                  className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center justify-center"
+                  className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center border-none font-bold justify-center"
                   disabled={!folderName.trim() || isCreating}
                 >
                   {isCreating ? (
@@ -378,7 +378,7 @@ export default function DocumentsPage(): JSX.Element {
                 </button>
                 <button
                   onClick={handleCloseModal}
-                  className="w-48 py-3 bg-gray-500 text-white rounded-md hover:bg-opacity-90"
+                  className="w-48 py-3 bg-gray-500 text-white rounded-md border-none hover:bg-opacity-90 font-bold"
                   disabled={isCreating}
                 >
                   戻る

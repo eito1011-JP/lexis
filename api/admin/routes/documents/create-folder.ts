@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
-import { sessionService } from '../../../../src/services/sessionService';
 import fs from 'fs';
 import path from 'path';
+import { getAuthenticatedUser } from '../../utils/auth';
+import { checkUserDraft } from '../../utils/git';
 
 // Request型の拡張
 declare global {
@@ -29,12 +30,12 @@ router.post('/create-folder', async (req: Request, res: Response) => {
       });
     }
 
-    const user = await sessionService.getSessionUser(sessionId);
+    await getAuthenticatedUser(sessionId);
 
-    if (!user) {
-      return res.status(HTTP_STATUS.UNAUTHORIZED).json({
-        error: API_ERRORS.AUTH.INVALID_SESSION,
-      });
+    // check diff
+    const hasDraft = await checkUserDraft(sessionId);
+
+    if (!hasDraft) {
     }
 
     const { folderName } = req.body;
