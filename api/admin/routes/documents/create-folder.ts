@@ -3,7 +3,7 @@ import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import fs from 'fs';
 import path from 'path';
 import { getAuthenticatedUser } from '../../utils/auth';
-import { checkUserDraft } from '../../utils/git';
+import { checkUserDraft, createBranch } from '../../utils/git';
 
 // Request型の拡張
 declare global {
@@ -30,13 +30,15 @@ router.post('/create-folder', async (req: Request, res: Response) => {
       });
     }
 
-    await getAuthenticatedUser(sessionId);
+    // ログインユーザーを取得
+    const loginUser = await getAuthenticatedUser(sessionId);
 
     // check diff
-    const hasDraft = await checkUserDraft(sessionId);
+    const hasDraft = await checkUserDraft(loginUser.userId);
 
     if (!hasDraft) {
-    }
+      await createBranch(loginUser.userId, loginUser.email);
+    } 
 
     const { folderName } = req.body;
 

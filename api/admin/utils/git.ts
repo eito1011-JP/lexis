@@ -1,12 +1,20 @@
 import { db } from "@site/src/lib/db";
-import { GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO } from "../config";
+import { GITHUB_TOKEN, GITHUB_REPO, GITHUB_OWNER } from "../config";
+import { v4 as uuidv4 } from 'uuid';
+const initOctokit = async () => {
+  const { Octokit } = await import('@octokit/rest');
+  return new Octokit({
+    auth: GITHUB_TOKEN
+  });
+};
+
 /**
  * @returns {Promise<boolean>} 未コミットの変更がある場合はtrue
  */
-  export async function checkUserDraft(userId: string): Promise<boolean> {  
+export async function checkUserDraft(userId: string): Promise<boolean> {  
   try {
     const hasDraft = await db.execute({
-      sql: 'SELECT * FROM user_branch WHERE user_id = ? AND is_active = 1 AND pr_status = ?',
+      sql: 'SELECT * FROM user_branches WHERE user_id = ? AND is_active = 1 AND pr_status = ?',
           args: [userId, 'none'],
     });
 
@@ -17,42 +25,39 @@ import { GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO } from "../config";
     }
 
   } catch (error) {
-    console.error('error');
+    console.error(error);
     throw new Error('diffの確認に失敗しました');
   }
 } 
 
-export async function createBranch(userId: string): Promise<void> {
-  // github api呼び出してmainブランチの最新コミットを取得
-  const snapshotCommit = await findLatestCommit(userId);
+export async function createBranch(userId: string, email: string): Promise<void> {
+  const snapshotCommit = await findLatestCommit();
 
   const timestamp = Math.floor(Date.now() / 1000);
-  const branchName = `feature/${userId}_${timestamp}`;
+  const branchName = `feature/${email}_${timestamp}`;
+  const id = uuidv4();
 
   // user branchの状態を記録
   await db.execute({
-    sql: 'INSERT INTO user_branch (user_id, branch_name, snapshot_commit, is_active, pr_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    args: [userId, branchName, snapshotCommit, 1, 'none', timestamp, timestamp],
+    sql: 'INSERT INTO user_branches (id, user_id, branch_name, snapshot_commit, is_active, pr_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    args: [id, userId, branchName, snapshotCommit, 1, 'none', timestamp, timestamp],
   });
 }
 
-async function findLatestCommit(userId: string): Promise<string> {
-const latestCommit = await fetch(
-    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/main`,
-    {
+async function findLatestCommit(): Promise<string> {
+  try {
+    const octokit = await initOctokit();
+    const response = await octokit.request('GET /repos/{owner}/{repo}/git/refs/heads/main', {
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,  
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
-    }
-  );
+        'X-GitHub-Api-Version': '2022-11-28'
+      }
+    });
 
-  console.log('latestCommit', latestCommit);
-
-  if (!latestCommit.ok) {
-    throw new Error(`GitHub API failed: ${latestCommit.status}`);
+    return response.data.object.sha;
+  } catch (error) {
+    console.error('GitHub APIエラー:', error);
+    throw new Error('最新のコミット取得に失敗しました');
   }
-
-  const data = await latestCommit.json();
-  return data.object.sha;
 }

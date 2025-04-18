@@ -112,7 +112,7 @@ export default function DocumentsPage(): JSX.Element {
   const handleCheckDiff = async () => {
     try {
       const hasUserDraft = await apiClient.get('/admin/git/check-diff');
-
+      
       if (hasUserDraft.exists) {
         setShowBranchModal(true);
       } else {

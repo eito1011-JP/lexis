@@ -1,6 +1,5 @@
 import React, { createContext, useState, useContext, useCallback, useRef, useEffect } from 'react';
 import { apiClient } from '@site/src/components/admin/api/client';
-import type { UserBranch } from '@site/src/services/branchService';
 
 interface User {
   userId: string;
@@ -27,14 +26,9 @@ export const useSession = () => useContext(SessionContext);
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<User | null>(null);
-  const [activeBranch, setActiveBranch] = useState<UserBranch | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const lastCheckRef = useRef<number>(0);
 
-  // アクティブブランチを更新する関数
-  const updateActiveBranch = useCallback((branch: UserBranch | null) => {
-    setActiveBranch(branch);
-  }, []);
 
   const checkSession = useCallback(async () => {
     const now = Date.now();
@@ -71,7 +65,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [checkSession]);
 
   return (
-    <SessionContext.Provider value={{ isAuthenticated, user, activeBranch, checkSession, updateActiveBranch, isLoading }}>
+    <SessionContext.Provider value={{ isAuthenticated, user, checkSession, isLoading }}>
       {children}
     </SessionContext.Provider>
   );
