@@ -108,6 +108,22 @@ export default function DocumentsPage(): JSX.Element {
     }
   };
 
+  // 差分チェックのハンドラー
+  const handleCheckDiff = async () => {
+    try {
+      const hasUserDraft = await apiClient.get('/admin/git/check-diff');
+
+      if (hasUserDraft.exists) {
+
+      } else {
+
+      }
+    } catch (err) {
+      console.error('差分チェックエラー:', err);
+      setSubmitError('差分の確認中にエラーが発生しました');
+    }
+  };
+
   // セッション確認中はローディング表示
   if (isLoading) {
     return (
@@ -262,7 +278,7 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md"
-                onClick={() => {}}
+                onClick={handleCheckDiff}
               >
                 新規ドキュメント作成
               </button>
