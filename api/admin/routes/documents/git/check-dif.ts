@@ -9,12 +9,12 @@ router.get('/check-diff', async (req: Request, res: Response) => {
     const loginUser = await getAuthenticatedUser(req.cookies.sid);
 
     const hasUserDraft = await db.execute({
-      sql: 'SELECT EXISTS (SELECT 1 FROM document_versions WHERE user_id = ? AND status = ?) as exists',
+      sql: 'SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END as has_draft FROM document_versions WHERE user_id = ? AND status = ?',
       args: [loginUser.userId, 'draft'],
     });
 
     return res.json({ 
-      exists: hasUserDraft.rows[0].exists === 1
+      exists: hasUserDraft.rows[0].has_draft === 1
     });
   } catch (error) {
     console.error('Error checking document versions:', error);
