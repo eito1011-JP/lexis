@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS user_branches (
   branch_name TEXT NOT NULL,
   snapshot_commit TEXT NOT NULL,
   is_active BOOLEAN DEFAULT 1,
-  pr_status TEXT CHECK(pr_status IN ('conflict', 'created', 'merged')) NOT NULL,
+  pr_status TEXT CHECK(pr_status IN ('none', 'conflict', 'created', 'merged', 'closed')) NOT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id)
