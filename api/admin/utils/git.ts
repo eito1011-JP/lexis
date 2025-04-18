@@ -1,18 +1,16 @@
 import { db } from "@site/src/lib/db";
-import { getAuthenticatedUser } from "./auth";
+import { GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO } from "../config";
 /**
- * ユーザーの作業ディレクトリに未コミットの変更があるかチェックする
  * @returns {Promise<boolean>} 未コミットの変更がある場合はtrue
  */
-  export async function checkUserDraft(sessionId: string): Promise<boolean> {  
+  export async function checkUserDraft(userId: string): Promise<boolean> {  
   try {
-    const loginUser = await getAuthenticatedUser(sessionId);
     const hasDraft = await db.execute({
-      sql: 'SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END as has_draft FROM document_versions WHERE user_id = ? AND status = ?',
-          args: [loginUser.userId, 'draft'],
+      sql: 'SELECT * FROM user_branch WHERE user_id = ? AND is_active = 1 AND pr_status = ?',
+          args: [userId, 'none'],
     });
 
-    if (!hasDraft.rows[0].has_draft) {
+    if (!hasDraft.rows[0]) {
       return false;
     } else {
       return true;
@@ -36,17 +34,25 @@ export async function createBranch(userId: string): Promise<void> {
     sql: 'INSERT INTO user_branch (user_id, branch_name, snapshot_commit, is_active, pr_status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     args: [userId, branchName, snapshotCommit, 1, 'none', timestamp, timestamp],
   });
-
-  // userの編集documentの状態を記録
-  await db.execute({
-    sql: 'INSERT INTO document_versions (user_id, branch_id, file_path, status, content, original_blob_sha, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    args: [userId, branchName, 'draft'],
-  });
 }
 
 async function findLatestCommit(userId: string): Promise<string> {
-  const snapshotCommit = await db.execute({
-    sql: 'SELECT snapshot_commit FROM user_branch WHERE user_id = ?',
-    args: [userId],
-  });
+const latestCommit = await fetch(
+    `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/git/refs/heads/main`,
+    {
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    }
+  );
+
+  console.log('latestCommit', latestCommit);
+
+  if (!latestCommit.ok) {
+    throw new Error(`GitHub API failed: ${latestCommit.status}`);
+  }
+
+  const data = await latestCommit.json();
+  return data.object.sha;
 }
