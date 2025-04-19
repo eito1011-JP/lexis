@@ -34,7 +34,6 @@ router.post('/signup', async (req: Request, res: Response) => {
 
     // 既存ユーザーの確認 - データベースから
     const userExists = await userService.checkUserExists(email);
-    console.log('ユーザー存在確認:', userExists);
     if (userExists) {
       return res.status(HTTP_STATUS.CONFLICT).json({
         error: API_ERRORS.AUTH.EMAIL_EXISTS,

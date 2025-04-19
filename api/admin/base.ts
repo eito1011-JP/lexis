@@ -9,9 +9,7 @@ import { getFoldersRouter } from './routes/documents/get-folders';
 import { middleware } from './routes/middleware';
 import { sessionService } from '../../src/services/sessionService';
 import usersRouter from './routes/users';
-import checkDiffRouter from './routes/git/check-diff';
 import documentGitCheckDiffRouter from './routes/documents/git/check-diff';
-
 // Expressアプリの初期化
 const app = express();
 
@@ -35,7 +33,6 @@ app.use('/api/admin', loginRouter);
 app.use('/api/admin/documents', createFolderRouter);
 app.use('/api/admin/documents', getFoldersRouter);
 app.use('/api/admin/users', usersRouter);
-app.use('/api/admin/git', checkDiffRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
 
 // セッション確認

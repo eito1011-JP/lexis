@@ -17,7 +17,7 @@ export async function checkUserDraft(userId: number): Promise<boolean> {
       sql: 'SELECT * FROM user_branches WHERE user_id = ? AND is_active = 1 AND pr_status = ?',
           args: [userId, 'none'],
     });
-
+  
     if (!hasDraft.rows[0]) {
       return false;
     } else {
@@ -30,7 +30,7 @@ export async function checkUserDraft(userId: number): Promise<boolean> {
   }
 } 
 
-export async function createBranch(userId: string, email: string): Promise<void> {
+export async function createBranch(userId: number, email: string): Promise<void> {
   const snapshotCommit = await findLatestCommit();
 
   const timestamp = new Date()
