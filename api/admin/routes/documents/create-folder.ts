@@ -3,8 +3,7 @@ import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import fs from 'fs';
 import path from 'path';
 import { getAuthenticatedUser } from '../../utils/auth';
-import { checkUserDraft, createBranch } from '../../utils/git';
-
+import { checkUserDraft, initBranchSnapshot } from '../../utils/git';
 // Request型の拡張
 declare global {
   namespace Express {
@@ -36,7 +35,7 @@ router.post('/create-folder', async (req: Request, res: Response) => {
     const hasDraft = await checkUserDraft(loginUser.userId);
 
     if (!hasDraft) {
-      await createBranch(loginUser.userId, loginUser.email);
+      await initBranchSnapshot(loginUser.userId, loginUser.email);
     } 
 
     const { folderName } = req.body;

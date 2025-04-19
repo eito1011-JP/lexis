@@ -30,7 +30,7 @@ export async function checkUserDraft(userId: number): Promise<boolean> {
   }
 } 
 
-export async function createBranch(userId: number, email: string): Promise<void> {
+export async function initBranchSnapshot(userId: number, email: string): Promise<void> {
   const snapshotCommit = await findLatestCommit();
 
   const timestamp = new Date()
