@@ -35,7 +35,7 @@ export default function DocumentsPage(): JSX.Element {
           setFolders(folders.folders);
         }
 
-        const hasUserDraft = await apiClient.get('/admin/git/check-diff');
+        const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
 
         if (hasUserDraft.exists) {
           setShowPrSubmitButton(true);

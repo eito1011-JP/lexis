@@ -15,7 +15,7 @@ export const API_CONFIG = {
       GET_ALL: '/admin/users',
     },
     GIT: {
-      CHECK_DIFF: '/admin/git/check-diff',
+      CHECK_DIFF: '/admin/documents/git/check-diff',
     },
   },
 };

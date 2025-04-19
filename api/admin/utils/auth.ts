@@ -1,9 +1,8 @@
 import { sessionService } from '../../../src/services/sessionService';
 
 export interface AuthUser {
-  userId: string;
+  userId: number;
   email: string;
-  lastActivity: string;
 }
 
 export const getAuthenticatedUser = async (sessionId: string): Promise<AuthUser | null> => {

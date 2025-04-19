@@ -10,7 +10,6 @@ export const sessionService = {
       userId,
       email,
       createdAt: new Date().toISOString(),
-      lastActivity: new Date().toISOString(),
     };
 
     try {
@@ -26,8 +25,7 @@ export const sessionService = {
           sql: 'UPDATE sessions SET sess = ?, expired_at = ? WHERE user_id = ?',
           args: [JSON.stringify(sessionData), expireAt, userId],
         });
-
-          return existingSession.rows[0].id as number;
+        return existingSession.rows[0].id as number;
       } else {
         // 新規セッションの作成
         const result = await db.execute({
@@ -35,7 +33,7 @@ export const sessionService = {
           args: [userId, JSON.stringify(sessionData), expireAt],
         });
 
-          return result.rows[0].id as number;
+        return Number(result.lastInsertRowid);
       }
     } catch (error) {
       console.error('セッション作成エラー:', error);
@@ -47,8 +45,8 @@ export const sessionService = {
   async getSessionUser(sessionId: string) {
     try {
       const result = await db.execute({
-        sql: 'SELECT user_id, sess FROM sessions WHERE id = ? AND expired_at > ?',
-        args: [sessionId, new Date().toISOString()],
+        sql: 'SELECT user_id, sess FROM sessions WHERE user_id = ? AND expired_at > ?',
+        args: [sessionId, new Date()],
       });
 
       if (result.rows.length === 0) {
@@ -59,7 +57,6 @@ export const sessionService = {
       return {
         userId: sessionData.userId,
         email: sessionData.email,
-        lastActivity: sessionData.lastActivity,
       };
     } catch (error) {
       console.error('セッション検証エラー:', error);

@@ -5,16 +5,19 @@ export const userService = {
   async createUser(
     email: string,
     hashedPassword: string, 
-  ): Promise<Omit<User, 'password'>> {
+  ): Promise<User> {
     try {
       const result = await db.execute({
-        sql: 'INSERT INTO users (email, password, created_at) VALUES (?, ?, ?) RETURNING id, email',
+        sql: 'INSERT INTO users (email, password, created_at) VALUES (?, ?, ?)',
         args: [email, hashedPassword, new Date().toISOString()],
       });
 
+      const row = result.lastInsertRowid;
       return {
-        id: Number(result.rows[0].id),
-        email: result.rows[0].email as string,
+        id: Number(row),
+        email: email,
+        password: hashedPassword,
+        createdAt: new Date(),
       };
     } catch (error) {
       console.error('ユーザー作成エラー:', error);
@@ -37,6 +40,7 @@ export const userService = {
       id: row.id as number,
       email: row.email as string,
       password: row.password as string,
+      createdAt: new Date(),
     };
   },
 
@@ -45,7 +49,6 @@ export const userService = {
       sql: 'SELECT 1 FROM users WHERE email = ?',
       args: [email],
     });
-    console.log(result);
     return result.rows.length > 0;
   },
 
@@ -59,6 +62,7 @@ export const userService = {
       return result.rows.map(row => ({
         id: row.id as number,
         email: row.email as string,
+        createdAt: new Date(),
       }));
     } catch (error) {
       console.error('ユーザー一覧取得エラー:', error);

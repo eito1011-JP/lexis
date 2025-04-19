@@ -2,9 +2,8 @@ import React, { createContext, useState, useContext, useCallback, useRef, useEff
 import { apiClient } from '@site/src/components/admin/api/client';
 
 interface User {
-  userId: string;
+  userId: number;
   email: string;
-  lastActivity: string;
 }
 
 interface SessionContextType {

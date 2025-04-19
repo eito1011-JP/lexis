@@ -6,7 +6,12 @@ const router = Router();
 
 router.get('/check-diff', async (req: Request, res: Response) => {
   try {
+    console.log('req.cookies.sid', req.cookies.sid);
     const loginUser = await getAuthenticatedUser(req.cookies.sid);
+    
+    if (!loginUser) {
+      return res.status(401).json({ error: '認証されていません' });
+    }
 
     const hasUserDraft = await db.execute({
       sql: 'SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END as has_draft FROM document_versions WHERE user_id = ? AND status = ?',
