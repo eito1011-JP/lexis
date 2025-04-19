@@ -294,7 +294,7 @@ export default function DocumentsPage(): JSX.Element {
           {showPrSubmitButton && (
           <div className="bottom-8 right-8 text-right mt-[2rem]">
             <button
-                onClick={handleSubmitDiff}
+                onClick={() => setShowSubmitModal(true)}
               className="bg-[#3832A5] text-white border-none font-bold py-2 px-4 rounded"
             >
               差分を提出する
@@ -304,7 +304,7 @@ export default function DocumentsPage(): JSX.Element {
 
         {/* 差分提出確認モーダル */}
         {showSubmitModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-[#0A0A0A] bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg max-w-md w-full">
               <h2 className="text-xl font-bold mb-4">差分の提出</h2>
               <p className="mb-4">現在の変更を提出しますか？</p>
@@ -316,17 +316,17 @@ export default function DocumentsPage(): JSX.Element {
               <div className="flex justify-end gap-4">
                 <button
                   onClick={() => setShowSubmitModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
+                  className="px-4 border-none py-2 bg-[#B1B1B1] text-white rounded"
                   disabled={isSubmitting}
                 >
                   キャンセル
                 </button>
                 <button
                   onClick={handleSubmitDiff}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-4 py-2 border-none bg-[#3832A5] text-white rounded hover:bg-opacity-90"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? '提出中...' : '提出する'}
+                  提出する
                 </button>
               </div>
             </div>
