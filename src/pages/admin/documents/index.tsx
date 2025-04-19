@@ -292,10 +292,10 @@ export default function DocumentsPage(): JSX.Element {
 
         {/* 差分提出ボタン */}
           {showPrSubmitButton && (
-          <div className="fixed bottom-8 right-8">
+          <div className="bottom-8 right-8 text-right mt-[2rem]">
             <button
                 onClick={handleSubmitDiff}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+              className="bg-[#3832A5] text-white border-none font-bold py-2 px-4 rounded"
             >
               差分を提出する
             </button>
