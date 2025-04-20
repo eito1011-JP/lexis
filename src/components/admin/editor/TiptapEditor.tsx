@@ -27,6 +27,8 @@ import { StrikeThrow as StrikeThrowIcon } from '../../icon/editor/StrikeThrow';
 import { Quote as QuoteIcon } from '../../icon/editor/Quote';
 import OrderedList from '@tiptap/extension-ordered-list';
 import { OrderedList as OrderedListIcon } from '../../icon/editor/OrderedList';
+import CodeBlock from '@tiptap/extension-code-block';
+import { CodeBlock as CodeBlockIcon } from '../../icon/editor/CodeBlock';
 
 // カスタムエクステンション: フォントサイズをサポート
 const FontSize = Extension.create({
@@ -117,6 +119,12 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       ListItem,
       OrderedList,
       Blockquote,
+      CodeBlock.configure({
+        languageClassPrefix: 'language-',
+        HTMLAttributes: {
+          class: 'code-block',
+        },
+      }),
       Image,
       Heading.configure({
         levels: [1, 2, 3, 4, 5, 6],
@@ -176,6 +184,10 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 
   const toggleBlockquote = () => {
     editor?.chain().focus().toggleBlockquote().run();
+  };
+
+  const toggleCodeBlock = () => {
+    editor?.chain().focus().toggleCodeBlock().run();
   };
 
   const addImage = () => {
@@ -436,6 +448,16 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           <QuoteIcon width={16} height={16} />
         </button>
 
+        <button
+          onClick={toggleCodeBlock}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('codeBlock') ? 'bg-gray-200' : ''
+          }`}
+          title="code block"
+        >
+          <CodeBlockIcon width={16} height={16} />
+        </button>
+
         <div className="flex items-center h-8 mx-1">
           <div className="h-5 border-l border-[#B1B1B1]"></div>
         </div>
@@ -512,6 +534,56 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           margin-left: 0;
           margin-right: 0;
           color: #666;
+        }
+        .ProseMirror pre {
+          background: #0D0D0D;
+          color: #FFF;
+          font-family: 'JetBrainsMono', monospace;
+          padding: 0.75rem 1rem;
+          border-radius: 0.5rem;
+          margin: 0.5rem 0;
+          overflow-x: auto;
+          position: relative;
+        }
+        .ProseMirror pre::before {
+          content: attr(data-language);
+          position: absolute;
+          top: 0.25rem;
+          right: 0.5rem;
+          font-size: 0.6rem;
+          color: rgba(255, 255, 255, 0.5);
+          text-transform: uppercase;
+        }
+        .ProseMirror .code-block {
+          position: relative;
+        }
+        .ProseMirror .code-block::after {
+          content: attr(data-language);
+          position: absolute;
+          top: 0;
+          right: 0;
+          padding: 0.25rem 0.5rem;
+          font-size: 0.65rem;
+          color: rgba(255, 255, 255, 0.5);
+          background-color: rgba(0, 0, 0, 0.4);
+          border-bottom-left-radius: 0.25rem;
+          text-transform: uppercase;
+        }
+        .ProseMirror pre code {
+          color: inherit;
+          padding: 0;
+          background: none;
+          font-size: 0.8rem;
+          font-family: 'JetBrainsMono', monospace;
+          line-height: 1.5;
+          display: block;
+        }
+        .ProseMirror code {
+          background-color: rgba(97, 97, 97, 0.1);
+          color: #616161;
+          font-family: 'JetBrainsMono', monospace;
+          border-radius: 0.25rem;
+          padding: 0.15rem 0.25rem;
         }
         .ProseMirror img {
           max-width: 100%;
