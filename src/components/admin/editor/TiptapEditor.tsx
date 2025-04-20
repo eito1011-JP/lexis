@@ -2,8 +2,76 @@ import Document from '@tiptap/extension-document';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import Placeholder from '@tiptap/extension-placeholder';
+import Bold from '@tiptap/extension-bold';
+import Italic from '@tiptap/extension-italic';
+import Underline from '@tiptap/extension-underline';
+import Strike from '@tiptap/extension-strike';
+import BulletList from '@tiptap/extension-bullet-list';
+import ListItem from '@tiptap/extension-list-item';
+import Blockquote from '@tiptap/extension-blockquote';
+import Image from '@tiptap/extension-image';
+import Heading from '@tiptap/extension-heading';
 import { EditorContent, useEditor } from '@tiptap/react';
 import React, { useEffect, useRef, useState } from 'react';
+import { Extension } from '@tiptap/core';
+import TextStyle from '@tiptap/extension-text-style';
+import Toggle from '../../icon/editor/Toggle';
+import { TextFormat } from '../../icon/editor/TextFormat';
+import { Paragraph as ParagraphIcon } from '../../icon/editor/Paragraph';
+
+// カスタムエクステンション: フォントサイズをサポート
+const FontSize = Extension.create({
+  name: 'fontSize',
+
+  addAttributes() {
+    return {
+      fontSize: {
+        default: null,
+        parseHTML: element => element.style.fontSize,
+        renderHTML: attributes => {
+          if (!attributes.fontSize) {
+            return {};
+          }
+          return {
+            style: `font-size: ${attributes.fontSize}`,
+          };
+        },
+      },
+    };
+  },
+
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['textStyle'],
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize,
+            renderHTML: attributes => {
+              if (!attributes.fontSize) {
+                return {};
+              }
+              return {
+                style: `font-size: ${attributes.fontSize}`,
+              };
+            },
+          },
+        },
+      },
+    ];
+  },
+
+  addCommands() {
+    return {
+      setFontSize: fontSize => ({ chain }) => {
+        return chain()
+          .setMark('textStyle', { fontSize: fontSize })
+          .run();
+      },
+    };
+  },
+});
 
 interface TiptapEditorProps {
   initialContent: string;
@@ -23,7 +91,24 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     extensions: [
       Document,
       Paragraph,
-      Text,
+      Text.configure({
+        HTMLAttributes: {
+          class: 'editor-text',
+        },
+      }),
+      Bold,
+      Italic,
+      Underline,
+      Strike,
+      BulletList,
+      ListItem,
+      Blockquote,
+      Image,
+      Heading.configure({
+        levels: [1, 2, 3, 4, 5, 6],
+      }),
+      TextStyle,
+      FontSize,
       Placeholder.configure({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
@@ -51,17 +136,250 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     }
   }, [editor]);
 
+  const toggleBold = () => {
+    editor?.chain().focus().toggleBold().run();
+  };
+
+  const toggleItalic = () => {
+    editor?.chain().focus().toggleItalic().run();
+  };
+
+  const toggleUnderline = () => {
+    editor?.chain().focus().toggleUnderline().run();
+  };
+
+  const toggleStrike = () => {
+    editor?.chain().focus().toggleStrike().run();
+  };
+
+  const toggleBulletList = () => {
+    editor?.chain().focus().toggleBulletList().run();
+  };
+
+  const toggleBlockquote = () => {
+    editor?.chain().focus().toggleBlockquote().run();
+  };
+
+  const addImage = () => {
+    const url = window.prompt('画像URLを入力してください');
+    if (url) {
+      editor?.chain().focus().setImage({ src: url }).run();
+    }
+  };
+
+  const setParagraph = () => {
+    editor?.chain().focus().setParagraph().run();
+  };
+
+  const setHeading = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
+    editor?.chain().focus().toggleHeading({ level }).run();
+  };
+
+  const setFontSize = (size: string) => {
+    // 現在の選択範囲にフォントサイズを適用
+    editor?.chain()
+           .focus()
+           .setFontSize(size)
+           .run();
+  };
+
   return (
-    <div className="flex w-full font-mono relative">
-      <div className="w-10 pt-2 bg-gray-800 text-gray-500 text-right select-none border-r border-gray-700">
-        {Array.from({ length: lineCount }, (_, i) => (
-          <div key={i} className="h-6 pr-2 text-sm leading-6">
-            {i + 1}
-          </div>
-        ))}
+    <div className="w-full relative">
+      <div className="flex mb-2 pb-5 pt-1 px-1 border-b gap-1 rounded-t">
+      <div className="relative group mr-1">
+        <button
+          className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent flex items-center`}
+          title="段落スタイル"
+        >
+            <span className="mr-3">{editor?.isActive('heading') ? `H${editor?.isActive('heading', { level: 1 }) ? '1' : 
+                           editor?.isActive('heading', { level: 2 }) ? '2' : 
+                           editor?.isActive('heading', { level: 3 }) ? '3' : 
+                           editor?.isActive('heading', { level: 4 }) ? '4' : 
+                           editor?.isActive('heading', { level: 5 }) ? '5' : '6'}` : <ParagraphIcon className="pb-0" width={18} height={18} />}</span>
+          <Toggle width={10} height={10}/>
+        </button>
+        <div className="absolute hidden group-hover:block bg-white border rounded shadow-lg z-10 w-32">
+          <button
+            onClick={setParagraph}
+            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+              editor?.isActive('paragraph') ? 'bg-gray-200' : ''
+            }`}
+          >
+            段落
+          </button>
+          <button
+            onClick={() => setHeading(1)}
+            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+              editor?.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''
+            }`}
+          >
+            見出し 1
+          </button>
+          <button
+            onClick={() => setHeading(2)}
+            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+              editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''
+            }`}
+          >
+            見出し 2
+          </button>
+          <button
+            onClick={() => setHeading(3)}
+            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+              editor?.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''
+            }`}
+          >
+            見出し 3
+          </button>
+        </div>
       </div>
-      <div className="flex-grow pl-2" ref={editorRef}>
-        <EditorContent editor={editor} className="outline-none" />
+      
+      <div className="relative group mr-1 border-l border-[#B1B1B1]">
+        <button
+          className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent flex items-center`}
+          title="フォントサイズ"
+        >
+          <TextFormat className="mr-3 pb-0" width={30} height={30}/>
+          <Toggle width={10} height={10}/>
+        </button>
+        <div className="absolute hidden group-hover:block bg-white border rounded shadow-lg z-10 w-32">
+          <button
+            onClick={() => setFontSize('12px')}
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xs"
+          >
+            小 (12px)
+          </button>
+          <button
+            onClick={() => setFontSize('16px')}
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
+          >
+            中 (16px)
+          </button>
+          <button
+            onClick={() => setFontSize('20px')}
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-lg"
+          >
+            大 (20px)
+          </button>
+          <button
+            onClick={() => setFontSize('24px')}
+            className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xl"
+          >
+            特大 (24px)
+          </button>
+        </div>
+      </div>
+
+      <div className="h-6 mx-1 border-r border-gray-300"></div>
+        
+      <button
+        onClick={toggleBold}
+        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+          editor?.isActive('bold') ? 'bg-gray-200' : ''
+        }`}
+        title="bold"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+          <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+        </svg>
+      </button>
+      <button
+        onClick={toggleItalic}
+        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+          editor?.isActive('italic') ? 'bg-gray-200' : ''
+        }`}
+        title="italic"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="19" y1="4" x2="10" y2="4"></line>
+          <line x1="14" y1="20" x2="5" y2="20"></line>
+          <line x1="15" y1="4" x2="9" y2="20"></line>
+        </svg>
+      </button>
+      <button
+        onClick={toggleUnderline}
+        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+          editor?.isActive('underline') ? 'bg-gray-200' : ''
+        }`}
+        title="underline"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
+          <line x1="4" y1="21" x2="20" y2="21"></line>
+        </svg>
+      </button>
+      <button
+        onClick={toggleStrike}
+        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+          editor?.isActive('strike') ? 'bg-gray-200' : ''
+        }`}
+        title="strike"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4"></path>
+          <path d="M20 9H4"></path>
+          <path d="M8 9v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V9"></path>
+        </svg>
+      </button>
+      
+      <div className="h-6 mx-1 border-r border-gray-300"></div>
+      
+      <button
+        onClick={toggleBulletList}
+        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+          editor?.isActive('bulletList') ? 'bg-gray-200' : ''
+        }`}
+        title="bullet-list"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="8" y1="6" x2="21" y2="6"></line>
+          <line x1="8" y1="12" x2="21" y2="12"></line>
+          <line x1="8" y1="18" x2="21" y2="18"></line>
+          <line x1="3" y1="6" x2="3.01" y2="6"></line>
+          <line x1="3" y1="12" x2="3.01" y2="12"></line>
+          <line x1="3" y1="18" x2="3.01" y2="18"></line>
+        </svg>
+      </button>
+      
+      <button
+        onClick={toggleBlockquote}
+        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+          editor?.isActive('blockquote') ? 'bg-gray-200' : ''
+        }`}
+        title="blockquote"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+      
+      <div className="h-6 mx-1 border-r border-gray-300"></div>
+      
+      <button
+        onClick={addImage}
+        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent`}
+        title="image"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
+        </svg>
+      </button>
+      </div>
+      
+      <div className="flex rounded-b">
+        <div className="w-10 text-[#B1B1B1] text-right py-2">
+          {Array.from({ length: lineCount }, (_, i) => (
+            <div key={i} className="h-6 pr-2 text-sm leading-6">
+              {i + 1}
+            </div>
+          ))}
+        </div>
+        <div className="flex-grow pl-2 py-2" ref={editorRef}>
+          <EditorContent editor={editor} className="outline-none w-full" />
+        </div>
       </div>
 
       <style jsx global>{`
@@ -75,12 +393,51 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           line-height: 1.5rem;
           min-height: 1.5rem;
         }
+        .ProseMirror h1 {
+          font-size: 1.75rem;
+          margin: 0.75rem 0 0.25rem 0;
+          font-weight: bold;
+        }
+        .ProseMirror h2 {
+          font-size: 1.5rem;
+          margin: 0.75rem 0 0.25rem 0;
+          font-weight: bold;
+        }
+        .ProseMirror h3 {
+          font-size: 1.25rem;
+          margin: 0.5rem 0 0.25rem 0;
+          font-weight: bold;
+        }
         .ProseMirror.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
           color: #666;
           pointer-events: none;
           height: 0;
+        }
+        .ProseMirror ul {
+          padding-left: 1.5rem;
+          margin: 0.5rem 0;
+        }
+        .ProseMirror li {
+          margin-bottom: 0.25rem;
+        }
+        .ProseMirror blockquote {
+          border-left: 3px solid #ddd;
+          padding-left: 1rem;
+          margin-left: 0;
+          margin-right: 0;
+          color: #666;
+        }
+        .ProseMirror img {
+          max-width: 100%;
+          height: auto;
+          margin: 0.5rem 0;
+        }
+        /* スタイル付きテキスト */
+        .ProseMirror span[style] {
+          display: inline;
+          white-space: pre-wrap;
         }
       `}</style>
     </div>
