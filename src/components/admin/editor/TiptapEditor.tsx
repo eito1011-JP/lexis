@@ -23,6 +23,8 @@ import { Italic as ItalicIcon } from '../../icon/editor/Italic';
 import { UnderLine as UnderLineIcon } from '../../icon/editor/UnderLine';
 import { Image as ImageIcon } from '../../icon/common/Image';
 import { BulletList as BulletListIcon } from '../../icon/editor/BulletList';
+import { StrikeThrow as StrikeThrowIcon } from '../../icon/editor/StrikeThrow';
+import { Quote as QuoteIcon } from '../../icon/editor/Quote';
 
 // カスタムエクステンション: フォントサイズをサポート
 const FontSize = Extension.create({
@@ -386,21 +388,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           }`}
           title="strike"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4"></path>
-            <path d="M20 9H4"></path>
-            <path d="M8 9v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V9"></path>
-          </svg>
+          <StrikeThrowIcon width={16} height={16} />
         </button>
 
         <div className="h-6 mx-1 border-r border-gray-300"></div>
@@ -422,19 +410,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           }`}
           title="blockquote"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
+          <QuoteIcon width={16} height={16} />
         </button>
 
         <div className="h-6 mx-1 border-r border-gray-300"></div>
