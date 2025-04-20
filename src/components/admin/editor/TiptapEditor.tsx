@@ -95,7 +95,6 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   onChange,
   placeholder = 'ここにドキュメントを作成してください',
 }) => {
-  const [lineCount, setLineCount] = useState<number>(1);
   const [showParagraphOptions, setShowParagraphOptions] = useState<boolean>(false);
   const [showFontSizeOptions, setShowFontSizeOptions] = useState<boolean>(false);
   const editorRef = useRef<HTMLDivElement>(null);
@@ -139,24 +138,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     content: initialContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
-      updateLineCount();
     },
+    editable: true,
   });
-
-  const updateLineCount = () => {
-    if (editorRef.current && editor) {
-      // DOM要素を直接使用して段落数をカウント
-      const paragraphs = editor.view.dom.querySelectorAll('p');
-      setLineCount(paragraphs.length || 1);
-    }
-  };
-
-  useEffect(() => {
-    if (editor) {
-      // エディタの初期化後に行数を更新
-      setTimeout(updateLineCount, 100);
-    }
-  }, [editor]);
 
   const toggleBold = () => {
     editor?.chain().focus().toggleBold().run();
@@ -207,7 +191,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 
   const setFontSize = (size: string) => {
     // 現在の選択範囲にフォントサイズを適用
-    editor?.chain().focus().setFontSize(size).run();
+    editor?.chain().focus().setMark('textStyle', { fontSize: size }).run();
   };
 
   // クリックイベントのハンドラ追加
@@ -471,23 +455,17 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         </button>
       </div>
 
-      <div className="flex rounded-b">
-        <div className="w-10 text-[#B1B1B1] text-right py-2">
-          {Array.from({ length: lineCount }, (_, i) => (
-            <div key={i} className="h-6 pr-2 text-sm leading-6">
-              {i + 1}
-            </div>
-          ))}
-        </div>
-        <div className="flex-grow pl-2 py-2" ref={editorRef}>
+      <div className="rounded-b">
+        <div className="w-full pt-4" ref={editorRef}>
           <EditorContent editor={editor} className="outline-none w-full" />
         </div>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         .ProseMirror {
           outline: none;
           min-height: 200px;
+          padding: 8px;
         }
         .ProseMirror p {
           margin: 0;
