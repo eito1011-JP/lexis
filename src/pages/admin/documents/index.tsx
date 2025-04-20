@@ -265,7 +265,7 @@ export default function DocumentsPage(): JSX.Element {
               <button
                 className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md"
                 onClick={() => {
-                  window.location.href = '/admin/documents/new';
+                  window.location.href = '/admin/documents/create';
                 }}
               >
                 新規ドキュメント作成
