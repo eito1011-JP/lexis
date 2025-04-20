@@ -36,7 +36,7 @@ router.post('/create-folder', async (req: Request, res: Response) => {
 
     if (!hasDraft) {
       await initBranchSnapshot(loginUser.userId, loginUser.email);
-    } 
+    }
 
     const { folderName } = req.body;
 

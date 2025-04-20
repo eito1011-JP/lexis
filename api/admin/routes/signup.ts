@@ -48,7 +48,10 @@ router.post('/signup', async (req: Request, res: Response) => {
     const userWithoutPassword = await userService.createUser(email, hashedPassword);
 
     // セッションを作成してセッションIDを取得
-    const sessionId = await sessionService.createSession(userWithoutPassword.id, userWithoutPassword.email);
+    const sessionId = await sessionService.createSession(
+      userWithoutPassword.id,
+      userWithoutPassword.email
+    );
 
     // クッキーにセッションIDを設定
     res.cookie('sid', sessionId, {

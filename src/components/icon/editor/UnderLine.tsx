@@ -1,0 +1,27 @@
+import React from 'react';
+
+type UnderLineProps = {
+  className?: string;
+  width?: number;
+  height?: number;
+};
+
+export const UnderLine: React.FC<UnderLineProps> = ({ className = '', width, height }) => {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={width}
+      height={height}
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
+      <line x1="4" y1="21" x2="20" y2="21"></line>
+    </svg>
+  );
+};

@@ -18,6 +18,11 @@ import TextStyle from '@tiptap/extension-text-style';
 import Toggle from '../../icon/editor/Toggle';
 import { TextFormat } from '../../icon/editor/TextFormat';
 import { Paragraph as ParagraphIcon } from '../../icon/editor/Paragraph';
+import { Bold as BoldIcon } from '../../icon/editor/Bold';
+import { Italic as ItalicIcon } from '../../icon/editor/Italic';
+import { UnderLine as UnderLineIcon } from '../../icon/editor/UnderLine';
+import { Image as ImageIcon } from '../../icon/common/Image';
+import { BulletList as BulletListIcon } from '../../icon/editor/BulletList';
 
 // カスタムエクステンション: フォントサイズをサポート
 const FontSize = Extension.create({
@@ -64,11 +69,11 @@ const FontSize = Extension.create({
 
   addCommands() {
     return {
-      setFontSize: fontSize => ({ chain }) => {
-        return chain()
-          .setMark('textStyle', { fontSize: fontSize })
-          .run();
-      },
+      setFontSize:
+        fontSize =>
+        ({ chain }) => {
+          return chain().setMark('textStyle', { fontSize: fontSize }).run();
+        },
     };
   },
 });
@@ -85,7 +90,11 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   placeholder = 'ここにドキュメントを作成してください',
 }) => {
   const [lineCount, setLineCount] = useState<number>(1);
+  const [showParagraphOptions, setShowParagraphOptions] = useState<boolean>(false);
+  const [showFontSizeOptions, setShowFontSizeOptions] = useState<boolean>(false);
   const editorRef = useRef<HTMLDivElement>(null);
+  const paragraphMenuRef = useRef<HTMLDivElement>(null);
+  const fontSizeMenuRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -177,198 +186,268 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 
   const setFontSize = (size: string) => {
     // 現在の選択範囲にフォントサイズを適用
-    editor?.chain()
-           .focus()
-           .setFontSize(size)
-           .run();
+    editor?.chain().focus().setFontSize(size).run();
+  };
+
+  // クリックイベントのハンドラ追加
+  useEffect(() => {
+    // メニュー外のクリックを監視して閉じる
+    const handleClickOutside = (event: MouseEvent) => {
+      if (paragraphMenuRef.current && !paragraphMenuRef.current.contains(event.target as Node)) {
+        setShowParagraphOptions(false);
+      }
+      if (fontSizeMenuRef.current && !fontSizeMenuRef.current.contains(event.target as Node)) {
+        setShowFontSizeOptions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const toggleParagraphMenu = () => {
+    setShowParagraphOptions(!showParagraphOptions);
+    setShowFontSizeOptions(false); // 他のメニューを閉じる
+  };
+
+  const toggleFontSizeMenu = () => {
+    setShowFontSizeOptions(!showFontSizeOptions);
+    setShowParagraphOptions(false); // 他のメニューを閉じる
   };
 
   return (
     <div className="w-full relative">
       <div className="flex mb-2 pb-5 pt-1 px-1 border-b gap-1 rounded-t">
-      <div className="relative group mr-1">
-        <button
-          className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent flex items-center`}
-          title="段落スタイル"
-        >
-            <span className="mr-3">{editor?.isActive('heading') ? `H${editor?.isActive('heading', { level: 1 }) ? '1' : 
-                           editor?.isActive('heading', { level: 2 }) ? '2' : 
-                           editor?.isActive('heading', { level: 3 }) ? '3' : 
-                           editor?.isActive('heading', { level: 4 }) ? '4' : 
-                           editor?.isActive('heading', { level: 5 }) ? '5' : '6'}` : <ParagraphIcon className="pb-0" width={18} height={18} />}</span>
-          <Toggle width={10} height={10}/>
-        </button>
-        <div className="absolute hidden group-hover:block bg-white border rounded shadow-lg z-10 w-32">
+        <div className="relative h-8 mr-1">
           <button
-            onClick={setParagraph}
-            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
-              editor?.isActive('paragraph') ? 'bg-gray-200' : ''
-            }`}
+            className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent flex items-center ${showParagraphOptions ? 'border-[#B1B1B1]' : ''}`}
+            title="段落スタイル"
+            onClick={toggleParagraphMenu}
           >
-            段落
+            <span className="mr-3">
+              {editor?.isActive('heading') ? (
+                `H${
+                  editor?.isActive('heading', { level: 1 })
+                    ? '1'
+                    : editor?.isActive('heading', { level: 2 })
+                      ? '2'
+                      : editor?.isActive('heading', { level: 3 })
+                        ? '3'
+                        : editor?.isActive('heading', { level: 4 })
+                          ? '4'
+                          : editor?.isActive('heading', { level: 5 })
+                            ? '5'
+                            : '6'
+                }`
+              ) : (
+                <ParagraphIcon width={18} height={18} />
+              )}
+            </span>
+            <Toggle width={10} height={10} />
           </button>
-          <button
-            onClick={() => setHeading(1)}
-            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
-              editor?.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''
-            }`}
+          <div
+            ref={paragraphMenuRef}
+            className={`absolute ${showParagraphOptions ? 'block' : 'hidden'} bg-white border rounded shadow-lg z-10 w-32`}
           >
-            見出し 1
-          </button>
-          <button
-            onClick={() => setHeading(2)}
-            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
-              editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''
-            }`}
-          >
-            見出し 2
-          </button>
-          <button
-            onClick={() => setHeading(3)}
-            className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
-              editor?.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''
-            }`}
-          >
-            見出し 3
-          </button>
+            <button
+              onClick={() => {
+                setParagraph();
+                setShowParagraphOptions(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+                editor?.isActive('paragraph') ? 'bg-gray-200' : ''
+              }`}
+            >
+              段落
+            </button>
+            <button
+              onClick={() => {
+                setHeading(1);
+                setShowParagraphOptions(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+                editor?.isActive('heading', { level: 1 }) ? 'bg-gray-200' : ''
+              }`}
+            >
+              見出し 1
+            </button>
+            <button
+              onClick={() => {
+                setHeading(2);
+                setShowParagraphOptions(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+                editor?.isActive('heading', { level: 2 }) ? 'bg-gray-200' : ''
+              }`}
+            >
+              見出し 2
+            </button>
+            <button
+              onClick={() => {
+                setHeading(3);
+                setShowParagraphOptions(false);
+              }}
+              className={`w-full text-left px-3 py-1.5 hover:bg-gray-100 ${
+                editor?.isActive('heading', { level: 3 }) ? 'bg-gray-200' : ''
+              }`}
+            >
+              見出し 3
+            </button>
+          </div>
         </div>
-      </div>
-      
-      <div className="relative group mr-1 border-l border-[#B1B1B1]">
-        <button
-          className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent flex items-center`}
-          title="フォントサイズ"
-        >
-          <TextFormat className="mr-3 pb-0" width={30} height={30}/>
-          <Toggle width={10} height={10}/>
-        </button>
-        <div className="absolute hidden group-hover:block bg-white border rounded shadow-lg z-10 w-32">
+
+        <div className="relative h-8 mr-1 border-l border-[#B1B1B1]">
           <button
-            onClick={() => setFontSize('12px')}
-            className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xs"
+            className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent flex items-center ${showFontSizeOptions ? 'border-[#B1B1B1]' : ''}`}
+            title="フォントサイズ"
+            onClick={toggleFontSizeMenu}
           >
-            小 (12px)
+            <TextFormat className="mr-3" width={30} height={30} />
+            <Toggle width={10} height={10} />
           </button>
-          <button
-            onClick={() => setFontSize('16px')}
-            className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
+          <div
+            ref={fontSizeMenuRef}
+            className={`absolute ${showFontSizeOptions ? 'block' : 'hidden'} bg-white border rounded shadow-lg z-10 w-32`}
           >
-            中 (16px)
-          </button>
-          <button
-            onClick={() => setFontSize('20px')}
-            className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-lg"
-          >
-            大 (20px)
-          </button>
-          <button
-            onClick={() => setFontSize('24px')}
-            className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xl"
-          >
-            特大 (24px)
-          </button>
+            <button
+              onClick={() => {
+                setFontSize('12px');
+                setShowFontSizeOptions(false);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xs"
+            >
+              小 (12px)
+            </button>
+            <button
+              onClick={() => {
+                setFontSize('16px');
+                setShowFontSizeOptions(false);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
+            >
+              中 (16px)
+            </button>
+            <button
+              onClick={() => {
+                setFontSize('20px');
+                setShowFontSizeOptions(false);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-lg"
+            >
+              大 (20px)
+            </button>
+            <button
+              onClick={() => {
+                setFontSize('24px');
+                setShowFontSizeOptions(false);
+              }}
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xl"
+            >
+              特大 (24px)
+            </button>
+          </div>
         </div>
+
+        <div className="h-8 mx-1 border-l border "></div>
+
+        <button
+          onClick={toggleBold}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('bold') ? 'bg-gray-200' : ''
+          }`}
+          title="bold"
+        >
+          <BoldIcon width={16} height={16} />
+        </button>
+        <button
+          onClick={toggleItalic}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('italic') ? 'bg-gray-200' : ''
+          }`}
+          title="italic"
+        >
+          <ItalicIcon width={16} height={16} />
+        </button>
+        <button
+          onClick={toggleUnderline}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('underline') ? 'bg-gray-200' : ''
+          }`}
+          title="underline"
+        >
+          <UnderLineIcon width={16} height={16} />
+        </button>
+        <button
+          onClick={toggleStrike}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('strike') ? 'bg-gray-200' : ''
+          }`}
+          title="strike"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4"></path>
+            <path d="M20 9H4"></path>
+            <path d="M8 9v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V9"></path>
+          </svg>
+        </button>
+
+        <div className="h-6 mx-1 border-r border-gray-300"></div>
+
+        <button
+          onClick={toggleBulletList}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('bulletList') ? 'bg-gray-200' : ''
+          }`}
+          title="bullet-list"
+        >
+          <BulletListIcon width={16} height={16} />
+        </button>
+
+        <button
+          onClick={toggleBlockquote}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('blockquote') ? 'bg-gray-200' : ''
+          }`}
+          title="blockquote"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </button>
+
+        <div className="h-6 mx-1 border-r border-gray-300"></div>
+
+        <button
+          onClick={addImage}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent`}
+          title="image"
+        >
+          <ImageIcon width={16} height={16} />
+        </button>
       </div>
 
-      <div className="h-6 mx-1 border-r border-gray-300"></div>
-        
-      <button
-        onClick={toggleBold}
-        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
-          editor?.isActive('bold') ? 'bg-gray-200' : ''
-        }`}
-        title="bold"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
-          <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
-        </svg>
-      </button>
-      <button
-        onClick={toggleItalic}
-        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
-          editor?.isActive('italic') ? 'bg-gray-200' : ''
-        }`}
-        title="italic"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="19" y1="4" x2="10" y2="4"></line>
-          <line x1="14" y1="20" x2="5" y2="20"></line>
-          <line x1="15" y1="4" x2="9" y2="20"></line>
-        </svg>
-      </button>
-      <button
-        onClick={toggleUnderline}
-        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
-          editor?.isActive('underline') ? 'bg-gray-200' : ''
-        }`}
-        title="underline"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M6 3v7a6 6 0 0 0 6 6 6 6 0 0 0 6-6V3"></path>
-          <line x1="4" y1="21" x2="20" y2="21"></line>
-        </svg>
-      </button>
-      <button
-        onClick={toggleStrike}
-        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
-          editor?.isActive('strike') ? 'bg-gray-200' : ''
-        }`}
-        title="strike"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 9V5a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v4"></path>
-          <path d="M20 9H4"></path>
-          <path d="M8 9v10a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V9"></path>
-        </svg>
-      </button>
-      
-      <div className="h-6 mx-1 border-r border-gray-300"></div>
-      
-      <button
-        onClick={toggleBulletList}
-        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
-          editor?.isActive('bulletList') ? 'bg-gray-200' : ''
-        }`}
-        title="bullet-list"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="8" y1="6" x2="21" y2="6"></line>
-          <line x1="8" y1="12" x2="21" y2="12"></line>
-          <line x1="8" y1="18" x2="21" y2="18"></line>
-          <line x1="3" y1="6" x2="3.01" y2="6"></line>
-          <line x1="3" y1="12" x2="3.01" y2="12"></line>
-          <line x1="3" y1="18" x2="3.01" y2="18"></line>
-        </svg>
-      </button>
-      
-      <button
-        onClick={toggleBlockquote}
-        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
-          editor?.isActive('blockquote') ? 'bg-gray-200' : ''
-        }`}
-        title="blockquote"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-      </button>
-      
-      <div className="h-6 mx-1 border-r border-gray-300"></div>
-      
-      <button
-        onClick={addImage}
-        className={`px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent`}
-        title="image"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-          <circle cx="8.5" cy="8.5" r="1.5"></circle>
-          <polyline points="21 15 16 10 5 21"></polyline>
-        </svg>
-      </button>
-      </div>
-      
       <div className="flex rounded-b">
         <div className="w-10 text-[#B1B1B1] text-right py-2">
           {Array.from({ length: lineCount }, (_, i) => (

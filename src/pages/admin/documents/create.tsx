@@ -187,7 +187,7 @@ export default function CreateDocumentPage(): JSX.Element {
     <AdminLayout title="ドキュメント作成">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-4">ドキュメント作成</h1>          
+          <h1 className="text-2xl font-bold mb-4">ドキュメント作成</h1>
           <div className="flex items-center gap-4 mb-6">
             <button
               className="bg-gray-900 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-700"

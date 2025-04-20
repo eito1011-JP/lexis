@@ -1,42 +1,38 @@
-import { db } from "@site/src/lib/db";
-import { GITHUB_TOKEN, GITHUB_REPO, GITHUB_OWNER } from "../config";
+import { db } from '@site/src/lib/db';
+import { GITHUB_TOKEN, GITHUB_REPO, GITHUB_OWNER } from '../config';
 
 const initOctokit = async () => {
   const { Octokit } = await import('@octokit/rest');
   return new Octokit({
-    auth: GITHUB_TOKEN
+    auth: GITHUB_TOKEN,
   });
 };
 
 /**
  * @returns {Promise<boolean>} 未コミットの変更がある場合はtrue
  */
-export async function checkUserDraft(userId: number): Promise<boolean> {  
+export async function checkUserDraft(userId: number): Promise<boolean> {
   try {
     const hasDraft = await db.execute({
       sql: 'SELECT * FROM user_branches WHERE user_id = ? AND is_active = 1 AND pr_status = ?',
-          args: [userId, 'none'],
+      args: [userId, 'none'],
     });
-  
+
     if (!hasDraft.rows[0]) {
       return false;
     } else {
       return true;
     }
-
   } catch (error) {
     console.error(error);
     throw new Error('diffの確認に失敗しました');
   }
-} 
+}
 
 export async function initBranchSnapshot(userId: number, email: string): Promise<void> {
   const snapshotCommit = await findLatestCommit();
 
-  const timestamp = new Date()
-  .toISOString()
-  .slice(0, 10)
-  .replace(/-/g, '');
+  const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
   const branchName = `feature/${email}_${timestamp}`;
 
@@ -52,10 +48,10 @@ async function findLatestCommit(): Promise<string> {
     const octokit = await initOctokit();
     const response = await octokit.request('GET /repos/{owner}/{repo}/git/refs/heads/main', {
       owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,  
+      repo: GITHUB_REPO,
       headers: {
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
     });
 
     return response.data.object.sha;

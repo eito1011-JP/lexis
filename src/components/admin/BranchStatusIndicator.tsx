@@ -26,7 +26,7 @@ export default function BranchStatusIndicator(): JSX.Element | null {
     <>
       {/* 通知表示エリア */}
       {notification && (
-        <div 
+        <div
           className={`fixed top-4 right-4 bg-green-800 text-white px-4 py-2 rounded-md shadow-lg transition-opacity duration-500 ${
             isVisible ? 'opacity-100' : 'opacity-0'
           }`}
@@ -36,4 +36,4 @@ export default function BranchStatusIndicator(): JSX.Element | null {
       )}
     </>
   );
-} 
+}

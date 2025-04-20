@@ -16,7 +16,7 @@ export default function DocumentsPage(): JSX.Element {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
-  const [foldersLoading, setFoldersLoading] = useState(true); 
+  const [foldersLoading, setFoldersLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -51,7 +51,6 @@ export default function DocumentsPage(): JSX.Element {
     fetchFolders();
   }, []);
 
-
   const handleCreateImageFolder = () => {
     setShowFolderModal(true);
   };
@@ -60,7 +59,6 @@ export default function DocumentsPage(): JSX.Element {
     setShowFolderModal(false);
     setFolderName('');
   };
-
 
   const handleCreateFolder = async () => {
     if (!folderName.trim()) return;
@@ -81,7 +79,6 @@ export default function DocumentsPage(): JSX.Element {
       setIsCreating(false);
     }
   };
-
 
   // 差分提出のハンドラー
   const handleSubmitDiff = async () => {
@@ -291,10 +288,10 @@ export default function DocumentsPage(): JSX.Element {
         </div>
 
         {/* 差分提出ボタン */}
-          {showPrSubmitButton && (
+        {showPrSubmitButton && (
           <div className="bottom-8 right-8 text-right mt-[2rem]">
             <button
-                onClick={() => setShowSubmitModal(true)}
+              onClick={() => setShowSubmitModal(true)}
               className="bg-[#3832A5] text-white border-none font-bold py-2 px-4 rounded"
             >
               差分を提出する
@@ -309,9 +306,7 @@ export default function DocumentsPage(): JSX.Element {
               <h2 className="text-xl font-bold mb-4">差分の提出</h2>
               <p className="mb-4">現在の変更を提出しますか？</p>
               {submitError && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-                  {submitError}
-                </div>
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{submitError}</div>
               )}
               <div className="flex justify-end gap-4">
                 <button

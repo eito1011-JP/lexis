@@ -2,10 +2,7 @@ import { db } from '../lib/db';
 import { User } from '../types/user';
 
 export const userService = {
-  async createUser(
-    email: string,
-    hashedPassword: string, 
-  ): Promise<User> {
+  async createUser(email: string, hashedPassword: string): Promise<User> {
     try {
       const result = await db.execute({
         sql: 'INSERT INTO users (email, password, created_at) VALUES (?, ?, ?)',

@@ -28,7 +28,6 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [isLoading, setIsLoading] = useState(true);
   const lastCheckRef = useRef<number>(0);
 
-
   const checkSession = useCallback(async () => {
     const now = Date.now();
     if (now - lastCheckRef.current < 5000) {
@@ -44,7 +43,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.error('セッション確認エラー:', err);
       setIsAuthenticated(false);
-      setUser(null);  
+      setUser(null);
       lastCheckRef.current = now;
     } finally {
       setIsLoading(false);

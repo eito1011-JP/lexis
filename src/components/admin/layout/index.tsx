@@ -27,7 +27,7 @@ export default function AdminLayout({
       </Head>
 
       <AdminHeader />
-      
+
       <BranchStatusIndicator />
 
       <main className="flex-1 p-6">{children}</main>
@@ -35,4 +35,4 @@ export default function AdminLayout({
       <AdminFooter />
     </div>
   );
-} 
+}

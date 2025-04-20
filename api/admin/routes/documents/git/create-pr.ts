@@ -4,15 +4,14 @@ import { getAuthenticatedUser } from '../../../utils/auth';
 const router = Router();
 
 router.get('/create-pr', async (req: Request, res: Response) => {
-  try { 
+  try {
     const loginUser = await getAuthenticatedUser(req.cookies.sid);
-    
+
     if (!loginUser) {
       return res.status(401).json({ error: '認証されていません' });
     }
 
-    // 
-
+    //
   } catch (error) {
     console.error('Error checking document versions:', error);
     return res.status(500).json({ error: 'Internal server error' });
@@ -20,4 +19,3 @@ router.get('/create-pr', async (req: Request, res: Response) => {
 });
 
 export default router;
-

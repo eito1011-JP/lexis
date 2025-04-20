@@ -25,4 +25,4 @@ export const isProduction = (): boolean => {
 
 export const requiresAuth = (): boolean => {
   return isProduction();
-}; 
+};
