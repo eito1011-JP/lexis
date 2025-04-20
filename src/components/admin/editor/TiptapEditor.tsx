@@ -25,6 +25,8 @@ import { Image as ImageIcon } from '../../icon/common/Image';
 import { BulletList as BulletListIcon } from '../../icon/editor/BulletList';
 import { StrikeThrow as StrikeThrowIcon } from '../../icon/editor/StrikeThrow';
 import { Quote as QuoteIcon } from '../../icon/editor/Quote';
+import OrderedList from '@tiptap/extension-ordered-list';
+import { OrderedList as OrderedListIcon } from '../../icon/editor/OrderedList';
 
 // カスタムエクステンション: フォントサイズをサポート
 const FontSize = Extension.create({
@@ -113,6 +115,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       Strike,
       BulletList,
       ListItem,
+      OrderedList,
       Blockquote,
       Image,
       Heading.configure({
@@ -165,6 +168,10 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 
   const toggleBulletList = () => {
     editor?.chain().focus().toggleBulletList().run();
+  };
+
+  const toggleOrderedList = () => {
+    editor?.chain().focus().toggleOrderedList().run();
   };
 
   const toggleBlockquote = () => {
@@ -244,7 +251,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
                             : '6'
                 }`
               ) : (
-                <ParagraphIcon width={18} height={18} />
+                <ParagraphIcon width={15} height={15} />
               )}
             </span>
             <Toggle width={10} height={10} />
@@ -299,14 +306,16 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
             </button>
           </div>
         </div>
-
-        <div className="relative h-8 mr-1 border-l border-[#B1B1B1]">
+        <div className="flex items-center h-8 mx-1">
+          <div className="h-5 border-l border-[#B1B1B1]"></div>
+        </div>
+        <div className="relative h-8 mr-1">
           <button
             className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent flex items-center ${showFontSizeOptions ? 'border-[#B1B1B1]' : ''}`}
             title="フォントサイズ"
             onClick={toggleFontSizeMenu}
           >
-            <TextFormat className="mr-3" width={30} height={30} />
+            <TextFormat className="mr-3" width={22} height={22} />
             <Toggle width={10} height={10} />
           </button>
           <div
@@ -352,7 +361,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           </div>
         </div>
 
-        <div className="h-8 mx-1 border-l border "></div>
+        <div className="flex items-center h-8 mx-1">
+          <div className="h-5 border-l border-[#B1B1B1]"></div>
+        </div>
 
         <button
           onClick={toggleBold}
@@ -391,7 +402,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           <StrikeThrowIcon width={16} height={16} />
         </button>
 
-        <div className="h-6 mx-1 border-r border-gray-300"></div>
+        <div className="flex items-center h-8 mx-1">
+          <div className="h-5 border-l border-[#B1B1B1]"></div>
+        </div>
 
         <button
           onClick={toggleBulletList}
@@ -404,6 +417,16 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         </button>
 
         <button
+          onClick={toggleOrderedList}
+          className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
+            editor?.isActive('orderedList') ? 'bg-gray-200' : ''
+          }`}
+          title="ordered-list"
+        >
+          <OrderedListIcon width={19} height={19} />
+        </button>
+
+        <button
           onClick={toggleBlockquote}
           className={`bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent ${
             editor?.isActive('blockquote') ? 'bg-gray-200' : ''
@@ -413,7 +436,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           <QuoteIcon width={16} height={16} />
         </button>
 
-        <div className="h-6 mx-1 border-r border-gray-300"></div>
+        <div className="flex items-center h-8 mx-1">
+          <div className="h-5 border-l border-[#B1B1B1]"></div>
+        </div>
 
         <button
           onClick={addImage}
@@ -471,6 +496,10 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           height: 0;
         }
         .ProseMirror ul {
+          padding-left: 1.5rem;
+          margin: 0.5rem 0;
+        }
+        .ProseMirror ol {
           padding-left: 1.5rem;
           margin: 0.5rem 0;
         }
