@@ -26,7 +26,7 @@ export default function DocumentsPage(): JSX.Element {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    // フォルダー一覧を取得
+    // フォルダ一覧を取得
     const fetchFolders = async () => {
       try {
         const folders = await apiClient.get('/admin/documents/folders');
@@ -41,8 +41,8 @@ export default function DocumentsPage(): JSX.Element {
           setShowPrSubmitButton(true);
         }
       } catch (err) {
-        console.error('フォルダー取得エラー:', err);
-        setApiError('フォルダーの取得に失敗しました');
+        console.error('フォルダ取得エラー:', err);
+        setApiError('フォルダの取得に失敗しました');
       } finally {
         setFoldersLoading(false);
       }
@@ -69,7 +69,7 @@ export default function DocumentsPage(): JSX.Element {
     try {
       await apiClient.post('/admin/documents/create-folder', { folderName });
 
-      // フォルダーリストを更新
+      // フォルダリストを更新
       setFolders(prev => [...prev, folderName]);
       handleCloseModal();
     } catch (err) {
@@ -118,7 +118,7 @@ export default function DocumentsPage(): JSX.Element {
     );
   }
 
-  // フォルダーセクション
+  // フォルダセクション
   const renderFolderSection = () => {
     if (foldersLoading) {
       return (
@@ -129,7 +129,7 @@ export default function DocumentsPage(): JSX.Element {
     }
 
     if (folders.length === 0) {
-      return <p className="text-gray-400 py-4">フォルダーがありません</p>;
+      return <p className="text-gray-400 py-4">フォルダがありません</p>;
     }
 
     return (
@@ -281,9 +281,9 @@ export default function DocumentsPage(): JSX.Element {
           </div>
         </div>
 
-        {/* フォルダーセクション */}
+        {/* フォルダセクション */}
         <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4">フォルダー</h2>
+          <h2 className="text-xl font-bold mb-4">フォルダ</h2>
           {renderFolderSection()}
         </div>
 

@@ -26,16 +26,16 @@ export default function CreateDocumentPage(): JSX.Element {
   const [usersLoading, setUsersLoading] = useState(true);
 
   useEffect(() => {
-    // フォルダー一覧を取得
+    // フォルダ一覧を取得
     const fetchFolders = async () => {
       try {
         const response = await apiClient.get('/admin/documents/folders');
-        console.log('フォルダー取得レスポンス:', response);
+        console.log('フォルダ取得レスポンス:', response);
         if (response.folders) {
           setFolders(response.folders);
         }
       } catch (err) {
-        console.error('フォルダー取得エラー:', err);
+        console.error('フォルダ取得エラー:', err);
       } finally {
         setFoldersLoading(false);
       }
@@ -109,7 +109,7 @@ export default function CreateDocumentPage(): JSX.Element {
     }
   };
 
-  // フォルダーを複数列に分割する関数
+  // フォルダを複数列に分割する関数
   const renderFolderList = () => {
     if (foldersLoading) {
       return (
