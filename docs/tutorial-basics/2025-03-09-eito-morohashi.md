@@ -1,5 +1,5 @@
 ---
-slug: eito morohashi
+slug: eito-morohashi
 sidebar_label: 私の自己消化い
 ---
 # 好きなもの

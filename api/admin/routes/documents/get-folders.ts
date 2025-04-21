@@ -3,6 +3,7 @@ import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import { sessionService } from '../../../../src/services/sessionService';
 import fs from 'fs';
 import path from 'path';
+import matter from 'gray-matter';
 
 // Request型の拡張
 declare global {
@@ -50,7 +51,43 @@ router.get('/folders', async (req: Request, res: Response) => {
 
     // docs 配下のフォルダを取得
     const items = fs.readdirSync(docsDir, { withFileTypes: true });
-    const folders = items.filter(item => item.isDirectory()).map(item => item.name);
+    const dirItems = items.filter(item => item.isDirectory());
+    
+    // フォルダ情報を拡張してslug情報を含める
+    const folders = await Promise.all(dirItems.map(async (dirItem) => {
+      const folderName = dirItem.name;
+      const folderPath = path.join(docsDir, folderName);
+      let slug = folderName; // デフォルトはフォルダ名
+      
+      // フォルダ内のmdファイルを探してslugを取得
+      try {
+        const files = fs.readdirSync(folderPath, { withFileTypes: true });
+        const mdFiles = files.filter(file => file.isFile() && file.name.endsWith('.md'));
+        
+        // mdファイルがあれば最初のファイルからslugを取得
+        if (mdFiles.length > 0) {
+          const firstMdFile = mdFiles[0];
+          const filePath = path.join(folderPath, firstMdFile.name);
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          
+          // front-matterを解析
+          const { data } = matter(fileContent);
+          
+          // slugが存在すればそれを使用
+          if (data.slug) {
+            slug = data.slug;
+          }
+        }
+      } catch (err) {
+        console.error(`${folderName}のslug取得中にエラー:`, err);
+        // エラーが発生してもフォルダ名をそのまま使用
+      }
+      
+      return {
+        name: folderName,
+        slug: slug
+      };
+    }));
 
     return res.status(HTTP_STATUS.OK).json({
       folders,

@@ -7,6 +7,7 @@ import { loginRouter } from './routes/login';
 import { createFolderRouter } from './routes/documents/create-folder';
 import { getFoldersRouter } from './routes/documents/get-folders';
 import { createDocumentRouter } from './routes/documents/create-document';
+import { getFolderContentsRouter } from './routes/documents/get-folder-contents';
 import { middleware } from './routes/middleware';
 import { sessionService } from '../../src/services/sessionService';
 import usersRouter from './routes/users';
@@ -34,6 +35,7 @@ app.use('/api/admin', loginRouter);
 app.use('/api/admin/documents', createFolderRouter);
 app.use('/api/admin/documents', getFoldersRouter);
 app.use('/api/admin/documents', createDocumentRouter);
+app.use('/api/admin/documents', getFolderContentsRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
 

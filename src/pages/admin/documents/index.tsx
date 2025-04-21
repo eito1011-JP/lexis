@@ -5,6 +5,12 @@ import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
 import { checkUserDraft } from '@site/api/admin/utils/git';
 
+// フォルダの型定義
+type Folder = {
+  name: string;
+  slug: string;
+};
+
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
@@ -15,7 +21,7 @@ export default function DocumentsPage(): JSX.Element {
   const [folderName, setFolderName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [folders, setFolders] = useState<string[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
@@ -29,10 +35,10 @@ export default function DocumentsPage(): JSX.Element {
     // フォルダ一覧を取得
     const fetchFolders = async () => {
       try {
-        const folders = await apiClient.get('/admin/documents/folders');
+        const response = await apiClient.get('/admin/documents/folders');
 
-        if (folders.folders) {
-          setFolders(folders.folders);
+        if (response.folders) {
+          setFolders(response.folders);
         }
 
         const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
@@ -67,10 +73,12 @@ export default function DocumentsPage(): JSX.Element {
     setError(null);
 
     try {
-      await apiClient.post('/admin/documents/create-folder', { folderName });
+      const response = await apiClient.post('/admin/documents/create-folder', { folderName });
 
-      // フォルダリストを更新
-      setFolders(prev => [...prev, folderName]);
+      // 新しいフォルダをリストに追加
+      if (response.folderName) {
+        setFolders(prev => [...prev, { name: response.folderName, slug: response.folderName }]);
+      }
       handleCloseModal();
     } catch (err) {
       console.error('フォルダ作成エラー:', err);
@@ -138,7 +146,7 @@ export default function DocumentsPage(): JSX.Element {
           <div
             key={index}
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
-            onClick={() => (window.location.href = `/admin/documents/folder/${folder}`)}
+            onClick={() => (window.location.href = `/admin/documents/${folder.slug}`)}
           >
             <svg
               className="w-5 h-5 mr-2 text-gray-400"
@@ -154,7 +162,7 @@ export default function DocumentsPage(): JSX.Element {
                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
               ></path>
             </svg>
-            <span>{folder}</span>
+            <span>{folder.name}</span>
           </div>
         ))}
       </div>
