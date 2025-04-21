@@ -64,15 +64,38 @@ export default function CreateDocumentPage(): JSX.Element {
     setContent(html);
   };
 
-  const handleSave = () => {
-    console.log('保存されたデータ:', {
-      title,
-      content,
-      publicOption,
-      hierarchy,
-      reviewer,
-    });
-    // ここに保存処理を追加する
+  const handleSave = async () => {
+    try {
+      if (!title) {
+        alert('タイトルを入力してください');
+        return;
+      }
+
+      if (!hierarchy) {
+        alert('階層を選択してください');
+        return;
+      }
+
+      // ドキュメント作成APIを呼び出す
+      const response = await apiClient.post('/admin/documents', {
+        title,
+        content,
+        file_path: hierarchy, // 階層情報をファイルパスとして使用
+        is_public: publicOption === '公開する', // 公開設定を真偽値に変換
+        reviewer_email: reviewer || null, // レビュー担当者のメールアドレス
+      });
+
+      if (response.success) {
+        alert('ドキュメントが作成されました');
+        // 成功したら一覧ページに戻る
+        window.location.href = '/admin/documents';
+      } else {
+        throw new Error(response.message || '不明なエラーが発生しました');
+      }
+    } catch (error) {
+      console.error('ドキュメント作成エラー:', error);
+      alert(`ドキュメントの作成に失敗しました: ${error.message || '不明なエラー'}`);
+    }
   };
 
   const handleSelectFolder = (folder: string) => {
