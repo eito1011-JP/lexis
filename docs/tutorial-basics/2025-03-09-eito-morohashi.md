@@ -1,8 +1,10 @@
 ---
 slug: eito-morohashi
-sidebar_label: 私の自己消化い
+category: 日本国憲法
+title: 私の自己消化い
+file_order: 1
 ---
-# 好きなもの
+# 好きなもの(以下コンテンツ)
 
 おもちですけど、お寿司も好きです。でも何より稲荷寿司が好きだし、ちらし寿司は普通っっっw
 
