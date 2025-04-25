@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
+import { MultipleFolder } from '@site/src/components/icon/common/ MultipleFolder';
+import { Folder } from '@site/src/components/icon/common/Folder';
 
 // カテゴリの型定義
 type Category = {
@@ -175,20 +177,7 @@ export default function DocumentsPage(): JSX.Element {
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
             onClick={() => (window.location.href = `/admin/documents/${category.slug}`)}
           >
-            <svg
-              className="w-5 h-5 mr-2 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-              ></path>
-            </svg>
+            <Folder className="w-5 h-5 mr-2" />
             <span>{category.name}</span>
           </div>
         ))}
@@ -321,20 +310,7 @@ export default function DocumentsPage(): JSX.Element {
                 className="flex items-center px-3 py-2 bg-gray-700 rounded-md hover:bg-gray-600 focus:outline-none"
                 onClick={handleCreateImageCategory}
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
-                  ></path>
-                </svg>
+                <MultipleFolder className="w-5 h-5 mr-2" />
                 <span>新規カテゴリ</span>
               </button>
             </div>
