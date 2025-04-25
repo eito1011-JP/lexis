@@ -19,7 +19,7 @@ declare global {
 
 const router = Router();
 
-router.get('/', async (req: Request, res: Response) => {
+router.get('/*', async (req: Request, res: Response) => {
   try {
     const sessionId = req.cookies.sid;
 
@@ -31,55 +31,30 @@ router.get('/', async (req: Request, res: Response) => {
       });
     }
 
-    // docs配下のフォルダを取得して、与えられたslugに一致するフォルダを探す
+    // パスからターゲットディレクトリを特定
+    const requestPath = req.params[0] || '';
+    const pathSegments = requestPath.split('/').filter(segment => segment.length > 0);
     const docsDir = path.join(process.cwd(), 'docs');
-    const dirItems = fs.readdirSync(docsDir, { withFileTypes: true });
-    const folders = dirItems.filter(item => item.isDirectory());
 
-    // 各フォルダ内のmdファイルをチェックしてslugを確認
-    let targetDir = null;
-    let folderPath = '';
+    // ブレッドクラムを構築
+    const breadcrumbs = [];
+    let currentPath = '';
 
-    for (const folder of folders) {
-      const folderName = folder.name;
-      const currentFolderPath = path.join(docsDir, folderName);
-
-      // スラッグが単にフォルダ名と一致する場合
-      if (folderName === slug) {
-        targetDir = currentFolderPath;
-        folderPath = folderName;
-        break;
-      }
-
-      // フォルダ内のmdファイルをチェック
-      try {
-        const files = fs.readdirSync(currentFolderPath, { withFileTypes: true });
-        const mdFiles = files.filter(file => file.isFile() && file.name.endsWith('.md'));
-
-        for (const mdFile of mdFiles) {
-          const filePath = path.join(currentFolderPath, mdFile.name);
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-
-          // front-matterを解析
-          const { data } = matter(fileContent);
-
-          if (data.slug === slug) {
-            targetDir = currentFolderPath;
-            folderPath = folderName;
-            break;
-          }
-        }
-
-        if (targetDir) break;
-      } catch (err) {
-        console.error(`${folderName}内のファイル読み込みエラー:`, err);
-      }
+    for (const segment of pathSegments) {
+      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+      breadcrumbs.push({
+        name: segment,
+        path: `/admin/documents/${currentPath}`,
+      });
     }
 
-    // 指定されたスラグに一致するフォルダが見つからない
-    if (!targetDir) {
+    // ターゲットディレクトリのパスを構築
+    const targetDir = path.join(docsDir, ...pathSegments);
+
+    // ディレクトリが存在するか確認
+    if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
-        error: 'Folder not found',
+        error: 'Directory not found',
       });
     }
 
@@ -89,17 +64,41 @@ router.get('/', async (req: Request, res: Response) => {
     // ファイルとフォルダに分類して処理
     const contentItems = await Promise.all(
       dirContents.map(async item => {
-        const itemPath = path.join(folderPath, item.name);
+        const itemPathSegments = [...pathSegments, item.name];
 
         if (item.isDirectory()) {
-          // フォルダの場合
+          // フォルダの場合（カテゴリとして処理）
+          // カテゴリ情報を取得するためにカテゴリ内の_category.jsonファイルを探す
+          const categoryMetadataPath = path.join(targetDir, item.name, '_category.json');
+
+          let label = item.name;
+          let position = 999; // デフォルト値
+          let description = '';
+
+          // カテゴリメタデータファイルが存在する場合、そこからメタデータを取得
+          if (fs.existsSync(categoryMetadataPath)) {
+            const categoryContent = fs.readFileSync(categoryMetadataPath, 'utf8');
+            const data = JSON.parse(categoryContent);
+
+            label = data.sidebar_label || data.label || item.name;
+            position = data.position || position;
+            description = data.link?.description || '';
+          }
+
           return {
-            type: 'folder',
-            name: item.name,
-            path: itemPath,
+            type: 'category',
+            slug: item.name,
+            label,
+            position,
+            description,
           };
-        } else if (item.isFile() && item.name.endsWith('.md')) {
-          // マークダウンファイルの場合
+        } else if (
+          item.isFile() &&
+          item.name.endsWith('.md') &&
+          item.name !== '_category.md' &&
+          item.name !== '_category.json'
+        ) {
+          // マークダウンファイルの場合（ドキュメントとして処理）
           const filePath = path.join(targetDir, item.name);
           const fileContent = fs.readFileSync(filePath, 'utf8');
 
@@ -107,12 +106,12 @@ router.get('/', async (req: Request, res: Response) => {
           const { data, content } = matter(fileContent);
 
           return {
-            type: 'document',
-            name: data.sidebar_label || item.name.replace('.md', ''),
-            path: itemPath.replace('.md', ''),
-            status: data.is_public ? '公開' : '未公開',
-            lastEditor: data.last_editor || '---',
-            content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+            type: 'file',
+            slug: data.slug || item.name.replace('.md', ''),
+            label: data.sidebar_label || data.label || item.name.replace('.md', ''),
+            position: data.position || 999,
+            description: data.description || '',
+            content: content,
           };
         }
 
@@ -121,12 +120,22 @@ router.get('/', async (req: Request, res: Response) => {
       })
     );
 
-    console.log(dirContents);
     // nullでない項目のみフィルタリング
     const validItems = contentItems.filter(item => item !== null);
 
+    // アイテムを表示順でソート
+    validItems.sort((a, b) => {
+      if (a.type !== b.type) {
+        // カテゴリを先に表示
+        return a.type === 'category' ? -1 : 1;
+      }
+      // 同じタイプの場合はpositionでソート
+      return (a.position || 999) - (b.position || 999);
+    });
+
     return res.status(HTTP_STATUS.OK).json({
       items: validItems,
+      breadcrumbs,
     });
   } catch (error) {
     console.error('フォルダコンテンツ取得エラー:', error);
@@ -136,4 +145,4 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
-export const getFolderContentsRouter = router;
+export const getDocumentsRouter = router;

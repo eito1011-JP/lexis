@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
-import { checkUserDraft } from '@site/api/admin/utils/git';
 
 // カテゴリの型定義
 type Category = {
@@ -43,6 +42,8 @@ export default function DocumentsPage(): JSX.Element {
         if (response.categories) {
           setCategories(response.categories);
         }
+
+        const documents = await apiClient.get('/admin/documents');
 
         const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
 
@@ -88,19 +89,16 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post('/admin/documents/create-category', { 
-        slug, 
-        label, 
-        position: positionNum, 
-        description 
+      const response = await apiClient.post('/admin/documents/create-category', {
+        slug,
+        label,
+        position: positionNum,
+        description,
       });
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {
-        setCategories(prev => [
-          ...prev,
-          { name: response.label, slug: response.slug },
-        ]);
+        setCategories(prev => [...prev, { name: response.label, slug: response.slug }]);
       }
       handleCloseModal();
     } catch (err) {
@@ -357,7 +355,7 @@ export default function DocumentsPage(): JSX.Element {
             )}
 
             <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-400">Slug</label>
+              <label className="block text-sm font-medium text-gray-400">Slug</label>
               <input
                 type="text"
                 className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
@@ -373,7 +371,7 @@ export default function DocumentsPage(): JSX.Element {
                 value={label}
                 onChange={e => setLabel(e.target.value)}
               />
-                            <label className="block text-sm font-medium text-gray-400">表示順</label>
+              <label className="block text-sm font-medium text-gray-400">表示順</label>
               <input
                 type="text"
                 className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
@@ -381,7 +379,7 @@ export default function DocumentsPage(): JSX.Element {
                 value={position}
                 onChange={e => setPosition(e.target.value)}
               />
-                            <label className="block text-sm font-medium text-gray-400">説明</label>
+              <label className="block text-sm font-medium text-gray-400">説明</label>
               <input
                 type="text"
                 className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"

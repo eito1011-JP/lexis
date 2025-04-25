@@ -97,14 +97,21 @@ router.post('/create-category', async (req: Request, res: Response) => {
 
     // _category.jsonを作成
     const categoryJsonPath = path.join(newCategoryPath, '_category.json');
-    fs.writeFileSync(categoryJsonPath, JSON.stringify({
-      label,
-      position,
-      link: {
-        type: "generated-index",
-        description
-      }
-    }, null, 2));
+    fs.writeFileSync(
+      categoryJsonPath,
+      JSON.stringify(
+        {
+          label,
+          position,
+          link: {
+            type: 'generated-index',
+            description,
+          },
+        },
+        null,
+        2
+      )
+    );
 
     return res.status(HTTP_STATUS.CREATED).json({
       slug,
