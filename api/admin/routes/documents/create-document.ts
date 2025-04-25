@@ -21,7 +21,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     // ログインユーザーを取得
     const loginUser = await getAuthenticatedUser(sessionId);
-    
+
     if (!loginUser) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         error: API_ERRORS.AUTH.INVALID_SESSION,
@@ -65,23 +65,23 @@ router.post('/', async (req: Request, res: Response) => {
     } else {
       // 3.2 存在しない場合、新しいブランチを作成
       await initBranchSnapshot(loginUser.userId, loginUser.email);
-      
+
       // 作成したブランチのIDを取得
       const newBranch = await db.execute({
         sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1',
         args: [loginUser.userId],
       });
-      
+
       if (newBranch.rows.length === 0) {
         throw new Error('ブランチの作成に失敗しました');
       }
-      
+
       userBranchId = newBranch.rows[0].id;
     }
 
     // 4. document_versionsにドラフトとして保存
     const now = new Date();
-    
+
     await db.execute({
       sql: `
         INSERT INTO document_versions 
@@ -125,4 +125,4 @@ router.post('/', async (req: Request, res: Response) => {
   }
 });
 
-export const createDocumentRouter = router; 
+export const createDocumentRouter = router;

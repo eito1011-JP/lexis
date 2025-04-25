@@ -24,4 +24,4 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ className = '', width, hei
       <polyline points="8 6 2 12 8 18"></polyline>
     </svg>
   );
-}; 
+};

@@ -38,6 +38,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     try {
       const response = await apiClient.get('/auth/session');
+
       setIsAuthenticated(response.authenticated);
       setUser(response.user || null);
     } catch (err) {

@@ -5,8 +5,8 @@ import { useSessionCheck } from '@site/src/hooks/useSessionCheck';
 import { apiClient } from '@site/src/components/admin/api/client';
 import { checkUserDraft } from '@site/api/admin/utils/git';
 
-// フォルダの型定義
-type Folder = {
+// カテゴリの型定義
+type Category = {
   name: string;
   slug: string;
 };
@@ -17,12 +17,12 @@ type Folder = {
 export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/admin/login', false);
 
-  const [showFolderModal, setShowFolderModal] = useState(false);
-  const [folderName, setFolderName] = useState('');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [categoryName, setCategoryName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [foldersLoading, setFoldersLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -32,13 +32,13 @@ export default function DocumentsPage(): JSX.Element {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    // フォルダ一覧を取得
-    const fetchFolders = async () => {
+    // カテゴリ一覧を取得
+    const getDocuments = async () => {
       try {
-        const response = await apiClient.get('/admin/documents/folders');
+        const response = await apiClient.get('/admin/documents/categories');
 
-        if (response.folders) {
-          setFolders(response.folders);
+        if (response.categories) {
+          setCategories(response.categories);
         }
 
         const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
@@ -47,41 +47,44 @@ export default function DocumentsPage(): JSX.Element {
           setShowPrSubmitButton(true);
         }
       } catch (err) {
-        console.error('フォルダ取得エラー:', err);
-        setApiError('フォルダの取得に失敗しました');
+        console.error('カテゴリ取得エラー:', err);
+        setApiError('カテゴリの取得に失敗しました');
       } finally {
-        setFoldersLoading(false);
+        setCategoriesLoading(false);
       }
     };
 
-    fetchFolders();
+    getDocuments();
   }, []);
 
-  const handleCreateImageFolder = () => {
-    setShowFolderModal(true);
+  const handleCreateImageCategory = () => {
+    setShowCategoryModal(true);
   };
 
   const handleCloseModal = () => {
-    setShowFolderModal(false);
-    setFolderName('');
+    setShowCategoryModal(false);
+    setCategoryName('');
   };
 
-  const handleCreateFolder = async () => {
-    if (!folderName.trim()) return;
+  const handleCreateCategory = async () => {
+    if (!categoryName.trim()) return;
 
     setIsCreating(true);
     setError(null);
 
     try {
-      const response = await apiClient.post('/admin/documents/create-folder', { folderName });
+      const response = await apiClient.post('/admin/documents/create-category', { categoryName });
 
-      // 新しいフォルダをリストに追加
-      if (response.folderName) {
-        setFolders(prev => [...prev, { name: response.folderName, slug: response.folderName }]);
+      // 新しいカテゴリをリストに追加
+      if (response.categoryName) {
+        setCategories(prev => [
+          ...prev,
+          { name: response.categoryName, slug: response.categoryName },
+        ]);
       }
       handleCloseModal();
     } catch (err) {
-      console.error('フォルダ作成エラー:', err);
+      console.error('カテゴリ作成エラー:', err);
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     } finally {
       setIsCreating(false);
@@ -126,9 +129,9 @@ export default function DocumentsPage(): JSX.Element {
     );
   }
 
-  // フォルダセクション
-  const renderFolderSection = () => {
-    if (foldersLoading) {
+  // カテゴリセクション
+  const renderCategorySection = () => {
+    if (categoriesLoading) {
       return (
         <div className="flex justify-center py-6">
           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
@@ -136,17 +139,17 @@ export default function DocumentsPage(): JSX.Element {
       );
     }
 
-    if (folders.length === 0) {
-      return <p className="text-gray-400 py-4">フォルダがありません</p>;
+    if (categories.length === 0) {
+      return <p className="text-gray-400 py-4">カテゴリがありません</p>;
     }
 
     return (
       <div className="grid grid-cols-2 gap-4">
-        {folders.map((folder, index) => (
+        {categories.map((category, index) => (
           <div
             key={index}
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
-            onClick={() => (window.location.href = `/admin/documents/${folder.slug}`)}
+            onClick={() => (window.location.href = `/admin/documents/${category.slug}`)}
           >
             <svg
               className="w-5 h-5 mr-2 text-gray-400"
@@ -162,7 +165,7 @@ export default function DocumentsPage(): JSX.Element {
                 d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
               ></path>
             </svg>
-            <span>{folder.name}</span>
+            <span>{category.name}</span>
           </div>
         ))}
       </div>
@@ -248,12 +251,12 @@ export default function DocumentsPage(): JSX.Element {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 ml-auto">
               <button
-                className="bg-gray-900 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-700"
-                onClick={handleCreateImageFolder}
-                title="フォルダ作成"
+                className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
+                onClick={() => setShowSubmitModal(true)}
+                disabled={!showPrSubmitButton}
               >
                 <svg
-                  className="w-5 h-5 text-gray-400"
+                  className="w-5 h-5 mr-2"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -263,117 +266,149 @@ export default function DocumentsPage(): JSX.Element {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
                   ></path>
                 </svg>
+                <span>差分提出</span>
               </button>
+
               <button
-                className="flex items-center px-4 py-2 bg-white text-[#0A0A0A] rounded-md"
-                onClick={() => {
-                  window.location.href = '/admin/documents/create';
-                }}
+                className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
+                onClick={() => (window.location.href = '/admin/documents/create')}
               >
-                新規ドキュメント作成
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  ></path>
+                </svg>
+                <span>新規ドキュメント</span>
+              </button>
+
+              <button
+                className="flex items-center px-3 py-2 bg-gray-700 rounded-md hover:bg-gray-600 focus:outline-none"
+                onClick={handleCreateImageCategory}
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                <span>新規カテゴリ</span>
               </button>
             </div>
           </div>
 
-          {/* テーブルヘッダー */}
-          <div className="grid grid-cols-12 border-b border-gray-700 pb-2 text-sm text-gray-400">
-            <div className="col-span-4 flex items-center">
-              <span>タイトル</span>
-            </div>
-            <div className="col-span-3">コンテンツ</div>
-            <div className="col-span-3">公開ステータス</div>
-            <div className="col-span-2">最終編集者</div>
+          {/* カテゴリセクション */}
+          <div className="mb-8">
+            <h2 className="text-xl font-bold mb-4">カテゴリ</h2>
+            {renderCategorySection()}
           </div>
         </div>
+      </div>
 
-        {/* フォルダセクション */}
-        <div className="mt-8">
-          <h2 className="text-xl font-bold mb-4">フォルダ</h2>
-          {renderFolderSection()}
-        </div>
+      {/* カテゴリ作成モーダル */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">新しいカテゴリを作成</h2>
 
-        {/* 差分提出ボタン */}
-        {showPrSubmitButton && (
-          <div className="bottom-8 right-8 text-right mt-[2rem]">
-            <button
-              onClick={() => setShowSubmitModal(true)}
-              className="bg-[#3832A5] text-white border-none font-bold py-2 px-4 rounded"
-            >
-              差分を提出する
-            </button>
-          </div>
-        )}
-
-        {/* 差分提出確認モーダル */}
-        {showSubmitModal && (
-          <div className="fixed inset-0 bg-[#0A0A0A] bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg max-w-md w-full">
-              <h2 className="text-xl font-bold mb-4">差分の提出</h2>
-              <p className="mb-4">現在の変更を提出しますか？</p>
-              {submitError && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">{submitError}</div>
-              )}
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setShowSubmitModal(false)}
-                  className="px-4 border-none py-2 bg-[#B1B1B1] text-white rounded"
-                  disabled={isSubmitting}
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={handleSubmitDiff}
-                  className="px-4 py-2 border-none bg-[#3832A5] text-white rounded hover:bg-opacity-90"
-                  disabled={isSubmitting}
-                >
-                  提出する
-                </button>
+            {error && (
+              <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
+                {error}
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* フォルダ作成モーダル */}
-        {showFolderModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-[#0A0A0A] rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-xl font-bold text-center mb-12">ドキュメントフォルダを作成</h3>
-              {error && (
-                <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
-                  {error}
-                </div>
-              )}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-400 mb-2">カテゴリ名</label>
               <input
                 type="text"
-                value={folderName}
-                onChange={e => setFolderName(e.target.value)}
-                className="w-full p-4 mb-8 bg-transparent border border-gray-700 rounded-md text-white"
-                placeholder="フォルダ名"
-                autoFocus
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5]"
+                placeholder="カテゴリ名を入力"
+                value={categoryName}
+                onChange={e => setCategoryName(e.target.value)}
               />
-              <div className="flex flex-col gap-4 items-center">
-                <button
-                  onClick={handleCreateFolder}
-                  className="w-48 py-3 bg-[#3832A5] text-white rounded-md hover:bg-opacity-90 flex items-center border-none font-bold justify-center"
-                  disabled={!folderName.trim() || isCreating}
-                >
-                  作成
-                </button>
-                <button
-                  onClick={handleCloseModal}
-                  className="w-48 py-3 bg-gray-500 text-white rounded-md border-none hover:bg-opacity-90 font-bold"
-                  disabled={isCreating}
-                >
-                  戻る
-                </button>
-              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={handleCloseModal}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
+                onClick={handleCreateCategory}
+                disabled={!categoryName.trim() || isCreating}
+              >
+                {isCreating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    <span>作成中...</span>
+                  </>
+                ) : (
+                  <span>作成</span>
+                )}
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* 差分提出確認モーダル */}
+      {showSubmitModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">変更内容を提出</h2>
+
+            <p className="mb-4 text-gray-300">
+              作成した変更内容をレビュー用に提出します。よろしいですか？
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={() => setShowSubmitModal(false)}
+                disabled={isSubmitting}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
+                onClick={handleSubmitDiff}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    <span>提出中...</span>
+                  </>
+                ) : (
+                  <span>提出する</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
