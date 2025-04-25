@@ -22,14 +22,14 @@ const router = express.Router();
  * カテゴリ作成API
  *
  * 新しいカテゴリ（ディレクトリ）を作成します。
- * リクエストボディで指定されたカテゴリ名のディレクトリをdocs配下に作成します。
+ * リクエストボディで指定されたslugのディレクトリをdocs配下に作成します。
  *
  * リクエスト:
  * POST /api/admin/documents/create-category
- * body: { categoryName: string }
+ * body: { slug: string, label: string, position: number, description: string }
  *
  * レスポンス:
- * 成功: { categoryName: string, path: string }
+ * 成功: { slug: string, label: string, position: number, description: string, path: string }
  * 失敗: { error: string }
  */
 router.post('/create-category', async (req: Request, res: Response) => {
@@ -39,6 +39,33 @@ router.post('/create-category', async (req: Request, res: Response) => {
     if (!sessionId) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         error: API_ERRORS.AUTH.NO_SESSION,
+      });
+    }
+
+    const { slug, label, position, description } = req.body;
+
+    // validation
+    if (!slug || typeof slug !== 'string') {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'slug is required and must be a string',
+      });
+    }
+
+    if (!label || typeof label !== 'string') {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'label is required and must be a string',
+      });
+    }
+
+    if (position && typeof position !== 'number') {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'position must be a number',
+      });
+    }
+
+    if (description && typeof description !== 'string') {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'description must be a string',
       });
     }
 
@@ -52,21 +79,13 @@ router.post('/create-category', async (req: Request, res: Response) => {
       await initBranchSnapshot(loginUser.userId, loginUser.email);
     }
 
-    const { categoryName } = req.body;
-
-    if (!categoryName || typeof categoryName !== 'string') {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'Category name is required and must be a string',
-      });
-    }
-
     const docsDir = path.join(process.cwd(), 'docs');
 
-    const newCategoryPath = path.join(docsDir, categoryName);
+    const newCategoryPath = path.join(docsDir, slug);
 
     if (fs.existsSync(newCategoryPath)) {
       return res.status(HTTP_STATUS.CONFLICT).json({
-        error: 'A category with this name already exists',
+        error: 'A category with this slug already exists',
       });
     }
 
@@ -76,8 +95,22 @@ router.post('/create-category', async (req: Request, res: Response) => {
     const gitkeepPath = path.join(newCategoryPath, '.gitkeep');
     fs.writeFileSync(gitkeepPath, '');
 
+    // _category.jsonを作成
+    const categoryJsonPath = path.join(newCategoryPath, '_category.json');
+    fs.writeFileSync(categoryJsonPath, JSON.stringify({
+      label,
+      position,
+      link: {
+        type: "generated-index",
+        description
+      }
+    }, null, 2));
+
     return res.status(HTTP_STATUS.CREATED).json({
-      categoryName,
+      slug,
+      label,
+      position,
+      description,
       path: newCategoryPath,
     });
   } catch (error) {

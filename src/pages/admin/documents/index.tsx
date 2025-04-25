@@ -18,7 +18,10 @@ export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/admin/login', false);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [categoryName, setCategoryName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [label, setLabel] = useState('');
+  const [position, setPosition] = useState('');
+  const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -63,23 +66,40 @@ export default function DocumentsPage(): JSX.Element {
 
   const handleCloseModal = () => {
     setShowCategoryModal(false);
-    setCategoryName('');
+    setSlug('');
+    setLabel('');
+    setPosition('');
+    setDescription('');
   };
 
   const handleCreateCategory = async () => {
-    if (!categoryName.trim()) return;
+    if (!slug.trim()) return;
+
+    // 表示順のバリデーション：数値以外が入力されていたらエラー
+    if (position.trim() !== '' && isNaN(Number(position))) {
+      setError('表示順は数値を入力してください');
+      return;
+    }
 
     setIsCreating(true);
     setError(null);
 
     try {
-      const response = await apiClient.post('/admin/documents/create-category', { categoryName });
+      // positionを数値に変換
+      const positionNum = position ? parseInt(position, 10) : undefined;
+
+      const response = await apiClient.post('/admin/documents/create-category', { 
+        slug, 
+        label, 
+        position: positionNum, 
+        description 
+      });
 
       // 新しいカテゴリをリストに追加
-      if (response.categoryName) {
+      if (response.slug) {
         setCategories(prev => [
           ...prev,
-          { name: response.categoryName, slug: response.categoryName },
+          { name: response.label, slug: response.slug },
         ]);
       }
       handleCloseModal();
@@ -337,13 +357,37 @@ export default function DocumentsPage(): JSX.Element {
             )}
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-400 mb-2">カテゴリ名</label>
+            <label className="block text-sm font-medium text-gray-400">Slug</label>
               <input
                 type="text"
-                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5]"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
+                placeholder="sample-document"
+                value={slug}
+                onChange={e => setSlug(e.target.value)}
+              />
+              <label className="block text-sm font-medium text-gray-400">カテゴリ名</label>
+              <input
+                type="text"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
                 placeholder="カテゴリ名を入力"
-                value={categoryName}
-                onChange={e => setCategoryName(e.target.value)}
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+              />
+                            <label className="block text-sm font-medium text-gray-400">表示順</label>
+              <input
+                type="text"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
+                placeholder="1"
+                value={position}
+                onChange={e => setPosition(e.target.value)}
+              />
+                            <label className="block text-sm font-medium text-gray-400">説明</label>
+              <input
+                type="text"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
+                placeholder="カテゴリの説明を入力"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
               />
             </div>
 
@@ -357,7 +401,7 @@ export default function DocumentsPage(): JSX.Element {
               <button
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
                 onClick={handleCreateCategory}
-                disabled={!categoryName.trim() || isCreating}
+                disabled={!slug.trim() || !label.trim() || isCreating}
               >
                 {isCreating ? (
                   <>
