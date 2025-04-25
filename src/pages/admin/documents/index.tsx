@@ -37,22 +37,28 @@ export default function DocumentsPage(): JSX.Element {
     // カテゴリ一覧を取得
     const getDocuments = async () => {
       try {
-        const response = await apiClient.get('/admin/documents/categories');
+        let categoryData = [];
+          const documents = await apiClient.get('/admin/documents');
+          
+          // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
+          if (documents && documents.items) {
+            const categoryItems = documents.items.filter(item => item.type === 'category');
+            categoryData = categoryItems.map(category => ({
+              name: category.label,
+              slug: category.slug
+            }));
+            setCategories(categoryData);
+          }
 
-        if (response.categories) {
-          setCategories(response.categories);
-        }
+          const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
+          if (hasUserDraft && hasUserDraft.exists) {
+            setShowPrSubmitButton(true);
+          }
 
-        const documents = await apiClient.get('/admin/documents');
+          console.log('hasUserDraft', hasUserDraft);
 
-        const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
-
-        if (hasUserDraft.exists) {
-          setShowPrSubmitButton(true);
-        }
       } catch (err) {
         console.error('カテゴリ取得エラー:', err);
-        setApiError('カテゴリの取得に失敗しました');
       } finally {
         setCategoriesLoading(false);
       }

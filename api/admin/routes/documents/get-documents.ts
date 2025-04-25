@@ -34,7 +34,10 @@ router.get('/*', async (req: Request, res: Response) => {
     // パスからターゲットディレクトリを特定
     const requestPath = req.params[0] || '';
     const pathSegments = requestPath.split('/').filter(segment => segment.length > 0);
-    const docsDir = path.join(process.cwd(), 'docs');
+
+    const apiDir = path.dirname(path.dirname(path.dirname(path.dirname(__filename))));
+    const rootDir = path.dirname(apiDir);
+    const docsDir = path.join(rootDir, 'docs');
 
     // ブレッドクラムを構築
     const breadcrumbs = [];
@@ -52,7 +55,7 @@ router.get('/*', async (req: Request, res: Response) => {
     const targetDir = path.join(docsDir, ...pathSegments);
 
     // ディレクトリが存在するか確認
-    if (!fs.existsSync(targetDir) || !fs.statSync(targetDir).isDirectory()) {
+    if (!fs.existsSync(targetDir)) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
         error: 'Directory not found',
       });
