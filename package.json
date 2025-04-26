@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run start\" \"npx tsx api/admin/base.ts\" \"turso dev --db-file local.db\"",
+    "dev": "concurrently \"npm run start\" \"npm run dev:api\" \"npm run dev:admin-frontend\" \"turso dev --db-file local.db\"",
     "dev:client": "docusaurus start",
-    "dev:server": "nodemon --exec ts-node src/server/index.ts",
-    "build": "docusaurus build",
+    "dev:api": "npx tsx api/admin/base.ts",
+    "dev:admin-frontend": "cd admin-frontend && npm run dev",
+    "build": "docusaurus build && cd admin-frontend && npm run build",
     "start": "docusaurus start",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\""
   },
