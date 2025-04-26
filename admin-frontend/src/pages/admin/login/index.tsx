@@ -1,141 +1,132 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { apiClient } from '../../../api/client';
+import { apiClient } from '@/components/admin/api/client';
+import { API_CONFIG } from '@/components/admin/api/config';
+import AdminLayout from '@/components/admin/layout';
+import React, { useState, FormEvent, ReactElement } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { Toast } from '@/components/admin/Toast';
+import { useSession } from '@/contexts/SessionContext';
 
-export default function LoginPage() {
+export default function LoginPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const navigate = useNavigate();
+  const { checkSession } = useSession();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const { isLoading } = useSessionCheck('/admin/documents', true);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
-    if (!email.trim() || !password.trim()) {
-      setError('メールアドレスとパスワードを入力してください');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
+    setLoading(true);
 
     try {
-      const response = await apiClient.post('/admin/login', { email, password });
-      
-      if (response.success) {
-        navigate('/documents');
-      } else {
-        setError(response.message || 'ログインに失敗しました');
-      }
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.LOGIN, {
+        email,
+        password,
+      });
+
+      setToastMessage(response.message || 'ログインに成功しました');
+      setToastType('success');
+      setShowToast(true);
+
+      // フォームをリセット
+      setEmail('');
+      setPassword('');
+
+      // セッション状態を更新
+      await checkSession();
+
+      // 状態の更新を待ってからリダイレクト
+      setTimeout(() => {
+        navigate('/admin/documents');
+      }, 1000);
     } catch (err) {
-      console.error('ログインエラー:', err);
-      setError('ログイン処理中にエラーが発生しました');
+      console.error('Error:', err);
+      setToastMessage(err instanceof Error ? err.message : 'ログインに失敗しました');
+      setToastType('error');
+      setShowToast(true);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h1 className="text-center text-3xl font-extrabold text-white">
-            管理者ログイン
-          </h1>
-          <p className="mt-2 text-center text-sm text-gray-400">
-            ハンドブック管理システムへようこそ
-          </p>
-        </div>
-
-        {error && (
-          <div className="bg-red-900 text-white p-3 rounded">
-            {error}
+  // セッション確認中はローディング表示
+  if (isLoading) {
+    return (
+      <AdminLayout title="読み込み中..." sidebar={false}>
+        <div className="bg-black min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
           </div>
-        )}
+        </div>
+      </AdminLayout>
+    );
+  }
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            <div>
-              <label htmlFor="email-address" className="sr-only">
+  return (
+    <AdminLayout title="ログイン" sidebar={false}>
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="w-full max-w-md bg-[#0A0A0A] border-[1px] border-[#B1B1B1] rounded-xl p-8 pt-[3rem]">
+          <div className="text-center mb-8">
+            <h1 className="text-white text-3xl font-bold mb-2">Lexis</h1>
+            <h2 className="text-white text-2xl">ログイン</h2>
+          </div>
+
+          <form className="mb-[1rem]" onSubmit={handleSubmit}>
+            <div className="mb-2">
+              <label htmlFor="email" className="block text-white mb-1 font-bold">
                 メールアドレス
               </label>
               <input
-                id="email-address"
-                name="email"
                 type="email"
-                autoComplete="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white placeholder-gray-400 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="メールアドレス"
+                id="email"
+                placeholder="mail@example.com"
+                className="w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={e => setEmail(e.target.value)}
+                required
               />
             </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
+
+            <div className="mb-8">
+              <label htmlFor="password" className="block text-white mb-1 font-bold">
                 パスワード
               </label>
               <input
-                id="password"
-                name="password"
                 type="password"
-                autoComplete="current-password"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white placeholder-gray-400 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="パスワード"
+                id="password"
+                placeholder="パスワードを入力"
+                className="w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={e => setPassword(e.target.value)}
+                required
               />
             </div>
-          </div>
-
-          <div>
             <button
               type="submit"
-              disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              className="border-none w-full font-bold bg-[#3832A5] hover:bg-indigo-800 text-white py-4 rounded-lg text-center transition duration-200"
+              disabled={loading}
             >
-              {isLoading ? (
-                <span className="flex items-center">
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  処理中...
-                </span>
-              ) : (
-                'ログイン'
-              )}
+              {loading ? '処理中...' : 'ログインする'}
             </button>
-          </div>
-
-          <div className="text-center">
-            <Link
-              to="/signup"
-              className="font-medium text-blue-500 hover:text-blue-400"
-            >
-              アカウント作成はこちら
-            </Link>
-          </div>
-        </form>
+            <div className="flex justify-center mt-4">
+              <p className="text-white text-[0.8rem]">
+                アカウントをお持ちでない方
+                <a href="/admin/signup" className="text-white hover:underline ml-8">
+                  新規登録
+                </a>
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
+      )}
+    </AdminLayout>
   );
-} 
+}

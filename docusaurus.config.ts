@@ -56,7 +56,7 @@ const config: Config = {
           label: 'Tutorial',
         },
         {
-          href: 'http://localhost:3002',
+          href: '/admin',
           label: '管理画面',
           position: 'right',
         },
