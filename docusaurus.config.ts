@@ -39,7 +39,6 @@ const config: Config = {
       } satisfies Preset.Options,
     ],
   ],
-  plugins: ['./src/plugins/tailwind-config.js'],
   themeConfig: {
     image: 'img/docusaurus-social-card.jpg',
     navbar: {

@@ -3,10 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:admin-frontend\" \"npm run dev:proxy\" \"turso dev --db-file local.db\"",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:admin-frontend\" \"turso dev --db-file local.db\" \"npm run start\"",
     "dev:api": "npx tsx api/admin/base.ts",
     "dev:admin-frontend": "cd admin-frontend && npm run dev",
-    "dev:proxy": "npx tsx src/scripts/setupProxy.ts",
     "build": "docusaurus build && cd admin-frontend && npm run build",
     "start": "docusaurus start",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\""

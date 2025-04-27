@@ -1,12 +1,12 @@
-import AdminLayout from '../../../components/admin/layout';
+import AdminLayout from '@/components/admin/layout';
 import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useSessionCheck } from '../../../hooks/useSessionCheck';
-import { apiClient } from '../../../components/admin/api/client';
-import { MultipleFolder } from '../../../components/icon/common/MultipleFolder';
-import { Folder } from '../../../components/icon/common/Folder';
-import { Document } from '../../../components/icon/common/Document';
+import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { apiClient } from '@/components/admin/api/client';
+import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
+import { Folder } from '@/components/icon/common/Folder';
+import { Document } from '@/components/icon/common/Document';
 
 // アイテムの型定義
 type Item = {
@@ -31,7 +31,7 @@ export default function CategoryDetailPage(): JSX.Element {
   const slug = params.slug;
   console.log('Current slug parameter:', slug);
   console.log('All params:', params);
-  const { isLoading } = useSessionCheck('/admin/login', false);
+  const { isLoading } = useSessionCheck('/login', false);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categorySlug, setCategorySlug] = useState('');

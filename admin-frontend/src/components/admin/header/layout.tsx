@@ -1,6 +1,6 @@
 import React from 'react';
-import Link from '@docusaurus/Link';
-import { useSession } from '@site/src/contexts/SessionContext';
+import { Link } from 'react-router-dom';
+import { useSession } from '../../../contexts/SessionContext';
 
 const PATHS = {
   HOME: '/',

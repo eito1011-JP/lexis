@@ -23,7 +23,7 @@ type DocumentItem = {
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/admin/login', false);
+  const { isLoading } = useSessionCheck('/login', false);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [slug, setSlug] = useState('');

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import AdminLayout from '../../../components/admin/layout';
-import { useSessionCheck } from '../../../hooks/useSessionCheck';
-import TiptapEditor from '../../../components/admin/editor/TiptapEditor';
-import { apiClient } from '../../../components/admin/api/client';
+import AdminLayout from '@/components/admin/layout';
+import { useSessionCheck } from '@/hooks/useSessionCheck';
+import TiptapEditor from '@/components/admin/editor/TiptapEditor';
+import { apiClient } from '@/components/admin/api/client';
 
 // ユーザー型定義を追加
 interface User {
@@ -16,7 +16,7 @@ interface ApiError {
 }
 
 export default function CreateDocumentPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/admin/login', false);
+  const { isLoading } = useSessionCheck('/login', false);
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');

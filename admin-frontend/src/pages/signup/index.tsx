@@ -1,35 +1,34 @@
+import React, { useState, FormEvent, ReactElement } from 'react';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import AdminLayout from '@/components/admin/layout';
-import React, { useState, FormEvent, ReactElement } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { Toast } from '@/components/admin/Toast';
 import { useSession } from '@/contexts/SessionContext';
+import { useSessionCheck } from '@/hooks/useSessionCheck';
 
-export default function LoginPage(): ReactElement {
+export default function AdminPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const navigate = useNavigate();
   const { checkSession } = useSession();
 
-  const { isLoading } = useSessionCheck('/admin/documents', true);
+  // すでにログインしている場合はダッシュボードにリダイレクト
+  useSessionCheck('/documents', true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.LOGIN, {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNUP, {
         email,
         password,
       });
 
-      setToastMessage(response.message || 'ログインに成功しました');
+      setToastMessage(response.message || '登録が完了しました');
       setToastType('success');
       setShowToast(true);
 
@@ -42,11 +41,11 @@ export default function LoginPage(): ReactElement {
 
       // 状態の更新を待ってからリダイレクト
       setTimeout(() => {
-        navigate('/admin/documents');
+        window.location.href = '/admin/documents';
       }, 1000);
     } catch (err) {
       console.error('Error:', err);
-      setToastMessage(err instanceof Error ? err.message : 'ログインに失敗しました');
+      setToastMessage(err instanceof Error ? err.message : '通信エラーが発生しました');
       setToastType('error');
       setShowToast(true);
     } finally {
@@ -54,26 +53,13 @@ export default function LoginPage(): ReactElement {
     }
   };
 
-  // セッション確認中はローディング表示
-  if (isLoading) {
-    return (
-      <AdminLayout title="読み込み中..." sidebar={false}>
-        <div className="bg-black min-h-screen flex items-center justify-center">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
   return (
-    <AdminLayout title="ログイン" sidebar={false}>
+    <AdminLayout title="新規登録" sidebar={false}>
       <div className="bg-black min-h-screen flex items-center justify-center">
         <div className="w-full max-w-md bg-[#0A0A0A] border-[1px] border-[#B1B1B1] rounded-xl p-8 pt-[3rem]">
           <div className="text-center mb-8">
             <h1 className="text-white text-3xl font-bold mb-2">Lexis</h1>
-            <h2 className="text-white text-2xl">ログイン</h2>
+            <h2 className="text-white text-2xl">新規登録</h2>
           </div>
 
           <form className="mb-[1rem]" onSubmit={handleSubmit}>
@@ -104,23 +90,17 @@ export default function LoginPage(): ReactElement {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
+                minLength={8}
               />
             </div>
+
             <button
               type="submit"
               className="border-none w-full font-bold bg-[#3832A5] hover:bg-indigo-800 text-white py-4 rounded-lg text-center transition duration-200"
               disabled={loading}
             >
-              {loading ? '処理中...' : 'ログインする'}
+              {loading ? '処理中...' : '登録する'}
             </button>
-            <div className="flex justify-center mt-4">
-              <p className="text-white text-[0.8rem]">
-                アカウントをお持ちでない方
-                <a href="/admin/signup" className="text-white hover:underline ml-8">
-                  新規登録
-                </a>
-              </p>
-            </div>
           </form>
         </div>
       </div>

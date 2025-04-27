@@ -1,11 +1,10 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
-import DocumentsPage from './pages/admin/documents';
-import DocumentDetailPage from './pages/admin/documents/slug';
-import LoginPage from './pages/admin/login';
-import SignupPage from './pages/admin/signup';
-import CreateDocumentPage from './pages/admin/documents/create';
-
+import DocumentsPage from './pages/documents';
+import DocumentDetailPage from './pages/documents/slug';
+import LoginPage from './pages/login';
+import SignupPage from './pages/signup';
+import CreateDocumentPage from './pages/documents/create';
 function App() {
   return (
     <Routes>
@@ -20,3 +19,4 @@ function App() {
 }
 
 export default App; 
+
