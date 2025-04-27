@@ -7,16 +7,16 @@ export const API_CONFIG = {
   ENDPOINTS: {
     SIGNUP: '/api/admin/signup',
     LOGIN: '/api/admin/login',
-    SESSION: '/api/admin/session',
+    SESSION: '/api/auth/session',
     LOGOUT: '/api/admin/logout',
     DOCUMENTS: {
       CREATE_FOLDER: '/api/admin/documents/create-folder',
       GET_FOLDERS: '/api/admin/documents/folders',
-      GET_BY_ID: '/api/admin/documents', // IDはリクエスト時に追加
+      GET_DOCUMENT: '/api/admin/documents',
     },
     USERS: {
       GET_ALL: '/api/admin/users',
-      GET_BY_ID: '/api/admin/users', // IDはリクエスト時に追加
+      GET_BY_ID: '/api/admin/users',
     },
     GIT: {
       CHECK_DIFF: '/api/admin/documents/git/check-diff',

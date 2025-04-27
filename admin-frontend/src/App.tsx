@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import DocumentsPage from './pages/documents';
 import DocumentDetailPage from './pages/documents/slug';

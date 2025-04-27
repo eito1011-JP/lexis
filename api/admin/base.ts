@@ -43,43 +43,11 @@ app.use('/api/admin/documents', getDocumentsRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
 
-// セッション確認 - 管理者用エンドポイント
-app.get('/api/admin/session', async (req, res) => {
-  const sessionId = req.cookies.sid;
-
-  if (!sessionId) {
-    return res.json({
-      isAuthenticated: false,
-      message: 'セッションがありません',
-    });
-  }
-
-  try {
-    const user = await sessionService.getSessionUser(sessionId);
-
-    if (!user) {
-      return res.json({
-        isAuthenticated: false,
-        message: 'セッションが無効または期限切れです',
-      });
-    }
-
-    return res.json({
-      isAuthenticated: true,
-      user,
-    });
-  } catch (error) {
-    console.error('セッション確認エラー:', error);
-    return res.status(500).json({
-      isAuthenticated: false,
-      error: 'セッション確認中にエラーが発生しました',
-    });
-  }
-});
-
 // セッション確認 - 既存のエンドポイント
 app.get('/api/auth/session', async (req, res) => {
   const sessionId = req.cookies.sid;
+
+  console.log('sessionId', sessionId);
 
   if (!sessionId) {
     return res.json({
@@ -90,6 +58,8 @@ app.get('/api/auth/session', async (req, res) => {
 
   try {
     const user = await sessionService.getSessionUser(sessionId);
+
+    console.log('user', user);
 
     if (!user) {
       return res.json({

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Header from './header/layout';
 
 /**
  * 管理画面用のレイアウトコンポーネント
@@ -8,39 +9,6 @@ interface AdminLayoutProps {
   title: string;
   sidebar?: boolean;
 }
-
-const Header: React.FC = () => {
-  return (
-    <header className="border-b border-gray-800 py-4 px-6 flex justify-between items-center">
-      <div className="flex items-center">
-        <a
-          href="/admin"
-          className="text-white text-xl font-semibold hover:text-gray-200 transition duration-200"
-        >
-          <span className="mr-1">📚</span>
-          ハンドブック管理
-        </a>
-      </div>
-
-      <div className="flex items-center gap-6">
-        {/* ユーザー情報 */}
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white">
-            ?
-          </div>
-          <div className="text-sm text-gray-300">管理者</div>
-        </div>
-
-        <a
-          href="/admin/logout"
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition duration-200"
-        >
-          ログアウト
-        </a>
-      </div>
-    </header>
-  );
-};
 
 export default function AdminLayout({ children, title, sidebar = true }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');

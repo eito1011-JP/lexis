@@ -40,7 +40,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       setLoading(true);
       const response = await apiClient.get(API_CONFIG.ENDPOINTS.SESSION);
-      
+
       if (response.data?.user) {
         setUser(response.data.user);
         setActiveBranch(response.data.activeBranch || null);
@@ -58,7 +58,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const logout = async () => {
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.LOGOUT);
+      await apiClient.post(API_CONFIG.ENDPOINTS.LOGOUT, {});
       setUser(null);
       setActiveBranch(null);
       window.location.href = '/admin/login';

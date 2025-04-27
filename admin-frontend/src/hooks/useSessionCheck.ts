@@ -13,11 +13,12 @@ export const useSessionCheck = (redirectPath: string, redirectIfAuth: boolean) =
     const checkSession = async () => {
       try {
         const response = await apiClient.get(API_CONFIG.ENDPOINTS.SESSION);
-        setIsAuthenticated(response.isAuthenticated);
 
-        if (redirectIfAuth && response.isAuthenticated) {
+        setIsAuthenticated(response.authenticated);
+
+        if (redirectIfAuth && response.authenticated) {
           navigate(redirectPath);
-        } else if (!redirectIfAuth && !response.isAuthenticated) {
+        } else if (!redirectIfAuth && !response.authenticated) {
           navigate(redirectPath);
         }
       } catch (error) {

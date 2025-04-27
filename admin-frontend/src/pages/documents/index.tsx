@@ -1,11 +1,11 @@
 import AdminLayout from '@/components/admin/layout';
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
-
+import { API_CONFIG } from '@/components/admin/api/config';
 // カテゴリの型定義
 type Category = {
   name: string;
@@ -47,7 +47,7 @@ export default function DocumentsPage(): JSX.Element {
     const getDocuments = async () => {
       try {
         let categoryData = [];
-          const documents = await apiClient.get('/admin/documents');
+          const documents = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
           
           // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
           if (documents && documents.items) {
@@ -59,7 +59,7 @@ export default function DocumentsPage(): JSX.Element {
             setCategories(categoryData);
           }
 
-          const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
+          const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF);
           if (hasUserDraft && hasUserDraft.exists) {
             setShowPrSubmitButton(true);
           }

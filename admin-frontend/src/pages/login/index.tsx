@@ -1,7 +1,7 @@
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import AdminLayout from '@/components/admin/layout';
-import React, { useState, FormEvent, ReactElement } from 'react';
+import { useState, FormEvent, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { Toast } from '@/components/admin/Toast';
@@ -42,7 +42,7 @@ export default function LoginPage(): ReactElement {
 
       // 状態の更新を待ってからリダイレクト
       setTimeout(() => {
-        navigate('/admin/documents');
+        navigate('/documents');
       }, 1000);
     } catch (err) {
       console.error('Error:', err);
