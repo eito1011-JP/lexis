@@ -103,12 +103,12 @@ router.get('/category-contents', async (req: Request, res: Response) => {
       .map(item => {
         const itemPath = path.join(categoryPath, item.name);
 
-        // タイプ（document or category）を決定
-        const type = item.isDirectory() ? 'category' : 'document';
+        // タイプ（file or folder）を決定
+        const type = item.isDirectory() ? 'folder' : 'file';
 
         // ドキュメントの場合はタイトルを取得
         let label = '';
-        if (type === 'document' && item.name.endsWith('.md')) {
+        if (type === 'file' && item.name.endsWith('.md')) {
           try {
             const filePath = path.join(targetDir, item.name);
             const fileContent = fs.readFileSync(filePath, 'utf8');
@@ -127,7 +127,7 @@ router.get('/category-contents', async (req: Request, res: Response) => {
           ...(label && { label }),
         };
       })
-      .filter(item => item.type === 'category' || item.name.endsWith('.md'));
+      .filter(item => item.type === 'folder' || item.name.endsWith('.md'));
 
     // 成功レスポンス
     return res.status(200).json({

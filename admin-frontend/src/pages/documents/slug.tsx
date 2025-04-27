@@ -11,20 +11,15 @@ import { API_CONFIG } from '@/components/admin/api/config';
 
 // アイテムの型定義
 type Item = {
-  type: 'category' | 'file';
+  type: 'folder' | 'file';
   slug: string;
   label: string;
+  name?: string;
   position?: number;
   description?: string;
   status?: string;
   lastEditedBy?: string;
   content?: string;
-};
-
-// パンくずリストアイテムの型定義
-type BreadcrumbItem = {
-  name: string;
-  path: string;
 };
 
 /**
@@ -61,22 +56,98 @@ export default function CategoryDetailPage(): JSX.Element {
         setItemsLoading(true);
         const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + slug);
         console.log('response', response);
-        if (response && response.items) {
-          setItems(response.items);
+        
+        // ここでAPIレスポンスのチェックとデバッグ用コンソール出力を追加
+        if (response) {
+          console.log('API応答:', response);
+          
+          // レスポンスからアイテムを正しく抽出
+          const responseItems = response.items || [];
+          
+          // APIレスポンスのデータ構造を変換（titleをlabelに、documentをfileに変換）
+          const convertedItems = responseItems.map((item: any) => {
+            // type変換（documentをfileに、それ以外はそのまま）
+            const convertedType = item.type === 'document' ? 'file' : item.type === 'category' ? 'folder' : item.type;
+            
+            // パスからファイル名を抽出して.mdを除去
+            let slug = item.slug || '';
+            if (item.path) {
+              const pathParts = item.path.split('/');
+              const fileName = pathParts[pathParts.length - 1];
+              slug = fileName.replace('.md', '') || slug;
+            }
+            
+            return {
+              type: convertedType,
+              slug: slug,
+              label: item.title || item.label || item.name || '',
+              name: item.name || '',
+              content: item.content || '',
+              status: item.status || '非公開',
+              lastEditedBy: item.lastEditedBy || '',
+              position: item.position,
+              description: item.description
+            } as Item;
+          });
+          
+          console.log('変換後のアイテム:', convertedItems);
+          setItems(convertedItems);
           
           // 現在のカテゴリ情報を設定
           if (response.category) {
             setCurrentCategory(response.category);
           }
+          
+          // デバッグ情報
+          console.log('設定されたアイテム:', convertedItems);
+          console.log('フォルダ:', convertedItems.filter((item: Item) => item.type === 'folder').length);
+          console.log('ファイル:', convertedItems.filter((item: Item) => item.type === 'file').length);
+        } else {
+          console.error('APIレスポンスが不正です:', response);
+          setApiError('カテゴリ詳細の取得に失敗しました: レスポンスが不正です');
+          
+          // APIレスポンスがない場合はダミーデータを使用（開発用）
+          setItems([
+            {
+              type: 'file',
+              slug: 'example-doc',
+              label: 'サンプルドキュメント',
+              status: '非公開',
+              lastEditedBy: 'sample@example.com',
+              content: 'サンプルコンテンツ'
+            },
+            {
+              type: 'folder',
+              slug: 'example-category',
+              label: 'サンプルカテゴリ'
+            }
+          ]);
         }
 
-        const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
+        const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF || '/admin/documents/git/check-diff');
         if (hasUserDraft && hasUserDraft.exists) {
           setShowPrSubmitButton(true);
         }
       } catch (err) {
         console.error('カテゴリ詳細取得エラー:', err);
         setApiError('カテゴリ詳細の取得に失敗しました');
+        
+        // エラー時にもダミーデータをセットして表示できるようにする
+        setItems([
+          {
+            type: 'file',
+            slug: 'example-doc',
+            label: 'サンプルドキュメント',
+            status: '非公開',
+            lastEditedBy: 'sample@example.com',
+            content: 'サンプルコンテンツ'
+          },
+          {
+            type: 'folder',
+            slug: 'example-category',
+            label: 'サンプルカテゴリ'
+          }
+        ]);
       } finally {
         setItemsLoading(false);
       }
@@ -128,7 +199,7 @@ export default function CategoryDetailPage(): JSX.Element {
         setItems(prev => [
           ...prev, 
           { 
-            type: 'category',
+            type: 'folder',
             slug: response.slug,
             label: response.label,
             position: positionNum,
@@ -194,7 +265,7 @@ export default function CategoryDetailPage(): JSX.Element {
     }
 
     // カテゴリタイプのアイテムのみをフィルタリング
-    const categories = items.filter(item => item.type === 'category');
+    const categories = items.filter(item => item.type === 'folder');
 
     if (categories.length === 0) {
       return <p className="text-gray-400 py-4">カテゴリがありません</p>;
@@ -209,7 +280,7 @@ export default function CategoryDetailPage(): JSX.Element {
           >
             <Folder className="w-5 h-5 mr-2" />
             <Link to={`/admin/documents/${category.slug}`} className="text-white hover:underline">
-              {category.label}
+              {category.label || category.name || category.slug}
             </Link>
           </div>
         ))}
@@ -249,7 +320,7 @@ export default function CategoryDetailPage(): JSX.Element {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-white">{document.label}</div>
+                      <div className="text-sm font-medium text-white">{document.label || document.name || document.slug}</div>
                       <div className="text-sm text-gray-400">{document.slug}</div>
                     </div>
                   </div>
@@ -468,6 +539,7 @@ export default function CategoryDetailPage(): JSX.Element {
 
           {/* ドキュメント一覧テーブル */}
           <div className="mb-8">
+            <h2 className="text-xl font-bold mb-4">ドキュメント</h2>
             {renderDocumentTable()}
           </div>
 

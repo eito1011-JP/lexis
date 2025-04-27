@@ -1,7 +1,7 @@
 ---
 slug: eito-morohashi
 category: 日本国憲法
-title: 私の自己消化い
+label: 私の自己消化い
 file_order: 1
 ---
 # 好きなもの(以下コンテンツ)

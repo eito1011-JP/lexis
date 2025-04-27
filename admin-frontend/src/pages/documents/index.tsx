@@ -17,6 +17,7 @@ type Category = {
 type DocumentItem = {
   type: string;
   label: string;
+  name?: string;
   slug: string;
   status?: string;
   lastEditedBy?: string;
@@ -58,15 +59,15 @@ export default function DocumentsPage(): JSX.Element {
           
         // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
         if (documents && documents.items) {
-          const categoryItems = documents.items.filter((item: DocumentItem) => item.type === 'category');
+          const categoryItems = documents.items.filter((item: DocumentItem) => item.type === 'folder');
           categoryData = categoryItems.map((category: DocumentItem) => ({
-            name: category.label,
+            name: category.label || '',
             slug: category.slug
           }));
           setCategories(categoryData);
 
           // ドキュメントのデータを取得して設定
-          const docItems = documents.items.filter((item: DocumentItem) => item.type === 'document');
+          const docItems = documents.items.filter((item: DocumentItem) => item.type === 'file');
           setDocuments(docItems);
         }
 
@@ -233,7 +234,7 @@ export default function DocumentsPage(): JSX.Element {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-white">{document.label}</div>
+                      <div className="text-sm font-medium text-white">{document.label || document.name || document.slug}</div>
                       <div className="text-sm text-gray-400">{document.slug}</div>
                     </div>
                   </div>

@@ -89,7 +89,7 @@ router.get('/', async (req: Request, res: Response) => {
           }
 
           return {
-            type: 'category',
+            type: 'folder',
             slug: item.name,
             label,
             position,
@@ -130,7 +130,7 @@ router.get('/', async (req: Request, res: Response) => {
     validItems.sort((a, b) => {
       if (a.type !== b.type) {
         // カテゴリを先に表示
-        return a.type === 'category' ? -1 : 1;
+        return a.type === 'folder' ? -1 : 1;
       }
       // 同じタイプの場合はpositionでソート
       return (a.position || 999) - (b.position || 999);
