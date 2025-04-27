@@ -6,6 +6,7 @@ import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
 import { API_CONFIG } from '@/components/admin/api/config';
+import { Home } from '@/components/icon/common/Home';
 // カテゴリの型定義
 type Category = {
   name: string;
@@ -17,6 +18,9 @@ type DocumentItem = {
   type: string;
   label: string;
   slug: string;
+  status?: string;
+  lastEditedBy?: string;
+  content?: string;
 };
 
 /**
@@ -33,7 +37,9 @@ export default function DocumentsPage(): JSX.Element {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -47,29 +53,35 @@ export default function DocumentsPage(): JSX.Element {
     const getDocuments = async () => {
       try {
         let categoryData = [];
-          const documents = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
+        let documentData = [];
+        const documents = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
           
-          // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
-          if (documents && documents.items) {
-            const categoryItems = documents.items.filter((item: DocumentItem) => item.type === 'category');
-            categoryData = categoryItems.map((category: DocumentItem) => ({
-              name: category.label,
-              slug: category.slug
-            }));
-            setCategories(categoryData);
-          }
+        // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
+        if (documents && documents.items) {
+          const categoryItems = documents.items.filter((item: DocumentItem) => item.type === 'category');
+          categoryData = categoryItems.map((category: DocumentItem) => ({
+            name: category.label,
+            slug: category.slug
+          }));
+          setCategories(categoryData);
 
-          const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF);
-          if (hasUserDraft && hasUserDraft.exists) {
-            setShowPrSubmitButton(true);
-          }
+          // ドキュメントのデータを取得して設定
+          const docItems = documents.items.filter((item: DocumentItem) => item.type === 'document');
+          setDocuments(docItems);
+        }
 
-          console.log('hasUserDraft', hasUserDraft);
+        const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF);
+        if (hasUserDraft && hasUserDraft.exists) {
+          setShowPrSubmitButton(true);
+        }
+
+        console.log('hasUserDraft', hasUserDraft);
 
       } catch (err) {
         console.error('カテゴリ取得エラー:', err);
       } finally {
         setCategoriesLoading(false);
+        setDocumentsLoading(false);
       }
     };
 
@@ -192,11 +204,91 @@ export default function DocumentsPage(): JSX.Element {
     );
   };
 
+  // ドキュメント一覧テーブル
+  const renderDocumentTable = () => {
+    if (documentsLoading) {
+      return (
+        <div className="flex justify-center py-6">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y">
+          <thead className="">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">タイトル</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">コンテンツ</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">公開ステータス</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">最終編集者</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">アクション</th>
+            </tr>
+          </thead>
+          {documents.length > 0 ? (
+            <tbody className="divide-y">
+            {documents.map((document, index) => (
+              <tr key={index} className="hover:bg-gray-800">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-white">{document.label}</div>
+                      <div className="text-sm text-gray-400">{document.slug}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-300">
+                    {document.content ? document.content.substring(0, 50) + '...' : 'コンテンツなし'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    document.status === '公開' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {document.status || '非公開'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                  {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <a
+                    href={`/admin/documents/edit/${document.slug}`}
+                    className="text-indigo-400 hover:text-indigo-300 mr-4"
+                  >
+                    編集
+                  </a>
+                  <span className="text-gray-500">・・・</span>
+                </td>
+              </tr>
+            ))}
+            </tbody>
+          ) : (
+            <tbody className="divide-y">
+              <tr>
+                <td colSpan={5} className="text-gray-400 py-4">ドキュメントがありません</td>
+              </tr>
+            </tbody>
+          )}
+        </table>
+      </div>
+    );
+  };
+
   return (
     <AdminLayout title="ドキュメント管理">
       <div className="flex flex-col h-full">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-4">ドキュメント</h1>
+          {/* パンくずリスト */}
+          <div className="flex items-center text-sm text-gray-400 mb-4">
+            <a href="/admin" className="hover:text-white">
+              <Home className="w-4 h-4 mx-2" />
+            </a>
+          </div>
 
           {/* APIエラー表示 */}
           {apiError && (
@@ -321,6 +413,11 @@ export default function DocumentsPage(): JSX.Element {
                 <span>新規カテゴリ</span>
               </button>
             </div>
+          </div>
+
+          {/* ドキュメント一覧テーブル */}
+          <div className="mb-8">
+            {renderDocumentTable()}
           </div>
 
           {/* カテゴリセクション */}

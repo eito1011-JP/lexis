@@ -1,5 +1,3 @@
-import React from 'react';
-
 type MultipleFolderProps = {
   className?: string;
   width?: number;

@@ -28,14 +28,14 @@ const router = express.Router();
  * GET /api/admin/documents/category-contents?slug=<category-slug>
  *
  * レスポンス:
- * 成功: { items: Array<{ name: string, path: string, type: 'document' | 'category', title?: string }> }
+ * 成功: { items: Array<{ name: string, path: string, type: 'document' | 'category', label?: string }> }
  * 失敗: { error: string }
  */
 router.get('/category-contents', async (req: Request, res: Response) => {
   try {
     // クエリパラメータからスラッグを取得
     const { slug } = req.query;
-
+    console.log('slug', slug);
     if (!slug || typeof slug !== 'string') {
       return res.status(400).json({
         error: 'A valid slug is required',
@@ -108,16 +108,16 @@ router.get('/category-contents', async (req: Request, res: Response) => {
         const type = item.isDirectory() ? 'category' : 'document';
 
         // ドキュメントの場合はタイトルを取得
-        let title = '';
+        let label = '';
         if (type === 'document' && item.name.endsWith('.md')) {
           try {
             const filePath = path.join(targetDir, item.name);
             const fileContent = fs.readFileSync(filePath, 'utf8');
             const { data } = matter(fileContent);
-            title = data.title || item.name.replace('.md', '');
+            label = data.label || item.name.replace('.md', '');
           } catch (err) {
             console.error(`ファイル ${item.name} の読み込みエラー:`, err);
-            title = item.name.replace('.md', '');
+            label = item.name.replace('.md', '');
           }
         }
 
@@ -125,7 +125,7 @@ router.get('/category-contents', async (req: Request, res: Response) => {
           name: item.name,
           path: itemPath,
           type,
-          ...(title && { title }),
+          ...(label && { label }),
         };
       })
       .filter(item => item.type === 'category' || item.name.endsWith('.md'));

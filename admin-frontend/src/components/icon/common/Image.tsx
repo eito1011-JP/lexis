@@ -1,12 +1,10 @@
-import React from 'react';
-
 type ImageProps = {
   className?: string;
   width?: number;
   height?: number;
 };
 
-export const Image: React.FC<ImageProps> = ({ className = '', width, height }) => {
+export const Image = ({ className = '', width, height }: ImageProps) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"

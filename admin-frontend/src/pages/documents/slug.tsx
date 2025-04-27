@@ -7,6 +7,7 @@ import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
 import { Document } from '@/components/icon/common/Document';
+import { API_CONFIG } from '@/components/admin/api/config';
 
 // アイテムの型定義
 type Item = {
@@ -29,8 +30,6 @@ type BreadcrumbItem = {
 export default function CategoryDetailPage(): JSX.Element {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
-  console.log('Current slug parameter:', slug);
-  console.log('All params:', params);
   const { isLoading } = useSessionCheck('/login', false);
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -57,8 +56,8 @@ export default function CategoryDetailPage(): JSX.Element {
     const getCategoryDetails = async () => {
       try {
         setItemsLoading(true);
-        const response = await apiClient.get(`/admin/documents/${slug}`);
-        
+        const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + slug);
+        console.log('response', response);
         if (response && response.items) {
           setItems(response.items);
           setBreadcrumbs(response.breadcrumbs || []);
@@ -78,6 +77,8 @@ export default function CategoryDetailPage(): JSX.Element {
 
     getCategoryDetails();
   }, [slug]);
+
+  console.log('items', items);
 
   const handleCreateCategory = () => {
     setShowCategoryModal(true);
@@ -374,7 +375,7 @@ export default function CategoryDetailPage(): JSX.Element {
 
           {/* コンテンツセクション */}
           <div className="mb-8">
-            <h2 className="text-xl font-bold mb-4">コンテンツ</h2>
+            <h2 className="text-xl font-bold mb-4">カテゴリ</h2>
             {renderContentsSection()}
           </div>
         </div>
