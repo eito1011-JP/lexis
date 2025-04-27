@@ -3,6 +3,7 @@ import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import TiptapEditor from '@/components/admin/editor/TiptapEditor';
 import { apiClient } from '@/components/admin/api/client';
+import { API_CONFIG } from '@/components/admin/api/config';
 
 // ユーザー型定義を追加
 interface User {
@@ -82,7 +83,7 @@ export default function CreateDocumentPage(): JSX.Element {
       }
 
       // ドキュメント作成APIを呼び出す
-      const response = await apiClient.post('/admin/documents', {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT, {
         title,
         content,
         file_path: hierarchy, // 階層情報をファイルパスとして使用

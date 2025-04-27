@@ -10,8 +10,7 @@ export const API_CONFIG = {
     SESSION: '/api/auth/session',
     LOGOUT: '/api/admin/logout',
     DOCUMENTS: {
-      CREATE_FOLDER: '/api/admin/documents/create-folder',
-      GET_FOLDERS: '/api/admin/documents/folders',
+      CREATE_FOLDER: '/api/admin/documents/create-category',
       GET_DOCUMENT: '/api/admin/documents',
     },
     USERS: {
@@ -20,6 +19,7 @@ export const API_CONFIG = {
     },
     GIT: {
       CHECK_DIFF: '/api/admin/documents/git/check-diff',
+      CREATE_PR: '/api/admin/documents/git/create-pr',
     },
   },
 };

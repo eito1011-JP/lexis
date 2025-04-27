@@ -104,7 +104,7 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post('/admin/documents/create-category', {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_FOLDER, {
         slug,
         label,
         position: positionNum,
@@ -131,7 +131,7 @@ export default function DocumentsPage(): JSX.Element {
     setSubmitSuccess(null);
 
     try {
-      const response = await apiClient.post('/admin/git/create-pr', {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.GIT.CREATE_PR, {
         title: '更新内容の提出',
         description: 'このPRはハンドブックの更新を含みます。',
       });
