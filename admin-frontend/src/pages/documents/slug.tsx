@@ -6,7 +6,7 @@ import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
-import { Document } from '@/components/icon/common/Document';
+import { Home } from '@/components/icon/common/Home';
 import { API_CONFIG } from '@/components/admin/api/config';
 
 // アイテムの型定義
@@ -16,6 +16,9 @@ type Item = {
   label: string;
   position?: number;
   description?: string;
+  status?: string;
+  lastEditedBy?: string;
+  content?: string;
 };
 
 // パンくずリストアイテムの型定義
@@ -40,7 +43,6 @@ export default function CategoryDetailPage(): JSX.Element {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [items, setItems] = useState<Item[]>([]);
-  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
@@ -48,6 +50,7 @@ export default function CategoryDetailPage(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [currentCategory, setCurrentCategory] = useState<Item | null>(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -60,7 +63,11 @@ export default function CategoryDetailPage(): JSX.Element {
         console.log('response', response);
         if (response && response.items) {
           setItems(response.items);
-          setBreadcrumbs(response.breadcrumbs || []);
+          
+          // 現在のカテゴリ情報を設定
+          if (response.category) {
+            setCurrentCategory(response.category);
+          }
         }
 
         const hasUserDraft = await apiClient.get('/admin/documents/git/check-diff');
@@ -176,7 +183,7 @@ export default function CategoryDetailPage(): JSX.Element {
     );
   }
 
-  // コンテンツセクション
+  // カテゴリセクション
   const renderContentsSection = () => {
     if (itemsLoading) {
       return (
@@ -186,55 +193,144 @@ export default function CategoryDetailPage(): JSX.Element {
       );
     }
 
-    if (items.length === 0) {
-      return <p className="text-gray-400 py-4">コンテンツがありません</p>;
+    // カテゴリタイプのアイテムのみをフィルタリング
+    const categories = items.filter(item => item.type === 'category');
+
+    if (categories.length === 0) {
+      return <p className="text-gray-400 py-4">カテゴリがありません</p>;
     }
 
     return (
       <div className="grid grid-cols-2 gap-4">
-        {items.map((item, index) => (
+        {categories.map((category, index) => (
           <div
             key={index}
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
-            {item.type === 'category' ? (
-              <>
-                <Folder className="w-5 h-5 mr-2" />
-                <Link to={`/admin/documents/${item.slug}`} className="text-white hover:underline">
-                  {item.label}
-                </Link>
-              </>
-            ) : (
-              <>
-                <Document className="w-5 h-5 mr-2" />
-                <Link to={`/admin/documents/edit/${item.slug}`} className="text-white hover:underline">
-                  {item.label}
-                </Link>
-              </>
-            )}
+            <Folder className="w-5 h-5 mr-2" />
+            <Link to={`/admin/documents/${category.slug}`} className="text-white hover:underline">
+              {category.label}
+            </Link>
           </div>
         ))}
       </div>
     );
   };
 
+  // ドキュメント一覧テーブル
+  const renderDocumentTable = () => {
+    if (itemsLoading) {
+      return (
+        <div className="flex justify-center py-6">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
+        </div>
+      );
+    }
+
+    // ドキュメントタイプのアイテムのみをフィルタリング
+    const documents = items.filter(item => item.type === 'file');
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y">
+          <thead className="">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">タイトル</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">コンテンツ</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">公開ステータス</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">最終編集者</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">アクション</th>
+            </tr>
+          </thead>
+          {documents.length > 0 ? (
+            <tbody className="divide-y">
+            {documents.map((document, index) => (
+              <tr key={index} className="hover:bg-gray-800">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-white">{document.label}</div>
+                      <div className="text-sm text-gray-400">{document.slug}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="text-sm text-gray-300">
+                    {document.content ? document.content.substring(0, 50) + '...' : 'コンテンツなし'}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                    document.status === '公開' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {document.status || '非公開'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                  {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <a
+                    href={`/admin/documents/edit/${document.slug}`}
+                    className="text-indigo-400 hover:text-indigo-300 mr-4"
+                  >
+                    編集
+                  </a>
+                  <span className="text-gray-500">・・・</span>
+                </td>
+              </tr>
+            ))}
+            </tbody>
+          ) : (
+            <tbody className="divide-y">
+              <tr>
+                <td colSpan={5} className="text-gray-400 py-4">ドキュメントがありません</td>
+              </tr>
+            </tbody>
+          )}
+        </table>
+      </div>
+    );
+  };
+
   // パンくずリスト
   const renderBreadcrumbs = () => {
-    if (!breadcrumbs || breadcrumbs.length === 0) return null;
+    if (!slug) return null;
+
+    // スラグを/で分割して階層構造を作成
+    const slugParts = slug.split('/');
+    let currentPath = '';
 
     return (
       <div className="flex items-center text-sm text-gray-400 mb-4">
-        <Link to="/admin/documents" className="hover:text-white">
-          ドキュメント
+        <Link to="/admin" className="hover:text-white">
+          <Home className="w-4 h-4 mx-2" />
         </Link>
-        {breadcrumbs.map((item, index) => (
-          <React.Fragment key={index}>
-            <span className="mx-2">/</span>
-            <Link to={item.path} className="hover:text-white">
-              {item.name}
-            </Link>
-          </React.Fragment>
-        ))}
+        {/* スラグの各部分に対してパンくずを生成 */}
+        {slugParts.map((part, index) => {
+          // パスを構築（現在までの部分）
+          currentPath += (index === 0 ? '' : '/') + part;
+          const path = `/admin/documents/${currentPath}`;
+          
+          return (
+            <React.Fragment key={index}>
+              <span className="mx-2">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </span>
+              {index === slugParts.length - 1 ? (
+                <span className="text-white">{part}</span>
+              ) : (
+                <Link to={path} className="hover:text-white">
+                  {part}
+                </Link>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
     );
   };
@@ -244,9 +340,6 @@ export default function CategoryDetailPage(): JSX.Element {
       <div className="flex flex-col h-full">
         <div className="mb-6">
           {renderBreadcrumbs()}
-          <h1 className="text-2xl font-bold mb-4">
-            {breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].name : slug}
-          </h1>
 
           {/* APIエラー表示 */}
           {apiError && (
@@ -373,7 +466,12 @@ export default function CategoryDetailPage(): JSX.Element {
             </div>
           </div>
 
-          {/* コンテンツセクション */}
+          {/* ドキュメント一覧テーブル */}
+          <div className="mb-8">
+            {renderDocumentTable()}
+          </div>
+
+          {/* カテゴリセクション */}
           <div className="mb-8">
             <h2 className="text-xl font-bold mb-4">カテゴリ</h2>
             {renderContentsSection()}

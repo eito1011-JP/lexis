@@ -35,7 +35,6 @@ router.get('/category-contents', async (req: Request, res: Response) => {
   try {
     // クエリパラメータからスラッグを取得
     const { slug } = req.query;
-    console.log('slug', slug);
     if (!slug || typeof slug !== 'string') {
       return res.status(400).json({
         error: 'A valid slug is required',
