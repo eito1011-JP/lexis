@@ -113,7 +113,7 @@ router.get('/category-contents', async (req: Request, res: Response) => {
             const filePath = path.join(targetDir, item.name);
             const fileContent = fs.readFileSync(filePath, 'utf8');
             const { data } = matter(fileContent);
-            label = data.label || item.name.replace('.md', '');
+            label = data.sidebar_label || data.label || item.name.replace('.md', '');
           } catch (err) {
             console.error(`ファイル ${item.name} の読み込みエラー:`, err);
             label = item.name.replace('.md', '');

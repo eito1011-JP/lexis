@@ -14,6 +14,7 @@ type Item = {
   type: 'folder' | 'file';
   slug: string;
   label: string;
+  sidebar_label?: string;
   name?: string;
   position?: number;
   description?: string;
@@ -80,7 +81,7 @@ export default function CategoryDetailPage(): JSX.Element {
             return {
               type: convertedType,
               slug: slug,
-              label: item.title || item.label || item.name || '',
+              label: item.sidebar_label || item.title || item.label || item.name || '',
               name: item.name || '',
               content: item.content || '',
               status: item.status || '非公開',
@@ -320,7 +321,7 @@ export default function CategoryDetailPage(): JSX.Element {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-white">{document.label || document.name || document.slug}</div>
+                      <div className="text-sm font-medium text-white">{document.label}</div>
                       <div className="text-sm text-gray-400">{document.slug}</div>
                     </div>
                   </div>
