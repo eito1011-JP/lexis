@@ -6,7 +6,7 @@ import { API_CONFIG } from '@/components/admin/api/config';
 export const useSessionCheck = (redirectPath: string, redirectIfAuth: boolean) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const navigate = useNavigate();
 
   useEffect(() => {

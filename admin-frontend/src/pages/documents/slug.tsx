@@ -14,11 +14,11 @@ type Item = {
   type: 'folder' | 'file';
   slug: string;
   label: string;
-  sidebar_label?: string;
+  sidebarLabel?: string;
   name?: string;
   position?: number;
   description?: string;
-  status?: string;
+  isDraft: boolean;
   lastEditedBy?: string;
   content?: string;
 };
@@ -55,21 +55,24 @@ export default function CategoryDetailPage(): JSX.Element {
     const getCategoryDetails = async () => {
       try {
         setItemsLoading(true);
-        const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + slug);
+        const response = await apiClient.get(
+          API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + slug
+        );
         console.log('response', response);
-        
+
         // ここでAPIレスポンスのチェックとデバッグ用コンソール出力を追加
         if (response) {
           console.log('API応答:', response);
-          
+
           // レスポンスからアイテムを正しく抽出
           const responseItems = response.items || [];
-          
+
           // APIレスポンスのデータ構造を変換（titleをlabelに、documentをfileに変換）
           const convertedItems = responseItems.map((item: any) => {
             // type変換（documentをfileに、それ以外はそのまま）
-            const convertedType = item.type === 'document' ? 'file' : item.type === 'category' ? 'folder' : item.type;
-            
+            const convertedType =
+              item.type === 'document' ? 'file' : item.type === 'category' ? 'folder' : item.type;
+
             // パスからファイル名を抽出して.mdを除去
             let slug = item.slug || '';
             if (item.path) {
@@ -77,77 +80,87 @@ export default function CategoryDetailPage(): JSX.Element {
               const fileName = pathParts[pathParts.length - 1];
               slug = fileName.replace('.md', '') || slug;
             }
-            
+
             return {
               type: convertedType,
               slug: slug,
-              label: item.sidebar_label || item.title || item.label || item.name || '',
+              label: item.sidebarLabel || item.title || item.label || item.name || '',
               name: item.name || '',
               content: item.content || '',
-              status: item.status || '非公開',
+              isDraft: item.isDraft || false,
               lastEditedBy: item.lastEditedBy || '',
               position: item.position,
-              description: item.description
+              description: item.description,
             } as Item;
           });
-          
+
           console.log('変換後のアイテム:', convertedItems);
           setItems(convertedItems);
-          
+
           // 現在のカテゴリ情報を設定
           if (response.category) {
             setCurrentCategory(response.category);
           }
-          
+
           // デバッグ情報
           console.log('設定されたアイテム:', convertedItems);
-          console.log('フォルダ:', convertedItems.filter((item: Item) => item.type === 'folder').length);
-          console.log('ファイル:', convertedItems.filter((item: Item) => item.type === 'file').length);
+          console.log(
+            'フォルダ:',
+            convertedItems.filter((item: Item) => item.type === 'folder').length
+          );
+          console.log(
+            'ファイル:',
+            convertedItems.filter((item: Item) => item.type === 'file').length
+          );
         } else {
           console.error('APIレスポンスが不正です:', response);
           setApiError('カテゴリ詳細の取得に失敗しました: レスポンスが不正です');
-          
+
           // APIレスポンスがない場合はダミーデータを使用（開発用）
           setItems([
             {
               type: 'file',
               slug: 'example-doc',
               label: 'サンプルドキュメント',
-              status: '非公開',
+              isDraft: false,
               lastEditedBy: 'sample@example.com',
-              content: 'サンプルコンテンツ'
+              content: 'サンプルコンテンツ',
             },
             {
               type: 'folder',
               slug: 'example-category',
-              label: 'サンプルカテゴリ'
-            }
+              label: 'サンプルカテゴリ',
+              isDraft: false,
+            },
           ]);
         }
 
-        const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF || '/admin/documents/git/check-diff');
+        const hasUserDraft = await apiClient.get(
+          API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF || '/admin/documents/git/check-diff'
+        );
         if (hasUserDraft && hasUserDraft.exists) {
           setShowPrSubmitButton(true);
         }
       } catch (err) {
         console.error('カテゴリ詳細取得エラー:', err);
         setApiError('カテゴリ詳細の取得に失敗しました');
-        
+
         // エラー時にもダミーデータをセットして表示できるようにする
         setItems([
           {
             type: 'file',
             slug: 'example-doc',
             label: 'サンプルドキュメント',
-            status: '非公開',
+            isDraft: false,
             lastEditedBy: 'sample@example.com',
-            content: 'サンプルコンテンツ'
+            content: 'サンプルコンテンツ',
           },
           {
             type: 'folder',
             slug: 'example-category',
-            label: 'サンプルカテゴリ'
-          }
+            label: 'サンプルカテゴリ',
+            isDraft: false,
+          },
         ]);
       } finally {
         setItemsLoading(false);
@@ -192,20 +205,21 @@ export default function CategoryDetailPage(): JSX.Element {
         label,
         position: positionNum,
         description,
-        parent: slug,  // 親カテゴリのスラグを指定
+        parent: slug, // 親カテゴリのスラグを指定
       });
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {
         setItems(prev => [
-          ...prev, 
-          { 
+          ...prev,
+          {
             type: 'folder',
             slug: response.slug,
             label: response.label,
             position: positionNum,
-            description: description
-          }
+            description: description,
+            isDraft: false,
+          },
         ]);
       }
       handleCloseModal();
@@ -307,58 +321,73 @@ export default function CategoryDetailPage(): JSX.Element {
         <table className="min-w-full divide-y">
           <thead className="">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">タイトル</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">コンテンツ</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">公開ステータス</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">最終編集者</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">アクション</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                タイトル
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                コンテンツ
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                公開ステータス
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                最終編集者
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                アクション
+              </th>
             </tr>
           </thead>
           {documents.length > 0 ? (
             <tbody className="divide-y">
-            {documents.map((document, index) => (
-              <tr key={index} className="hover:bg-gray-800">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-white">{document.label}</div>
-                      <div className="text-sm text-gray-400">{document.slug}</div>
+              {documents.map((document, index) => (
+                <tr key={index} className="hover:bg-gray-800">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-white">{document.label}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-300">
-                    {document.content ? document.content.substring(0, 50) + '...' : 'コンテンツなし'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    document.status === '公開' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {document.status || '非公開'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <a
-                    href={`/admin/documents/edit/${document.slug}`}
-                    className="text-indigo-400 hover:text-indigo-300 mr-4"
-                  >
-                    編集
-                  </a>
-                  <span className="text-gray-500">・・・</span>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-300">
+                      {document.content
+                        ? document.content.substring(0, 50) + '...'
+                        : 'コンテンツなし'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        document.isDraft === true
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {document.isDraft === true ? '非公開' : '公開'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a
+                      href={`/admin/documents/edit/${document.slug}`}
+                      className="text-indigo-400 hover:text-indigo-300 mr-4"
+                    >
+                      編集
+                    </a>
+                    <span className="text-gray-500">・・・</span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           ) : (
             <tbody className="divide-y">
               <tr>
-                <td colSpan={5} className="text-gray-400 py-4">ドキュメントがありません</td>
+                <td colSpan={5} className="text-gray-400 py-4">
+                  ドキュメントがありません
+                </td>
               </tr>
             </tbody>
           )}
@@ -385,12 +414,23 @@ export default function CategoryDetailPage(): JSX.Element {
           // パスを構築（現在までの部分）
           currentPath += (index === 0 ? '' : '/') + part;
           const path = `/admin/documents/${currentPath}`;
-          
+
           return (
             <React.Fragment key={index}>
               <span className="mx-2">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path>
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
                 </svg>
               </span>
               {index === slugParts.length - 1 ? (
@@ -663,4 +703,4 @@ export default function CategoryDetailPage(): JSX.Element {
       )}
     </AdminLayout>
   );
-} 
+}

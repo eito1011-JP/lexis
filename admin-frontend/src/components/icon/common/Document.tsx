@@ -23,4 +23,4 @@ export const Document = ({ className = '', width, height }: DocumentProps) => {
       ></path>
     </svg>
   );
-}; 
+};

@@ -115,9 +115,9 @@ router.get('/category-contents', async (req: Request, res: Response) => {
             const fileContent = fs.readFileSync(filePath, 'utf8');
             const { data } = matter(fileContent);
             label = data.sidebar_label || data.label || item.name.replace('.md', '');
-            
+
             // is_publicの値を取得（未設定の場合はデフォルトでtrue）
-            isDraft = data.draft
+            isDraft = data.draft;
           } catch (err) {
             console.error(`ファイル ${item.name} の読み込みエラー:`, err);
             label = item.name.replace('.md', '');

@@ -1,5 +1,5 @@
 import AdminLayout from '@/components/admin/layout';
-import  { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
@@ -56,13 +56,15 @@ export default function DocumentsPage(): JSX.Element {
         let categoryData = [];
         let documentData = [];
         const documents = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
-          
+
         // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
         if (documents && documents.items) {
-          const categoryItems = documents.items.filter((item: DocumentItem) => item.type === 'folder');
+          const categoryItems = documents.items.filter(
+            (item: DocumentItem) => item.type === 'folder'
+          );
           categoryData = categoryItems.map((category: DocumentItem) => ({
             name: category.label || '',
-            slug: category.slug
+            slug: category.slug,
           }));
           setCategories(categoryData);
 
@@ -77,7 +79,6 @@ export default function DocumentsPage(): JSX.Element {
         }
 
         console.log('hasUserDraft', hasUserDraft);
-
       } catch (err) {
         console.error('カテゴリ取得エラー:', err);
       } finally {
@@ -220,58 +221,76 @@ export default function DocumentsPage(): JSX.Element {
         <table className="min-w-full divide-y">
           <thead className="">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">タイトル</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">コンテンツ</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">公開ステータス</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">最終編集者</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">アクション</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                タイトル
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                コンテンツ
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                公開ステータス
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                最終編集者
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                アクション
+              </th>
             </tr>
           </thead>
           {documents.length > 0 ? (
             <tbody className="divide-y">
-            {documents.map((document, index) => (
-              <tr key={index} className="hover:bg-gray-800">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-white">{document.label || document.name || document.slug}</div>
-                      <div className="text-sm text-gray-400">{document.slug}</div>
+              {documents.map((document, index) => (
+                <tr key={index} className="hover:bg-gray-800">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-white">
+                          {document.label || document.name || document.slug}
+                        </div>
+                        <div className="text-sm text-gray-400">{document.slug}</div>
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-300">
-                    {document.content ? document.content.substring(0, 50) + '...' : 'コンテンツなし'}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    document.status === '公開' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {document.status || '非公開'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <a
-                    href={`/admin/documents/edit/${document.slug}`}
-                    className="text-indigo-400 hover:text-indigo-300 mr-4"
-                  >
-                    編集
-                  </a>
-                  <span className="text-gray-500">・・・</span>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm text-gray-300">
+                      {document.content
+                        ? document.content.substring(0, 50) + '...'
+                        : 'コンテンツなし'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        document.status === '公開'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {document.status || '非公開'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <a
+                      href={`/admin/documents/edit/${document.slug}`}
+                      className="text-indigo-400 hover:text-indigo-300 mr-4"
+                    >
+                      編集
+                    </a>
+                    <span className="text-gray-500">・・・</span>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           ) : (
             <tbody className="divide-y">
               <tr>
-                <td colSpan={5} className="text-gray-400 py-4">ドキュメントがありません</td>
+                <td colSpan={5} className="text-gray-400 py-4">
+                  ドキュメントがありません
+                </td>
               </tr>
             </tbody>
           )}
@@ -417,9 +436,7 @@ export default function DocumentsPage(): JSX.Element {
           </div>
 
           {/* ドキュメント一覧テーブル */}
-          <div className="mb-8">
-            {renderDocumentTable()}
-          </div>
+          <div className="mb-8">{renderDocumentTable()}</div>
 
           {/* カテゴリセクション */}
           <div className="mb-8">

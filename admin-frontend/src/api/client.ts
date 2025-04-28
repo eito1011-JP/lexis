@@ -12,7 +12,7 @@ const apiClient = {
       throw error;
     }
   },
-  
+
   async post(endpoint: string, data: any) {
     try {
       const response = await axios.post(`${baseURL}${endpoint}`, data);
@@ -22,7 +22,7 @@ const apiClient = {
       throw error;
     }
   },
-  
+
   async put(endpoint: string, data: any) {
     try {
       const response = await axios.put(`${baseURL}${endpoint}`, data);
@@ -32,7 +32,7 @@ const apiClient = {
       throw error;
     }
   },
-  
+
   async delete(endpoint: string) {
     try {
       const response = await axios.delete(`${baseURL}${endpoint}`);
@@ -41,7 +41,7 @@ const apiClient = {
       console.error('API DELETE error:', error);
       throw error;
     }
-  }
+  },
 };
 
-export { apiClient }; 
+export { apiClient };

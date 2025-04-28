@@ -7,8 +7,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
+      '@': path.resolve(__dirname, './src'),
+    },
   },
   base: '/admin/',
   server: {
@@ -17,7 +17,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001', // APIサーバーのURL
         changeOrigin: true,
-      }
-    }
-  }
-}); 
+      },
+    },
+  },
+});

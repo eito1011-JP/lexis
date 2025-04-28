@@ -10,7 +10,11 @@ interface AdminLayoutProps {
   sidebar?: boolean;
 }
 
-export default function AdminLayout({ children, title, sidebar = true }: AdminLayoutProps): React.ReactElement {
+export default function AdminLayout({
+  children,
+  title,
+  sidebar = true,
+}: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
 
   useEffect(() => {

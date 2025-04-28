@@ -10,9 +10,8 @@ const PORT = process.env.PORT || 3001;
 // ミドルウェアの設定
 app.use(
   cors({
-    origin: process.env.NODE_ENV === 'production' 
-      ? 'https://yourdomain.com' 
-      : 'http://localhost:3002',
+    origin:
+      process.env.NODE_ENV === 'production' ? 'https://yourdomain.com' : 'http://localhost:3002',
     credentials: true,
   })
 );
