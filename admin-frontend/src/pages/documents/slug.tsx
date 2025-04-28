@@ -58,12 +58,9 @@ export default function CategoryDetailPage(): JSX.Element {
         const response = await apiClient.get(
           API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + slug
         );
-        console.log('response', response);
 
         // ここでAPIレスポンスのチェックとデバッグ用コンソール出力を追加
         if (response) {
-          console.log('API応答:', response);
-
           // レスポンスからアイテムを正しく抽出
           const responseItems = response.items || [];
 
@@ -94,26 +91,13 @@ export default function CategoryDetailPage(): JSX.Element {
             } as Item;
           });
 
-          console.log('変換後のアイテム:', convertedItems);
           setItems(convertedItems);
 
           // 現在のカテゴリ情報を設定
           if (response.category) {
             setCurrentCategory(response.category);
-          }
-
-          // デバッグ情報
-          console.log('設定されたアイテム:', convertedItems);
-          console.log(
-            'フォルダ:',
-            convertedItems.filter((item: Item) => item.type === 'folder').length
-          );
-          console.log(
-            'ファイル:',
-            convertedItems.filter((item: Item) => item.type === 'file').length
-          );
+          }  
         } else {
-          console.error('APIレスポンスが不正です:', response);
           setApiError('カテゴリ詳細の取得に失敗しました: レスポンスが不正です');
 
           // APIレスポンスがない場合はダミーデータを使用（開発用）
@@ -142,7 +126,6 @@ export default function CategoryDetailPage(): JSX.Element {
           setShowPrSubmitButton(true);
         }
       } catch (err) {
-        console.error('カテゴリ詳細取得エラー:', err);
         setApiError('カテゴリ詳細の取得に失敗しました');
 
         // エラー時にもダミーデータをセットして表示できるようにする
@@ -368,7 +351,7 @@ export default function CategoryDetailPage(): JSX.Element {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
+                    {document.lastEditedBy}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a

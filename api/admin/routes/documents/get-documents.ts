@@ -115,6 +115,7 @@ router.get('/', async (req: Request, res: Response) => {
             position: data.position || 999,
             description: data.description || '',
             content: content,
+            lastEditedBy: data.last_edited_by || '',
           };
         }
 
