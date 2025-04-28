@@ -308,9 +308,6 @@ export default function CategoryDetailPage(): JSX.Element {
                 タイトル
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                コンテンツ
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 公開ステータス
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -332,13 +329,6 @@ export default function CategoryDetailPage(): JSX.Element {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-300">
-                      {document.content
-                        ? document.content.substring(0, 50) + '...'
-                        : 'コンテンツなし'}
-                    </div>
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -355,12 +345,12 @@ export default function CategoryDetailPage(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
-                      href={`/admin/documents/edit/${document.slug}`}
+                      href={`/admin/documents/${document.slug}/edit`}
                       className="text-indigo-400 hover:text-indigo-300 mr-4"
                     >
                       編集
                     </a>
-                    <span className="text-gray-500">・・・</span>
+                    <span className="text-gray-500">･･･</span>
                   </td>
                 </tr>
               ))}
