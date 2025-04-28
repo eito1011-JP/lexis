@@ -28,7 +28,7 @@ const router = express.Router();
  * GET /api/admin/documents/category-contents?slug=<category-slug>
  *
  * レスポンス:
- * 成功: { items: Array<{ name: string, path: string, type: 'document' | 'category', label?: string }> }
+ * 成功: { items: Array<{ name: string, path: string, type: 'document' | 'category', label?: string, isDraft: boolean }> }
  * 失敗: { error: string }
  */
 router.get('/category-contents', async (req: Request, res: Response) => {
@@ -108,12 +108,16 @@ router.get('/category-contents', async (req: Request, res: Response) => {
 
         // ドキュメントの場合はタイトルを取得
         let label = '';
+        let isDraft = false;
         if (type === 'file' && item.name.endsWith('.md')) {
           try {
             const filePath = path.join(targetDir, item.name);
             const fileContent = fs.readFileSync(filePath, 'utf8');
             const { data } = matter(fileContent);
             label = data.sidebar_label || data.label || item.name.replace('.md', '');
+            
+            // is_publicの値を取得（未設定の場合はデフォルトでtrue）
+            isDraft = data.draft
           } catch (err) {
             console.error(`ファイル ${item.name} の読み込みエラー:`, err);
             label = item.name.replace('.md', '');
@@ -125,6 +129,7 @@ router.get('/category-contents', async (req: Request, res: Response) => {
           path: itemPath,
           type,
           ...(label && { label }),
+          isDraft: isDraft,
         };
       })
       .filter(item => item.type === 'folder' || item.name.endsWith('.md'));
