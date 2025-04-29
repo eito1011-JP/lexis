@@ -384,14 +384,14 @@ export default function DocumentBySlugPage(): JSX.Element {
 
     return (
       <div className="flex items-center text-sm text-gray-400 mb-4">
-        <Link to="/admin/documents" className="hover:text-white">
+        <Link to="/documents" className="hover:text-white">
           <Home className="w-4 h-4 mx-2" />
         </Link>
         {/* スラグの各部分に対してパンくずを生成 */}
         {slugParts.map((part, index) => {
           // パスを構築（現在までの部分）
           currentPath += (index === 0 ? '' : '/') + part;
-          const path = `/admin/documents/${currentPath}`;
+          const path = `/documents/${currentPath}`;
 
           return (
             <React.Fragment key={index}>
