@@ -1,7 +1,7 @@
 import AdminLayout from '@/components/admin/layout';
 import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
@@ -26,11 +26,10 @@ type Item = {
 /**
  * 管理画面のドキュメントカテゴリ詳細ページコンポーネント
  */
-export default function CategoryDetailPage(): JSX.Element {
-  const params = useParams<{ slug: string }>();
-  const slug = params.slug;
+export default function DocumentBySlugPage(): JSX.Element {
+  const location = useLocation();
+  const slug = location.pathname.replace('/documents/', '');
   const { isLoading } = useSessionCheck('/login', false);
-
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categorySlug, setCategorySlug] = useState('');
   const [label, setLabel] = useState('');
@@ -55,8 +54,11 @@ export default function CategoryDetailPage(): JSX.Element {
     const getCategoryDetails = async () => {
       try {
         setItemsLoading(true);
+        // スラグが空の場合はルートカテゴリを取得
+        const requestSlug = slug === '' ? 'root' : slug;
+        
         const response = await apiClient.get(
-          API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + slug
+          API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + requestSlug
         );
 
         // ここでAPIレスポンスのチェックとデバッグ用コンソール出力を追加
@@ -274,15 +276,16 @@ export default function CategoryDetailPage(): JSX.Element {
     return (
       <div className="grid grid-cols-2 gap-4">
         {categories.map((category, index) => (
-          <div
+          <Link
             key={index}
+            to={`/documents/${slug ? `${slug}/` : ''}${category.slug}`}
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
             <Folder className="w-5 h-5 mr-2" />
-            <Link to={`/admin/documents/${category.slug}`} className="text-white hover:underline">
-              {category.label || category.name || category.slug}
-            </Link>
-          </div>
+            <span className="text-white hover:underline">
+              {category.label}
+            </span>
+          </Link>
         ))}
       </div>
     );
@@ -346,12 +349,12 @@ export default function CategoryDetailPage(): JSX.Element {
                     {document.lastEditedBy}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a
-                      href={`/admin/documents/${document.slug}/edit`}
+                    <Link
+                      to={`/admin/documents/${slug ? `${slug}/` : ''}${document.slug}/edit`}
                       className="text-indigo-400 hover:text-indigo-300 mr-4"
                     >
                       編集
-                    </a>
+                    </Link>
                     <span className="text-gray-500">･･･</span>
                   </td>
                 </tr>
@@ -381,7 +384,7 @@ export default function CategoryDetailPage(): JSX.Element {
 
     return (
       <div className="flex items-center text-sm text-gray-400 mb-4">
-        <Link to="/admin" className="hover:text-white">
+        <Link to="/admin/documents" className="hover:text-white">
           <Home className="w-4 h-4 mx-2" />
         </Link>
         {/* スラグの各部分に対してパンくずを生成 */}
@@ -423,7 +426,7 @@ export default function CategoryDetailPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title={`${slug} - ドキュメント管理`}>
+    <AdminLayout title={`${slug || 'ドキュメント'} - ドキュメント管理`}>
       <div className="flex flex-col h-full">
         <div className="mb-6">
           {renderBreadcrumbs()}
@@ -523,7 +526,7 @@ export default function CategoryDetailPage(): JSX.Element {
               </button>
 
               <Link
-                to={`/admin/documents/create?category=${slug}`}
+                to={`/documents/create?category=${slug}`}
                 className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
               >
                 <svg

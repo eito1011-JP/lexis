@@ -122,6 +122,12 @@ router.get('/category-contents', async (req: Request, res: Response) => {
             console.error(`ファイル ${item.name} の読み込みエラー:`, err);
             label = item.name.replace('.md', '');
           }
+        } else {
+            const categoryJsonPath = path.join(targetDir, item.name, '_category.json');
+            if (fs.existsSync(categoryJsonPath)) {
+              const categoryJson = JSON.parse(fs.readFileSync(categoryJsonPath, 'utf8'));
+              label = categoryJson.label;
+            }
         }
 
         return {
