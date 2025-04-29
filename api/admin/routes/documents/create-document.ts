@@ -28,21 +28,21 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    const { title, content, file_path, is_public, reviewer_email } = req.body;
+    const { label, content, is_public, reviewer_email } = req.body;
 
-    console.log(title, content, file_path, is_public, reviewer_email);
+    console.log(label, content, is_public, reviewer_email);
 
     // バリデーション
-    if (!title || !content || !file_path) {
+    if (!label || !content) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'タイトル、コンテンツ、ファイルパスは必須です',
+        error: 'タイトル、コンテンツは必須です',
       });
     }
 
     // 2. ファイルパスの重複チェック（任意）
     const existingDoc = await db.execute({
       sql: 'SELECT id FROM document_versions WHERE file_path = ? LIMIT 1',
-      args: [file_path],
+      args: [label],
     });
 
     if (existingDoc.rows.length > 0) {
@@ -88,34 +88,34 @@ router.post('/', async (req: Request, res: Response) => {
         (user_id, user_branch_id, file_path, status, content, created_at, updated_at) 
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      args: [loginUser.userId, userBranchId, file_path, 'draft', content, now, now],
+      args: [loginUser.userId, userBranchId, label, 'draft', content, now, now],
     });
 
     // フォルダが存在しなければ作成
-    const folderPath = path.join(process.cwd(), 'docs', path.dirname(file_path));
+    const folderPath = path.join(process.cwd(), 'docs', path.dirname(label));
     if (!fs.existsSync(folderPath)) {
       fs.mkdirSync(folderPath, { recursive: true });
     }
 
     // 追加情報をメタデータとして保存
     const metadata = {
-      title,
-      is_public,
-      reviewer_email: reviewer_email || null,
-      created_by: loginUser.email,
-      created_at: now,
-      updated_at: now,
+      label,
+      isPublic: is_public,
+      reviewerEmail: reviewer_email || null,
+      createdBy: loginUser.email,
+      createdAt: now,
+      updatedAt: now,
     };
 
     // メタデータをJSONファイルとして保存
-    const metaFilePath = path.join(process.cwd(), 'docs', `${file_path}.meta.json`);
+    const metaFilePath = path.join(process.cwd(), 'docs', `${label}.meta.json`);
     fs.writeFileSync(metaFilePath, JSON.stringify(metadata, null, 2));
 
     // 5. 成功レスポンスを返す
     return res.status(HTTP_STATUS.OK).json({
       success: true,
       message: 'ドキュメントが作成されました',
-      document_id: file_path,
+      documentId: label,
     });
   } catch (error) {
     console.error('ドキュメント作成エラー:', error);

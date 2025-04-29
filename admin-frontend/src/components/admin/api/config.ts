@@ -11,6 +11,7 @@ export const API_CONFIG = {
     LOGOUT: '/api/admin/logout',
     DOCUMENTS: {
       CREATE_FOLDER: '/api/admin/documents/create-category',
+      CREATE_DOCUMENT: '/api/admin/documents',
       GET_DOCUMENT: '/api/admin/documents',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
     },

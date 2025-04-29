@@ -19,7 +19,7 @@ interface ApiError {
 export default function CreateDocumentPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
 
-  const [title, setTitle] = useState('');
+  const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
   const [hierarchy, setHierarchy] = useState('');
@@ -72,23 +72,17 @@ export default function CreateDocumentPage(): JSX.Element {
 
   const handleSave = async () => {
     try {
-      if (!title) {
+      if (!label) {
         alert('タイトルを入力してください');
-        return;
-      }
-
-      if (!hierarchy) {
-        alert('階層を選択してください');
         return;
       }
 
       // ドキュメント作成APIを呼び出す
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT, {
-        title,
+        label,
         content,
-        file_path: hierarchy, // 階層情報をファイルパスとして使用
-        is_public: publicOption === '公開する', // 公開設定を真偽値に変換
-        reviewer_email: reviewer || null, // レビュー担当者のメールアドレス
+        isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
+        reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
       });
 
       if (response.success) {
@@ -247,32 +241,13 @@ export default function CreateDocumentPage(): JSX.Element {
               </button>
             </div>
           </div>
-          <div className="mb-6">
-            <label className="block mb-2 font-bold">階層</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={hierarchy}
-                readOnly
-                className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white pr-24 cursor-pointer"
-                placeholder="階層を選択してください"
-                onClick={() => setIsHierarchyModalOpen(true)}
-              />
-              <button
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-1.5 bg-[#3832A5] text-white rounded hover:bg-opacity-80 text-sm border-none"
-                onClick={() => setIsHierarchyModalOpen(true)}
-              >
-                選択
-              </button>
-            </div>
-          </div>
 
           <div className="mb-6">
             <label className="block mb-2 font-bold">タイトル</label>
             <input
               type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
+              value={label}
+              onChange={e => setLabel(e.target.value)}
               className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
               placeholder="タイトルを入力してください"
             />
