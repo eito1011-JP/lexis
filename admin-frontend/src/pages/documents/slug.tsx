@@ -155,7 +155,9 @@ export default function CategoryDetailPage(): JSX.Element {
 
   console.log('items', items);
 
-  const handleCreateCategory = () => {
+  const handleCreateCategoryModal = async () => {
+    if (!slug) return;
+
     setShowCategoryModal(true);
   };
 
@@ -183,7 +185,7 @@ export default function CategoryDetailPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post('/admin/documents/create-category', {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_FOLDER, {
         slug: categorySlug,
         label,
         position: positionNum,
@@ -543,7 +545,7 @@ export default function CategoryDetailPage(): JSX.Element {
 
               <button
                 className="flex items-center px-3 py-2 bg-gray-700 rounded-md hover:bg-gray-600 focus:outline-none"
-                onClick={handleCreateCategory}
+                onClick={handleCreateCategoryModal}
               >
                 <MultipleFolder className="w-5 h-5 mr-2" />
                 <span>新規カテゴリ</span>

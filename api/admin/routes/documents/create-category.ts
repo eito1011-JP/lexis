@@ -26,7 +26,7 @@ const router = express.Router();
  *
  * リクエスト:
  * POST /api/admin/documents/create-category
- * body: { slug: string, label: string, position: number, description: string }
+ * body: { slug: string, label: string, position: number, description: string, parent?: string }
  *
  * レスポンス:
  * 成功: { slug: string, label: string, position: number, description: string, path: string }
@@ -42,7 +42,7 @@ router.post('/create-category', async (req: Request, res: Response) => {
       });
     }
 
-    const { slug, label, position, description } = req.body;
+    const { slug, label, position, description, parent } = req.body;
 
     // validation
     if (!slug || typeof slug !== 'string') {
@@ -69,6 +69,12 @@ router.post('/create-category', async (req: Request, res: Response) => {
       });
     }
 
+    if (parent && typeof parent !== 'string') {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'parent must be a string',
+      });
+    }
+
     // ログインユーザーを取得
     const loginUser = await getAuthenticatedUser(sessionId);
 
@@ -81,7 +87,26 @@ router.post('/create-category', async (req: Request, res: Response) => {
 
     const docsDir = path.join(process.cwd(), 'docs');
 
-    const newCategoryPath = path.join(docsDir, slug);
+    // 親カテゴリが指定されている場合は、その配下にカテゴリを作成
+    let newCategoryPath;
+    let newCategorySlug;
+    
+    if (parent) {
+      const parentCategoryPath = path.join(docsDir, parent);
+      
+      // 親カテゴリが存在するか確認
+      if (!fs.existsSync(parentCategoryPath)) {
+        return res.status(HTTP_STATUS.NOT_FOUND).json({
+          error: 'Parent category not found',
+        });
+      }
+      
+      newCategoryPath = path.join(parentCategoryPath, slug);
+      newCategorySlug = `${parent}/${slug}`;
+    } else {
+      newCategoryPath = path.join(docsDir, slug);
+      newCategorySlug = slug;
+    }
 
     if (fs.existsSync(newCategoryPath)) {
       return res.status(HTTP_STATUS.CONFLICT).json({
@@ -114,7 +139,7 @@ router.post('/create-category', async (req: Request, res: Response) => {
     );
 
     return res.status(HTTP_STATUS.CREATED).json({
-      slug,
+      slug: newCategorySlug,
       label,
       position,
       description,
