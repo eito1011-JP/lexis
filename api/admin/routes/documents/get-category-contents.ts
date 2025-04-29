@@ -35,64 +35,34 @@ router.get('/category-contents', async (req: Request, res: Response) => {
   try {
     // クエリパラメータからスラッグを取得
     const { slug } = req.query;
+
+    // docsディレクトリのパス
+    const docsDir = path.join(process.cwd(), 'docs');
+
+    // スラッグが空の場合はルートカテゴリを取得
     if (!slug || typeof slug !== 'string') {
       return res.status(400).json({
         error: 'A valid slug is required',
       });
     }
 
-    // docsディレクトリのパス
-    const docsDir = path.join(process.cwd(), 'docs');
-
-    // docsディレクトリ内の各カテゴリを取得
-    const dirItems = fs
-      .readdirSync(docsDir, { withFileTypes: true })
-      .filter(item => item.isDirectory());
-
-    // スラッグに一致するカテゴリを探す
-    let targetDir = '';
-    const categories = dirItems.filter(item => item.isDirectory());
-
+    // スラッグのパスを分割
+    const slugParts = slug.split('/');
+    let targetDir = docsDir;
     let categoryPath = '';
 
-    for (const category of categories) {
-      const categoryName = category.name;
-      const currentCategoryPath = path.join(docsDir, categoryName);
-
-      // カテゴリ名がスラッグと一致するか確認
-      if (categoryName === slug) {
-        targetDir = currentCategoryPath;
-        categoryPath = categoryName;
-        break;
+    // スラッグのパスに沿ってディレクトリを探索
+    for (const part of slugParts) {
+      const currentPath = path.join(targetDir, part);
+      // ディレクトリが存在するか確認
+      if (!fs.existsSync(currentPath) || !fs.statSync(currentPath).isDirectory()) {
+        return res.status(404).json({
+          error: 'Category not found',
+        });
       }
 
-      try {
-        // カテゴリ内のMarkdownファイルを検索
-        const files = fs.readdirSync(currentCategoryPath, { withFileTypes: true });
-        const mdFiles = files.filter(file => file.isFile() && file.name.endsWith('.md'));
-
-        // Markdownファイルを見つけた場合、front matterからスラッグを確認
-        for (const mdFile of mdFiles) {
-          const filePath = path.join(currentCategoryPath, mdFile.name);
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-          const { data } = matter(fileContent);
-
-          if (data.slug && data.slug.split('/')[0] === slug) {
-            targetDir = currentCategoryPath;
-            categoryPath = categoryName;
-            break;
-          }
-        }
-      } catch (err) {
-        console.error(`${categoryName}内のファイル読み込みエラー:`, err);
-      }
-    }
-
-    // 対象のカテゴリが見つからない場合
-    if (!targetDir) {
-      return res.status(404).json({
-        error: 'Category not found',
-      });
+      targetDir = currentPath;
+      categoryPath = categoryPath ? `${categoryPath}/${part}` : part;
     }
 
     // カテゴリ内のファイルとサブカテゴリを取得
@@ -122,12 +92,12 @@ router.get('/category-contents', async (req: Request, res: Response) => {
             console.error(`ファイル ${item.name} の読み込みエラー:`, err);
             label = item.name.replace('.md', '');
           }
-        } else {
-            const categoryJsonPath = path.join(targetDir, item.name, '_category.json');
-            if (fs.existsSync(categoryJsonPath)) {
-              const categoryJson = JSON.parse(fs.readFileSync(categoryJsonPath, 'utf8'));
-              label = categoryJson.label;
-            }
+        } else if (type === 'folder') {
+          const categoryJsonPath = path.join(targetDir, item.name, '_category.json');
+          if (fs.existsSync(categoryJsonPath)) {
+            const categoryJson = JSON.parse(fs.readFileSync(categoryJsonPath, 'utf8'));
+            label = categoryJson.label;
+          }
         }
 
         return {
