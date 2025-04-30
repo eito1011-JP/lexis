@@ -16,9 +16,8 @@ interface ApiError {
   message?: string;
 }
 
-export default function CreateDocumentPage(): JSX.Element {
+export default function EditDocumentPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
-
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');

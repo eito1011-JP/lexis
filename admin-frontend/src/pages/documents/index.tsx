@@ -48,6 +48,33 @@ export default function DocumentsPage(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
+
+  // 予約語やルーティングで使用される特殊パターン
+  const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
+  
+  // slugのバリデーション関数
+  const validateSlug = (value: string) => {
+    // 空の場合はエラーなし（必須チェックは別で行う）
+    if (!value.trim()) {
+      setInvalidSlug(null);
+      return;
+    }
+    
+    // 予約語チェック
+    if (reservedSlugs.includes(value.toLowerCase())) {
+      setInvalidSlug(`"${value}" は予約語のため使用できません`);
+      return;
+    }
+    
+    // URLで問題になる文字をチェック
+    if (!/^[a-z0-9-]+$/i.test(value)) {
+      setInvalidSlug('英数字とハイフン(-)のみ使用できます');
+      return;
+    }
+    
+    setInvalidSlug(null);
+  };
 
   useEffect(() => {
     // カテゴリ一覧を取得
@@ -100,6 +127,7 @@ export default function DocumentsPage(): JSX.Element {
     setLabel('');
     setPosition('');
     setDescription('');
+    setInvalidSlug(null);
   };
 
   const handleCreateCategory = async () => {
@@ -108,6 +136,12 @@ export default function DocumentsPage(): JSX.Element {
     // 表示順のバリデーション：数値以外が入力されていたらエラー
     if (position.trim() !== '' && isNaN(Number(position))) {
       setError('表示順は数値を入力してください');
+      return;
+    }
+
+    // slugのバリデーション
+    if (invalidSlug) {
+      setError(invalidSlug);
       return;
     }
 
@@ -208,6 +242,7 @@ export default function DocumentsPage(): JSX.Element {
 
   // ドキュメント一覧テーブル
   const renderDocumentTable = () => {
+    console.log(documents);
     if (documentsLoading) {
       return (
         <div className="flex justify-center py-6">
@@ -275,7 +310,7 @@ export default function DocumentsPage(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
-                      href={`/admin/documents/edit/${document.slug}`}
+                      href={`documents/${document.slug}/edit`}
                       className="text-indigo-400 hover:text-indigo-300 mr-4"
                     >
                       編集
@@ -462,11 +497,18 @@ export default function DocumentsPage(): JSX.Element {
               <label className="block text-sm font-medium text-gray-400">Slug</label>
               <input
                 type="text"
-                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
+                className={`w-full p-2 bg-gray-800 border ${invalidSlug ? 'border-red-500' : 'border-gray-700'} rounded-md focus:outline-none focus:border-[#3832A5] mb-2`}
                 placeholder="sample-document"
                 value={slug}
-                onChange={e => setSlug(e.target.value)}
+                onChange={e => {
+                  const value = e.target.value;
+                  setSlug(value);
+                  validateSlug(value);
+                }}
               />
+              {invalidSlug && (
+                <p className="text-red-500 text-xs mt-1 mb-2">{invalidSlug}</p>
+              )}
               <label className="block text-sm font-medium text-gray-400">カテゴリ名</label>
               <input
                 type="text"
