@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import { db } from '@site/src/lib/db';
 import { getAuthenticatedUser } from '../../utils/auth';
-import { checkUserDraft, initBranchSnapshot } from '../../utils/git';
+import { initBranchSnapshot } from '../../utils/git';
 import path from 'path';
 import fs from 'fs';
 
@@ -28,36 +28,34 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    const { label, content, is_public, reviewer_email } = req.body;
-
-    console.log(label, content, is_public, reviewer_email);
-
+    const { category, label, content, isPublic, reviewerEmail, slug, displayOrder } = req.body;
     // バリデーション
-    if (!label || !content) {
+    if (!label || !content || !slug) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'タイトル、コンテンツは必須です',
+        error: 'タイトル、本文、slugは必須です',
       });
     }
 
-    // 2. ファイルパスの重複チェック（任意）
-    const existingDoc = await db.execute({
-      sql: 'SELECT id FROM document_versions WHERE file_path = ? LIMIT 1',
-      args: [label],
-    });
+    // 2. ファイルパスの重複チェック
+    const targetDir = category 
+      ? path.join(process.cwd(), 'docs', category)
+      : path.join(process.cwd(), 'docs');
+    const targetFile = path.join(targetDir, `${slug}.md`);
 
-    if (existingDoc.rows.length > 0) {
+    if (fs.existsSync(targetFile)) {
       return res.status(HTTP_STATUS.CONFLICT).json({
-        error: '同じパスのドキュメントが既に存在します',
+        error: '同じカテゴリ内に同じslugのドキュメントが既に存在します',
       });
     }
 
     // 3. アクティブなuser_branchesを取得
     const activeBranch = await db.execute({
-      sql: 'SELECT id, branch_name FROM user_branches WHERE user_id = ? AND is_active = 1',
-      args: [loginUser.userId],
+      sql: 'SELECT id, branch_name FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
+      args: [loginUser.userId, 1, 'none'],
     });
-
+    
     let userBranchId;
+    const now = new Date();
 
     if (activeBranch.rows.length > 0) {
       // 3.1 存在する場合
@@ -79,37 +77,10 @@ router.post('/', async (req: Request, res: Response) => {
       userBranchId = newBranch.rows[0].id;
     }
 
-    // 4. document_versionsにドラフトとして保存
-    const now = new Date();
-
     await db.execute({
-      sql: `
-        INSERT INTO document_versions 
-        (user_id, user_branch_id, file_path, status, content, created_at, updated_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `,
-      args: [loginUser.userId, userBranchId, label, 'draft', content, now, now],
+      sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, display_order, last_edited_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [loginUser.userId, userBranchId, targetFile, 'draft', content, slug, category, label, displayOrder, loginUser.email, now, now],
     });
-
-    // フォルダが存在しなければ作成
-    const folderPath = path.join(process.cwd(), 'docs', path.dirname(label));
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath, { recursive: true });
-    }
-
-    // 追加情報をメタデータとして保存
-    const metadata = {
-      label,
-      isPublic: is_public,
-      reviewerEmail: reviewer_email || null,
-      createdBy: loginUser.email,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    // メタデータをJSONファイルとして保存
-    const metaFilePath = path.join(process.cwd(), 'docs', `${label}.meta.json`);
-    fs.writeFileSync(metaFilePath, JSON.stringify(metadata, null, 2));
 
     // 5. 成功レスポンスを返す
     return res.status(HTTP_STATUS.OK).json({

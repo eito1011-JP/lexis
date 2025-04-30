@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import TiptapEditor from '@/components/admin/editor/TiptapEditor';
@@ -22,15 +22,13 @@ export default function CreateDocumentPage(): JSX.Element {
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
-  const [hierarchy, setHierarchy] = useState('');
   const [reviewer, setReviewer] = useState('');
-  const [isHierarchyModalOpen, setIsHierarchyModalOpen] = useState(false);
   const [folders, setFolders] = useState<string[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
-
+  const [slug, setSlug] = useState('');
+  const [displayOrder, setDisplayOrder] = useState('');
   useEffect(() => {
     // フォルダ一覧を取得
     const fetchFolders = async () => {
@@ -77,12 +75,20 @@ export default function CreateDocumentPage(): JSX.Element {
         return;
       }
 
+      const queryParams = new URLSearchParams(window.location.search);
+      const category = queryParams.get('category');
+
       // ドキュメント作成APIを呼び出す
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT, {
-        label,
-        content,
-        isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
+      const response = await apiClient.post(
+        API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT,
+        {
+          category,
+          label,
+          content,
+          isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
         reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
+        slug,
+        displayOrder,
       });
 
       if (response.success) {
@@ -97,103 +103,6 @@ export default function CreateDocumentPage(): JSX.Element {
       const apiError = error as ApiError;
       alert(`ドキュメントの作成に失敗しました: ${apiError.message || '不明なエラー'}`);
     }
-  };
-
-  const handleSelectFolder = (folder: string) => {
-    setSelectedFolder(folder);
-  };
-
-  const handleConfirmHierarchy = () => {
-    if (selectedFolder) {
-      setHierarchy(selectedFolder);
-      setIsHierarchyModalOpen(false);
-    }
-  };
-
-  // フォルダを複数列に分割する関数
-  const renderFolderList = () => {
-    if (foldersLoading) {
-      return (
-        <div className="p-4 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mx-auto"></div>
-          <p className="mt-2 text-gray-400">フォルダ読み込み中...</p>
-        </div>
-      );
-    }
-
-    if (folders.length === 0) {
-      return <div className="p-4 text-center text-gray-400">フォルダが存在しません</div>;
-    }
-
-    // 画像のような2列表示のためにフォルダを分割
-    const midPoint = Math.ceil(folders.length / 2);
-    const leftColumnFolders = folders.slice(0, midPoint);
-    const rightColumnFolders = folders.slice(midPoint);
-
-    return (
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-4">
-          {leftColumnFolders.map((folder, index) => (
-            <div key={`left-${index}`} className="flex items-center mb-4">
-              <button
-                className={`w-full text-left p-2 rounded flex items-center ${
-                  selectedFolder === folder
-                    ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]'
-                    : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
-                } border border-solid border-2`}
-                onClick={() => handleSelectFolder(folder)}
-              >
-                <svg
-                  className="w-5 h-5 mr-2 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                  ></path>
-                </svg>
-                {folder}
-              </button>
-            </div>
-          ))}
-        </div>
-        <div className="p-4">
-          {rightColumnFolders.map((folder, index) => (
-            <div key={`right-${index}`} className="flex items-center mb-4">
-              <button
-                className={`w-full text-left p-2 rounded flex items-center ${
-                  selectedFolder === folder
-                    ? 'bg-transparent border-[#3832A5] text-[#FFFFFF]'
-                    : 'bg-transparent hover:bg-[#3832A5]/50 border-[#B1B1B1] text-[#FFFFFF]'
-                } border border-solid border-3`}
-                onClick={() => handleSelectFolder(folder)}
-              >
-                <svg
-                  className="w-5 h-5 mr-2 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                  ></path>
-                </svg>
-                {folder}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
   };
 
   // セッション確認中はローディング表示
@@ -240,6 +149,28 @@ export default function CreateDocumentPage(): JSX.Element {
                 保存
               </button>
             </div>
+          </div>
+
+          <div className="mb-6">
+            <label className="block mb-2 font-bold">Slug</label>
+            <input
+              type="text"
+              value={slug}
+              onChange={e => setSlug(e.target.value)}
+              className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
+              placeholder="slugを入力してください"
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block mb-2 font-bold">表示順序</label>
+            <input
+              type="number"
+              value={displayOrder}
+              onChange={e => setDisplayOrder(e.target.value)}
+              className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
+              placeholder="表示順序を入力してください"
+            />
           </div>
 
           <div className="mb-6">
@@ -336,32 +267,6 @@ export default function CreateDocumentPage(): JSX.Element {
               </div>
             </div>
           </div>
-
-          {isHierarchyModalOpen && (
-            <div className="fixed inset-0 bg-[#B1B1B1]/50 flex items-center justify-center z-50">
-              <div className="bg-[#1A1A1A] p-6 rounded-lg w-full max-w-2xl">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">階層選択</h2>
-                </div>
-                {renderFolderList()}
-                <div className="px-4 flex justify-end gap-4 mt-6">
-                  <button
-                    onClick={() => setIsHierarchyModalOpen(false)}
-                    className="border-none px-4 py-2 bg-[#B1B1B1] text-white rounded hover:bg-gray-700"
-                  >
-                    戻る
-                  </button>
-                  <button
-                    onClick={handleConfirmHierarchy}
-                    className="border-none px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80"
-                    disabled={!selectedFolder}
-                  >
-                    選択
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </AdminLayout>
