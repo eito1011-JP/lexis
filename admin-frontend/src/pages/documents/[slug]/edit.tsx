@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import TiptapEditor from '@/components/admin/editor/TiptapEditor';
@@ -16,26 +17,67 @@ interface ApiError {
   message?: string;
 }
 
+// ドキュメントデータの型定義
+interface DocumentData {
+  slug: string;
+  label: string;
+  content: string;
+  position: number;
+  isPublic: boolean;
+  reviewerEmail: string | null;
+  lastEditedBy: string | null;
+  description: string;
+  source: 'md_file' | 'database';
+}
+
 export default function EditDocumentPage(): JSX.Element {
+  const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
   const { isLoading } = useSessionCheck('/login', false);
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
   const [reviewer, setReviewer] = useState('');
-  const [folders, setFolders] = useState<string[]>([]);
-  const [foldersLoading, setFoldersLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
-  const [slug, setSlug] = useState('');
+  const [documentSlug, setDocumentSlug] = useState('');
   const [displayOrder, setDisplayOrder] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [reviewerEmail, setReviewerEmail] = useState('');
-  const [categories, setCategories] = useState<any[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
+  const [documentLoading, setDocumentLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchDocument = async () => {
+      if (!slug) return;
+      console.log('slug', slug);
+      try {
+        setDocumentLoading(true);
+        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_BY_SLUG}/${slug}`;
+        const response = await apiClient.get(endpoint);
+        
+        console.log('response', response);
+        if (response) {
+          // 取得したデータをフォームにセット
+          setDocumentSlug(response.slug || '');
+          setLabel(response.label || '');
+          setContent(response.content || '');
+          setPublicOption(response.isPublic ? '公開する' : '公開しない');
+          setReviewer(response.reviewerEmail || '');
+          setDisplayOrder(response.position?.toString() || '');
+        }
+      } catch (error) {
+        console.error('ドキュメント取得エラー:', error);
+        setError('ドキュメントの取得に失敗しました');
+      } finally {
+        setDocumentLoading(false);
+      }
+    };
+
+    if (slug) {
+      fetchDocument();
+    }
+  }, [slug, location.search]);
+  
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
   
@@ -65,44 +107,9 @@ export default function EditDocumentPage(): JSX.Element {
   // slugの変更ハンドラー
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setSlug(value);
+    setDocumentSlug(value);
     validateSlug(value);
   };
-
-  useEffect(() => {
-    // フォルダ一覧を取得
-    const fetchFolders = async () => {
-      try {
-        const response = await apiClient.get('/admin/documents/folders');
-        console.log('フォルダ取得レスポンス:', response);
-        if (response.folders) {
-          setFolders(response.folders);
-        }
-      } catch (err) {
-        console.error('フォルダ取得エラー:', err);
-      } finally {
-        setFoldersLoading(false);
-      }
-    };
-
-    fetchFolders();
-
-    // ユーザー一覧を取得
-    const fetchUsers = async () => {
-      try {
-        const response = await apiClient.get('/admin/users');
-        if (response.users) {
-          setUsers(response.users);
-        }
-      } catch (err) {
-        console.error('ユーザー取得エラー:', err);
-      } finally {
-        setUsersLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
 
   const handleEditorChange = (html: string) => {
     setContent(html);
@@ -115,38 +122,38 @@ export default function EditDocumentPage(): JSX.Element {
         return;
       }
 
-      const queryParams = new URLSearchParams(window.location.search);
-      const category = queryParams.get('category');
+      const searchParams = new URLSearchParams(location.search);
+      const category = searchParams.get('category');
 
-      // ドキュメント作成APIを呼び出す
-      const response = await apiClient.post(
-        API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT,
+      // ドキュメント編集APIを呼び出す
+      const response = await apiClient.put(
+        API_CONFIG.ENDPOINTS.DOCUMENTS.EDIT_DOCUMENT,
         {
           category,
           label,
           content,
           isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
-        reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
-        slug,
-        displayOrder,
-      });
+          reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
+          slug: documentSlug,
+          displayOrder,
+        });
 
       if (response.success) {
-        alert('ドキュメントが作成されました');
+        alert('ドキュメントが編集されました');
         // 成功したら一覧ページに戻る
         window.location.href = '/admin/documents';
       } else {
         throw new Error(response.message || '不明なエラーが発生しました');
       }
     } catch (error: unknown) {
-      console.error('ドキュメント作成エラー:', error);
+      console.error('ドキュメント編集エラー:', error);
       const apiError = error as ApiError;
-      alert(`ドキュメントの作成に失敗しました: ${apiError.message || '不明なエラー'}`);
+      alert(`ドキュメントの編集に失敗しました: ${apiError.message || '不明なエラー'}`);
     }
   };
 
-  // セッション確認中はローディング表示
-  if (isLoading) {
+  // セッション確認中またはドキュメント読み込み中はローディング表示
+  if (isLoading || documentLoading) {
     return (
       <AdminLayout title="読み込み中...">
         <div className="flex flex-col items-center justify-center h-full">
@@ -157,10 +164,10 @@ export default function EditDocumentPage(): JSX.Element {
   }
 
   return (
-    <AdminLayout title="ドキュメント作成">
+    <AdminLayout title="ドキュメント編集">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-4">ドキュメント作成</h1>
+          <h1 className="text-2xl font-bold mb-4">ドキュメント編集</h1>
           <div className="flex items-center gap-4 mb-6">
             <button
               className="bg-gray-900 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-700"
@@ -196,7 +203,7 @@ export default function EditDocumentPage(): JSX.Element {
             <label className="block mb-2 font-bold">Slug</label>
             <input
               type="text"
-              value={slug}
+              value={documentSlug}
               onChange={handleSlugChange}
               className={`w-full p-2.5 border ${invalidSlug ? 'border-red-500' : 'border-gray-700'} rounded bg-transparent text-white`}
               placeholder="slugを入力してください"
@@ -304,7 +311,7 @@ export default function EditDocumentPage(): JSX.Element {
               <label className="block mb-2 font-bold">本文</label>
               <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
                 <TiptapEditor
-                  initialContent=""
+                  initialContent={content}
                   onChange={handleEditorChange}
                   placeholder="ここにドキュメントを作成してください"
                 />

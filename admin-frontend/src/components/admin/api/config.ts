@@ -12,7 +12,9 @@ export const API_CONFIG = {
     DOCUMENTS: {
       CREATE_FOLDER: '/api/admin/documents/create-category',
       CREATE_DOCUMENT: '/api/admin/documents',
+      EDIT_DOCUMENT: '/api/admin/documents',
       GET_DOCUMENT: '/api/admin/documents',
+      GET_DOCUMENT_BY_SLUG: '/api/admin/documents',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
     },
     USERS: {
