@@ -184,7 +184,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   const fontSizeMenuRef = useRef<HTMLDivElement>(null);
 
   // マークダウンコンテンツをHTMLに変換
-  const processedContent = initialContent.trim() ? convertMarkdownToHTML(initialContent) : initialContent;
+  const processedContent = initialContent.trim()
+    ? convertMarkdownToHTML(initialContent)
+    : initialContent;
 
   const editor = useEditor({
     extensions: [
