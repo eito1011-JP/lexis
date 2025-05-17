@@ -37,7 +37,7 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     // 2. ファイルパスの重複チェック
-    const targetDir = category 
+    const targetDir = category
       ? path.join(process.cwd(), 'docs', category)
       : path.join(process.cwd(), 'docs');
     const targetFile = path.join(targetDir, `${slug}.md`);
@@ -53,7 +53,7 @@ router.post('/', async (req: Request, res: Response) => {
       sql: 'SELECT id, branch_name FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
       args: [loginUser.userId, 1, 'none'],
     });
-    
+
     let userBranchId;
     const now = new Date();
 
@@ -79,7 +79,20 @@ router.post('/', async (req: Request, res: Response) => {
 
     await db.execute({
       sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, display_order, last_edited_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      args: [loginUser.userId, userBranchId, targetFile, 'draft', content, slug, category, label, displayOrder, loginUser.email, now, now],
+      args: [
+        loginUser.userId,
+        userBranchId,
+        targetFile,
+        'draft',
+        content,
+        slug,
+        category,
+        label,
+        displayOrder,
+        loginUser.email,
+        now,
+        now,
+      ],
     });
 
     // 5. 成功レスポンスを返す

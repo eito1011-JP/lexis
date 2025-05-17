@@ -39,7 +39,7 @@ export default function CreateDocumentPage(): JSX.Element {
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
-  
+
   // slugのバリデーション関数
   const validateSlug = (value: string) => {
     // 空の場合はエラーなし（必須チェックは別で行う）
@@ -47,22 +47,22 @@ export default function CreateDocumentPage(): JSX.Element {
       setInvalidSlug(null);
       return;
     }
-    
+
     // 予約語チェック
     if (reservedSlugs.includes(value.toLowerCase())) {
       setInvalidSlug(`"${value}" は予約語のため使用できません`);
       return;
     }
-    
+
     // URLで問題になる文字をチェック
     if (!/^[a-z0-9-]+$/i.test(value)) {
       setInvalidSlug('英数字とハイフン(-)のみ使用できます');
       return;
     }
-    
+
     setInvalidSlug(null);
   };
-  
+
   // slugの変更ハンドラー
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -120,13 +120,11 @@ export default function CreateDocumentPage(): JSX.Element {
       const category = queryParams.get('category');
 
       // ドキュメント作成APIを呼び出す
-      const response = await apiClient.post(
-        API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT,
-        {
-          category,
-          label,
-          content,
-          isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT, {
+        category,
+        label,
+        content,
+        isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
         reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
         slug,
         displayOrder,
@@ -202,9 +200,7 @@ export default function CreateDocumentPage(): JSX.Element {
               className={`w-full p-2.5 border ${invalidSlug ? 'border-red-500' : 'border-gray-700'} rounded bg-transparent text-white`}
               placeholder="slugを入力してください"
             />
-            {invalidSlug && (
-              <p className="mt-1 text-red-500 text-sm">{invalidSlug}</p>
-            )}
+            {invalidSlug && <p className="mt-1 text-red-500 text-sm">{invalidSlug}</p>}
           </div>
 
           <div className="mb-6">

@@ -24,14 +24,13 @@ interface DocumentData {
   content: string;
   position: number;
   isPublic: boolean;
-  reviewerEmail: string | null;
+  lastReviewedBy: string | null;
   lastEditedBy: string | null;
   description: string;
   source: 'md_file' | 'database';
 }
 
 export default function EditDocumentPage(): JSX.Element {
-  const { slug } = useParams<{ slug: string }>();
   const location = useLocation();
   const { isLoading } = useSessionCheck('/login', false);
   const [label, setLabel] = useState('');
@@ -46,6 +45,15 @@ export default function EditDocumentPage(): JSX.Element {
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(true);
 
+  // URLからslugとcategoryを抽出
+  const pathname = location.pathname;
+  // '/documents/a/b/c/edit' → ['', 'documents', 'a', 'b', 'c', 'edit']
+  const pathParts = pathname.split('/');
+  // 最後のeditを除去して、最後の要素がslug
+  const slug = pathParts[pathParts.length - 2];
+  // 残りの部分がカテゴリパス (documentsとslugとeditを除く)
+  const category = pathParts.slice(2, pathParts.length - 2).join('/');
+
   useEffect(() => {
     const fetchDocument = async () => {
       if (!slug) return;
@@ -53,8 +61,10 @@ export default function EditDocumentPage(): JSX.Element {
       try {
         setDocumentLoading(true);
         const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_BY_SLUG}/${slug}`;
-        const response = await apiClient.get(endpoint);
-        
+
+        // カテゴリパラメータがある場合はAPIリクエストに含める
+        const response = await apiClient.get(endpoint + (category ? `?category=${category}` : ''));
+
         console.log('response', response);
         if (response) {
           // 取得したデータをフォームにセット
@@ -76,11 +86,11 @@ export default function EditDocumentPage(): JSX.Element {
     if (slug) {
       fetchDocument();
     }
-  }, [slug, location.search]);
-  
+  }, [slug, category]);
+
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
-  
+
   // slugのバリデーション関数
   const validateSlug = (value: string) => {
     // 空の場合はエラーなし（必須チェックは別で行う）
@@ -88,22 +98,22 @@ export default function EditDocumentPage(): JSX.Element {
       setInvalidSlug(null);
       return;
     }
-    
+
     // 予約語チェック
     if (reservedSlugs.includes(value.toLowerCase())) {
       setInvalidSlug(`"${value}" は予約語のため使用できません`);
       return;
     }
-    
+
     // URLで問題になる文字をチェック
     if (!/^[a-z0-9-]+$/i.test(value)) {
       setInvalidSlug('英数字とハイフン(-)のみ使用できます');
       return;
     }
-    
+
     setInvalidSlug(null);
   };
-  
+
   // slugの変更ハンドラー
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -122,26 +132,21 @@ export default function EditDocumentPage(): JSX.Element {
         return;
       }
 
-      const searchParams = new URLSearchParams(location.search);
-      const category = searchParams.get('category');
-
       // ドキュメント編集APIを呼び出す
-      const response = await apiClient.put(
-        API_CONFIG.ENDPOINTS.DOCUMENTS.EDIT_DOCUMENT,
-        {
-          category,
-          label,
-          content,
-          isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
-          reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
-          slug: documentSlug,
-          displayOrder,
-        });
+      const response = await apiClient.put(API_CONFIG.ENDPOINTS.DOCUMENTS.EDIT_DOCUMENT, {
+        category,
+        label,
+        content,
+        isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
+        lastReviewedBy: reviewer || null, // レビュー担当者のメールアドレス
+        slug: documentSlug,
+        displayOrder,
+      });
 
       if (response.success) {
         alert('ドキュメントが編集されました');
         // 成功したら一覧ページに戻る
-        window.location.href = '/admin/documents';
+        window.location.href = category ? `/documents/${category}` : '/documents';
       } else {
         throw new Error(response.message || '不明なエラーが発生しました');
       }
@@ -208,9 +213,7 @@ export default function EditDocumentPage(): JSX.Element {
               className={`w-full p-2.5 border ${invalidSlug ? 'border-red-500' : 'border-gray-700'} rounded bg-transparent text-white`}
               placeholder="slugを入力してください"
             />
-            {invalidSlug && (
-              <p className="mt-1 text-red-500 text-sm">{invalidSlug}</p>
-            )}
+            {invalidSlug && <p className="mt-1 text-red-500 text-sm">{invalidSlug}</p>}
           </div>
 
           <div className="mb-6">

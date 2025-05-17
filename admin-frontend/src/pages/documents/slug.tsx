@@ -1,14 +1,14 @@
 import AdminLayout from '@/components/admin/layout';
 import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
 import { Home } from '@/components/icon/common/Home';
 import { API_CONFIG } from '@/components/admin/api/config';
-import { ROUTES, generatePath } from '../../routes';
+import EditDocumentPage from './[slug]/edit';
 
 // アイテムの型定義
 type Item = {
@@ -29,6 +29,10 @@ type Item = {
  */
 export default function DocumentBySlugPage(): JSX.Element {
   const location = useLocation();
+  // /editで終わるパスはEditDocumentPageをレンダリング
+  if (location.pathname.endsWith('/edit')) {
+    return <EditDocumentPage />;
+  }
   const slug = location.pathname.replace('/documents/', '');
   const { isLoading } = useSessionCheck('/login', false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -51,7 +55,7 @@ export default function DocumentBySlugPage(): JSX.Element {
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
-  
+
   // slugのバリデーション関数
   const validateSlug = (value: string) => {
     // 空の場合はエラーなし（必須チェックは別で行う）
@@ -59,19 +63,19 @@ export default function DocumentBySlugPage(): JSX.Element {
       setInvalidSlug(null);
       return;
     }
-    
+
     // 予約語チェック
     if (reservedSlugs.includes(value.toLowerCase())) {
       setInvalidSlug(`"${value}" は予約語のため使用できません`);
       return;
     }
-    
+
     // URLで問題になる文字をチェック
     if (!/^[a-z0-9-]+$/i.test(value)) {
       setInvalidSlug('英数字とハイフン(-)のみ使用できます');
       return;
     }
-    
+
     setInvalidSlug(null);
   };
 
@@ -84,7 +88,7 @@ export default function DocumentBySlugPage(): JSX.Element {
         setItemsLoading(true);
         // スラグが空の場合はルートカテゴリを取得
         const requestSlug = slug === '' ? 'root' : slug;
-        
+
         const response = await apiClient.get(
           API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + requestSlug
         );
@@ -126,7 +130,7 @@ export default function DocumentBySlugPage(): JSX.Element {
           // 現在のカテゴリ情報を設定
           if (response.category) {
             setCurrentCategory(response.category);
-          }  
+          }
         }
         const hasUserDraft = await apiClient.get(
           API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF || '/admin/documents/git/check-diff'
@@ -278,9 +282,7 @@ export default function DocumentBySlugPage(): JSX.Element {
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
             <Folder className="w-5 h-5 mr-2" />
-            <span className="text-white hover:underline">
-              {category.label}
-            </span>
+            <span className="text-white hover:underline">{category.label}</span>
           </Link>
         ))}
       </div>
@@ -346,7 +348,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link
-                      to={generatePath(ROUTES.EDIT_DOCUMENT, { slug: document.slug })}
+                      to={`/documents/${slug ? `${slug}/` : ''}${document.slug}/edit`}
                       className="text-indigo-400 hover:text-indigo-300 mr-4"
                     >
                       編集
@@ -591,9 +593,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                   validateSlug(value);
                 }}
               />
-              {invalidSlug && (
-                <p className="text-red-500 text-xs mt-1 mb-2">{invalidSlug}</p>
-              )}
+              {invalidSlug && <p className="text-red-500 text-xs mt-1 mb-2">{invalidSlug}</p>}
               <label className="block text-sm font-medium text-gray-400">カテゴリ名</label>
               <input
                 type="text"

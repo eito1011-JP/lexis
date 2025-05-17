@@ -45,10 +45,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
     console.log('targetDir', targetDir);
 
     // MDファイルの検索パターン
-    const possibleFiles = [
-      `${slug}.md`,
-      `${slug}/index.md`
-    ];
+    const possibleFiles = [`${slug}.md`, `${slug}/index.md`];
 
     let documentData = null;
 
@@ -59,17 +56,17 @@ router.get('/:slug', async (req: Request, res: Response) => {
         const fileContent = fs.readFileSync(filePath, 'utf8');
         // front-matterを解析
         const { data, content } = matter(fileContent);
-        
+
         documentData = {
           slug: slug,
           label: data.sidebar_label || data.label || slug,
           content: content,
           position: data.position || 999,
           isPublic: data.isPublic !== false, // デフォルトは公開する
-          reviewerEmail: data.reviewer_email || null,
+          reviewerEmail: data.last_reviewed_by || null,
           lastEditedBy: data.last_edited_by || null,
           description: data.description || '',
-          source: 'md_file'
+          source: 'md_file',
         };
         break;
       }
@@ -93,7 +90,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
           reviewerEmail: draftDocument.reviewer_email,
           lastEditedBy: draftDocument.last_edited_by,
           description: draftDocument.description || '',
-          source: 'database'
+          source: 'database',
         };
       }
     }
@@ -115,4 +112,4 @@ router.get('/:slug', async (req: Request, res: Response) => {
   }
 });
 
-export const getDocumentsRouter = router;
+export const getDocumentBySlugRouter = router;

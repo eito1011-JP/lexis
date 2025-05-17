@@ -22,6 +22,7 @@ type DocumentItem = {
   status?: string;
   lastEditedBy?: string;
   content?: string;
+  category?: string;
 };
 
 /**
@@ -52,7 +53,7 @@ export default function DocumentsPage(): JSX.Element {
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
-  
+
   // slugのバリデーション関数
   const validateSlug = (value: string) => {
     // 空の場合はエラーなし（必須チェックは別で行う）
@@ -60,19 +61,19 @@ export default function DocumentsPage(): JSX.Element {
       setInvalidSlug(null);
       return;
     }
-    
+
     // 予約語チェック
     if (reservedSlugs.includes(value.toLowerCase())) {
       setInvalidSlug(`"${value}" は予約語のため使用できません`);
       return;
     }
-    
+
     // URLで問題になる文字をチェック
     if (!/^[a-z0-9-]+$/i.test(value)) {
       setInvalidSlug('英数字とハイフン(-)のみ使用できます');
       return;
     }
-    
+
     setInvalidSlug(null);
   };
 
@@ -81,7 +82,6 @@ export default function DocumentsPage(): JSX.Element {
     const getDocuments = async () => {
       try {
         let categoryData = [];
-        let documentData = [];
         const documents = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
 
         // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
@@ -310,7 +310,7 @@ export default function DocumentsPage(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
-                      href={`documents/${document.slug}/edit`}
+                      href={`/documents/${document.category ? `${document.category}/` : ''}${document.slug}/edit`}
                       className="text-indigo-400 hover:text-indigo-300 mr-4"
                     >
                       編集
@@ -506,9 +506,7 @@ export default function DocumentsPage(): JSX.Element {
                   validateSlug(value);
                 }}
               />
-              {invalidSlug && (
-                <p className="text-red-500 text-xs mt-1 mb-2">{invalidSlug}</p>
-              )}
+              {invalidSlug && <p className="text-red-500 text-xs mt-1 mb-2">{invalidSlug}</p>}
               <label className="block text-sm font-medium text-gray-400">カテゴリ名</label>
               <input
                 type="text"

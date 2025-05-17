@@ -90,17 +90,17 @@ router.post('/create-category', async (req: Request, res: Response) => {
     // 親カテゴリが指定されている場合は、その配下にカテゴリを作成
     let newCategoryPath;
     let newCategorySlug;
-    
+
     if (parent) {
       const parentCategoryPath = path.join(docsDir, parent);
-      
+
       // 親カテゴリが存在するか確認
       if (!fs.existsSync(parentCategoryPath)) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({
           error: 'Parent category not found',
         });
       }
-      
+
       newCategoryPath = path.join(parentCategoryPath, slug);
       newCategorySlug = `${parent}/${slug}`;
     } else {

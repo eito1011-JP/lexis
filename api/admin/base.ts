@@ -13,6 +13,7 @@ import { sessionService } from '../../src/services/sessionService';
 import usersRouter from './routes/users';
 import documentGitCheckDiffRouter from './routes/documents/git/check-diff';
 import { getDocumentsRouter } from './routes/documents/get-documents';
+import { getDocumentBySlugRouter } from './routes/documents/get-document-by-slug';
 
 // Expressアプリの初期化
 const app = express();
@@ -39,6 +40,7 @@ app.use('/api/admin/documents', getCategoriesRouter);
 app.use('/api/admin/documents', createDocumentRouter);
 app.use('/api/admin/documents', getCategoryContentsRouter);
 app.use('/api/admin/documents', getDocumentsRouter);
+app.use('/api/admin/documents', getDocumentBySlugRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
 

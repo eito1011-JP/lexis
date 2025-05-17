@@ -4,6 +4,7 @@ category: 日本国憲法
 sidebar_label: 私の自己消化い
 file_order: 1
 draft: true
+last_reviewed_by: eito-morohashi@nexis-inc.com
 last_edited_by: eito.55855@gmail.com
 ---
 # 好きなもの(以下コンテンツ)
