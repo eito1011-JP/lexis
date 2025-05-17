@@ -13,6 +13,17 @@ interface Branch {
   branchName: string;
 }
 
+interface SessionResponse {
+  authenticated: boolean;
+  user?: {
+    userId?: string;
+    id?: string;
+    email?: string;
+    role?: string;
+  };
+  activeBranch?: Branch | null;
+}
+
 interface SessionContextType {
   user: User | null;
   activeBranch: Branch | null;
@@ -21,15 +32,25 @@ interface SessionContextType {
   logout: () => Promise<void>;
 }
 
-const SessionContext = createContext<SessionContextType>({
+const DEFAULT_CONTEXT: SessionContextType = {
   user: null,
   activeBranch: null,
   loading: true,
   checkSession: async () => {},
   logout: async () => {},
-});
+};
+
+const SessionContext = createContext<SessionContextType>(DEFAULT_CONTEXT);
 
 export const useSession = () => useContext(SessionContext);
+
+const resetSession = (
+  setUser: (user: User | null) => void,
+  setActiveBranch: (branch: Branch | null) => void
+) => {
+  setUser(null);
+  setActiveBranch(null);
+};
 
 export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -39,18 +60,25 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const checkSession = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(API_CONFIG.ENDPOINTS.SESSION);
+      const response = (await apiClient.get(API_CONFIG.ENDPOINTS.SESSION)) as SessionResponse;
 
-      if (response.data?.user) {
-        setUser(response.data.user);
-        setActiveBranch(response.data.activeBranch || null);
-      } else {
-        setUser(null);
-        setActiveBranch(null);
+      if (!response.authenticated) {
+        resetSession(setUser, setActiveBranch);
+        return;
       }
+
+      const userData = response.user || {};
+      const newUser: User = {
+        id: userData.userId || userData.id || '',
+        email: userData.email || '',
+        role: userData.role || 'user',
+      };
+
+      setUser(newUser);
+      setActiveBranch(response.activeBranch || null);
     } catch (error) {
-      setUser(null);
-      setActiveBranch(null);
+      console.error('セッションチェックエラー:', error);
+      resetSession(setUser, setActiveBranch);
     } finally {
       setLoading(false);
     }
@@ -59,11 +87,11 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const logout = async () => {
     try {
       await apiClient.post(API_CONFIG.ENDPOINTS.LOGOUT, {});
-      setUser(null);
-      setActiveBranch(null);
+      resetSession(setUser, setActiveBranch);
       window.location.href = '/admin/login';
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('ログアウトエラー:', error);
+      throw error;
     }
   };
 
