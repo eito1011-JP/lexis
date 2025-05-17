@@ -26,7 +26,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
     const sessionId = req.cookies.sid;
     const { slug } = req.params;
     const category = req.query.category as string;
-    console.log('slug', slug);
+
     // 認証チェック
     const loginUser = await sessionService.getSessionUser(sessionId);
     if (!loginUser) {
@@ -42,7 +42,6 @@ router.get('/:slug', async (req: Request, res: Response) => {
     // カテゴリパスを構築
     const categoryPath = category ? category.split('/').filter(Boolean) : [];
     const targetDir = path.join(docsDir, ...categoryPath);
-    console.log('targetDir', targetDir);
 
     // MDファイルの検索パターン
     const possibleFiles = [`${slug}.md`, `${slug}/index.md`];
@@ -58,14 +57,13 @@ router.get('/:slug', async (req: Request, res: Response) => {
         const { data, content } = matter(fileContent);
 
         documentData = {
-          slug: slug,
-          label: data.sidebar_label || data.label || slug,
+          slug: data.slug,
+          label: data.sidebar_label,
           content: content,
-          position: data.position || 999,
-          isPublic: data.isPublic !== false, // デフォルトは公開する
+          position: data.file_order,
+          draft: data.draft === true,
           reviewerEmail: data.last_reviewed_by || null,
           lastEditedBy: data.last_edited_by || null,
-          description: data.description || '',
           source: 'md_file',
         };
         break;
@@ -85,17 +83,14 @@ router.get('/:slug', async (req: Request, res: Response) => {
           slug: slug,
           label: draftDocument.title || draftDocument.sidebar_label,
           content: draftDocument.content,
-          position: draftDocument.display_order || 999,
-          isPublic: draftDocument.is_public === 1,
+          position: draftDocument.file_order,
+          draft: draftDocument.status === 'draft',
           reviewerEmail: draftDocument.reviewer_email,
           lastEditedBy: draftDocument.last_edited_by,
-          description: draftDocument.description || '',
           source: 'database',
         };
       }
     }
-
-    console.log('documentData', documentData);
 
     if (!documentData) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({

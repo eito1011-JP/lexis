@@ -37,8 +37,7 @@ export default function EditDocumentPage(): JSX.Element {
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
   const [reviewer, setReviewer] = useState('');
-  const [users, setUsers] = useState<User[]>([]);
-  const [usersLoading, setUsersLoading] = useState(true);
+  const [reviewers, setReviewers] = useState<User[]>([]);
   const [documentSlug, setDocumentSlug] = useState('');
   const [displayOrder, setDisplayOrder] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -271,25 +270,17 @@ export default function EditDocumentPage(): JSX.Element {
           <div className="mb-6">
             <label className="block mb-2 font-bold">レビュー担当者</label>
             <div className="relative">
-              {usersLoading ? (
-                <div className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white">
-                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2 inline-block"></div>
-                  <span className="text-gray-400">ユーザー読み込み中...</span>
-                </div>
-              ) : (
-                <select
-                  value={reviewer}
-                  onChange={e => setReviewer(e.target.value)}
-                  className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white appearance-none"
-                >
-                  <option value="">レビュー担当者を選択してください</option>
-                  {users.map(user => (
-                    <option key={user.id} value={user.email}>
-                      {user.email}
-                    </option>
-                  ))}
-                </select>
-              )}
+              <select
+                value={reviewer}
+                onChange={e => setReviewer(e.target.value)}
+                className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white appearance-none"
+              >
+                {reviewers.map(user => (
+                  <option key={user.id} value={user.email} selected={user.email === reviewer}>
+                    {user.email}
+                  </option>
+                ))}
+              </select>
               <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
                 <svg
                   className="w-5 h-5 text-white"
