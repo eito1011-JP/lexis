@@ -43,6 +43,10 @@ export default function EditDocumentPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(true);
+  const [showReviewerModal, setShowReviewerModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredReviewers, setFilteredReviewers] = useState<User[]>([]);
+  const [reviewerName, setReviewerName] = useState('');
 
   // URLからslugとcategoryを抽出
   const pathname = location.pathname;
@@ -72,6 +76,7 @@ export default function EditDocumentPage(): JSX.Element {
           setContent(response.content || '');
           setPublicOption(response.isPublic ? '公開する' : '公開しない');
           setReviewer(response.reviewerEmail || '');
+          setReviewerName(response.reviewerEmail || '');
           setDisplayOrder(response.position?.toString() || '');
         }
       } catch (error) {
@@ -86,6 +91,35 @@ export default function EditDocumentPage(): JSX.Element {
       fetchDocument();
     }
   }, [slug, category]);
+
+  useEffect(() => {
+    // ユーザー一覧を取得
+    const fetchUsers = async () => {
+      try {
+        const response = await apiClient.get(API_CONFIG.ENDPOINTS.USERS.GET_ALL);
+        if (response.users) {
+          setReviewers(response.users);
+          setFilteredReviewers(response.users);
+        }
+      } catch (err) {
+        console.error('ユーザー取得エラー:', err);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  // 検索クエリに基づいてレビュアーをフィルタリング
+  useEffect(() => {
+    if (searchQuery) {
+      const filtered = reviewers.filter(user =>
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredReviewers(filtered);
+    } else {
+      setFilteredReviewers(reviewers);
+    }
+  }, [searchQuery, reviewers]);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -122,6 +156,27 @@ export default function EditDocumentPage(): JSX.Element {
 
   const handleEditorChange = (html: string) => {
     setContent(html);
+  };
+
+  // レビュー担当者選択ハンドラー
+  const handleSelectReviewer = (user: User) => {
+    setReviewer(user.email);
+    setReviewerName(user.email);
+    setShowReviewerModal(false);
+  };
+
+  // モーダルを開く時にユーザー一覧を再取得する
+  const handleOpenReviewerModal = async () => {
+    setShowReviewerModal(true);
+    try {
+      const response = await apiClient.get('/admin/users');
+      if (response.users && response.users.length > 0) {
+        setReviewers(response.users);
+        setFilteredReviewers(response.users);
+      }
+    } catch (err) {
+      console.error('ユーザー取得エラー:', err);
+    }
   };
 
   const handleSave = async () => {
@@ -269,34 +324,25 @@ export default function EditDocumentPage(): JSX.Element {
 
           <div className="mb-6">
             <label className="block mb-2 font-bold">レビュー担当者</label>
-            <div className="relative">
-              <select
-                value={reviewer}
-                onChange={e => setReviewer(e.target.value)}
-                className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white appearance-none"
+            <div
+              className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white cursor-pointer flex justify-between items-center"
+              onClick={handleOpenReviewerModal}
+            >
+              <span>{reviewerName || 'レビュー担当者を選択'}</span>
+              <svg
+                className="w-5 h-5 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
               >
-                {reviewers.map(user => (
-                  <option key={user.id} value={user.email} selected={user.email === reviewer}>
-                    {user.email}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  ></path>
-                </svg>
-              </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 9l-7 7-7-7"
+                ></path>
+              </svg>
             </div>
           </div>
 
@@ -314,6 +360,54 @@ export default function EditDocumentPage(): JSX.Element {
           </div>
         </div>
       </div>
+
+      {/* レビュー担当者選択モーダル */}
+      {showReviewerModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">レビュー担当者を選択</h2>
+            <div className="mb-4">
+              <input
+                type="text"
+                placeholder="ユーザーを検索..."
+                className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="max-h-60 overflow-y-auto mb-4">
+              {filteredReviewers.length > 0 ? (
+                filteredReviewers.map(user => (
+                  <div
+                    key={user.id}
+                    className="p-2 hover:bg-gray-800 rounded cursor-pointer flex items-center"
+                    onClick={() => handleSelectReviewer(user)}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-2">
+                      {user.email.charAt(0).toUpperCase()}
+                    </div>
+                    <span>{user.email}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-gray-400">
+                  {searchQuery ? '検索結果がありません' : 'ユーザーを読み込み中...'}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={() => setShowReviewerModal(false)}
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
