@@ -30,6 +30,88 @@ import { OrderedList as OrderedListIcon } from '../../icon/editor/OrderedList';
 import CodeBlock from '@tiptap/extension-code-block';
 import { CodeBlock as CodeBlockIcon } from '../../icon/editor/CodeBlock';
 
+// マークダウンをHTMLに変換する関数
+const convertMarkdownToHTML = (markdown: string): string => {
+  // 見出し（# Header → <h1>Header</h1>）
+  let html = markdown
+    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+    .replace(/^#### (.*$)/gm, '<h4>$1</h4>')
+    .replace(/^##### (.*$)/gm, '<h5>$1</h5>')
+    .replace(/^###### (.*$)/gm, '<h6>$1</h6>');
+
+  // 太字（**text** → <strong>text</strong>）
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // 斜体（*text* → <em>text</em>）
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+  // 引用（> text → <blockquote>text</blockquote>）
+  html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+
+  // 箇条書きリスト
+  // 空白行を挟まない連続した箇条書きを検出
+  const bulletListRegex = /^(\s*)\* (.*?)$/gm;
+  let match;
+  const matches = [];
+  while ((match = bulletListRegex.exec(html)) !== null) {
+    matches.push(match);
+  }
+
+  if (matches.length > 0) {
+    // マッチした箇条書きをHTMLに変換
+    let bulletListHtml = '<ul>';
+    for (const match of matches) {
+      bulletListHtml += `<li>${match[2]}</li>`;
+    }
+    bulletListHtml += '</ul>';
+
+    // マッチした元のテキストをHTMLに置換
+    for (const match of matches) {
+      html = html.replace(match[0], '');
+    }
+
+    // 空の行を削除
+    html = html.replace(/^\s*[\r\n]/gm, '');
+
+    // HTMLの適切な位置に箇条書きを挿入
+    if (matches[0].index > 0) {
+      html = html.slice(0, matches[0].index) + bulletListHtml + html.slice(matches[0].index);
+    } else {
+      html = bulletListHtml + html;
+    }
+  }
+
+  // コードブロック（```code``` → <pre><code>code</code></pre>）
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+  // インラインコード（`code` → <code>code</code>）
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // 段落（空行で区切られたテキスト → <p>text</p>）
+  // 既にHTMLタグになっている部分以外を<p>で囲む
+  html = html
+    .split(/\n\n+/)
+    .map(block => {
+      // 既にHTMLタグを含む場合はそのまま返す
+      if (
+        block.trim().startsWith('<') &&
+        (block.trim().startsWith('<h') ||
+          block.trim().startsWith('<blockquote') ||
+          block.trim().startsWith('<ul') ||
+          block.trim().startsWith('<pre'))
+      ) {
+        return block;
+      }
+      // それ以外は段落として扱う
+      return `<p>${block.trim()}</p>`;
+    })
+    .join('\n');
+
+  return html;
+};
+
 // カスタムエクステンション: フォントサイズをサポート
 const FontSize = Extension.create({
   name: 'fontSize',
@@ -38,7 +120,7 @@ const FontSize = Extension.create({
     return {
       fontSize: {
         default: null,
-        parseHTML: element => element.style.fontSize,
+        parseHTML: (element: HTMLElement) => element.style.fontSize,
         renderHTML: attributes => {
           if (!attributes.fontSize) {
             return {};
@@ -58,7 +140,7 @@ const FontSize = Extension.create({
         attributes: {
           fontSize: {
             default: null,
-            parseHTML: element => element.style.fontSize,
+            parseHTML: (element: HTMLElement) => element.style.fontSize,
             renderHTML: attributes => {
               if (!attributes.fontSize) {
                 return {};
@@ -76,8 +158,8 @@ const FontSize = Extension.create({
   addCommands() {
     return {
       setFontSize:
-        fontSize =>
-        ({ chain }) => {
+        (fontSize: string) =>
+        ({ chain }: { chain: any }) => {
           return chain().setMark('textStyle', { fontSize: fontSize }).run();
         },
     };
@@ -100,6 +182,9 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const paragraphMenuRef = useRef<HTMLDivElement>(null);
   const fontSizeMenuRef = useRef<HTMLDivElement>(null);
+
+  // マークダウンコンテンツをHTMLに変換
+  const processedContent = initialContent.trim() ? convertMarkdownToHTML(initialContent) : initialContent;
 
   const editor = useEditor({
     extensions: [
@@ -135,7 +220,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         emptyEditorClass: 'is-editor-empty',
       }),
     ],
-    content: initialContent,
+    content: processedContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
