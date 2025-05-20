@@ -11,6 +11,7 @@ import ListItem from '@tiptap/extension-list-item';
 import Blockquote from '@tiptap/extension-blockquote';
 import Image from '@tiptap/extension-image';
 import Heading from '@tiptap/extension-heading';
+import Link from '@tiptap/extension-link';
 import { EditorContent, useEditor } from '@tiptap/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Extension } from '@tiptap/core';
@@ -49,6 +50,12 @@ const convertMarkdownToHTML = (markdown: string): string => {
 
   // 引用（> text → <blockquote>text</blockquote>）
   html = html.replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>');
+
+  // マークダウンのURLを緑色のテキストとリンクに変換
+  html = html.replace(
+    /\[(.*?)\]\((.*?)\)/g,
+    '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: #00a000 !important; text-decoration: none !important; cursor: pointer;" class="custom-link" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">$1</a>'
+  );
 
   // 箇条書きリスト
   // 空白行を挟まない連続した箇条書きを検出
@@ -121,7 +128,7 @@ const FontSize = Extension.create({
       fontSize: {
         default: null,
         parseHTML: (element: HTMLElement) => element.style.fontSize,
-        renderHTML: attributes => {
+        renderHTML: (attributes: { fontSize: string | null }) => {
           if (!attributes.fontSize) {
             return {};
           }
@@ -141,7 +148,7 @@ const FontSize = Extension.create({
           fontSize: {
             default: null,
             parseHTML: (element: HTMLElement) => element.style.fontSize,
-            renderHTML: attributes => {
+            renderHTML: (attributes: { fontSize: string | null }) => {
               if (!attributes.fontSize) {
                 return {};
               }
@@ -217,6 +224,14 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
       }),
       TextStyle,
       FontSize,
+      Link.configure({
+        openOnClick: true,
+        HTMLAttributes: {
+          class: 'custom-link',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+      }),
       Placeholder.configure({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
@@ -659,6 +674,18 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         .ProseMirror span[style] {
           display: inline;
           white-space: pre-wrap;
+        }
+        /* リンクスタイル */
+        .ProseMirror a, 
+        .ProseMirror .custom-link {
+          color: #00a000 !important;
+          text-decoration: none !important;
+          cursor: pointer;
+          transition: text-decoration 0.2s ease;
+        }
+        .ProseMirror a:hover, 
+        .ProseMirror .custom-link:hover {
+          text-decoration: underline !important;
         }
       `}</style>
     </div>
