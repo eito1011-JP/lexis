@@ -12,6 +12,7 @@ import Blockquote from '@tiptap/extension-blockquote';
 import Image from '@tiptap/extension-image';
 import Heading from '@tiptap/extension-heading';
 import Link from '@tiptap/extension-link';
+import History from '@tiptap/extension-history';
 import { EditorContent, useEditor } from '@tiptap/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Extension } from '@tiptap/core';
@@ -236,12 +237,28 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
         placeholder,
         emptyEditorClass: 'is-editor-empty',
       }),
+      History,
     ],
     content: processedContent,
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
     editable: true,
+    editorProps: {
+      handleKeyDown: (view, event) => {
+        // Cmd + Z (Mac) または Ctrl + Z (Windows) でUndo
+        if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
+          editor?.chain().focus().undo().run();
+          return true;
+        }
+        // Cmd + Shift + Z (Mac) または Ctrl + Y (Windows) でRedo
+        if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'z') {
+          editor?.chain().focus().redo().run();
+          return true;
+        }
+        return false;
+      },
+    },
   });
 
   const toggleBold = () => {
@@ -616,7 +633,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           color: #666;
         }
         .ProseMirror pre {
-          background: #0D0D0D;
+          background: #282A36;
           color: #FFF;
           font-family: 'JetBrainsMono', monospace;
           padding: 0.75rem 1rem;
