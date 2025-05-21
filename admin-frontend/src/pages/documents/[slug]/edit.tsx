@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import TiptapEditor from '@/components/admin/editor/TiptapEditor';
