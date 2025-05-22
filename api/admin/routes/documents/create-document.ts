@@ -5,6 +5,7 @@ import { getAuthenticatedUser } from '../../utils/auth';
 import { initBranchSnapshot } from '../../utils/git';
 import path from 'path';
 import fs from 'fs';
+import TurndownService from 'turndown';
 
 const router = Router();
 
@@ -28,15 +29,30 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    const { category, label, content, isPublic, reviewerEmail, slug, displayOrder } = req.body;
-    // バリデーション
+    const { category, label, content, isPublic, reviewerEmail, slug, fileOrder } = req.body;
+
+    // 2. バリデーション
     if (!label || !content || !slug) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
         error: 'タイトル、本文、slugは必須です',
       });
     }
 
-    // 2. ファイルパスの重複チェック
+    // slugの形式チェック
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: 'slugは英小文字、数字、ハイフンのみ使用できます',
+      });
+    }
+
+    // file_orderが整数かチェック
+    if (fileOrder && !Number.isInteger(Number(fileOrder))) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        error: '表示順序は整数で入力してください',
+      });
+    }
+
+    // 3. ファイルパスの重複チェック
     const targetDir = category
       ? path.join(process.cwd(), 'docs', category)
       : path.join(process.cwd(), 'docs');
@@ -48,7 +64,29 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // 3. アクティブなuser_branchesを取得
+    // 4. HTMLからMarkdownへの変換
+    const turndownService = new TurndownService();
+    const markdownContent = turndownService.turndown(content);
+
+    // 5. file_orderの重複処理・自動採番
+    let correctedFileOrder = fileOrder ? parseInt(fileOrder) : null;
+    if (correctedFileOrder) {
+      // file_order重複時、既存のfile_order >= 入力値を+1してずらす
+      await db.execute({
+        sql: `UPDATE document_versions SET file_order = file_order + 1 WHERE category = ? AND status = ? AND file_order >= ? AND is_deleted = 0`,
+        args: [category, 'merged', correctedFileOrder],
+      });
+    } else {
+      // file_order未入力時、カテゴリ内最大値+1をセット
+      const maxOrderResult = await db.execute({
+        sql: `SELECT MAX(file_order) as maxOrder FROM document_versions WHERE category = ?`,
+        args: [category],
+      });
+      const maxOrder = Number(maxOrderResult.rows[0]?.maxOrder) || 0;
+      correctedFileOrder = maxOrder + 1;
+    }
+
+    // 6. アクティブなuser_branchesを取得
     const activeBranch = await db.execute({
       sql: 'SELECT id, branch_name FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
       args: [loginUser.userId, 1, 'none'],
@@ -58,13 +96,10 @@ router.post('/', async (req: Request, res: Response) => {
     const now = new Date();
 
     if (activeBranch.rows.length > 0) {
-      // 3.1 存在する場合
       userBranchId = activeBranch.rows[0].id;
     } else {
-      // 3.2 存在しない場合、新しいブランチを作成
       await initBranchSnapshot(loginUser.userId, loginUser.email);
 
-      // 作成したブランチのIDを取得
       const newBranch = await db.execute({
         sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1',
         args: [loginUser.userId],
@@ -77,29 +112,32 @@ router.post('/', async (req: Request, res: Response) => {
       userBranchId = newBranch.rows[0].id;
     }
 
+    // 7. データベースに保存
     await db.execute({
-      sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, display_order, last_edited_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, file_order, last_edited_by, last_reviewed_by, created_at, updated_at, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         loginUser.userId,
         userBranchId,
         targetFile,
         'draft',
-        content,
+        markdownContent,
         slug,
         category,
         label,
-        displayOrder,
+        correctedFileOrder,
         loginUser.email,
+        reviewerEmail,
         now,
         now,
+        isPublic,
       ],
     });
 
-    // 5. 成功レスポンスを返す
+    // 8. 成功レスポンスを返す
     return res.status(HTTP_STATUS.OK).json({
       success: true,
       message: 'ドキュメントが作成されました',
-      documentId: label,
+      documentId: slug,
     });
   } catch (error) {
     console.error('ドキュメント作成エラー:', error);

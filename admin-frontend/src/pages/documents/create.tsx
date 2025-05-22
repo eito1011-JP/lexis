@@ -28,7 +28,7 @@ export default function CreateDocumentPage(): JSX.Element {
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [slug, setSlug] = useState('');
-  const [displayOrder, setDisplayOrder] = useState('');
+  const [fileOrder, setFileOrder] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -136,6 +136,17 @@ export default function CreateDocumentPage(): JSX.Element {
       const queryParams = new URLSearchParams(window.location.search);
       const category = queryParams.get('category');
 
+      // デバッグログを追加
+      console.log('送信データ:', {
+        category,
+        label,
+        content,
+        isPublic: publicOption === '公開する',
+        reviewerEmail: reviewer || null,
+        slug,
+        fileOrder,
+      });
+
       // ドキュメント作成APIを呼び出す
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT, {
         category,
@@ -144,7 +155,7 @@ export default function CreateDocumentPage(): JSX.Element {
         isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
         reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
         slug,
-        displayOrder,
+        fileOrder,
       });
 
       if (response.success) {
@@ -218,15 +229,6 @@ export default function CreateDocumentPage(): JSX.Element {
                 />
               </svg>
             </button>
-            <div className="ml-auto">
-              <button
-                className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80 border-none"
-                onClick={handleSave}
-                disabled={!!invalidSlug}
-              >
-                保存
-              </button>
-            </div>
           </div>
 
           <div className="mb-6">
@@ -245,8 +247,8 @@ export default function CreateDocumentPage(): JSX.Element {
             <label className="block mb-2 font-bold">表示順序</label>
             <input
               type="number"
-              value={displayOrder}
-              onChange={e => setDisplayOrder(e.target.value)}
+              value={fileOrder}
+              onChange={e => setFileOrder(e.target.value)}
               className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
               placeholder="表示順序を入力してください"
             />
@@ -328,6 +330,16 @@ export default function CreateDocumentPage(): JSX.Element {
                 />
               </div>
             </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-4 mt-8">
+            <button
+              className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80 border-none w-45"
+              onClick={handleSave}
+              disabled={!!invalidSlug}
+            >
+              保存
+            </button>
           </div>
         </div>
       </div>
