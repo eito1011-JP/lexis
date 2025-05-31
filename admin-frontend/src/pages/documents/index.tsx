@@ -310,7 +310,7 @@ export default function DocumentsPage(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
-                      href={`/documents/${document.slug}/edit`}
+                      href={`/admin/documents/${document.slug}/edit`}
                       className="text-indigo-400 hover:text-indigo-300 mr-4"
                     >
                       編集

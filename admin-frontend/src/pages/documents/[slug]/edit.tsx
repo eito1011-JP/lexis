@@ -20,13 +20,11 @@ interface ApiError {
 // ドキュメントデータの型定義
 interface DocumentData {
   slug: string;
-  label: string;
+  sidebar_label: string;
   content: string;
-  position: number;
-  isPublic: boolean;
-  lastReviewedBy: string | null;
-  lastEditedBy: string | null;
-  description: string;
+  file_order: number;
+  is_public: boolean;
+  last_edited_by: string | null;
   source: 'md_file' | 'database';
 }
 
@@ -39,7 +37,7 @@ export default function EditDocumentPage(): JSX.Element {
   const [reviewer, setReviewer] = useState('');
   const [reviewers, setReviewers] = useState<User[]>([]);
   const [documentSlug, setDocumentSlug] = useState('');
-  const [displayOrder, setDisplayOrder] = useState('');
+  const [fileOrder, setFileOrder] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(true);
@@ -63,10 +61,13 @@ export default function EditDocumentPage(): JSX.Element {
       console.log('slug', slug);
       try {
         setDocumentLoading(true);
-        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_BY_SLUG}/${slug}`;
+        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_BY_SLUG}`;
+        const queryParams = new URLSearchParams({
+          slug: category ? `${category}/${slug}` : slug,
+        });
 
-        // カテゴリパラメータがある場合はAPIリクエストに含める
-        const response = await apiClient.get(endpoint + (category ? `?category=${category}` : ''));
+        // クエリパラメータとしてslugを渡す
+        const response = await apiClient.get(`${endpoint}?${queryParams.toString()}`);
 
         console.log('response', response);
         if (response) {
@@ -75,9 +76,7 @@ export default function EditDocumentPage(): JSX.Element {
           setLabel(response.label || '');
           setContent(response.content || '');
           setPublicOption(response.isPublic ? '公開する' : '公開しない');
-          setReviewer(response.reviewerEmail || '');
-          setReviewerName(response.reviewerEmail || '');
-          setDisplayOrder(response.position?.toString() || '');
+          setFileOrder(response.fileOrder || '');
         }
       } catch (error) {
         console.error('ドキュメント取得エラー:', error);
@@ -91,23 +90,6 @@ export default function EditDocumentPage(): JSX.Element {
       fetchDocument();
     }
   }, [slug, category]);
-
-  useEffect(() => {
-    // ユーザー一覧を取得
-    const fetchUsers = async () => {
-      try {
-        const response = await apiClient.get(API_CONFIG.ENDPOINTS.USERS.GET_ALL);
-        if (response.users) {
-          setReviewers(response.users);
-          setFilteredReviewers(response.users);
-        }
-      } catch (err) {
-        console.error('ユーザー取得エラー:', err);
-      }
-    };
-
-    fetchUsers();
-  }, []);
 
   // 検索クエリに基づいてレビュアーをフィルタリング
   useEffect(() => {
@@ -158,27 +140,6 @@ export default function EditDocumentPage(): JSX.Element {
     setContent(html);
   };
 
-  // レビュー担当者選択ハンドラー
-  const handleSelectReviewer = (user: User) => {
-    setReviewer(user.email);
-    setReviewerName(user.email);
-    setShowReviewerModal(false);
-  };
-
-  // モーダルを開く時にユーザー一覧を再取得する
-  const handleOpenReviewerModal = async () => {
-    setShowReviewerModal(true);
-    try {
-      const response = await apiClient.get('/admin/users');
-      if (response.users && response.users.length > 0) {
-        setReviewers(response.users);
-        setFilteredReviewers(response.users);
-      }
-    } catch (err) {
-      console.error('ユーザー取得エラー:', err);
-    }
-  };
-
   const handleSave = async () => {
     try {
       if (!label) {
@@ -191,10 +152,9 @@ export default function EditDocumentPage(): JSX.Element {
         category,
         label,
         content,
-        isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
-        lastReviewedBy: reviewer || null, // レビュー担当者のメールアドレス
+        isPublic: publicOption === '公開する',
         slug: documentSlug,
-        displayOrder,
+        file_order: fileOrder === '' ? null : Number(fileOrder),
       });
 
       if (response.success) {
@@ -265,10 +225,11 @@ export default function EditDocumentPage(): JSX.Element {
             <label className="block mb-2 font-bold">表示順序</label>
             <input
               type="number"
-              value={displayOrder}
-              onChange={e => setDisplayOrder(e.target.value)}
+              value={fileOrder}
+              onChange={e => setFileOrder(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
               placeholder="表示順序を入力してください"
+              min="0"
             />
           </div>
 
@@ -310,30 +271,6 @@ export default function EditDocumentPage(): JSX.Element {
                   ></path>
                 </svg>
               </div>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <label className="block mb-2 font-bold">レビュー担当者</label>
-            <div
-              className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white cursor-pointer flex justify-between items-center"
-              onClick={handleOpenReviewerModal}
-            >
-              <span>{reviewerName || 'レビュー担当者を選択'}</span>
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                ></path>
-              </svg>
             </div>
           </div>
 
@@ -383,7 +320,6 @@ export default function EditDocumentPage(): JSX.Element {
                   <div
                     key={user.id}
                     className="p-2 hover:bg-gray-800 rounded cursor-pointer flex items-center"
-                    onClick={() => handleSelectReviewer(user)}
                   >
                     <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-2">
                       {user.email.charAt(0).toUpperCase()}

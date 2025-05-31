@@ -1,9 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import { sessionService } from '../../../../src/services/sessionService';
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
 import { db } from '@site/src/lib/db';
 
 // Request型の拡張
@@ -21,11 +18,9 @@ declare global {
 const router = Router();
 
 // 特定のslugのドキュメントを取得するAPI
-router.get('/:slug', async (req: Request, res: Response) => {
+router.get('/slug', async (req: Request, res: Response) => {
   try {
     const sessionId = req.cookies.sid;
-    const { slug } = req.params;
-    const category = req.query.category as string;
 
     // 認証チェック
     const loginUser = await sessionService.getSessionUser(sessionId);
@@ -35,70 +30,82 @@ router.get('/:slug', async (req: Request, res: Response) => {
       });
     }
 
-    const apiDir = path.dirname(path.dirname(path.dirname(path.dirname(__filename))));
-    const rootDir = path.dirname(apiDir);
-    const docsDir = path.join(rootDir, 'docs');
+    // パスからslugとcategoryPathを取得
+    const pathParts = req.query.slug.toString().split('/');
+    const slug = pathParts[pathParts.length - 1];
+    const categoryPath = pathParts.slice(0, -1);
 
-    // カテゴリパスを構築
-    const categoryPath = category ? category.split('/').filter(Boolean) : [];
-    const targetDir = path.join(docsDir, ...categoryPath);
-
-    // MDファイルの検索パターン
-    const possibleFiles = [`${slug}.md`, `${slug}/index.md`];
-
-    let documentData = null;
-
-    // MDファイルが存在するか確認
-    for (const fileName of possibleFiles) {
-      const filePath = path.join(targetDir, fileName);
-      if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf8');
-        // front-matterを解析
-        const { data, content } = matter(fileContent);
-
-        documentData = {
-          slug: data.slug,
-          label: data.sidebar_label,
-          content: content,
-          position: data.file_order,
-          draft: data.draft === true,
-          reviewerEmail: data.last_reviewed_by || null,
-          lastEditedBy: data.last_edited_by || null,
-          source: 'md_file',
-        };
-        break;
-      }
-    }
-
-    // MDファイルが見つからない場合、データベースからドラフトデータを取得
-    if (!documentData) {
-      const draftDocumentResult = await db.execute({
-        sql: 'SELECT * FROM document_versions WHERE slug = ? AND category_path = ? AND status = ? ORDER BY created_at DESC LIMIT 1',
-        args: [slug, category || '', 'draft'],
+    // カテゴリ情報を取得
+    let categoryResult;
+    if (categoryPath.length === 0) {
+      // カテゴリが指定されていない場合（ルートカテゴリ）
+      categoryResult = await db.execute({
+        sql: 'SELECT id FROM document_categories WHERE parent_id IS NULL AND is_deleted = 0 LIMIT 1',
       });
-
-      if (draftDocumentResult.rows.length > 0) {
-        const draftDocument = draftDocumentResult.rows[0];
-        documentData = {
-          slug: slug,
-          label: draftDocument.title || draftDocument.sidebar_label,
-          content: draftDocument.content,
-          position: draftDocument.file_order,
-          draft: draftDocument.status === 'draft',
-          reviewerEmail: draftDocument.reviewer_email,
-          lastEditedBy: draftDocument.last_edited_by,
-          source: 'database',
-        };
-      }
+    } else {
+      // カテゴリが指定されている場合
+      categoryResult = await db.execute({
+        sql: `
+          WITH RECURSIVE category_tree AS (
+            -- ルートカテゴリを取得
+            SELECT id, slug, parent_id, sidebar_label
+            FROM document_categories
+            WHERE slug = ? AND is_deleted = 0
+            UNION ALL
+            -- 子カテゴリを再帰的に取得
+            SELECT c.id, c.slug, c.parent_id, c.sidebar_label
+            FROM document_categories c
+            INNER JOIN category_tree ct ON c.parent_id = ct.id
+            WHERE c.is_deleted = 0
+          )
+          SELECT id FROM category_tree
+          WHERE slug = ?
+        `,
+        args: [categoryPath[0], categoryPath[categoryPath.length - 1] || categoryPath[0]],
+      });
     }
 
-    if (!documentData) {
+    const category = categoryResult.rows[0];
+    if (!category) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
-        error: 'Document not found',
+        error: 'カテゴリが見つかりません',
       });
     }
 
-    return res.status(HTTP_STATUS.OK).json(documentData);
+    // ドキュメントバージョンを取得
+    const documentResult = await db.execute({
+      sql: `
+        SELECT 
+          slug, sidebar_label, content, file_order, is_public, 
+          last_edited_by
+        FROM document_versions 
+        WHERE slug = ? 
+          AND category_id = ? 
+          AND is_deleted = 0
+        LIMIT 1
+      `,
+      args: [slug, category.id],
+    });
+
+    const documentVersion = documentResult.rows[0];
+    if (!documentVersion) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        error: 'ドキュメントが見つかりません',
+      });
+    }
+
+    // レスポンスデータを構築
+    const response = {
+      slug: documentVersion.slug,
+      label: documentVersion.sidebar_label,
+      content: documentVersion.content,
+      fileOrder: documentVersion.file_order,
+      isPublic: documentVersion.is_public === 1,
+      lastEditedBy: documentVersion.last_edited_by,
+      source: 'database' as const,
+    };
+
+    return res.json(response);
   } catch (error) {
     console.error('ドキュメント取得エラー:', error);
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({

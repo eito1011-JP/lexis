@@ -14,7 +14,7 @@ export const API_CONFIG = {
       CREATE_DOCUMENT: '/api/admin/documents',
       EDIT_DOCUMENT: '/api/admin/documents',
       GET_DOCUMENT: '/api/admin/documents',
-      GET_DOCUMENT_BY_SLUG: '/api/admin/documents',
+      GET_DOCUMENT_BY_SLUG: '/api/admin/documents/slug',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
     },
     USERS: {
