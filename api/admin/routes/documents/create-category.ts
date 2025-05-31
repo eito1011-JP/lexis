@@ -123,7 +123,7 @@ router.post('/create-category', async (req: Request, res: Response) => {
     }
 
     // カテゴリパスの処理
-    let parentId: number | null = null;
+    let parentId = 1;
     for (const slug of categoryPath) {
       const result = await db.execute({
         sql: `SELECT id FROM document_categories 
@@ -159,8 +159,8 @@ router.post('/create-category', async (req: Request, res: Response) => {
       sql: `INSERT INTO document_categories (
         slug, sidebar_label, position, description, 
         status, last_edited_by, user_branch_id, parent_id,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?) RETURNING id`,
+        created_at, updated_at, is_deleted
+      ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?) RETURNING id`,
       args: [
         slug,
         sidebarLabel,
@@ -171,6 +171,7 @@ router.post('/create-category', async (req: Request, res: Response) => {
         parentId,
         now,
         now,
+        0,
       ],
     });
 

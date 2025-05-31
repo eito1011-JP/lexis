@@ -73,7 +73,15 @@ const queries = {
     return result.rows;
   },
 
-  getDocuments: async (categoryId: number | null) => {
+  getDocuments: async (categoryId: number | null, userId: number) => {
+    // アクティブなブランチを取得
+    const activeBranch = await db.execute({
+      sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
+      args: [userId, 1, 'none'],
+    });
+
+    const userBranchId = activeBranch.rows[0]?.id;
+
     const result = await db.execute({
       sql: `
         SELECT 
@@ -85,9 +93,13 @@ const queries = {
         FROM document_versions 
         WHERE category_id = ? 
           AND is_deleted = 0 
-          AND status IN ('pushed', 'merged')
+          AND (
+            status IN ('pushed', 'merged')
+            OR (user_branch_id = ? AND status = 'draft')
+          )
+          AND is_deleted = 0
       `,
-      args: [categoryId],
+      args: [categoryId, userBranchId],
     });
     return result.rows;
   },
@@ -150,7 +162,7 @@ router.get('/', async (req: Request, res: Response) => {
     // データ取得
     const [subCategories, documents] = await Promise.all([
       queries.getSubCategories(currentCategoryId),
-      queries.getDocuments(currentCategoryId),
+      queries.getDocuments(currentCategoryId, loginUser.userId),
     ]);
 
     // レスポンスの構築
