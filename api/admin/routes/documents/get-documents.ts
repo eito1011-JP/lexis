@@ -1,9 +1,32 @@
 import { Router, Request, Response } from 'express';
 import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import { sessionService } from '../../../../src/services/sessionService';
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
+import { db } from '../../../../src/lib/db';
+
+// 型定義
+interface DocumentResponse {
+  sidebarLabel: string | null;
+  slug: string | null;
+  isPublic: boolean;
+  status: string;
+  lastEditedBy: string | null;
+}
+
+interface CategoryResponse {
+  slug: string;
+  sidebarLabel: string;
+}
+
+interface GetDocumentsResponse {
+  documents: DocumentResponse[];
+  categories: CategoryResponse[];
+}
+
+interface Category {
+  id: number;
+  slug: string;
+  sidebar_label: string;
+}
 
 // Request型の拡張
 declare global {
@@ -19,11 +42,99 @@ declare global {
 
 const router = Router();
 
+// データベースクエリ
+const queries = {
+  getDefaultCategory: async (): Promise<number | null> => {
+    const result = await db.execute({
+      sql: 'SELECT id FROM document_categories WHERE slug = ?',
+      args: ['uncategorized'],
+    });
+    return result.rows[0]?.id ? Number(result.rows[0].id) : null;
+  },
+
+  getCategoryBySlug: async (slug: string, parentId: number | null): Promise<number | null> => {
+    const result = await db.execute({
+      sql: 'SELECT id FROM document_categories WHERE slug = ? AND parent_id IS ?',
+      args: [slug, parentId],
+    });
+    return result.rows[0]?.id ? Number(result.rows[0].id) : null;
+  },
+
+  getSubCategories: async (categoryId: number | null) => {
+    const result = await db.execute({
+      sql: `
+        SELECT slug, sidebar_label
+        FROM document_categories
+        WHERE parent_id = ?
+        ORDER BY position ASC
+      `,
+      args: [categoryId],
+    });
+    return result.rows;
+  },
+
+  getDocuments: async (categoryId: number | null) => {
+    const result = await db.execute({
+      sql: `
+        SELECT 
+          sidebar_label,
+          slug,
+          is_public,
+          status,
+          last_edited_by
+        FROM document_versions 
+        WHERE category_id = ? 
+          AND is_deleted = 0 
+          AND status IN ('pushed', 'merged')
+      `,
+      args: [categoryId],
+    });
+    return result.rows;
+  },
+};
+
+// データ変換関数
+const transformers = {
+  toDocumentResponse: (row: any): DocumentResponse => ({
+    sidebarLabel: row.sidebar_label as string | null,
+    slug: row.slug as string | null,
+    isPublic: Boolean(row.is_public),
+    status: row.status as string,
+    lastEditedBy: row.last_edited_by as string | null,
+  }),
+
+  toCategoryResponse: (row: any): CategoryResponse => ({
+    slug: row.slug as string,
+    sidebarLabel: row.sidebar_label as string,
+  }),
+};
+
+// カテゴリID取得ロジック
+const getCategoryId = async (categoryPath: string[]): Promise<number | null> => {
+  if (categoryPath.length === 0) {
+    return await queries.getDefaultCategory();
+  }
+
+  let parentId: number | null = null;
+  let currentCategoryId: number | null = null;
+
+  for (const slug of categoryPath) {
+    const categoryId = await queries.getCategoryBySlug(slug, parentId);
+    if (categoryId) {
+      parentId = categoryId;
+      currentCategoryId = categoryId;
+    } else {
+      return await queries.getDefaultCategory();
+    }
+  }
+
+  return currentCategoryId;
+};
+
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const sessionId = req.cookies.sid;
-
     // 認証チェック
+    const sessionId = req.cookies.sid;
     const loginUser = await sessionService.getSessionUser(sessionId);
     if (!loginUser) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
@@ -31,118 +142,26 @@ router.get('/', async (req: Request, res: Response) => {
       });
     }
 
-    // パスからターゲットディレクトリを特定
+    // カテゴリパスの取得と処理
     const requestPath = req.params[0] || '';
-    const pathSegments = requestPath.split('/').filter(segment => segment.length > 0);
+    const categoryPath = requestPath.split('/').filter(segment => segment.length > 0);
+    const currentCategoryId = await getCategoryId(categoryPath);
 
-    const apiDir = path.dirname(path.dirname(path.dirname(path.dirname(__filename))));
-    const rootDir = path.dirname(apiDir);
-    const docsDir = path.join(rootDir, 'docs');
+    // データ取得
+    const [subCategories, documents] = await Promise.all([
+      queries.getSubCategories(currentCategoryId),
+      queries.getDocuments(currentCategoryId),
+    ]);
 
-    // ブレッドクラムを構築
-    const breadcrumbs = [];
-    let currentPath = '';
+    // レスポンスの構築
+    const response: GetDocumentsResponse = {
+      documents: documents.map(transformers.toDocumentResponse),
+      categories: subCategories.map(transformers.toCategoryResponse),
+    };
 
-    for (const segment of pathSegments) {
-      currentPath = currentPath ? `${currentPath}/${segment}` : segment;
-      breadcrumbs.push({
-        name: segment,
-        path: `/admin/documents/${currentPath}`,
-      });
-    }
-
-    // ターゲットディレクトリのパスを構築
-    const targetDir = path.join(docsDir, ...pathSegments);
-
-    // ディレクトリが存在するか確認
-    if (!fs.existsSync(targetDir)) {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({
-        error: 'Directory not found',
-      });
-    }
-
-    // ディレクトリの内容を取得
-    const dirContents = fs.readdirSync(targetDir, { withFileTypes: true });
-
-    // ファイルとフォルダに分類して処理
-    const contentItems = await Promise.all(
-      dirContents.map(async item => {
-        const itemPathSegments = [...pathSegments, item.name];
-
-        if (item.isDirectory()) {
-          // フォルダの場合（カテゴリとして処理）
-          // カテゴリ情報を取得するためにカテゴリ内の_category.jsonファイルを探す
-          const categoryMetadataPath = path.join(targetDir, item.name, '_category.json');
-
-          let label = item.name;
-          let position = 999; // デフォルト値
-          let description = '';
-
-          // カテゴリメタデータファイルが存在する場合、そこからメタデータを取得
-          if (fs.existsSync(categoryMetadataPath)) {
-            const categoryContent = fs.readFileSync(categoryMetadataPath, 'utf8');
-            const data = JSON.parse(categoryContent);
-
-            label = data.sidebar_label || data.label || item.name;
-            position = data.position || position;
-            description = data.link?.description || '';
-          }
-
-          return {
-            type: 'folder',
-            slug: item.name,
-            label,
-            position,
-            description,
-          };
-        } else if (
-          item.isFile() &&
-          item.name.endsWith('.md') &&
-          item.name !== '_category.md' &&
-          item.name !== '_category.json'
-        ) {
-          // マークダウンファイルの場合（ドキュメントとして処理）
-          const filePath = path.join(targetDir, item.name);
-          const fileContent = fs.readFileSync(filePath, 'utf8');
-
-          // front-matterを解析
-          const { data, content } = matter(fileContent);
-
-          return {
-            type: 'file',
-            slug: data.slug || item.name.replace('.md', ''),
-            label: data.sidebar_label || data.label || item.name.replace('.md', ''),
-            position: data.position || 999,
-            description: data.description || '',
-            content: content,
-            lastEditedBy: data.last_edited_by || '',
-          };
-        }
-
-        // その他のファイルは無視
-        return null;
-      })
-    );
-
-    // nullでない項目のみフィルタリング
-    const validItems = contentItems.filter(item => item !== null);
-
-    // アイテムを表示順でソート
-    validItems.sort((a, b) => {
-      if (a.type !== b.type) {
-        // カテゴリを先に表示
-        return a.type === 'folder' ? -1 : 1;
-      }
-      // 同じタイプの場合はpositionでソート
-      return (a.position || 999) - (b.position || 999);
-    });
-
-    return res.status(HTTP_STATUS.OK).json({
-      items: validItems,
-      breadcrumbs,
-    });
+    return res.status(HTTP_STATUS.OK).json(response);
   } catch (error) {
-    console.error('フォルダコンテンツ取得エラー:', error);
+    console.error('ドキュメント一覧取得エラー:', error);
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       error: API_ERRORS.SERVER.INTERNAL_ERROR,
     });

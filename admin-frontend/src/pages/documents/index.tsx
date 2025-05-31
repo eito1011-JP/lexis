@@ -9,20 +9,17 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
 // カテゴリの型定義
 type Category = {
-  name: string;
   slug: string;
+  sidebarLabel: string;
 };
 
 // ドキュメントアイテムの型定義
 type DocumentItem = {
-  type: string;
-  label: string;
-  name?: string;
-  slug: string;
-  status?: string;
-  lastEditedBy?: string;
-  content?: string;
-  category?: string;
+  sidebarLabel: string | null;
+  slug: string | null;
+  isPublic: boolean;
+  status: string;
+  lastEditedBy: string | null;
 };
 
 /**
@@ -81,33 +78,20 @@ export default function DocumentsPage(): JSX.Element {
     // カテゴリ一覧を取得
     const getDocuments = async () => {
       try {
-        let categoryData = [];
-        const documents = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
+        const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
 
-        // documentsデータからカテゴリー（フォルダ）のデータを取得して設定
-        if (documents && documents.items) {
-          const categoryItems = documents.items.filter(
-            (item: DocumentItem) => item.type === 'folder'
-          );
-          categoryData = categoryItems.map((category: DocumentItem) => ({
-            name: category.label || '',
-            slug: category.slug,
-          }));
-          setCategories(categoryData);
-
-          // ドキュメントのデータを取得して設定
-          const docItems = documents.items.filter((item: DocumentItem) => item.type === 'file');
-          setDocuments(docItems);
+        if (response) {
+          setCategories(response.categories);
+          setDocuments(response.documents);
         }
 
         const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF);
         if (hasUserDraft && hasUserDraft.exists) {
           setShowPrSubmitButton(true);
         }
-
-        console.log('hasUserDraft', hasUserDraft);
       } catch (err) {
-        console.error('カテゴリ取得エラー:', err);
+        console.error('ドキュメント取得エラー:', err);
+        setApiError('ドキュメントの取得に失敗しました');
       } finally {
         setCategoriesLoading(false);
         setDocumentsLoading(false);
@@ -161,7 +145,13 @@ export default function DocumentsPage(): JSX.Element {
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {
-        setCategories(prev => [...prev, { name: response.label, slug: response.slug }]);
+        setCategories(prev => [
+          ...prev,
+          {
+            slug: response.slug,
+            sidebarLabel: response.label,
+          },
+        ]);
       }
       handleCloseModal();
     } catch (err) {
@@ -233,7 +223,7 @@ export default function DocumentsPage(): JSX.Element {
             onClick={() => (window.location.href = `/admin/documents/${category.slug}`)}
           >
             <Folder className="w-5 h-5 mr-2" />
-            <span>{category.name}</span>
+            <span>{category.sidebarLabel}</span>
           </div>
         ))}
       </div>
@@ -242,7 +232,6 @@ export default function DocumentsPage(): JSX.Element {
 
   // ドキュメント一覧テーブル
   const renderDocumentTable = () => {
-    console.log(documents);
     if (documentsLoading) {
       return (
         <div className="flex justify-center py-6">
@@ -260,13 +249,13 @@ export default function DocumentsPage(): JSX.Element {
                 タイトル
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                コンテンツ
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                公開ステータス
+                作業ステータス
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 最終編集者
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                公開ステータス
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                 アクション
@@ -281,36 +270,46 @@ export default function DocumentsPage(): JSX.Element {
                     <div className="flex items-center">
                       <div className="ml-4">
                         <div className="text-sm font-medium text-white">
-                          {document.label || document.name || document.slug}
+                          {document.sidebarLabel || document.slug}
                         </div>
                         <div className="text-sm text-gray-400">{document.slug}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-300">
-                      {document.content
-                        ? document.content.substring(0, 50) + '...'
-                        : 'コンテンツなし'}
-                    </div>
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        document.status === '公開'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                        document.status === 'pushed'
+                          ? 'bg-blue-100 text-blue-800'
+                          : document.status === 'merged'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
                       }`}
                     >
-                      {document.status || '非公開'}
+                      {document.status === 'pushed'
+                        ? '確認待ち'
+                        : document.status === 'merged'
+                          ? '採用済み'
+                          : '未提出'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                     {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        document.isPublic
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {document.isPublic ? '公開' : '非公開'}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
-                      href={`/documents/${document.category ? `${document.category}/` : ''}${document.slug}/edit`}
+                      href={`/documents/${document.slug}/edit`}
                       className="text-indigo-400 hover:text-indigo-300 mr-4"
                     >
                       編集
@@ -323,7 +322,7 @@ export default function DocumentsPage(): JSX.Element {
           ) : (
             <tbody className="divide-y">
               <tr>
-                <td colSpan={5} className="text-gray-400 py-4">
+                <td colSpan={4} className="text-gray-400 py-4">
                   ドキュメントがありません
                 </td>
               </tr>
