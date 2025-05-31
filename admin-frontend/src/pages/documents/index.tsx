@@ -138,9 +138,10 @@ export default function DocumentsPage(): JSX.Element {
 
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_FOLDER, {
         slug,
-        label,
+        sidebarLabel: label,
         position: positionNum,
         description,
+        categoryPath: [],
       });
 
       // 新しいカテゴリをリストに追加

@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { getAuthenticatedUser } from '../../utils/auth';
 import { checkUserDraft, initBranchSnapshot } from '../../utils/git';
+import { db } from '@site/src/lib/db';
+
 // Request型の拡張
 declare global {
   namespace Express {
@@ -16,6 +18,14 @@ declare global {
   }
 }
 
+interface CreateCategoryRequest {
+  slug: string;
+  sidebarLabel: string;
+  position: number;
+  description: string;
+  categoryPath: string[];
+}
+
 const router = express.Router();
 
 /**
@@ -26,7 +36,13 @@ const router = express.Router();
  *
  * リクエスト:
  * POST /api/admin/documents/create-category
- * body: { slug: string, label: string, position: number, description: string, parent?: string }
+ * body: {
+ *   slug: string,
+ *   sidebarLabel: string,
+ *   position: number,
+ *   description: string,
+ *   categoryPath: string[]
+ * }
  *
  * レスポンス:
  * 成功: { slug: string, label: string, position: number, description: string, path: string }
@@ -42,8 +58,10 @@ router.post('/create-category', async (req: Request, res: Response) => {
       });
     }
 
-    const { slug, label, position, description, parent } = req.body;
+    const { slug, sidebarLabel, position, description, categoryPath } =
+      req.body as CreateCategoryRequest;
 
+    console.log(req.body);
     // validation
     if (!slug || typeof slug !== 'string') {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -51,9 +69,9 @@ router.post('/create-category', async (req: Request, res: Response) => {
       });
     }
 
-    if (!label || typeof label !== 'string') {
+    if (!sidebarLabel || typeof sidebarLabel !== 'string') {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'label is required and must be a string',
+        error: 'sidebarLabel is required and must be a string',
       });
     }
 
@@ -69,81 +87,101 @@ router.post('/create-category', async (req: Request, res: Response) => {
       });
     }
 
-    if (parent && typeof parent !== 'string') {
+    if (!Array.isArray(categoryPath)) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'parent must be a string',
+        error: 'categoryPath must be an array',
       });
     }
 
     // ログインユーザーを取得
     const loginUser = await getAuthenticatedUser(sessionId);
 
-    // ブランチが存在しない場合は作成
-    const hasDraft = await checkUserDraft(loginUser.userId);
+    // アクティブなユーザーブランチを確認
+    const activeBranch = await db.execute({
+      sql: 'SELECT id, branch_name FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
+      args: [loginUser.userId, 1, 'none'],
+    });
 
-    if (!hasDraft) {
+    let userBranchId;
+    const now = new Date();
+
+    if (activeBranch.rows.length > 0) {
+      userBranchId = activeBranch.rows[0].id;
+    } else {
       await initBranchSnapshot(loginUser.userId, loginUser.email);
+
+      const newBranch = await db.execute({
+        sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1',
+        args: [loginUser.userId],
+      });
+
+      if (newBranch.rows.length === 0) {
+        throw new Error('ブランチの作成に失敗しました');
+      }
+
+      userBranchId = newBranch.rows[0].id;
     }
 
-    const docsDir = path.join(process.cwd(), 'docs');
+    // カテゴリパスの処理
+    let parentId: number | null = null;
+    for (const slug of categoryPath) {
+      const result = await db.execute({
+        sql: `SELECT id FROM document_categories 
+              WHERE slug = ? AND parent_id IS ? 
+              ORDER BY id DESC LIMIT 1`,
+        args: [slug, parentId],
+      });
 
-    // 親カテゴリが指定されている場合は、その配下にカテゴリを作成
-    let newCategoryPath;
-    let newCategorySlug;
-
-    if (parent) {
-      const parentCategoryPath = path.join(docsDir, parent);
-
-      // 親カテゴリが存在するか確認
-      if (!fs.existsSync(parentCategoryPath)) {
+      if (result.rows.length === 0) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: 'Parent category not found',
+          error: '指定されたカテゴリパスが存在しません',
         });
       }
 
-      newCategoryPath = path.join(parentCategoryPath, slug);
-      newCategorySlug = `${parent}/${slug}`;
-    } else {
-      newCategoryPath = path.join(docsDir, slug);
-      newCategorySlug = slug;
+      parentId = Number(result.rows[0].id);
     }
 
-    if (fs.existsSync(newCategoryPath)) {
+    // カテゴリの重複チェック
+    const existingCategory = await db.execute({
+      sql: `SELECT id FROM document_categories 
+            WHERE slug = ? AND parent_id IS ?`,
+      args: [slug, parentId],
+    });
+
+    if (existingCategory.rows.length > 0) {
       return res.status(HTTP_STATUS.CONFLICT).json({
-        error: 'A category with this slug already exists',
+        error: 'このslugのカテゴリは既に存在します',
       });
     }
 
-    fs.mkdirSync(newCategoryPath, { recursive: true });
+    // カテゴリをデータベースに保存
+    const categoryResult = await db.execute({
+      sql: `INSERT INTO document_categories (
+        slug, sidebar_label, position, description, 
+        status, last_edited_by, user_branch_id, parent_id,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?) RETURNING id`,
+      args: [
+        slug,
+        sidebarLabel,
+        position,
+        description,
+        loginUser.email,
+        userBranchId,
+        parentId,
+        now,
+        now,
+      ],
+    });
 
-    // 空のカテゴリをGitで追跡するために.gitkeepファイルを作成
-    const gitkeepPath = path.join(newCategoryPath, '.gitkeep');
-    fs.writeFileSync(gitkeepPath, '');
-
-    // _category.jsonを作成
-    const categoryJsonPath = path.join(newCategoryPath, '_category.json');
-    fs.writeFileSync(
-      categoryJsonPath,
-      JSON.stringify(
-        {
-          label,
-          position,
-          link: {
-            type: 'generated-index',
-            description,
-          },
-        },
-        null,
-        2
-      )
-    );
+    const categoryId = categoryResult.rows[0].id;
 
     return res.status(HTTP_STATUS.CREATED).json({
-      slug: newCategorySlug,
-      label,
+      id: categoryId,
+      slug,
+      label: sidebarLabel,
       position,
       description,
-      path: newCategoryPath,
     });
   } catch (error) {
     console.error('カテゴリ作成エラー:', error);
