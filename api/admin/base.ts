@@ -14,6 +14,7 @@ import usersRouter from './routes/users';
 import documentGitCheckDiffRouter from './routes/documents/git/check-diff';
 import { getDocumentsRouter } from './routes/documents/get-documents';
 import { getDocumentBySlugRouter } from './routes/documents/get-document-by-slug';
+import { updateDocumentRouter } from './routes/documents/update-document';
 
 // Expressアプリの初期化
 const app = express();
@@ -41,14 +42,13 @@ app.use('/api/admin/documents', createDocumentRouter);
 app.use('/api/admin/documents', getCategoryContentsRouter);
 app.use('/api/admin/documents', getDocumentsRouter);
 app.use('/api/admin/documents', getDocumentBySlugRouter);
+app.use('/api/admin/documents', updateDocumentRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
 
 // セッション確認 - 既存のエンドポイント
 app.get('/api/auth/session', async (req, res) => {
   const sessionId = req.cookies.sid;
-
-  console.log('sessionId', sessionId);
 
   if (!sessionId) {
     return res.json({
@@ -59,8 +59,6 @@ app.get('/api/auth/session', async (req, res) => {
 
   try {
     const user = await sessionService.getSessionUser(sessionId);
-
-    console.log('user', user);
 
     if (!user) {
       return res.json({

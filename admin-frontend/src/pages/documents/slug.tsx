@@ -148,8 +148,6 @@ export default function DocumentBySlugPage(): JSX.Element {
     getCategoryDetails();
   }, [slug]);
 
-  console.log('items', items);
-
   const handleCreateCategoryModal = async () => {
     if (!slug) return;
 

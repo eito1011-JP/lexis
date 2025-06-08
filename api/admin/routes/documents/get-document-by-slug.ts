@@ -76,6 +76,7 @@ router.get('/slug', async (req: Request, res: Response) => {
     const documentResult = await db.execute({
       sql: `
         SELECT 
+          id,
           slug, sidebar_label, content, file_order, is_public, 
           last_edited_by
         FROM document_versions 
@@ -96,6 +97,7 @@ router.get('/slug', async (req: Request, res: Response) => {
 
     // レスポンスデータを構築
     const response = {
+      id: documentVersion.id,
       slug: documentVersion.slug,
       label: documentVersion.sidebar_label,
       content: documentVersion.content,

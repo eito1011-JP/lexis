@@ -10,6 +10,7 @@ interface DocumentResponse {
   isPublic: boolean;
   status: string;
   lastEditedBy: string | null;
+  fileOrder: number | null;
 }
 
 interface CategoryResponse {
@@ -73,20 +74,7 @@ const queries = {
     return result.rows;
   },
 
-  getDocuments: async (categoryId: number | null, userId: number) => {
-    // アクティブなブランチを取得
-    const activeBranch = await db.execute({
-      sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
-      args: [userId, 1, 'none'],
-    });
-
-    let userBranchId;
-    if (activeBranch.rows.length > 0) {
-      userBranchId = activeBranch.rows[0]?.id;
-    } else {
-      userBranchId = null;
-    }
-
+  getDocuments: async (categoryId: number | null, userBranchId: number | null) => {
     const result = await db.execute({
       sql: `
         SELECT 
@@ -94,7 +82,8 @@ const queries = {
           slug,
           is_public,
           status,
-          last_edited_by
+          last_edited_by,
+          file_order
         FROM document_versions 
         WHERE category_id = ? 
           AND is_deleted = 0 
@@ -118,6 +107,7 @@ const transformers = {
     isPublic: Boolean(row.is_public),
     status: row.status as string,
     lastEditedBy: row.last_edited_by as string | null,
+    fileOrder: row.file_order as number | null,
   }),
 
   toCategoryResponse: (row: any): CategoryResponse => ({
@@ -167,10 +157,24 @@ router.get('/', async (req: Request, res: Response) => {
 
     console.log('currentCategoryId', currentCategoryId);
 
+        // アクティブなブランチを取得
+    const activeBranch = await db.execute({
+      sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
+      args: [loginUser.userId, 1, 'none'],
+    });
+
+        let userBranchId;
+        if (activeBranch.rows.length > 0) {
+          userBranchId = activeBranch.rows[0]?.id;
+        } else {
+          userBranchId = null;
+        }
+
+    console.log('userBranchId', userBranchId);
     // データ取得
     const [subCategories, documents] = await Promise.all([
       queries.getSubCategories(currentCategoryId),
-      queries.getDocuments(currentCategoryId, loginUser.userId),
+      queries.getDocuments(currentCategoryId, userBranchId),
     ]);
 
     // レスポンスの構築

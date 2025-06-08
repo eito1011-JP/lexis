@@ -19,6 +19,7 @@ interface ApiError {
 
 // ドキュメントデータの型定義
 interface DocumentData {
+  id: number;
   slug: string;
   sidebar_label: string;
   content: string;
@@ -45,6 +46,7 @@ export default function EditDocumentPage(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredReviewers, setFilteredReviewers] = useState<User[]>([]);
   const [reviewerName, setReviewerName] = useState('');
+  const [documentId, setDocumentId] = useState<number | null>(null);
 
   // URLからslugとcategoryを抽出
   const pathname = location.pathname;
@@ -72,6 +74,7 @@ export default function EditDocumentPage(): JSX.Element {
         console.log('response', response);
         if (response) {
           // 取得したデータをフォームにセット
+          setDocumentId(response.id);
           setDocumentSlug(response.slug || '');
           setLabel(response.label || '');
           setContent(response.content || '');
@@ -147,20 +150,28 @@ export default function EditDocumentPage(): JSX.Element {
         return;
       }
 
+      if (!documentId) {
+        alert('ドキュメントIDが見つかりません');
+        return;
+      }
+
+      console.log('fileOrder', fileOrder);
+
       // ドキュメント編集APIを呼び出す
-      const response = await apiClient.put(API_CONFIG.ENDPOINTS.DOCUMENTS.EDIT_DOCUMENT, {
+      const response = await apiClient.put(API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_DOCUMENT, {
+        id: documentId,
         category,
         label,
         content,
         isPublic: publicOption === '公開する',
         slug: documentSlug,
-        file_order: fileOrder === '' ? null : Number(fileOrder),
+        fileOrder: fileOrder === '' ? null : Number(fileOrder),
       });
 
       if (response.success) {
         alert('ドキュメントが編集されました');
         // 成功したら一覧ページに戻る
-        window.location.href = category ? `/documents/${category}` : '/documents';
+        window.location.href = category ? `/admin/documents/${category}` : '/admin/documents';
       } else {
         throw new Error(response.message || '不明なエラーが発生しました');
       }
@@ -226,7 +237,17 @@ export default function EditDocumentPage(): JSX.Element {
             <input
               type="number"
               value={fileOrder}
-              onChange={e => setFileOrder(e.target.value === '' ? '' : Number(e.target.value))}
+              onChange={e => {
+                const value = e.target.value;
+                if (value === '') {
+                  setFileOrder('');
+                } else {
+                  const num = Number(value);
+                  if (!isNaN(num) && isFinite(num)) {
+                    setFileOrder(num);
+                  }
+                }
+              }}
               className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
               placeholder="表示順序を入力してください"
               min="0"

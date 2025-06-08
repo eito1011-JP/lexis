@@ -20,6 +20,7 @@ type DocumentItem = {
   isPublic: boolean;
   status: string;
   lastEditedBy: string | null;
+  position?: number;
 };
 
 /**
@@ -101,6 +102,7 @@ export default function DocumentsPage(): JSX.Element {
     getDocuments();
   }, []);
 
+  console.log('documents', documents);
   const handleCreateImageCategory = () => {
     setShowCategoryModal(true);
   };
@@ -258,6 +260,9 @@ export default function DocumentsPage(): JSX.Element {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 公開ステータス
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                表示順序
+              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                 アクション
               </th>
@@ -307,6 +312,9 @@ export default function DocumentsPage(): JSX.Element {
                     >
                       {document.isPublic ? '公開' : '非公開'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {document.fileOrder || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <a
