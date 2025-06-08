@@ -80,7 +80,12 @@ const queries = {
       args: [userId, 1, 'none'],
     });
 
-    const userBranchId = activeBranch.rows[0]?.id;
+    let userBranchId;
+    if (activeBranch.rows.length > 0) {
+      userBranchId = activeBranch.rows[0]?.id;
+    } else {
+      userBranchId = null;
+    }
 
     const result = await db.execute({
       sql: `
@@ -148,6 +153,7 @@ router.get('/', async (req: Request, res: Response) => {
     // 認証チェック
     const sessionId = req.cookies.sid;
     const loginUser = await sessionService.getSessionUser(sessionId);
+
     if (!loginUser) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
         error: API_ERRORS.AUTH.NO_SESSION,
@@ -158,6 +164,8 @@ router.get('/', async (req: Request, res: Response) => {
     const requestPath = req.params[0] || '';
     const categoryPath = requestPath.split('/').filter(segment => segment.length > 0);
     const currentCategoryId = await getCategoryId(categoryPath);
+
+    console.log('currentCategoryId', currentCategoryId);
 
     // データ取得
     const [subCategories, documents] = await Promise.all([
