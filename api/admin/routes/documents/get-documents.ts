@@ -177,10 +177,28 @@ router.get('/', async (req: Request, res: Response) => {
       queries.getDocuments(currentCategoryId, userBranchId),
     ]);
 
+    // ソート処理
+    const sortedDocuments = documents
+      .map(transformers.toDocumentResponse)
+      .filter(doc => doc.fileOrder !== null)
+      .sort((a, b) => a.fileOrder! - b.fileOrder!);
+
+    const sortedCategories = subCategories
+      .map(transformers.toCategoryResponse)
+      .filter(cat => {
+        const originalCat = subCategories.find(c => c.slug === cat.slug);
+        return originalCat?.position !== null;
+      })
+      .sort((a, b) => {
+        const posA = Number(subCategories.find(cat => cat.slug === a.slug)?.position);
+        const posB = Number(subCategories.find(cat => cat.slug === b.slug)?.position);
+        return posA - posB;
+      });
+
     // レスポンスの構築
     const response: GetDocumentsResponse = {
-      documents: documents.map(transformers.toDocumentResponse),
-      categories: subCategories.map(transformers.toCategoryResponse),
+      documents: sortedDocuments,
+      categories: sortedCategories,
     };
 
     return res.status(HTTP_STATUS.OK).json(response);
