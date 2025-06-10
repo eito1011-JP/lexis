@@ -1,6 +1,4 @@
 import express, { Request, Response } from 'express';
-import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
-import { sessionService } from '../../../../src/services/sessionService';
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';

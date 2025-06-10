@@ -24,6 +24,22 @@ type Item = {
   content?: string;
 };
 
+type Category = {
+  slug: string;
+  label: string;
+  position?: number;
+  description?: string;
+  isDraft: boolean;
+};
+
+type Document = {
+  slug: string;
+  label: string;
+  isDraft: boolean;
+  lastEditedBy?: string;
+  content?: string;
+};
+
 /**
  * 管理画面のドキュメントカテゴリ詳細ページコンポーネント
  */
@@ -52,6 +68,10 @@ export default function DocumentBySlugPage(): JSX.Element {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [currentCategory, setCurrentCategory] = useState<Item | null>(null);
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [documentsLoading, setDocumentsLoading] = useState(true);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -80,73 +100,32 @@ export default function DocumentBySlugPage(): JSX.Element {
   };
 
   useEffect(() => {
-    if (!slug) return;
-
-    // カテゴリ詳細データを取得
-    const getCategoryDetails = async () => {
+    const getDocuments = async () => {
       try {
-        setItemsLoading(true);
-        // スラグが空の場合はルートカテゴリを取得
-        const requestSlug = slug === '' ? 'root' : slug;
-
+        const currentPath = location.pathname;
+        const pathAfterDocuments = currentPath.replace('/documents/', '');
         const response = await apiClient.get(
-          API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_CATEGORY_CONTENTS + '?slug=' + requestSlug
+          `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT}?slug=${pathAfterDocuments}`
         );
 
-        // ここでAPIレスポンスのチェックとデバッグ用コンソール出力を追加
         if (response) {
-          // レスポンスからアイテムを正しく抽出
-          const responseItems = response.items || [];
-
-          // APIレスポンスのデータ構造を変換（titleをlabelに、documentをfileに変換）
-          const convertedItems = responseItems.map((item: any) => {
-            // type変換（documentをfileに、それ以外はそのまま）
-            const convertedType =
-              item.type === 'document' ? 'file' : item.type === 'category' ? 'folder' : item.type;
-
-            // パスからファイル名を抽出して.mdを除去
-            let slug = item.slug || '';
-            if (item.path) {
-              const pathParts = item.path.split('/');
-              const fileName = pathParts[pathParts.length - 1];
-              slug = fileName.replace('.md', '') || slug;
-            }
-
-            return {
-              type: convertedType,
-              slug: slug,
-              label: item.sidebarLabel || item.title || item.label || item.name || '',
-              name: item.name || '',
-              content: item.content || '',
-              isDraft: item.isDraft || false,
-              lastEditedBy: item.lastEditedBy || '',
-              position: item.position,
-              description: item.description,
-            } as Item;
-          });
-
-          setItems(convertedItems);
-
-          // 現在のカテゴリ情報を設定
-          if (response.category) {
-            setCurrentCategory(response.category);
-          }
+          setCategories(response.categories);
+          setDocuments(response.documents);
         }
-        const hasUserDraft = await apiClient.get(
-          API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF || '/admin/documents/git/check-diff'
-        );
+        const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF);
         if (hasUserDraft && hasUserDraft.exists) {
           setShowPrSubmitButton(true);
         }
       } catch (err) {
-        setApiError('カテゴリ詳細の取得に失敗しました');
+        setApiError('ドキュメントの取得に失敗しました');
       } finally {
-        setItemsLoading(false);
+        setCategoriesLoading(false);
+        setDocumentsLoading(false);
       }
     };
 
-    getCategoryDetails();
-  }, [slug]);
+    getDocuments();
+  }, []);
 
   const handleCreateCategoryModal = async () => {
     if (!slug) return;
@@ -273,7 +252,7 @@ export default function DocumentBySlugPage(): JSX.Element {
 
     return (
       <div className="grid grid-cols-2 gap-4">
-        {categories.map((category, index) => (
+        {categories.map((category: Item, index: number) => (
           <Link
             key={index}
             to={`/documents/${slug ? `${slug}/` : ''}${category.slug}`}
@@ -297,9 +276,6 @@ export default function DocumentBySlugPage(): JSX.Element {
       );
     }
 
-    // ドキュメントタイプのアイテムのみをフィルタリング
-    const documents = items.filter(item => item.type === 'file');
-
     return (
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y">
@@ -321,7 +297,7 @@ export default function DocumentBySlugPage(): JSX.Element {
           </thead>
           {documents.length > 0 ? (
             <tbody className="divide-y">
-              {documents.map((document, index) => (
+              {documents.map((document: Document, index: number) => (
                 <tr key={index} className="hover:bg-gray-800">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

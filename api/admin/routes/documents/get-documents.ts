@@ -122,7 +122,7 @@ const getCategoryId = async (categoryPath: string[]): Promise<number | null> => 
     return await queries.getDefaultCategory();
   }
 
-  let parentId: number | null = null;
+  let parentId: number = 1;
   let currentCategoryId: number | null = null;
 
   for (const slug of categoryPath) {
@@ -150,27 +150,27 @@ router.get('/', async (req: Request, res: Response) => {
       });
     }
 
+    // クエリパラメータからslugを取得
+    const slugParam = (req.query.slug as string) || '';
+
     // カテゴリパスの取得と処理
-    const requestPath = req.params[0] || '';
-    const categoryPath = requestPath.split('/').filter(segment => segment.length > 0);
+    const categoryPath = slugParam.split('/').filter(segment => segment.length > 0);
+
     const currentCategoryId = await getCategoryId(categoryPath);
 
-    console.log('currentCategoryId', currentCategoryId);
-
-        // アクティブなブランチを取得
+    // アクティブなブランチを取得
     const activeBranch = await db.execute({
       sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = ? AND pr_status = ?',
       args: [loginUser.userId, 1, 'none'],
     });
 
-        let userBranchId;
-        if (activeBranch.rows.length > 0) {
-          userBranchId = activeBranch.rows[0]?.id;
-        } else {
-          userBranchId = null;
-        }
+    let userBranchId;
+    if (activeBranch.rows.length > 0) {
+      userBranchId = activeBranch.rows[0]?.id;
+    } else {
+      userBranchId = null;
+    }
 
-    console.log('userBranchId', userBranchId);
     // データ取得
     const [subCategories, documents] = await Promise.all([
       queries.getSubCategories(currentCategoryId),

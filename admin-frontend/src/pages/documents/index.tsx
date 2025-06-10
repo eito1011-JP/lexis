@@ -21,6 +21,7 @@ type DocumentItem = {
   status: string;
   lastEditedBy: string | null;
   position?: number;
+  fileOrder?: number;
 };
 
 /**
@@ -76,7 +77,6 @@ export default function DocumentsPage(): JSX.Element {
   };
 
   useEffect(() => {
-    // カテゴリ一覧を取得
     const getDocuments = async () => {
       try {
         const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);

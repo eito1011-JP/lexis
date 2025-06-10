@@ -37,7 +37,12 @@ const validateUpdateRequest = (data: Partial<UpdateDocumentRequest>): string | n
     return 'slugは英小文字、数字、ハイフンのみ使用できます';
   }
 
-  if (data.fileOrder && (!Number.isInteger(Number(data.fileOrder)) || !isFinite(Number(data.fileOrder)) || Number(data.fileOrder) < 1)) {
+  if (
+    data.fileOrder &&
+    (!Number.isInteger(Number(data.fileOrder)) ||
+      !isFinite(Number(data.fileOrder)) ||
+      Number(data.fileOrder) < 1)
+  ) {
     return '表示順序は1以上の有効な整数で入力してください';
   }
 
@@ -53,7 +58,7 @@ const dbOperations = {
     });
     const row = result.rows[0];
     if (!row) return null;
-    
+
     return {
       id: Number(row.id),
       file_path: String(row.file_path),
@@ -62,7 +67,7 @@ const dbOperations = {
       sidebar_label: String(row.sidebar_label),
       file_order: Number(row.file_order),
       is_public: Boolean(row.is_public),
-      category_id: String(row.category_id)
+      category_id: String(row.category_id),
     };
   },
 
@@ -84,10 +89,10 @@ const dbOperations = {
 
   // 新しい位置から元の位置までの範囲のドキュメントを取得
   getDocumentsToShift: async (
-    categoryId: string, 
-    newFileOrder: number, 
-    oldFileOrder: number, 
-    userBranchId: number, 
+    categoryId: string,
+    newFileOrder: number,
+    oldFileOrder: number,
+    userBranchId: number,
     excludeId: number
   ) => {
     let sql: string;
@@ -115,10 +120,10 @@ const dbOperations = {
   },
 
   updateDocumentFileOrders: async (
-    documentsToUpdate: any[], 
-    userId: number, 
-    userBranchId: number, 
-    email: string, 
+    documentsToUpdate: any[],
+    userId: number,
+    userBranchId: number,
+    email: string,
     categoryId: string,
     isMovingUp: boolean
   ) => {
@@ -128,14 +133,14 @@ const dbOperations = {
     const insertValues = [];
     const placeholders = [];
 
-    documentsToUpdate.forEach((doc) => {
+    documentsToUpdate.forEach(doc => {
       placeholders.push(`(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-      
+
       // 移動方向に応じてfile_orderを調整
-      const newFileOrder = isMovingUp ? 
-        Number(doc.file_order) + 1 :  // 上に移動：既存レコードのfile_orderを+1
-        Number(doc.file_order) - 1;   // 下に移動：既存レコードのfile_orderを-1
-      
+      const newFileOrder = isMovingUp
+        ? Number(doc.file_order) + 1 // 上に移動：既存レコードのfile_orderを+1
+        : Number(doc.file_order) - 1; // 下に移動：既存レコードのfile_orderを-1
+
       insertValues.push(
         userId,
         userBranchId,
@@ -150,12 +155,12 @@ const dbOperations = {
         now,
         0,
         doc.is_public,
-        doc.category_id,
+        doc.category_id
       );
     });
 
     const idsToDelete = documentsToUpdate.map(row => row.id);
-    
+
     // 既存レコードを論理削除
     await db.execute({
       sql: `UPDATE document_versions SET is_deleted = 1 WHERE id IN (${idsToDelete.map(() => '?').join(',')})`,
@@ -202,10 +207,10 @@ const dbOperations = {
         now,
         0,
         updateData.isPublic ? 1 : 0,
-        String(categoryId)
+        String(categoryId),
       ],
     });
-  }
+  },
 };
 
 const router = Router();
@@ -272,10 +277,10 @@ router.put('/', async (req: Request, res: Response) => {
             userBranchId,
             updateData.id
           );
-          
+
           console.log('documentsToShift', documentsToShift.rows);
           console.log('documentsToShift.length', documentsToShift.rows.length);
-          
+
           if (documentsToShift.rows.length > 0) {
             const isMovingUp = newFileOrder < oldFileOrder;
             await dbOperations.updateDocumentFileOrders(
