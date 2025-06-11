@@ -3,6 +3,7 @@ import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import { db } from '@site/src/lib/db';
 import { getAuthenticatedUser } from '../../utils/auth';
 import { initBranchSnapshot } from '../../utils/git';
+import { updateDocumentFileOrders } from '../../../utils/update-file-order';
 
 // 型定義
 interface UpdateDocumentRequest {
@@ -119,65 +120,6 @@ const dbOperations = {
     return await db.execute({ sql, args });
   },
 
-  updateDocumentFileOrders: async (
-    documentsToUpdate: any[],
-    userId: number,
-    userBranchId: number,
-    email: string,
-    categoryId: string,
-    isMovingUp: boolean
-  ) => {
-    if (documentsToUpdate.length === 0) return;
-
-    const now = new Date().toISOString();
-    const insertValues = [];
-    const placeholders = [];
-
-    documentsToUpdate.forEach(doc => {
-      placeholders.push(`(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-
-      // 移動方向に応じてfile_orderを調整
-      const newFileOrder = isMovingUp
-        ? Number(doc.file_order) + 1 // 上に移動：既存レコードのfile_orderを+1
-        : Number(doc.file_order) - 1; // 下に移動：既存レコードのfile_orderを-1
-
-      insertValues.push(
-        userId,
-        userBranchId,
-        doc.file_path,
-        'draft',
-        doc.content,
-        doc.slug,
-        doc.sidebar_label,
-        newFileOrder,
-        email,
-        now,
-        now,
-        0,
-        doc.is_public,
-        doc.category_id
-      );
-    });
-
-    const idsToDelete = documentsToUpdate.map(row => row.id);
-
-    // 既存レコードを論理削除
-    await db.execute({
-      sql: `UPDATE document_versions SET is_deleted = 1 WHERE id IN (${idsToDelete.map(() => '?').join(',')})`,
-      args: idsToDelete,
-    });
-
-    // 新しいレコードを挿入
-    await db.execute({
-      sql: `INSERT INTO document_versions (
-              user_id, user_branch_id, file_path, status, content, slug,
-              sidebar_label, file_order, last_edited_by, created_at, updated_at,
-              is_deleted, is_public, category_id
-            ) VALUES ${placeholders.join(', ')}`,
-      args: insertValues,
-    });
-  },
-
   createNewDocumentVersion: async (
     userId: number,
     userBranchId: number,
@@ -283,12 +225,21 @@ router.put('/', async (req: Request, res: Response) => {
 
           if (documentsToShift.rows.length > 0) {
             const isMovingUp = newFileOrder < oldFileOrder;
-            await dbOperations.updateDocumentFileOrders(
-              documentsToShift.rows,
+            const documentsToUpdate = documentsToShift.rows.map(row => ({
+              id: Number(row.id),
+              file_order: Number(row.file_order),
+              file_path: String(row.file_path),
+              content: String(row.content),
+              slug: String(row.slug),
+              sidebar_label: String(row.sidebar_label),
+              is_public: Boolean(row.is_public),
+              category_id: String(row.category_id)
+            }));
+            await updateDocumentFileOrders(
+              documentsToUpdate,
               loginUser.userId,
               userBranchId,
               loginUser.email,
-              categoryId,
               isMovingUp
             );
           }
