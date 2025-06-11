@@ -1,10 +1,9 @@
 import express, { Request, Response } from 'express';
 import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
-import fs from 'fs';
-import path from 'path';
 import { getAuthenticatedUser } from '../../utils/auth';
-import { checkUserDraft, initBranchSnapshot } from '../../utils/git';
+import { initBranchSnapshot } from '../../utils/git';
 import { db } from '@site/src/lib/db';
+import { getCategoryIdByPath } from '@site/src/utils/category';
 
 // Request型の拡張
 declare global {
@@ -87,12 +86,6 @@ router.post('/create-category', async (req: Request, res: Response) => {
       });
     }
 
-    if (!Array.isArray(categoryPath)) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        error: 'categoryPath must be an array',
-      });
-    }
-
     // ログインユーザーを取得
     const loginUser = await getAuthenticatedUser(sessionId);
 
@@ -122,30 +115,13 @@ router.post('/create-category', async (req: Request, res: Response) => {
       userBranchId = newBranch.rows[0].id;
     }
 
-    // カテゴリパスの処理
-    let parentId = 1;
-    for (const slug of categoryPath) {
-      const result = await db.execute({
-        sql: `SELECT id FROM document_categories 
-              WHERE slug = ? AND parent_id IS ? 
-              ORDER BY id DESC LIMIT 1`,
-        args: [slug, parentId],
-      });
+    const belongedCategroy = await getCategoryIdByPath(categoryPath);
 
-      if (result.rows.length === 0) {
-        return res.status(HTTP_STATUS.NOT_FOUND).json({
-          error: '指定されたカテゴリパスが存在しません',
-        });
-      }
-
-      parentId = Number(result.rows[0].id);
-    }
-
-    // カテゴリの重複チェック
+    // // カテゴリの重複チェック
     const existingCategory = await db.execute({
       sql: `SELECT id FROM document_categories 
             WHERE slug = ? AND parent_id IS ?`,
-      args: [slug, parentId],
+      args: [slug, belongedCategroy],
     });
 
     if (existingCategory.rows.length > 0) {
@@ -168,7 +144,7 @@ router.post('/create-category', async (req: Request, res: Response) => {
         description,
         loginUser.email,
         userBranchId,
-        parentId,
+        belongedCategroy,
         now,
         now,
         0,

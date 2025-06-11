@@ -39,16 +39,16 @@ const validateUpdateRequest = (data: Partial<UpdateDocumentRequest>): string | n
   }
 
   if (
-    data.fileOrder != null &&  // null/undefined チェックのみ
+    data.fileOrder != null && // null/undefined チェックのみ
     (!Number.isInteger(Number(data.fileOrder)) ||
-     !isFinite(Number(data.fileOrder)) ||
-     Number(data.fileOrder) < 1)
+      !isFinite(Number(data.fileOrder)) ||
+      Number(data.fileOrder) < 1)
   ) {
     return '表示順序は1以上の有効な整数で入力してください';
   }
 
   return null;
-}
+};
 
 // データベース操作関数
 const dbOperations = {

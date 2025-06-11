@@ -167,10 +167,10 @@ export default function DocumentBySlugPage(): JSX.Element {
 
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_FOLDER, {
         slug: categorySlug,
-        label,
+        sidebarLabel: label,
         position: positionNum,
         description,
-        parent: slug, // 親カテゴリのスラグを指定
+        categoryPath: slug ? [slug] : [], // 親カテゴリのパスを追加
       });
 
       // 新しいカテゴリをリストに追加
