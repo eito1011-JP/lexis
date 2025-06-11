@@ -6,6 +6,7 @@ import { initBranchSnapshot } from '../../utils/git';
 import path from 'path';
 import fs from 'fs';
 import TurndownService from 'turndown';
+import { getCategoryIdFromPath } from '@site/api/utils/document-category';
 
 const router = Router();
 
@@ -29,7 +30,10 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    const { category, label, content, isPublic, reviewerEmail, slug, fileOrder } = req.body;
+    const { category, label, content, isPublic, slug, fileOrder } = req.body;
+
+    // categoryのslugから階層を特定
+    const belongedCategoryId = await getCategoryIdFromPath(category);
 
     // 2. バリデーション
     if (!label || !content || !slug) {
@@ -112,9 +116,8 @@ router.post('/', async (req: Request, res: Response) => {
       userBranchId = newBranch.rows[0].id;
     }
 
-    // 7. データベースに保存
     await db.execute({
-      sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, file_order, last_edited_by, last_reviewed_by, created_at, updated_at, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, file_order, last_edited_by, category_id, created_at, updated_at, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         loginUser.userId,
         userBranchId,
@@ -126,7 +129,7 @@ router.post('/', async (req: Request, res: Response) => {
         label,
         correctedFileOrder,
         loginUser.email,
-        reviewerEmail,
+        belongedCategoryId,
         now,
         now,
         isPublic,

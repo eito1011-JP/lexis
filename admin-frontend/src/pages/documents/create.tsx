@@ -22,24 +22,15 @@ export default function CreateDocumentPage(): JSX.Element {
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
-  const [reviewer, setReviewer] = useState('');
   const [folders, setFolders] = useState<string[]>([]);
   const [foldersLoading, setFoldersLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [slug, setSlug] = useState('');
   const [fileOrder, setFileOrder] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [reviewerEmail, setReviewerEmail] = useState('');
-  const [categories, setCategories] = useState<any[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
-  const [showReviewerModal, setShowReviewerModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
-  const [reviewerName, setReviewerName] = useState('');
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -142,7 +133,6 @@ export default function CreateDocumentPage(): JSX.Element {
         label,
         content,
         isPublic: publicOption === '公開する',
-        reviewerEmail: reviewer || null,
         slug,
         fileOrder,
       });
@@ -153,7 +143,6 @@ export default function CreateDocumentPage(): JSX.Element {
         label,
         content,
         isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
-        reviewerEmail: reviewer || null, // レビュー担当者のメールアドレス
         slug,
         fileOrder,
       });
@@ -169,27 +158,6 @@ export default function CreateDocumentPage(): JSX.Element {
       console.error('ドキュメント作成エラー:', error);
       const apiError = error as ApiError;
       alert(`ドキュメントの作成に失敗しました: ${apiError.message || '不明なエラー'}`);
-    }
-  };
-
-  // レビュー担当者選択ハンドラー
-  const handleSelectReviewer = (user: User) => {
-    setReviewer(user.email);
-    setReviewerName(user.email);
-    setShowReviewerModal(false);
-  };
-
-  // モーダルを開く時にユーザー一覧を再取得する
-  const handleOpenReviewerModal = async () => {
-    setShowReviewerModal(true);
-    try {
-      const response = await apiClient.get(API_CONFIG.ENDPOINTS.USERS.GET_ALL);
-      if (response.users && response.users.length > 0) {
-        setUsers(response.users);
-        setFilteredUsers(response.users);
-      }
-    } catch (err) {
-      console.error('ユーザー取得エラー:', err);
     }
   };
 
@@ -295,30 +263,6 @@ export default function CreateDocumentPage(): JSX.Element {
             </div>
           </div>
 
-          <div className="mb-6">
-            <label className="block mb-2 font-bold">レビュー担当者</label>
-            <div
-              className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white cursor-pointer flex justify-between items-center"
-              onClick={handleOpenReviewerModal}
-            >
-              <span>{reviewerName || 'レビュー担当者を選択'}</span>
-              <svg
-                className="w-5 h-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 9l-7 7-7-7"
-                ></path>
-              </svg>
-            </div>
-          </div>
-
           <div className="gap-6 mt-8">
             <div>
               <label className="block mb-2 font-bold">本文</label>
@@ -343,54 +287,6 @@ export default function CreateDocumentPage(): JSX.Element {
           </div>
         </div>
       </div>
-
-      {/* レビュー担当者選択モーダル */}
-      {showReviewerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">レビュー担当者を選択</h2>
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="ユーザーを検索..."
-                className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="max-h-60 overflow-y-auto mb-4">
-              {filteredUsers.length > 0 ? (
-                filteredUsers.map(user => (
-                  <div
-                    key={user.id}
-                    className="p-2 hover:bg-gray-800 rounded cursor-pointer flex items-center"
-                    onClick={() => handleSelectReviewer(user)}
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-2">
-                      {user.email.charAt(0).toUpperCase()}
-                    </div>
-                    <span>{user.email}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-400">
-                  {searchQuery ? '検索結果がありません' : 'ユーザーを読み込み中...'}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
-                onClick={() => setShowReviewerModal(false)}
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   );
 }

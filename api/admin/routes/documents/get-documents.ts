@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { HTTP_STATUS, API_ERRORS } from '../../../const/errors';
 import { sessionService } from '../../../../src/services/sessionService';
 import { db } from '../../../../src/lib/db';
+import { getCategoryIdFromPath } from '../../../utils/document-category';
 
 // 型定義
 interface DocumentResponse {
@@ -21,12 +22,6 @@ interface CategoryResponse {
 interface GetDocumentsResponse {
   documents: DocumentResponse[];
   categories: CategoryResponse[];
-}
-
-interface Category {
-  id: number;
-  slug: string;
-  sidebar_label: string;
 }
 
 // Request型の拡張
@@ -116,28 +111,6 @@ const transformers = {
   }),
 };
 
-// カテゴリID取得ロジック
-const getCategoryId = async (categoryPath: string[]): Promise<number | null> => {
-  if (categoryPath.length === 0) {
-    return await queries.getDefaultCategory();
-  }
-
-  let parentId: number = 1;
-  let currentCategoryId: number | null = null;
-
-  for (const slug of categoryPath) {
-    const categoryId = await queries.getCategoryBySlug(slug, parentId);
-    if (categoryId) {
-      parentId = categoryId;
-      currentCategoryId = categoryId;
-    } else {
-      return await queries.getDefaultCategory();
-    }
-  }
-
-  return currentCategoryId;
-};
-
 router.get('/', async (req: Request, res: Response) => {
   try {
     // 認証チェック
@@ -156,7 +129,7 @@ router.get('/', async (req: Request, res: Response) => {
     // カテゴリパスの取得と処理
     const categoryPath = slugParam.split('/').filter(segment => segment.length > 0);
 
-    const currentCategoryId = await getCategoryId(categoryPath);
+    const currentCategoryId = await getCategoryIdFromPath(categoryPath);
 
     // アクティブなブランチを取得
     const activeBranch = await db.execute({
