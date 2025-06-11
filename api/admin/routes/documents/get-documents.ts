@@ -56,15 +56,16 @@ const queries = {
     return result.rows[0]?.id ? Number(result.rows[0].id) : null;
   },
 
-  getSubCategories: async (categoryId: number | null) => {
+  getSubCategories: async (categoryId: number | null, userBranchId: number | null) => {
     const result = await db.execute({
       sql: `
         SELECT slug, sidebar_label
         FROM document_categories
         WHERE parent_id = ?
+          AND user_branch_id = ?
         ORDER BY position ASC
       `,
-      args: [categoryId],
+      args: [categoryId, userBranchId],
     });
     return result.rows;
   },
@@ -146,7 +147,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     // データ取得
     const [subCategories, documents] = await Promise.all([
-      queries.getSubCategories(currentCategoryId),
+      queries.getSubCategories(currentCategoryId, userBranchId),
       queries.getDocuments(currentCategoryId, userBranchId),
     ]);
 
