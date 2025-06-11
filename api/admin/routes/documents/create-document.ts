@@ -56,13 +56,13 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // 3. ファイルパスの重複チェック
-    const targetDir = category
-      ? path.join(process.cwd(), 'docs', category)
-      : path.join(process.cwd(), 'docs');
-    const targetFile = path.join(targetDir, `${slug}.md`);
+    // 3. 同じカテゴリ内でのslug重複チェック
+    const existingDocument = await db.execute({
+      sql: `SELECT id FROM document_versions WHERE category_id = ? AND slug = ? AND is_deleted = 0`,
+      args: [belongedCategoryId, slug],
+    });
 
-    if (fs.existsSync(targetFile)) {
+    if (existingDocument.rows.length > 0) {
       return res.status(HTTP_STATUS.CONFLICT).json({
         error: '同じカテゴリ内に同じslugのドキュメントが既に存在します',
       });
@@ -116,12 +116,18 @@ router.post('/', async (req: Request, res: Response) => {
       userBranchId = newBranch.rows[0].id;
     }
 
+    // 7. ファイルパスの生成
+    const targetDir = category
+      ? path.join(process.cwd(), 'docs', category)
+      : path.join(process.cwd(), 'docs');
+    const filePath = path.join(targetDir, `${slug}.md`);
+
     await db.execute({
       sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, file_order, last_edited_by, category_id, created_at, updated_at, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         loginUser.userId,
         userBranchId,
-        targetFile,
+        filePath,
         'draft',
         markdownContent,
         slug,
