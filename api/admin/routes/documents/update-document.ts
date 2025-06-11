@@ -233,7 +233,7 @@ router.put('/', async (req: Request, res: Response) => {
               slug: String(row.slug),
               sidebar_label: String(row.sidebar_label),
               is_public: Boolean(row.is_public),
-              category_id: String(row.category_id)
+              category_id: String(row.category_id),
             }));
             await updateDocumentFileOrders(
               documentsToUpdate,

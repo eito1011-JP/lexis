@@ -26,7 +26,7 @@ type Item = {
 
 type Category = {
   slug: string;
-  label: string;
+  sidebarLabel: string;
   position?: number;
   description?: string;
   isDraft: boolean;
@@ -34,10 +34,11 @@ type Category = {
 
 type Document = {
   slug: string;
-  label: string;
-  isDraft: boolean;
-  lastEditedBy?: string;
-  content?: string;
+  sidebarLabel: string;
+  isPublic: boolean;
+  status: string;
+  lastEditedBy: string | null;
+  fileOrder: number | null;
 };
 
 /**
@@ -235,7 +236,7 @@ export default function DocumentBySlugPage(): JSX.Element {
 
   // カテゴリセクション
   const renderContentsSection = () => {
-    if (itemsLoading) {
+    if (categoriesLoading) {
       return (
         <div className="flex justify-center py-6">
           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
@@ -243,23 +244,20 @@ export default function DocumentBySlugPage(): JSX.Element {
       );
     }
 
-    // カテゴリタイプのアイテムのみをフィルタリング
-    const categories = items.filter(item => item.type === 'folder');
-
     if (categories.length === 0) {
       return <p className="text-gray-400 py-4">カテゴリがありません</p>;
     }
 
     return (
       <div className="grid grid-cols-2 gap-4">
-        {categories.map((category: Item, index: number) => (
+        {categories.map((category, index) => (
           <Link
             key={index}
             to={`/documents/${slug ? `${slug}/` : ''}${category.slug}`}
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
             <Folder className="w-5 h-5 mr-2" />
-            <span className="text-white hover:underline">{category.label}</span>
+            <span className="text-white hover:underline">{category.sidebarLabel}</span>
           </Link>
         ))}
       </div>
@@ -268,7 +266,7 @@ export default function DocumentBySlugPage(): JSX.Element {
 
   // ドキュメント一覧テーブル
   const renderDocumentTable = () => {
-    if (itemsLoading) {
+    if (documentsLoading) {
       return (
         <div className="flex justify-center py-6">
           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
@@ -285,10 +283,16 @@ export default function DocumentBySlugPage(): JSX.Element {
                 タイトル
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                公開ステータス
+                作業ステータス
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                 最終編集者
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                公開ステータス
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                表示順序
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                 アクション
@@ -297,28 +301,50 @@ export default function DocumentBySlugPage(): JSX.Element {
           </thead>
           {documents.length > 0 ? (
             <tbody className="divide-y">
-              {documents.map((document: Document, index: number) => (
+              {documents.map((document, index) => (
                 <tr key={index} className="hover:bg-gray-800">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-white">{document.label}</div>
+                        <div className="text-sm font-medium text-white">
+                          {document.sidebarLabel}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        document.isDraft === true
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
+                        document.status === 'draft'
+                          ? 'bg-blue-100 text-blue-800'
+                          : document.status === 'pushed'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-green-100 text-green-800'
                       }`}
                     >
-                      {document.isDraft === true ? '非公開' : '公開'}
+                      {document.status === 'draft'
+                        ? '編集中'
+                        : document.status === 'pushed'
+                          ? 'レビュー中'
+                          : '完了'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.lastEditedBy}
+                    {document.lastEditedBy || '未設定'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        document.isPublic
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {document.isPublic ? '公開' : '非公開'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {document.fileOrder !== null ? document.fileOrder : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <Link
@@ -335,7 +361,7 @@ export default function DocumentBySlugPage(): JSX.Element {
           ) : (
             <tbody className="divide-y">
               <tr>
-                <td colSpan={5} className="text-gray-400 py-4">
+                <td colSpan={6} className="text-gray-400 py-4">
                   ドキュメントがありません
                 </td>
               </tr>

@@ -30,7 +30,9 @@ export const getCategoryIdBySlug = async (
  * @param categoryPath カテゴリパスの配列（例: ['category1', 'subcategory1']）
  * @returns カテゴリID、見つからない場合はデフォルトカテゴリID
  */
-export const getCategoryIdFromPath = async (categoryPath: string[] | string): Promise<number | null> => {
+export const getCategoryIdFromPath = async (
+  categoryPath: string[] | string
+): Promise<number | null> => {
   // 文字列の場合は配列に変換
   const pathArray = Array.isArray(categoryPath) ? categoryPath : [categoryPath];
 
