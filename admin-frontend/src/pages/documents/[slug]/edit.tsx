@@ -250,7 +250,7 @@ export default function EditDocumentPage(): JSX.Element {
               }}
               className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
               placeholder="表示順序を入力してください"
-              min="0"
+              min="1"
             />
           </div>
 

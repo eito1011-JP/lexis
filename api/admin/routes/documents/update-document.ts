@@ -39,16 +39,16 @@ const validateUpdateRequest = (data: Partial<UpdateDocumentRequest>): string | n
   }
 
   if (
-    data.fileOrder &&
+    data.fileOrder != null &&  // null/undefined チェックのみ
     (!Number.isInteger(Number(data.fileOrder)) ||
-      !isFinite(Number(data.fileOrder)) ||
-      Number(data.fileOrder) < 1)
+     !isFinite(Number(data.fileOrder)) ||
+     Number(data.fileOrder) < 1)
   ) {
     return '表示順序は1以上の有効な整数で入力してください';
   }
 
   return null;
-};
+}
 
 // データベース操作関数
 const dbOperations = {
@@ -126,7 +126,8 @@ const dbOperations = {
     existingDoc: DocumentVersion,
     updateData: UpdateDocumentRequest,
     finalFileOrder: number,
-    categoryId: string
+    categoryId: string,
+    loginUserEmail: string
   ) => {
     const now = new Date().toISOString();
     await db.execute({
@@ -144,7 +145,7 @@ const dbOperations = {
         String(updateData.slug),
         String(updateData.label),
         Number(finalFileOrder),
-        String(updateData.email),
+        loginUserEmail,
         now,
         now,
         0,
@@ -259,7 +260,8 @@ router.put('/', async (req: Request, res: Response) => {
         existingDoc,
         updateData,
         Number(finalFileOrder),
-        categoryId
+        categoryId,
+        loginUser.email
       );
 
       // 8. 成功レスポンス
