@@ -8,7 +8,7 @@ interface DocumentToUpdate {
   slug: string;
   sidebar_label: string;
   is_public: boolean;
-  category_id: string;
+  category_id: number;
 }
 
 export const updateDocumentFileOrders = async (

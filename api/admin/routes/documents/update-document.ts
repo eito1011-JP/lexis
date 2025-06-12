@@ -25,7 +25,7 @@ interface DocumentVersion {
   sidebar_label: string;
   file_order: number;
   is_public: boolean;
-  category_id: string;
+  category_id: number;
 }
 
 // バリデーション関数
@@ -68,7 +68,7 @@ const dbOperations = {
       sidebar_label: String(row.sidebar_label),
       file_order: Number(row.file_order),
       is_public: Boolean(row.is_public),
-      category_id: String(row.category_id),
+      category_id: Number(row.category_id),
     };
   },
 
@@ -80,7 +80,7 @@ const dbOperations = {
     return result.rows[0]?.id ? Number(result.rows[0].id) : null;
   },
 
-  getMaxFileOrder: async (categoryId: string): Promise<number> => {
+  getMaxFileOrder: async (categoryId: number): Promise<number> => {
     const result = await db.execute({
       sql: 'SELECT MAX(file_order) as max_order FROM document_versions WHERE category_id = ? AND status = ? AND is_deleted = ?',
       args: [categoryId, 'merged', 0],
@@ -90,7 +90,7 @@ const dbOperations = {
 
   // 新しい位置から元の位置までの範囲のドキュメントを取得
   getDocumentsToShift: async (
-    categoryId: string,
+    categoryId: number,
     newFileOrder: number,
     oldFileOrder: number,
     userBranchId: number,
@@ -126,7 +126,7 @@ const dbOperations = {
     existingDoc: DocumentVersion,
     updateData: UpdateDocumentRequest,
     finalFileOrder: number,
-    categoryId: string,
+    categoryId: number,
     loginUserEmail: string
   ) => {
     const now = new Date().toISOString();
@@ -150,7 +150,7 @@ const dbOperations = {
         now,
         0,
         updateData.isPublic ? 1 : 0,
-        String(categoryId),
+        Number(categoryId),
       ],
     });
   },
@@ -202,7 +202,7 @@ router.put('/', async (req: Request, res: Response) => {
 
     try {
       // 5. file_orderの処理
-      const categoryId = updateData.category === '' ? '1' : updateData.category;
+      const categoryId = existingDoc.category_id;
       let finalFileOrder = updateData.fileOrder;
 
       if (updateData.fileOrder === '') {
@@ -221,9 +221,6 @@ router.put('/', async (req: Request, res: Response) => {
             updateData.id
           );
 
-          console.log('documentsToShift', documentsToShift.rows);
-          console.log('documentsToShift.length', documentsToShift.rows.length);
-
           if (documentsToShift.rows.length > 0) {
             const isMovingUp = newFileOrder < oldFileOrder;
             const documentsToUpdate = documentsToShift.rows.map(row => ({
@@ -234,7 +231,7 @@ router.put('/', async (req: Request, res: Response) => {
               slug: String(row.slug),
               sidebar_label: String(row.sidebar_label),
               is_public: Boolean(row.is_public),
-              category_id: String(row.category_id),
+              category_id: Number(row.category_id),
             }));
             await updateDocumentFileOrders(
               documentsToUpdate,
@@ -260,7 +257,7 @@ router.put('/', async (req: Request, res: Response) => {
         existingDoc,
         updateData,
         Number(finalFileOrder),
-        categoryId,
+        Number(categoryId),
         loginUser.email
       );
 
