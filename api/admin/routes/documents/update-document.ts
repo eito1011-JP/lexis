@@ -205,7 +205,7 @@ router.put('/', async (req: Request, res: Response) => {
       const categoryId = existingDoc.category_id;
       let finalFileOrder = updateData.fileOrder;
 
-      if (updateData.fileOrder === '') {
+      if (updateData.fileOrder === '' || updateData.fileOrder === null || updateData.fileOrder === undefined) {
         finalFileOrder = await dbOperations.getMaxFileOrder(categoryId);
       } else {
         const newFileOrder = Number(updateData.fileOrder);
