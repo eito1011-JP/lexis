@@ -251,14 +251,16 @@ export default function DocumentBySlugPage(): JSX.Element {
     return (
       <div className="grid grid-cols-2 gap-4">
         {categories.map((category, index) => (
-          <Link
+          <div
             key={index}
-            to={`/documents/${slug ? `${slug}/` : ''}${category.slug}`}
+            onClick={() => {
+              window.location.href = `/admin/documents/${slug ? `${slug}/` : ''}${category.slug}`;
+            }}
             className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
             <Folder className="w-5 h-5 mr-2" />
             <span className="text-white hover:underline">{category.sidebarLabel}</span>
-          </Link>
+          </div>
         ))}
       </div>
     );
@@ -382,14 +384,19 @@ export default function DocumentBySlugPage(): JSX.Element {
 
     return (
       <div className="flex items-center text-sm text-gray-400 mb-4">
-        <Link to="/documents" className="hover:text-white">
+        <div
+          onClick={() => {
+            window.location.href = '/admin/documents';
+          }}
+          className="hover:text-white"
+        >
           <Home className="w-4 h-4 mx-2" />
-        </Link>
+        </div>
         {/* スラグの各部分に対してパンくずを生成 */}
         {slugParts.map((part, index) => {
           // パスを構築（現在までの部分）
           currentPath += (index === 0 ? '' : '/') + part;
-          const path = `/documents/${currentPath}`;
+          const path = `/admin/documents/${currentPath}`;
 
           return (
             <React.Fragment key={index}>
@@ -412,9 +419,14 @@ export default function DocumentBySlugPage(): JSX.Element {
               {index === slugParts.length - 1 ? (
                 <span className="text-white">{part}</span>
               ) : (
-                <Link to={path} className="hover:text-white">
+                <div
+                  onClick={() => {
+                    window.location.href = path;
+                  }}
+                  className="hover:text-white"
+                >
                   {part}
-                </Link>
+                </div>
               )}
             </React.Fragment>
           );
