@@ -74,6 +74,8 @@ export default function DocumentBySlugPage(): JSX.Element {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
+  const handleCloseMenu = () => setOpenMenuIndex(null);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -264,8 +266,8 @@ export default function DocumentBySlugPage(): JSX.Element {
               <Folder className="w-5 h-5 mr-2" />
               <span className="text-white hover:underline">{category.sidebarLabel}</span>
             </div>
-            <div 
-              onClick={(e) => {
+            <div
+              onClick={e => {
                 e.stopPropagation();
               }}
             >
@@ -360,14 +362,47 @@ export default function DocumentBySlugPage(): JSX.Element {
                     {document.fileOrder !== null ? document.fileOrder : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end">
-                      <Link
-                        to={`/documents/${slug ? `${slug}/` : ''}${document.slug}/edit`}
-                        className="text-indigo-400 hover:text-indigo-300 mr-4"
+                    <div className="flex items-center justify-end relative">
+                      <button
+                        className="focus:outline-none"
+                        onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
                       >
-                        編集
-                      </Link>
-                      <ThreeDots className="w-4 h-4" />
+                        <ThreeDots className="w-4 h-4" />
+                      </button>
+                      {openMenuIndex === index && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={handleCloseMenu} />
+                          <div
+                            className="absolute right-0 top-full mt-2 w-40 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
+                            style={{ zIndex: 100 }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <ul className="py-1">
+                              <li>
+                                <Link
+                                  to={`/documents/${slug ? `${slug}/` : ''}${document.slug}/edit`}
+                                  className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer text-left"
+                                  style={{ textAlign: 'left' }}
+                                >
+                                  編集する
+                                </Link>
+                              </li>
+                              <li>
+                                <button
+                                  className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 cursor-pointer"
+                                  style={{ textAlign: 'left' }}
+                                  onClick={() => {
+                                    alert('削除機能は未実装です');
+                                    handleCloseMenu();
+                                  }}
+                                >
+                                  削除する
+                                </button>
+                              </li>
+                            </ul>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
