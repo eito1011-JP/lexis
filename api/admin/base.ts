@@ -15,6 +15,7 @@ import documentGitCheckDiffRouter from './routes/documents/git/check-diff';
 import { getDocumentsRouter } from './routes/documents/get-documents';
 import { getDocumentBySlugRouter } from './routes/documents/get-document-by-slug';
 import { updateDocumentRouter } from './routes/documents/update-document';
+import { deleteDocumentRouter } from './routes/documents/delete-document';
 
 // Expressアプリの初期化
 const app = express();
@@ -43,6 +44,7 @@ app.use('/api/admin/documents', getCategoryContentsRouter);
 app.use('/api/admin/documents', getDocumentsRouter);
 app.use('/api/admin/documents', getDocumentBySlugRouter);
 app.use('/api/admin/documents', updateDocumentRouter);
+app.use('/api/admin/documents', deleteDocumentRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
 

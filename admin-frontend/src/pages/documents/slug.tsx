@@ -76,6 +76,10 @@ export default function DocumentBySlugPage(): JSX.Element {
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const handleCloseMenu = () => setOpenMenuIndex(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -225,6 +229,49 @@ export default function DocumentBySlugPage(): JSX.Element {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // ドキュメント削除のハンドラー
+  const handleDeleteDocument = async () => {
+    if (!documentToDelete) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE_DOCUMENT, {
+        body: JSON.stringify({ slug: documentToDelete.slug }),
+      });
+
+      if (response.success) {
+        // ドキュメント一覧から削除されたドキュメントを除去
+        setDocuments(prev => prev.filter(doc => doc.slug !== documentToDelete.slug));
+        setShowDeleteModal(false);
+        setDocumentToDelete(null);
+        setSubmitSuccess('ドキュメントが削除されました');
+      } else {
+        setDeleteError(response.message || 'ドキュメントの削除に失敗しました');
+      }
+    } catch (err) {
+      console.error('ドキュメント削除エラー:', err);
+      setDeleteError('ドキュメントの削除中にエラーが発生しました');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // 削除確認モーダルを開く
+  const openDeleteModal = (document: Document) => {
+    setDocumentToDelete(document);
+    setShowDeleteModal(true);
+    setOpenMenuIndex(null);
+  };
+
+  // 削除確認モーダルを閉じる
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDocumentToDelete(null);
+    setDeleteError(null);
   };
 
   // セッション確認中はローディング表示
@@ -391,10 +438,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                                 <button
                                   className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 cursor-pointer"
                                   style={{ textAlign: 'left' }}
-                                  onClick={() => {
-                                    alert('削除機能は未実装です');
-                                    handleCloseMenu();
-                                  }}
+                                  onClick={() => openDeleteModal(document)}
                                 >
                                   削除する
                                 </button>
@@ -736,6 +780,49 @@ export default function DocumentBySlugPage(): JSX.Element {
                   </>
                 ) : (
                   <span>提出する</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ドキュメント削除確認モーダル */}
+      {showDeleteModal && documentToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">ドキュメントを削除</h2>
+
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
+                {deleteError}
+              </div>
+            )}
+
+            <p className="mb-4 text-gray-300">
+              「{documentToDelete.sidebarLabel || documentToDelete.slug}」を削除しますか？
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={closeDeleteModal}
+                disabled={isDeleting}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 rounded-md hover:bg-red-700 focus:outline-none flex items-center"
+                onClick={handleDeleteDocument}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    <span>削除中...</span>
+                  </>
+                ) : (
+                  <span>はい</span>
                 )}
               </button>
             </div>
