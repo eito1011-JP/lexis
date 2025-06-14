@@ -344,7 +344,7 @@ export default function DocumentsPage(): JSX.Element {
                           <div className="fixed inset-0 z-40" onClick={handleCloseMenu} />
                           {/* ThreeDotsのすぐ下にabsolute配置 */}
                           <div
-                            className="absolute right-0 top-full mt-2 w-40 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
+                            className="fixed  w-30 mr-6 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
                             style={{ zIndex: 100 }}
                             onClick={e => e.stopPropagation()}
                           >
