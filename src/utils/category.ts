@@ -13,13 +13,18 @@ export const getCategoryIdByPath = async (categoryPath: string[]): Promise<numbe
   let parentId: number = 1;
   let currentCategoryId: number | null = null;
 
-  for (const slug of categoryPath) {
-    const categoryId = await getCategoryIdBySlug(slug, parentId);
-    if (categoryId) {
-      parentId = categoryId;
-      currentCategoryId = categoryId;
-    } else {
-      return await getDefaultCategoryId();
+  for (const path of categoryPath) {
+    // パスを/で分割して階層を取得
+    const pathParts = path.split('/');
+
+    for (const slug of pathParts) {
+      const categoryId = await getCategoryIdBySlug(slug, parentId);
+      if (categoryId) {
+        parentId = categoryId;
+        currentCategoryId = categoryId;
+      } else {
+        return await getDefaultCategoryId();
+      }
     }
   }
 

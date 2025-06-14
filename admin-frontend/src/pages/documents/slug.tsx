@@ -188,6 +188,7 @@ export default function DocumentBySlugPage(): JSX.Element {
         ]);
       }
       handleCloseModal();
+      window.location.reload();
     } catch (err) {
       console.error('カテゴリ作成エラー:', err);
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
