@@ -7,6 +7,7 @@ import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
+import { ThreeDots } from '@/components/icon/common/ThreeDots';
 // カテゴリの型定義
 type Category = {
   slug: string;
@@ -222,11 +223,20 @@ export default function DocumentsPage(): JSX.Element {
         {categories.map((category, index) => (
           <div
             key={index}
-            className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
+            className="flex items-center justify-between p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
             onClick={() => (window.location.href = `/admin/documents/${category.slug}`)}
           >
-            <Folder className="w-5 h-5 mr-2" />
-            <span>{category.sidebarLabel}</span>
+            <div className="flex items-center">
+              <Folder className="w-5 h-5 mr-2" />
+              <span>{category.sidebarLabel}</span>
+            </div>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <ThreeDots className="w-4 h-4 text-gray-400 hover:text-white" />
+            </div>
           </div>
         ))}
       </div>
@@ -317,13 +327,15 @@ export default function DocumentsPage(): JSX.Element {
                     {document.fileOrder || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a
-                      href={`/admin/documents/${document.slug}/edit`}
-                      className="text-indigo-400 hover:text-indigo-300 mr-4"
-                    >
-                      編集
-                    </a>
-                    <span className="text-gray-500">・・・</span>
+                    <div className="flex items-center justify-end">
+                      <a
+                        href={`/admin/documents/${document.slug}/edit`}
+                        className="text-indigo-400 hover:text-indigo-300 mr-4"
+                      >
+                        編集
+                      </a>
+                      <ThreeDots className="w-4 h-4" />
+                    </div>
                   </td>
                 </tr>
               ))}

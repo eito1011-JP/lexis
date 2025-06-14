@@ -9,6 +9,7 @@ import { Folder } from '@/components/icon/common/Folder';
 import { Home } from '@/components/icon/common/Home';
 import { API_CONFIG } from '@/components/admin/api/config';
 import EditDocumentPage from './[slug]/edit';
+import { ThreeDots } from '@/components/icon/common/ThreeDots';
 
 // アイテムの型定義
 type Item = {
@@ -257,10 +258,19 @@ export default function DocumentBySlugPage(): JSX.Element {
             onClick={() => {
               window.location.href = `/admin/documents/${slug ? `${slug}/` : ''}${category.slug}`;
             }}
-            className="flex items-center p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
+            className="flex items-center justify-between p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
-            <Folder className="w-5 h-5 mr-2" />
-            <span className="text-white hover:underline">{category.sidebarLabel}</span>
+            <div className="flex items-center">
+              <Folder className="w-5 h-5 mr-2" />
+              <span className="text-white hover:underline">{category.sidebarLabel}</span>
+            </div>
+            <div 
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              <ThreeDots className="w-4 h-4 text-gray-400 hover:text-white" />
+            </div>
           </div>
         ))}
       </div>
@@ -350,13 +360,15 @@ export default function DocumentBySlugPage(): JSX.Element {
                     {document.fileOrder !== null ? document.fileOrder : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      to={`/documents/${slug ? `${slug}/` : ''}${document.slug}/edit`}
-                      className="text-indigo-400 hover:text-indigo-300 mr-4"
-                    >
-                      編集
-                    </Link>
-                    <span className="text-gray-500">･･･</span>
+                    <div className="flex items-center justify-end">
+                      <Link
+                        to={`/documents/${slug ? `${slug}/` : ''}${document.slug}/edit`}
+                        className="text-indigo-400 hover:text-indigo-300 mr-4"
+                      >
+                        編集
+                      </Link>
+                      <ThreeDots className="w-4 h-4" />
+                    </div>
                   </td>
                 </tr>
               ))}
