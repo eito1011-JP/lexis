@@ -30,7 +30,7 @@ router.delete('/', async (req: Request, res: Response) => {
 
     // 2. リクエストデータの取得
     const { slug } = req.body as DeleteDocumentRequest;
-    
+
     if (!slug) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
         error: 'slugは必須です',
@@ -58,14 +58,14 @@ router.delete('/', async (req: Request, res: Response) => {
     });
 
     let userBranchId;
-    
+
     if (activeBranch.rows.length > 0) {
       // 既存のアクティブブランチを使用
       userBranchId = Number(activeBranch.rows[0].id);
     } else {
       // 新しいブランチを作成
       await initBranchSnapshot(loginUser.userId, loginUser.email);
-      
+
       const newBranch = await db.execute({
         sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = 1 ORDER BY id DESC LIMIT 1',
         args: [loginUser.userId],
@@ -116,7 +116,6 @@ router.delete('/', async (req: Request, res: Response) => {
       message: 'ドキュメントが削除されました',
       documentSlug: slug,
     });
-
   } catch (error) {
     console.error('ドキュメント削除エラー:', error);
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
@@ -125,4 +124,4 @@ router.delete('/', async (req: Request, res: Response) => {
   }
 });
 
-export const deleteDocumentRouter = router; 
+export const deleteDocumentRouter = router;

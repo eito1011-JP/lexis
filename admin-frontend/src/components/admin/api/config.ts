@@ -11,6 +11,8 @@ export const API_CONFIG = {
     LOGOUT: '/api/admin/logout',
     DOCUMENTS: {
       CREATE_FOLDER: '/api/admin/documents/create-category',
+      UPDATE_FOLDER: '/api/admin/documents/update-category',
+      DELETE_FOLDER: '/api/admin/documents/delete-category',
       CREATE_DOCUMENT: '/api/admin/documents',
       UPDATE_DOCUMENT: '/api/admin/documents',
       DELETE_DOCUMENT: '/api/admin/documents',
