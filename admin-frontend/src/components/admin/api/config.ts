@@ -18,6 +18,7 @@ export const API_CONFIG = {
       DELETE_DOCUMENT: '/api/admin/documents',
       GET_DOCUMENT: '/api/admin/documents',
       GET_DOCUMENT_BY_SLUG: '/api/admin/documents/slug',
+      GET_CATEGORY_BY_SLUG: '/api/admin/documents/category-slug',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
     },
     USERS: {

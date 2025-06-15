@@ -130,12 +130,15 @@ export default function DocumentsPage(): JSX.Element {
     setInvalidSlug(null);
   };
 
-  const handleOpenEditModal = (category: Category) => {
-    setEditingCategory(category);
-    setSlug(category.slug);
-    setLabel(category.sidebarLabel);
-    setPosition('');
-    setDescription('');
+  const handleOpenEditModal = async (category: Category) => {
+    console.log('category', category.slug);
+    const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_CATEGORY_BY_SLUG}?slug=${category.slug}`);
+
+    setEditingCategory(response);
+    setSlug(response.slug);
+    setLabel(response.sidebarLabel);
+    setPosition(response.position?.toString() || '');
+    setDescription(response.description || '');
     setInvalidSlug(null);
     setShowCategoryEditModal(true);
     setOpenCategoryMenuIndex(null);
@@ -419,7 +422,6 @@ export default function DocumentsPage(): JSX.Element {
                 <>
                   {/* 背景クリックで閉じる */}
                   <div className="fixed inset-0 z-40" onClick={handleCloseCategoryMenu} />
-                  {/* ThreeDotsのすぐ下にabsolute配置 */}
                   <div
                     className="absolute right-0 top-6 w-30 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
                     onClick={e => e.stopPropagation()}

@@ -16,6 +16,7 @@ import { getDocumentsRouter } from './routes/documents/get-documents';
 import { getDocumentBySlugRouter } from './routes/documents/get-document-by-slug';
 import { updateDocumentRouter } from './routes/documents/update-document';
 import { deleteDocumentRouter } from './routes/documents/delete-document';
+import { getCategoryBySlugRouter } from './routes/documents/get-category-by-slug';
 
 // Expressアプリの初期化
 const app = express();
@@ -47,6 +48,7 @@ app.use('/api/admin/documents', updateDocumentRouter);
 app.use('/api/admin/documents', deleteDocumentRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
+app.use('/api/admin/documents', getCategoryBySlugRouter);
 
 // セッション確認 - 既存のエンドポイント
 app.get('/api/auth/session', async (req, res) => {
