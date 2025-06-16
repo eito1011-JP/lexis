@@ -63,6 +63,7 @@ const queries = {
         FROM document_categories
         WHERE parent_id = ?
           AND user_branch_id = ?
+          AND is_deleted = 0
         ORDER BY position ASC
       `,
       args: [categoryId, userBranchId],

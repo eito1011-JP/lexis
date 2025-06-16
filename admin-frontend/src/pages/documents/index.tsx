@@ -116,7 +116,6 @@ export default function DocumentsPage(): JSX.Element {
     getDocuments();
   }, []);
 
-  console.log('documents', documents);
   const handleCreateImageCategory = () => {
     setShowCategoryModal(true);
   };
