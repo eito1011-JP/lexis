@@ -131,7 +131,9 @@ export default function DocumentsPage(): JSX.Element {
 
   const handleOpenEditModal = async (category: Category) => {
     console.log('category', category.slug);
-    const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_CATEGORY_BY_SLUG}?slug=${category.slug}`);
+    const response = await apiClient.get(
+      `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_CATEGORY_BY_SLUG}?slug=${category.slug}`
+    );
 
     setEditingCategory(response);
     setSlug(response.slug);

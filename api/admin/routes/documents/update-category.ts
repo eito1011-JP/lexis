@@ -4,6 +4,7 @@ import { db } from '@site/src/lib/db';
 import { getAuthenticatedUser } from '../../utils/auth';
 import { initBranchSnapshot } from '../../utils/git';
 import { getCategoryIdFromPath } from '@site/api/utils/document-category';
+import { updateCategoryPositions } from '@site/api/utils/category-position-order';
 
 // Request型の拡張
 declare global {
@@ -65,7 +66,8 @@ router.put('/update-category', async (req: Request, res: Response) => {
       });
     }
 
-    const { originalSlug, slug, sidebarLabel, position, description } = req.body as UpdateCategoryRequest;
+    const { originalSlug, slug, sidebarLabel, position, description } =
+      req.body as UpdateCategoryRequest;
 
     // バリデーション
     if (!originalSlug || typeof originalSlug !== 'string') {
@@ -81,13 +83,33 @@ router.put('/update-category', async (req: Request, res: Response) => {
     }
 
     // 重複チェック
-    const categoryId = await getCategoryIdFromPath(slug);
-        if (categoryId) {
-          return res.status(HTTP_STATUS.CONFLICT).json({
-            error: 'slugが重複しています',
-          });
-        }
+    const existingCategoryId = await getCategoryIdFromPath(originalSlug);
 
+    // 既存カテゴリの情報を取得
+    const existingCategory = await db.execute({
+      sql: 'SELECT * FROM document_categories WHERE id = ? AND is_deleted = 0',
+      args: [existingCategoryId],
+    });
+
+    if (existingCategory.rows.length === 0) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        error: '更新対象のカテゴリが見つかりません',
+      });
+    }
+
+    const categoryData = existingCategory.rows[0];
+
+    // 同じ親カテゴリ内でのslug重複チェック
+    const duplicateCheck = await db.execute({
+      sql: 'SELECT * FROM document_categories WHERE parent_id = ? AND slug = ? AND id != ? AND is_deleted = 0',
+      args: [categoryData.parent_id, slug, existingCategoryId],
+    });
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(HTTP_STATUS.CONFLICT).json({
+        error: '同じ親カテゴリ内に同じslugのカテゴリが既に存在します',
+      });
+    }
 
     if (!sidebarLabel || typeof sidebarLabel !== 'string') {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -135,66 +157,85 @@ router.put('/update-category', async (req: Request, res: Response) => {
       userBranchId = newBranch.rows[0].id;
     }
 
-    // 3. リクエストのslugから既存カテゴリのレコードを再帰的に取得
-    const existingCategoryId = await getCategoryIdFromPath(originalSlug);
-    
-    if (!existingCategoryId) {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({
-        error: '更新対象のカテゴリが見つかりません',
+    try {
+      await db.execute({
+        sql: 'UPDATE document_categories SET is_deleted = 1, updated_at = ? WHERE id = ?',
+        args: [now, existingCategoryId],
       });
-    }
 
-    // 既存カテゴリの詳細情報を取得
-    const existingCategory = await db.execute({
-      sql: 'SELECT * FROM document_categories WHERE id = ? AND is_deleted = 0',
-      args: [existingCategoryId],
-    });
+      // category_positionの重複処理を追加する
+      let finalPosition = position;
+      if (position === undefined || position === null) {
+        // 最大位置を取得
+        const maxPositionResult = await db.execute({
+          sql: 'SELECT MAX(position) as max_position FROM document_categories WHERE parent_id = ? AND is_deleted = 0',
+          args: [categoryData.parent_id],
+        });
+        finalPosition = (Number(maxPositionResult.rows[0]?.max_position) || 0) + 1;
+      } else {
+        // 同じ親カテゴリ内の他のカテゴリを取得
+        const siblingCategories = await db.execute({
+          sql: 'SELECT * FROM document_categories WHERE parent_id = ? AND is_deleted = 0 AND id != ? ORDER BY position',
+          args: [categoryData.parent_id, existingCategoryId],
+        });
 
-    if (existingCategory.rows.length === 0) {
-      return res.status(HTTP_STATUS.NOT_FOUND).json({
-        error: '更新対象のカテゴリが見つかりません',
+        console.log(siblingCategories);
+
+        const categoriesToUpdate = siblingCategories.rows
+          .filter(cat => Number(cat.position) >= position)
+          .map(cat => ({
+            id: Number(cat.id),
+            position: Number(cat.position),
+            slug: String(cat.slug),
+            sidebar_label: String(cat.sidebar_label),
+            description: cat.description ? String(cat.description) : null,
+            parent_id: cat.parent_id ? Number(cat.parent_id) : null,
+          }));
+
+        if (categoriesToUpdate.length > 0) {
+          console.log(categoriesToUpdate);
+          await updateCategoryPositions(
+            categoriesToUpdate,
+            loginUser.userId,
+            userBranchId,
+            loginUser.email,
+            false
+          );
+        }
+      }
+
+      // 5. ブランチ管理のためにリクエストの編集内容をもとに新規レコードを挿入
+      const categoryResult = await db.execute({
+        sql: `INSERT INTO document_categories (
+          slug, sidebar_label, position, description, 
+          status, last_edited_by, user_branch_id, parent_id,
+          created_at, updated_at, is_deleted
+        ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?) RETURNING id`,
+        args: [
+          slug,
+          sidebarLabel,
+          finalPosition,
+          description || categoryData.description,
+          loginUser.email,
+          userBranchId,
+          categoryData.parent_id,
+          now,
+          now,
+          0,
+        ],
       });
+
+      const newCategoryId = categoryResult.rows[0].id;
+
+      return res.status(HTTP_STATUS.OK).json({
+        success: true,
+        slug: slug,
+        label: sidebarLabel,
+        id: newCategoryId,
+      });
+    } catch (error) {
+      throw error;
     }
-
-    const categoryData = existingCategory.rows[0];
-
-    // 4. 既存カテゴリのレコードを論理削除
-    await db.execute({
-      sql: 'UPDATE document_categories SET is_deleted = 1, updated_at = ? WHERE id = ?',
-      args: [now, existingCategoryId],
-    });
-
-    // category_positionの重複処理を追加する
-
-    // 5. ブランチ管理のためにリクエストの編集内容をもとに新規レコードを挿入
-    const categoryResult = await db.execute({
-      sql: `INSERT INTO document_categories (
-        slug, sidebar_label, position, description, 
-        status, last_edited_by, user_branch_id, parent_id,
-        created_at, updated_at, is_deleted
-      ) VALUES (?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?) RETURNING id`,
-      args: [
-        slug,
-        sidebarLabel,
-        position || categoryData.position,
-        description || categoryData.description,
-        loginUser.email,
-        userBranchId,
-        categoryData.parent_id,
-        now,
-        now,
-        0,
-      ],
-    });
-
-    const newCategoryId = categoryResult.rows[0].id;
-
-    return res.status(HTTP_STATUS.OK).json({
-      success: true,
-      slug: slug,
-      label: sidebarLabel,
-      id: newCategoryId,
-    });
   } catch (error) {
     console.error('カテゴリ更新エラー:', error);
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
@@ -203,4 +244,4 @@ router.put('/update-category', async (req: Request, res: Response) => {
   }
 });
 
-export const updateCategoryRouter = router; 
+export const updateCategoryRouter = router;

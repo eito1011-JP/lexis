@@ -62,4 +62,4 @@ export const updateCategoryPositions = async (
           ) VALUES ${placeholders.join(', ')}`,
     args: insertValues,
   });
-}; 
+};
