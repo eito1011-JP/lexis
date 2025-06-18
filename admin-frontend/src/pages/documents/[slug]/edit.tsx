@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import TiptapEditor from '@/components/admin/editor/TiptapEditor';
+import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 
@@ -299,7 +299,7 @@ export default function EditDocumentPage(): JSX.Element {
             <div>
               <label className="block mb-2 font-bold">本文</label>
               <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
-                <TiptapEditor
+                <SlateEditor
                   initialContent={content}
                   onChange={handleEditorChange}
                   placeholder="ここにドキュメントを作成してください"

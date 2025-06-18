@@ -179,8 +179,6 @@ router.put('/update-category', async (req: Request, res: Response) => {
           args: [categoryData.parent_id, existingCategoryId],
         });
 
-        console.log(siblingCategories);
-
         const categoriesToUpdate = siblingCategories.rows
           .filter(cat => Number(cat.position) >= position)
           .map(cat => ({
@@ -193,7 +191,6 @@ router.put('/update-category', async (req: Request, res: Response) => {
           }));
 
         if (categoriesToUpdate.length > 0) {
-          console.log(categoriesToUpdate);
           await updateCategoryPositions(
             categoriesToUpdate,
             loginUser.userId,

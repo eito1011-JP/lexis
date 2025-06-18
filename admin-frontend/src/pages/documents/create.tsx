@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import TiptapEditor from '@/components/admin/editor/TiptapEditor';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
+import SlateEditor from '@/components/admin/editor/SlateEditor';
 
 // ユーザー型定義を追加
 interface User {
@@ -60,7 +60,7 @@ export default function CreateDocumentPage(): JSX.Element {
 
   // slugの変更ハンドラー
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
+    const value = e.target.value; 
     setSlug(value);
     validateSlug(value);
   };
@@ -257,7 +257,7 @@ export default function CreateDocumentPage(): JSX.Element {
             <div>
               <label className="block mb-2 font-bold">本文</label>
               <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
-                <TiptapEditor
+                <SlateEditor
                   initialContent=""
                   onChange={handleEditorChange}
                   placeholder="ここにドキュメントを作成してください"

@@ -19,7 +19,7 @@ export const getCategoryIdBySlug = async (
   parentId: number | null
 ): Promise<number | null> => {
   const result = await db.execute({
-    sql: 'SELECT id FROM document_categories WHERE slug = ? AND parent_id IS ?',
+    sql: 'SELECT id FROM document_categories WHERE slug = ? AND parent_id IS ? AND is_deleted = 0',
     args: [slug, parentId],
   });
   return result.rows[0]?.id ? Number(result.rows[0].id) : null;
