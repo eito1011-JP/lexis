@@ -11,11 +11,11 @@ const initOctokit = async () => {
 /**
  * @returns {Promise<boolean>} 未コミットの変更がある場合はtrue
  */
-export async function checkUserDraft(userId: number): Promise<boolean> {
+export async function fetchUserBranch(userId: number, status: string): Promise<boolean> {
   try {
     const hasDraft = await db.execute({
       sql: 'SELECT * FROM user_branches WHERE user_id = ? AND is_active = 1 AND pr_status = ?',
-      args: [userId, 'none'],
+      args: [userId, status],
     });
 
     if (!hasDraft.rows[0]) {

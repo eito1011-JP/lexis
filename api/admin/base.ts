@@ -13,6 +13,8 @@ import { middleware } from './routes/middleware';
 import { sessionService } from '../../src/services/sessionService';
 import usersRouter from './routes/users';
 import documentGitCheckDiffRouter from './routes/documents/git/check-diff';
+import documentGitCreatePrRouter from './routes/documents/git/create-pr';
+import documentGitDiffRouter from './routes/documents/git/diff';
 import { getDocumentsRouter } from './routes/documents/get-documents';
 import { getDocumentBySlugRouter } from './routes/documents/get-document-by-slug';
 import { updateDocumentRouter } from './routes/documents/update-document';
@@ -52,6 +54,8 @@ app.use('/api/admin/documents', deleteDocumentRouter);
 app.use('/api/admin/documents', deleteCategoryRouter);
 app.use('/api/admin/users', usersRouter);
 app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
+app.use('/api/admin/documents/git', documentGitCreatePrRouter);
+app.use('/api/admin/documents/git', documentGitDiffRouter);
 app.use('/api/admin/documents', getCategoryBySlugRouter);
 
 // セッション確認 - 既存のエンドポイント

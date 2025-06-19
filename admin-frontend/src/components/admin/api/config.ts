@@ -28,6 +28,7 @@ export const API_CONFIG = {
     GIT: {
       CHECK_DIFF: '/api/admin/documents/git/check-diff',
       CREATE_PR: '/api/admin/documents/git/create-pr',
+      GET_DIFF: '/api/admin/documents/git/diff',
     },
   },
 };

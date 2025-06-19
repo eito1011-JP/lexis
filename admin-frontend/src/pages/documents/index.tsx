@@ -48,6 +48,7 @@ export default function DocumentsPage(): JSX.Element {
   const [apiError, setApiError] = useState<string | null>(null);
   const [showSubmitButton, setShowSubmitButton] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
   const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -251,33 +252,6 @@ export default function DocumentsPage(): JSX.Element {
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
     } finally {
       setIsEditing(false);
-    }
-  };
-
-  // 差分提出のハンドラー
-  const handleSubmitDiff = async () => {
-    setIsSubmitting(true);
-    setSubmitError(null);
-    setSubmitSuccess(null);
-
-    try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.GIT.CREATE_PR, {
-        title: '更新内容の提出',
-        description: 'このPRはハンドブックの更新を含みます。',
-      });
-
-      if (response.success) {
-        setShowSubmitModal(false);
-        setShowSubmitButton(false);
-        setSubmitSuccess('差分の提出が完了しました');
-      } else {
-        setSubmitError(response.message || '差分の提出に失敗しました');
-      }
-    } catch (err) {
-      console.error('差分提出エラー:', err);
-      setSubmitError('差分の提出中にエラーが発生しました');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -687,7 +661,7 @@ export default function DocumentsPage(): JSX.Element {
             <div className="flex items-center gap-4 ml-auto">
               <button
                 className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-                onClick={() => setShowSubmitModal(true)}
+                onClick={() => setShowDiffConfirmModal(true)}
                 disabled={!showPrSubmitButton}
               >
                 <svg
@@ -930,17 +904,37 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
-                onClick={handleSubmitDiff}
-                disabled={isSubmitting}
+                onClick={() => window.location.href = '/admin/documents/diff'}
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                    <span>提出中...</span>
-                  </>
-                ) : (
-                  <span>提出する</span>
-                )}
+                差分確認画面へ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 差分確認画面への遷移確認モーダル */}
+      {showDiffConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">変更内容の確認</h2>
+
+            <p className="mb-4 text-gray-300">
+              変更された内容を確認してから提出しますか？
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={() => setShowDiffConfirmModal(false)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
+                onClick={() => window.location.href = '/admin/documents/diff'}
+              >
+                差分確認画面へ
               </button>
             </div>
           </div>

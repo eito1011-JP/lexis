@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getAuthenticatedUser } from '../../../utils/auth';
-import { checkUserDraft } from '../../../utils/git';
+import { fetchUserBranch } from '../../../utils/git';
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.get('/check-diff', async (req: Request, res: Response) => {
       return res.status(401).json({ error: '認証されていません' });
     }
 
-    const hasUserDraft = await checkUserDraft(loginUser.userId);
+    const hasUserDraft = await fetchUserBranch(loginUser.userId, 'none');
 
     return res.json({
       exists: hasUserDraft,

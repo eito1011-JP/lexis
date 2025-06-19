@@ -10,6 +10,7 @@ import { Home } from '@/components/icon/common/Home';
 import { API_CONFIG } from '@/components/admin/api/config';
 import EditDocumentPage from './[slug]/edit';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
+import DiffDocumentPage from './diff'; 
 
 // アイテムの型定義
 type Item = {
@@ -50,6 +51,8 @@ export default function DocumentBySlugPage(): JSX.Element {
   // /editで終わるパスはEditDocumentPageをレンダリング
   if (location.pathname.endsWith('/edit')) {
     return <EditDocumentPage />;
+  } else if (location.pathname.endsWith('/diff')) {
+    return <DiffDocumentPage />;
   }
   const slug = location.pathname.replace('/documents/', '');
   const { isLoading } = useSessionCheck('/login', false);
@@ -211,7 +214,7 @@ export default function DocumentBySlugPage(): JSX.Element {
     setSubmitSuccess(null);
 
     try {
-      const response = await apiClient.post('/admin/git/create-pr', {
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.GET_DIFF, {
         title: '更新内容の提出',
         description: 'このPRはハンドブックの更新を含みます。',
       });
