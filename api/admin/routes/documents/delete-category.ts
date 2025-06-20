@@ -108,7 +108,7 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
           userBranchId,
           1,
           now,
-          now
+          now,
         ],
       });
     }
@@ -150,14 +150,13 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
       deletedCategories: categories.length,
       deletedDocuments: documents.length,
     });
-
   } catch (error) {
     console.error('カテゴリ削除エラー:', error);
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       error: API_ERRORS.SERVER.INTERNAL_ERROR,
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 });
 
-export const deleteCategoryRouter = router; 
+export const deleteCategoryRouter = router;

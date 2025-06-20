@@ -35,15 +35,21 @@ type DiffResponse = {
 };
 
 // 差分表示コンポーネント
-const DiffField = ({ label, before, after }: { label: string; before?: string; after?: string }) => {
+const DiffField = ({
+  label,
+  before,
+  after,
+}: {
+  label: string;
+  before?: string;
+  after?: string;
+}) => {
   // 変更がない場合
   if (before === after) {
     return (
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-        <div className="bg-gray-800 rounded-md p-3 text-sm text-gray-300">
-          {after || '-'}
-        </div>
+        <div className="bg-gray-800 rounded-md p-3 text-sm text-gray-300">{after || '-'}</div>
       </div>
     );
   }
@@ -86,7 +92,7 @@ export default function DiffPage(): JSX.Element {
             user_branch_id: '1',
           },
         });
-        
+
         console.log('response', response);
         if (response) {
           setDiffData(response);
@@ -179,7 +185,7 @@ export default function DiffPage(): JSX.Element {
           </div>
           <button
             className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-            onClick={() => window.location.href = '/admin/documents'}
+            onClick={() => (window.location.href = '/admin/documents')}
           >
             ドキュメント一覧に戻る
           </button>
@@ -196,7 +202,7 @@ export default function DiffPage(): JSX.Element {
           <p className="text-gray-400 mb-4">変更された内容はありません</p>
           <button
             className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-            onClick={() => window.location.href = '/admin/documents'}
+            onClick={() => (window.location.href = '/admin/documents')}
           >
             ドキュメント一覧に戻る
           </button>
@@ -272,7 +278,7 @@ export default function DiffPage(): JSX.Element {
           <div className="flex gap-2">
             <button
               className="px-4 py-2 bg-red-700 rounded-md hover:bg-red-600 focus:outline-none text-white"
-              onClick={() => window.location.href = '/admin/documents'}
+              onClick={() => (window.location.href = '/admin/documents')}
               disabled={isSubmitting}
             >
               戻る
@@ -296,13 +302,11 @@ export default function DiffPage(): JSX.Element {
 
         {/* カテゴリの変更数表示 */}
         <div className="mb-6">
-          <div className="text-sm text-gray-400">
-            カテゴリの変更 × {diffData.categories.length}
-          </div>
-          
+          <div className="text-sm text-gray-400">カテゴリの変更 × {diffData.categories.length}</div>
+
           {/* Slug一覧 */}
           <div className="mt-2 space-y-1">
-            {diffData.categories.map((category) => (
+            {diffData.categories.map(category => (
               <div key={category.id} className="text-sm">
                 <div className="bg-red-900/30 border border-red-800 rounded-md px-3 py-1 text-red-200 inline-block mr-2">
                   {category.before?.slug || 'this-is-sample-slug'}
@@ -323,27 +327,30 @@ export default function DiffPage(): JSX.Element {
               カテゴリ名
             </h2>
             <div className="space-y-4">
-              {diffData.categories.map((category) => (
-                <div key={category.id} className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-                  <DiffField 
-                    label="Slug" 
-                    before={category.before?.slug} 
-                    after={category.after?.slug} 
+              {diffData.categories.map(category => (
+                <div
+                  key={category.id}
+                  className="bg-gray-900 rounded-lg border border-gray-800 p-6"
+                >
+                  <DiffField
+                    label="Slug"
+                    before={category.before?.slug}
+                    after={category.after?.slug}
                   />
-                  <DiffField 
-                    label="カテゴリ名" 
-                    before={category.before?.sidebar_label} 
-                    after={category.after?.sidebar_label} 
+                  <DiffField
+                    label="カテゴリ名"
+                    before={category.before?.sidebar_label}
+                    after={category.after?.sidebar_label}
                   />
-                  <DiffField 
-                    label="表示順" 
-                    before={category.before?.position?.toString()} 
-                    after={category.after?.position?.toString()} 
+                  <DiffField
+                    label="表示順"
+                    before={category.before?.position?.toString()}
+                    after={category.after?.position?.toString()}
                   />
-                  <DiffField 
-                    label="説明" 
-                    before={category.before?.description} 
-                    after={category.after?.description} 
+                  <DiffField
+                    label="説明"
+                    before={category.before?.description}
+                    after={category.after?.description}
                   />
                 </div>
               ))}
@@ -362,22 +369,25 @@ export default function DiffPage(): JSX.Element {
         {diffData.documents.length > 0 && (
           <div className="mb-8">
             <div className="space-y-6">
-              {diffData.documents.map((document) => (
-                <div key={document.id} className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-                  <DiffField 
-                    label="Slug" 
-                    before={document.before?.slug} 
-                    after={document.after?.slug} 
+              {diffData.documents.map(document => (
+                <div
+                  key={document.id}
+                  className="bg-gray-900 rounded-lg border border-gray-800 p-6"
+                >
+                  <DiffField
+                    label="Slug"
+                    before={document.before?.slug}
+                    after={document.after?.slug}
                   />
-                  <DiffField 
-                    label="タイトル" 
-                    before={document.before?.title} 
-                    after={document.after?.title} 
+                  <DiffField
+                    label="タイトル"
+                    before={document.before?.title}
+                    after={document.after?.title}
                   />
-                  <DiffField 
-                    label="公開設定" 
-                    before={document.before ? "公開する" : undefined} 
-                    after={document.after ? "公開しない" : "公開する"} 
+                  <DiffField
+                    label="公開設定"
+                    before={document.before ? '公開する' : undefined}
+                    after={document.after ? '公開しない' : '公開する'}
                   />
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-300 mb-2">本文</label>
@@ -400,4 +410,4 @@ export default function DiffPage(): JSX.Element {
       </div>
     </AdminLayout>
   );
-} 
+}

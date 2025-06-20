@@ -60,7 +60,7 @@ export default function CreateDocumentPage(): JSX.Element {
 
   // slugの変更ハンドラー
   const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value; 
+    const value = e.target.value;
     setSlug(value);
     validateSlug(value);
   };

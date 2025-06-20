@@ -10,7 +10,7 @@ import { Home } from '@/components/icon/common/Home';
 import { API_CONFIG } from '@/components/admin/api/config';
 import EditDocumentPage from './[slug]/edit';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
-import DiffDocumentPage from './diff'; 
+import DiffDocumentPage from './diff';
 
 // アイテムの型定義
 type Item = {

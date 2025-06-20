@@ -15,10 +15,10 @@ router.post('/create-pr', async (req: Request, res: Response) => {
 
     // TODO: 実際のPR作成ロジックを実装
     // 現在は成功レスポンスを返す
-    return res.json({ 
-      success: true, 
+    return res.json({
+      success: true,
       message: 'PRが正常に作成されました',
-      pr_url: null // 実装後にPRのURLを返す
+      pr_url: null, // 実装後にPRのURLを返す
     });
   } catch (error) {
     console.error('Error creating PR:', error);

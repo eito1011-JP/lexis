@@ -904,7 +904,7 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
-                onClick={() => window.location.href = '/admin/documents/diff'}
+                onClick={() => (window.location.href = '/admin/documents/diff')}
               >
                 差分確認画面へ
               </button>
@@ -919,9 +919,7 @@ export default function DocumentsPage(): JSX.Element {
           <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">変更内容の確認</h2>
 
-            <p className="mb-4 text-gray-300">
-              変更された内容を確認してから提出しますか？
-            </p>
+            <p className="mb-4 text-gray-300">変更された内容を確認してから提出しますか？</p>
 
             <div className="flex justify-end gap-2">
               <button
@@ -932,7 +930,7 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-                onClick={() => window.location.href = '/admin/documents/diff'}
+                onClick={() => (window.location.href = '/admin/documents/diff')}
               >
                 差分確認画面へ
               </button>

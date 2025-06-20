@@ -40,19 +40,19 @@ export const getCategoryIdByPath = async (categoryPath: string[]): Promise<numbe
 export async function getCategoryTreeFromSlug(slug: string, userBranchId: number) {
   const categories = [];
   const documents = [];
-  
+
   // 指定されたslugのカテゴリを取得
   const rootCategoryResult = await db.execute({
     sql: 'SELECT * FROM document_categories WHERE slug = ? AND user_branch_id = ? AND is_deleted = 0 LIMIT 1',
     args: [slug, userBranchId],
   });
-    
+
   if (rootCategoryResult.rows.length === 0) {
     throw new Error('Category not found');
   }
-  
+
   const rootCategory = rootCategoryResult.rows[0];
-  
+
   // 再帰的にカテゴリとドキュメントを取得
   async function collectCategoryTree(categoryId: number) {
     // 現在のカテゴリを取得
@@ -60,11 +60,11 @@ export async function getCategoryTreeFromSlug(slug: string, userBranchId: number
       sql: 'SELECT * FROM document_categories WHERE id = ? AND user_branch_id = ? AND is_deleted = 0 LIMIT 1',
       args: [categoryId, userBranchId],
     });
-      
+
     if (categoryResult.rows.length > 0) {
       const category = categoryResult.rows[0];
       categories.push(category);
-      
+
       // このカテゴリに属するドキュメントを取得（document_versionsテーブルのみから）
       const categoryDocumentsResult = await db.execute({
         sql: `SELECT * FROM document_versions 
@@ -72,23 +72,23 @@ export async function getCategoryTreeFromSlug(slug: string, userBranchId: number
               AND is_deleted = 0`,
         args: [categoryId, userBranchId],
       });
-        
+
       documents.push(...categoryDocumentsResult.rows);
-      
+
       // 子カテゴリを再帰的に処理
       const childCategoriesResult = await db.execute({
         sql: 'SELECT * FROM document_categories WHERE parent_id = ? AND user_branch_id = ? AND is_deleted = 0',
         args: [categoryId, userBranchId],
       });
-        
+
       for (const child of childCategoriesResult.rows) {
         await collectCategoryTree(Number(child.id));
       }
     }
   }
-  
+
   await collectCategoryTree(Number(rootCategory.id));
-  
+
   return { categories, documents };
 }
 
