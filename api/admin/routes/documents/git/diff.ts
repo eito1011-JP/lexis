@@ -10,7 +10,6 @@ type DiffItem = {
   slug: string;
   sidebar_label: string;
   description?: string;
-  title?: string;
   content?: string;
   position?: number;
   file_order?: number;
@@ -222,7 +221,6 @@ function mapDocumentToDiffItem(doc: any): DiffItem {
     id: doc.id as number,
     slug: doc.slug as string,
     sidebar_label: doc.sidebar_label as string,
-    title: doc.title as string,
     content: doc.content as string,
     file_order: doc.file_order as number,
     category_id: doc.category_id as number,

@@ -23,4 +23,4 @@ export const DocumentDetailed = ({ className = '', width, height }: DocumentDeta
       ></path>
     </svg>
   );
-}; 
+};

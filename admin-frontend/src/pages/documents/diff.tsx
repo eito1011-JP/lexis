@@ -349,7 +349,7 @@ export default function DiffPage(): JSX.Element {
 
         {/* 変更されたカテゴリの詳細 */}
         {diffData.categories.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-10">
             <h2 className="text-xl font-bold mb-4 flex items-center">
               <Folder className="w-5 h-5 mr-2" />
               カテゴリの変更 × {diffData.categories.length}
@@ -388,12 +388,10 @@ export default function DiffPage(): JSX.Element {
         )}
 
         {/* ドキュメントの変更数表示 */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold mb-4 flex items-center">
-            <DocumentDetailed className="w-6 h-6 mr-2" />
-            ドキュメントの変更 × {diffData.documents.length}
-          </h2>
-        </div>
+        <h2 className="text-xl font-bold mb-4 flex items-center">
+          <DocumentDetailed className="w-6 h-6 mr-2" />
+          ドキュメントの変更 × {diffData.documents.length}
+        </h2>
 
         {/* 変更されたドキュメントの詳細 */}
         {diffData.documents.length > 0 && (
@@ -412,8 +410,8 @@ export default function DiffPage(): JSX.Element {
                   />
                   <DiffField
                     label="タイトル"
-                    before={document.original?.title}
-                    after={document.current.title}
+                    before={document.original?.sidebar_label}
+                    after={document.current.sidebar_label}
                   />
                   <DiffField
                     label="公開設定"
@@ -425,18 +423,18 @@ export default function DiffPage(): JSX.Element {
                     <div className="space-y-2">
                       {document.original?.content && (
                         <div className="bg-red-900/30 border border-red-800 rounded-md p-3 text-sm text-red-200">
-                          <div 
-                            dangerouslySetInnerHTML={{ 
-                              __html: markdownToHtml(document.original.content) 
+                          <div
+                            dangerouslySetInnerHTML={{
+                              __html: markdownToHtml(document.original.content),
                             }}
                             className="[&>h1]:text-lg [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-bold [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-4 [&>ol]:mb-2 [&>li]:mb-1 [&>blockquote]:border-l-4 [&>blockquote]:border-red-400 [&>blockquote]:pl-2 [&>blockquote]:mb-2 [&>pre]:bg-red-800/50 [&>pre]:p-2 [&>pre]:rounded [&>pre]:mb-2 [&>code]:bg-red-800/50 [&>code]:px-1 [&>code]:rounded [&>a]:text-blue-300 [&>a]:underline [&>strong]:font-bold [&>em]:italic"
                           />
                         </div>
                       )}
                       <div className="bg-green-900/30 border border-green-800 rounded-md p-3 text-sm text-green-200">
-                        <div 
-                          dangerouslySetInnerHTML={{ 
-                            __html: markdownToHtml(document.current.content || '（新規追加）') 
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: markdownToHtml(document.current.content || '（新規追加）'),
                           }}
                           className="[&>h1]:text-lg [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-bold [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-4 [&>ol]:mb-2 [&>li]:mb-1 [&>blockquote]:border-l-4 [&>blockquote]:border-green-400 [&>blockquote]:pl-2 [&>blockquote]:mb-2 [&>pre]:bg-green-800/50 [&>pre]:p-2 [&>pre]:rounded [&>pre]:mb-2 [&>code]:bg-green-800/50 [&>code]:px-1 [&>code]:rounded [&>a]:text-blue-300 [&>a]:underline [&>strong]:font-bold [&>em]:italic"
                         />
