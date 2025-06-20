@@ -270,7 +270,11 @@ router.put('/', async (req: Request, res: Response) => {
 
       // 8. 編集開始バージョンの作成
       await db.execute({
-        sql: `insert into edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at) values (?, ?, ?, ?, ?)`,
+        sql: `INSERT INTO edit_start_versions (
+          user_branch_id, target_type, original_version_id, current_version_id, created_at
+        ) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(user_branch_id, original_version_id)
+        DO UPDATE SET current_version_id = excluded.current_version_id`,
         args: [userBranchId, 'document', updateData.id, newDocumentId, new Date().toISOString()],
       });
 
