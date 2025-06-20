@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { getAuthenticatedUser } from '../../../utils/auth';
-import { fetchUserBranch } from '../../../utils/git';
 import { db } from '@site/src/lib/db';
 
 const router = Router();
@@ -21,12 +20,20 @@ type DiffItem = {
   user_branch_id: number;
   created_at: string;
   updated_at: string;
-  before?: DiffItem | null; // 変更前のデータ
-  after?: DiffItem | null; // 変更後のデータ
-  change_type: 'created' | 'updated' | 'deleted';
 };
 
-router.get('/diff', async (req: Request, res: Response) => {
+type DiffResponse = {
+  documents: Array<{
+    original: DiffItem | null;
+    current: DiffItem;
+  }>;
+  categories: Array<{
+    original: DiffItem | null;
+    current: DiffItem;
+  }>;
+};
+
+router.get('/', async (req: Request, res: Response) => {
   try {
     const loginUser = await getAuthenticatedUser(req.cookies.sid);
 
@@ -34,27 +41,31 @@ router.get('/diff', async (req: Request, res: Response) => {
       return res.status(401).json({ error: '認証されていません' });
     }
 
-    // ユーザーのブランチIDを取得
-    const userBranchId = await fetchUserBranch(loginUser.userId, 'none');
+    // リクエストからuser_branch_idを取得
+    const userBranchId = req.query.user_branch_id;
 
-    if (!userBranchId) {
-      return res.status(404).json({
+    if (!userBranchId || typeof userBranchId !== 'string') {
+      return res.status(400).json({
         success: false,
-        message: 'ユーザーブランチが見つかりません',
+        message: 'user_branch_idが必要です',
       });
     }
 
-    // カテゴリの差分を取得
-    const categoryDiffs = await getCategoryDiffs(userBranchId);
+    const branchId = parseInt(userBranchId, 10);
 
-    // ドキュメントの差分を取得
-    const documentDiffs = await getDocumentDiffs(userBranchId);
+    if (isNaN(branchId)) {
+      return res.status(400).json({
+        success: false,
+        message: '有効なuser_branch_idを指定してください',
+      });
+    }
+
+    // 差分情報を取得
+    const diffData = await getDiffData(branchId);
 
     return res.json({
       success: true,
-      categories: categoryDiffs,
-      documents: documentDiffs,
-      user_branch_id: userBranchId,
+      ...diffData,
     });
   } catch (error) {
     console.error('差分取得中にエラーが発生しました:', error);
@@ -65,145 +76,177 @@ router.get('/diff', async (req: Request, res: Response) => {
   }
 });
 
-// カテゴリの差分を取得する関数
-async function getCategoryDiffs(userBranchId: number): Promise<DiffItem[]> {
-  // draft状態のカテゴリを取得
-  const draftCategories = await db.execute({
-    sql: `SELECT * FROM document_categories 
-          WHERE user_branch_id = ? AND is_deleted = ? AND status = ?
-          ORDER BY parent_id ASC NULLS FIRST, position ASC`,
-    args: [userBranchId, 0, 'draft'],
+// 差分データを取得する関数
+async function getDiffData(userBranchId: number): Promise<DiffResponse> {
+  // 1. edit_start_versionsからdocumentとcategoryの差分情報を取得
+  const documentEditVersions = await db.execute({
+    sql: `SELECT * FROM edit_start_versions 
+          WHERE target_type = 'document' AND user_branch_id = ?
+          ORDER BY created_at ASC`,
+    args: [userBranchId],
   });
 
-  const diffs: DiffItem[] = [];
+  const categoryEditVersions = await db.execute({
+    sql: `SELECT * FROM edit_start_versions 
+          WHERE target_type = 'category' AND user_branch_id = ?
+          ORDER BY created_at ASC`,
+    args: [userBranchId],
+  });
 
-  for (const draft of draftCategories.rows || []) {
-    // 同じslugのmerged状態のカテゴリを検索
-    const mergedResult = await db.execute({
-      sql: `SELECT * FROM document_categories 
-            WHERE slug = ? AND status = ? AND is_deleted = ? 
-            ORDER BY updated_at DESC LIMIT 1`,
-      args: [draft.slug, 'merged', 0],
-    });
+  // 2. original_version_idとcurrent_version_idを変数にまとめる
+  const documentOriginalIds: number[] = [];
+  const documentCurrentIds: number[] = [];
+  const categoryOriginalIds: number[] = [];
+  const categoryCurrentIds: number[] = [];
 
-    const merged = mergedResult.rows?.[0] || null;
+  // documentのIDを収集
+  for (const editVersion of documentEditVersions.rows || []) {
+    if (editVersion.original_version_id) {
+      documentOriginalIds.push(editVersion.original_version_id as number);
+    }
+    if (editVersion.current_version_id) {
+      documentCurrentIds.push(editVersion.current_version_id as number);
+    }
+  }
 
-    diffs.push({
-      id: draft.id as number,
-      slug: draft.slug as string,
-      sidebar_label: draft.sidebar_label as string,
-      description: draft.description as string,
-      position: draft.position as number,
-      parent_id: draft.parent_id as number,
-      status: draft.status as string,
-      user_branch_id: draft.user_branch_id as number,
-      created_at: draft.created_at as string,
-      updated_at: draft.updated_at as string,
-      before: merged
-        ? {
-            id: merged.id as number,
-            slug: merged.slug as string,
-            sidebar_label: merged.sidebar_label as string,
-            description: merged.description as string,
-            position: merged.position as number,
-            parent_id: merged.parent_id as number,
-            status: merged.status as string,
-            user_branch_id: merged.user_branch_id as number,
-            created_at: merged.created_at as string,
-            updated_at: merged.updated_at as string,
-            change_type: 'updated' as const,
-          }
-        : null,
-      after: {
-        id: draft.id as number,
-        slug: draft.slug as string,
-        sidebar_label: draft.sidebar_label as string,
-        description: draft.description as string,
-        position: draft.position as number,
-        parent_id: draft.parent_id as number,
-        status: draft.status as string,
-        user_branch_id: draft.user_branch_id as number,
-        created_at: draft.created_at as string,
-        updated_at: draft.updated_at as string,
-        change_type: 'updated' as const,
-      },
-      change_type: merged ? 'updated' : 'created',
-    });
+  // categoryのIDを収集
+  for (const editVersion of categoryEditVersions.rows || []) {
+    if (editVersion.original_version_id) {
+      categoryOriginalIds.push(editVersion.original_version_id as number);
+    }
+    if (editVersion.current_version_id) {
+      categoryCurrentIds.push(editVersion.current_version_id as number);
+    }
+  }
+
+  // 3. document_versionsとdocument_categoriesのレコードを取得
+  const originalDocuments =
+    documentOriginalIds.length > 0
+      ? await db.execute({
+          sql: `SELECT * FROM document_versions WHERE id IN (${documentOriginalIds.map(() => '?').join(',')})`,
+          args: documentOriginalIds,
+        })
+      : { rows: [] };
+
+  const currentDocuments =
+    documentCurrentIds.length > 0
+      ? await db.execute({
+          sql: `SELECT * FROM document_versions WHERE id IN (${documentCurrentIds.map(() => '?').join(',')})`,
+          args: documentCurrentIds,
+        })
+      : { rows: [] };
+
+  const originalCategories =
+    categoryOriginalIds.length > 0
+      ? await db.execute({
+          sql: `SELECT * FROM document_categories WHERE id IN (${categoryOriginalIds.map(() => '?').join(',')})`,
+          args: categoryOriginalIds,
+        })
+      : { rows: [] };
+
+  const currentCategories =
+    categoryCurrentIds.length > 0
+      ? await db.execute({
+          sql: `SELECT * FROM document_categories WHERE id IN (${categoryCurrentIds.map(() => '?').join(',')})`,
+          args: categoryCurrentIds,
+        })
+      : { rows: [] };
+
+  // 4. 差分データを組み立て
+  const documents = buildDocumentDiffs(
+    documentEditVersions.rows || [],
+    originalDocuments.rows || [],
+    currentDocuments.rows || []
+  );
+  const categories = buildCategoryDiffs(
+    categoryEditVersions.rows || [],
+    originalCategories.rows || [],
+    currentCategories.rows || []
+  );
+
+  return {
+    documents,
+    categories,
+  };
+}
+
+// ドキュメントの差分を組み立てる関数
+function buildDocumentDiffs(
+  editVersions: any[],
+  originalDocuments: any[],
+  currentDocuments: any[]
+): Array<{ original: DiffItem | null; current: DiffItem }> {
+  const diffs: Array<{ original: DiffItem | null; current: DiffItem }> = [];
+
+  for (const editVersion of editVersions) {
+    const original = originalDocuments.find(doc => doc.id === editVersion.original_version_id);
+    const current = currentDocuments.find(doc => doc.id === editVersion.current_version_id);
+
+    if (current) {
+      diffs.push({
+        original: original ? mapDocumentToDiffItem(original) : null,
+        current: mapDocumentToDiffItem(current),
+      });
+    }
   }
 
   return diffs;
 }
 
-// ドキュメントの差分を取得する関数
-async function getDocumentDiffs(userBranchId: number): Promise<DiffItem[]> {
-  // draft状態のドキュメントを取得
-  const draftDocuments = await db.execute({
-    sql: `SELECT * FROM document_versions 
-          WHERE user_branch_id = ? AND is_deleted = ? AND status = ?
-          ORDER BY category_id ASC NULLS FIRST, file_order ASC`,
-    args: [userBranchId, 0, 'draft'],
-  });
+// カテゴリの差分を組み立てる関数
+function buildCategoryDiffs(
+  editVersions: any[],
+  originalCategories: any[],
+  currentCategories: any[]
+): Array<{ original: DiffItem | null; current: DiffItem }> {
+  const diffs: Array<{ original: DiffItem | null; current: DiffItem }> = [];
 
-  const diffs: DiffItem[] = [];
+  for (const editVersion of editVersions) {
+    const original = originalCategories.find(cat => cat.id === editVersion.original_version_id);
+    const current = currentCategories.find(cat => cat.id === editVersion.current_version_id);
 
-  for (const draft of draftDocuments.rows || []) {
-    // 同じslugのmerged状態のドキュメントを検索
-    const mergedResult = await db.execute({
-      sql: `SELECT * FROM document_versions 
-            WHERE slug = ? AND status = ? AND is_deleted = ? 
-            ORDER BY updated_at DESC LIMIT 1`,
-      args: [draft.slug, 'merged', 0],
-    });
-
-    const merged = mergedResult.rows?.[0] || null;
-
-    diffs.push({
-      id: draft.id as number,
-      slug: draft.slug as string,
-      sidebar_label: draft.sidebar_label as string,
-      title: draft.title as string,
-      content: draft.content as string,
-      file_order: draft.file_order as number,
-      category_id: draft.category_id as number,
-      status: draft.status as string,
-      user_branch_id: draft.user_branch_id as number,
-      created_at: draft.created_at as string,
-      updated_at: draft.updated_at as string,
-      before: merged
-        ? {
-            id: merged.id as number,
-            slug: merged.slug as string,
-            sidebar_label: merged.sidebar_label as string,
-            title: merged.title as string,
-            content: merged.content as string,
-            file_order: merged.file_order as number,
-            category_id: merged.category_id as number,
-            status: merged.status as string,
-            user_branch_id: merged.user_branch_id as number,
-            created_at: merged.created_at as string,
-            updated_at: merged.updated_at as string,
-            change_type: 'updated' as const,
-          }
-        : null,
-      after: {
-        id: draft.id as number,
-        slug: draft.slug as string,
-        sidebar_label: draft.sidebar_label as string,
-        title: draft.title as string,
-        content: draft.content as string,
-        file_order: draft.file_order as number,
-        category_id: draft.category_id as number,
-        status: draft.status as string,
-        user_branch_id: draft.user_branch_id as number,
-        created_at: draft.created_at as string,
-        updated_at: draft.updated_at as string,
-        change_type: 'updated' as const,
-      },
-      change_type: merged ? 'updated' : 'created',
-    });
+    if (current) {
+      diffs.push({
+        original: original ? mapCategoryToDiffItem(original) : null,
+        current: mapCategoryToDiffItem(current),
+      });
+    }
   }
 
   return diffs;
+}
+
+// ドキュメントをDiffItemにマッピングする関数
+function mapDocumentToDiffItem(doc: any): DiffItem {
+  return {
+    id: doc.id as number,
+    slug: doc.slug as string,
+    sidebar_label: doc.sidebar_label as string,
+    title: doc.title as string,
+    content: doc.content as string,
+    file_order: doc.file_order as number,
+    category_id: doc.category_id as number,
+    status: doc.status as string,
+    user_branch_id: doc.user_branch_id as number,
+    created_at: doc.created_at as string,
+    updated_at: doc.updated_at as string,
+  };
+}
+
+// カテゴリをDiffItemにマッピングする関数
+function mapCategoryToDiffItem(cat: any): DiffItem {
+  return {
+    id: cat.id as number,
+    slug: cat.slug as string,
+    sidebar_label: cat.sidebar_label as string,
+    description: cat.description as string,
+    position: cat.position as number,
+    parent_id: cat.parent_id as number,
+    status: cat.status as string,
+    user_branch_id: cat.user_branch_id as number,
+    created_at: cat.created_at as string,
+    updated_at: cat.updated_at as string,
+  };
 }
 
 export default router;

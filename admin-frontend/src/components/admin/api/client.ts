@@ -49,8 +49,24 @@ export const apiClient = {
   /**
    * 各種HTTPメソッド用のヘルパー関数
    */
-  async get(endpoint: string, options = {}) {
-    return this.request(endpoint, { ...options, method: 'GET' });
+  async get(endpoint: string, options: { params?: Record<string, any> } = {}) {
+    let url = endpoint;
+
+    // クエリパラメータがある場合はURLに追加
+    if (options.params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          searchParams.append(key, String(value));
+        }
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+
+    return this.request(url, { method: 'GET' });
   },
 
   async post(endpoint: string, body: any, options = {}) {

@@ -53,9 +53,9 @@ app.use('/api/admin/documents', updateDocumentRouter);
 app.use('/api/admin/documents', deleteDocumentRouter);
 app.use('/api/admin/documents', deleteCategoryRouter);
 app.use('/api/admin/users', usersRouter);
-app.use('/api/admin/documents/git', documentGitCheckDiffRouter);
-app.use('/api/admin/documents/git', documentGitCreatePrRouter);
-app.use('/api/admin/documents/git', documentGitDiffRouter);
+app.use('/api/admin/documents/git/check-diff', documentGitCheckDiffRouter);
+app.use('/api/admin/documents/git/create-pr', documentGitCreatePrRouter);
+app.use('/api/admin/documents/git/diff', documentGitDiffRouter);
 app.use('/api/admin/documents', getCategoryBySlugRouter);
 
 // セッション確認 - 既存のエンドポイント

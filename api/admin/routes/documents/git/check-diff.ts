@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { getAuthenticatedUser } from '../../../utils/auth';
-import { fetchUserBranch } from '../../../utils/git';
+import { db } from '@site/src/lib/db';
 
 const router = Router();
 
-router.get('/check-diff', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const loginUser = await getAuthenticatedUser(req.cookies.sid);
 
@@ -12,10 +12,18 @@ router.get('/check-diff', async (req: Request, res: Response) => {
       return res.status(401).json({ error: '認証されていません' });
     }
 
-    const hasUserDraft = await fetchUserBranch(loginUser.userId, 'none');
+    // アクティブなユーザーブランチを取得
+    const activeBranch = await db.execute({
+      sql: 'SELECT id FROM user_branches WHERE user_id = ? AND is_active = 1 AND pr_status = ?',
+      args: [loginUser.userId, 'none'],
+    });
+
+    const hasUserDraft = activeBranch.rows.length > 0;
+    const userBranchId = hasUserDraft ? activeBranch.rows[0].id : null;
 
     return res.json({
       exists: hasUserDraft,
+      user_branch_id: userBranchId,
     });
   } catch (error) {
     console.error('Error checking document versions:', error);

@@ -23,15 +23,17 @@ type DiffItem = {
   user_branch_id: number;
   created_at: string;
   updated_at: string;
-  before?: DiffItem | null;
-  after?: DiffItem | null;
-  change_type: 'created' | 'updated' | 'deleted';
 };
 
 type DiffResponse = {
-  categories: DiffItem[];
-  documents: DiffItem[];
-  user_branch_id: number;
+  documents: Array<{
+    original: DiffItem | null;
+    current: DiffItem;
+  }>;
+  categories: Array<{
+    original: DiffItem | null;
+    current: DiffItem;
+  }>;
 };
 
 // 差分表示コンポーネント
@@ -87,9 +89,19 @@ export default function DiffPage(): JSX.Element {
   useEffect(() => {
     const fetchDiff = async () => {
       try {
+        // URLパラメータからuser_branch_idを取得
+        const urlParams = new URLSearchParams(window.location.search);
+        const userBranchId = urlParams.get('user_branch_id');
+
+        if (!userBranchId) {
+          setError('user_branch_idパラメータが必要です');
+          setLoading(false);
+          return;
+        }
+
         const response = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.GET_DIFF, {
           params: {
-            user_branch_id: '1',
+            user_branch_id: userBranchId,
           },
         });
 
@@ -307,12 +319,12 @@ export default function DiffPage(): JSX.Element {
           {/* Slug一覧 */}
           <div className="mt-2 space-y-1">
             {diffData.categories.map(category => (
-              <div key={category.id} className="text-sm">
+              <div key={category.current.id} className="text-sm">
                 <div className="bg-red-900/30 border border-red-800 rounded-md px-3 py-1 text-red-200 inline-block mr-2">
-                  {category.before?.slug || 'this-is-sample-slug'}
+                  {category.original?.slug || 'this-is-sample-slug'}
                 </div>
                 <div className="bg-green-900/30 border border-green-800 rounded-md px-3 py-1 text-green-200 inline-block">
-                  {category.after?.slug || 'this-is-new-sample-slug'}
+                  {category.current.slug || 'this-is-new-sample-slug'}
                 </div>
               </div>
             ))}
@@ -329,28 +341,28 @@ export default function DiffPage(): JSX.Element {
             <div className="space-y-4">
               {diffData.categories.map(category => (
                 <div
-                  key={category.id}
+                  key={category.current.id}
                   className="bg-gray-900 rounded-lg border border-gray-800 p-6"
                 >
                   <DiffField
                     label="Slug"
-                    before={category.before?.slug}
-                    after={category.after?.slug}
+                    before={category.original?.slug}
+                    after={category.current.slug}
                   />
                   <DiffField
                     label="カテゴリ名"
-                    before={category.before?.sidebar_label}
-                    after={category.after?.sidebar_label}
+                    before={category.original?.sidebar_label}
+                    after={category.current.sidebar_label}
                   />
                   <DiffField
                     label="表示順"
-                    before={category.before?.position?.toString()}
-                    after={category.after?.position?.toString()}
+                    before={category.original?.position?.toString()}
+                    after={category.current.position?.toString()}
                   />
                   <DiffField
                     label="説明"
-                    before={category.before?.description}
-                    after={category.after?.description}
+                    before={category.original?.description}
+                    after={category.current.description}
                   />
                 </div>
               ))}
@@ -371,34 +383,34 @@ export default function DiffPage(): JSX.Element {
             <div className="space-y-6">
               {diffData.documents.map(document => (
                 <div
-                  key={document.id}
+                  key={document.current.id}
                   className="bg-gray-900 rounded-lg border border-gray-800 p-6"
                 >
                   <DiffField
                     label="Slug"
-                    before={document.before?.slug}
-                    after={document.after?.slug}
+                    before={document.original?.slug}
+                    after={document.current.slug}
                   />
                   <DiffField
                     label="タイトル"
-                    before={document.before?.title}
-                    after={document.after?.title}
+                    before={document.original?.title}
+                    after={document.current.title}
                   />
                   <DiffField
                     label="公開設定"
-                    before={document.before ? '公開する' : undefined}
-                    after={document.after ? '公開しない' : '公開する'}
+                    before={document.original ? '公開する' : undefined}
+                    after={document.current ? '公開しない' : '公開する'}
                   />
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-300 mb-2">本文</label>
                     <div className="space-y-2">
-                      {document.before?.content && (
+                      {document.original?.content && (
                         <div className="bg-red-900/30 border border-red-800 rounded-md p-3 text-sm text-red-200">
-                          {document.before.content}
+                          {document.original.content}
                         </div>
                       )}
                       <div className="bg-green-900/30 border border-green-800 rounded-md p-3 text-sm text-green-200">
-                        {document.after?.content || '（新規追加）'}
+                        {document.current.content || '（新規追加）'}
                       </div>
                     </div>
                   </div>

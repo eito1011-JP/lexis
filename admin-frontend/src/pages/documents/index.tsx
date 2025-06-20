@@ -64,6 +64,7 @@ export default function DocumentsPage(): JSX.Element {
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isCategoryDeleting, setIsCategoryDeleting] = useState(false);
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
+  const [userBranchId, setUserBranchId] = useState<string | null>(null);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -104,6 +105,7 @@ export default function DocumentsPage(): JSX.Element {
         const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF);
         if (hasUserDraft && hasUserDraft.exists) {
           setShowPrSubmitButton(true);
+          setUserBranchId(hasUserDraft.user_branch_id);
         }
       } catch (err) {
         console.error('ドキュメント取得エラー:', err);
@@ -904,7 +906,16 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
-                onClick={() => (window.location.href = '/admin/documents/diff')}
+                onClick={() => {
+                  if (userBranchId) {
+                    window.location.href = `/admin/documents/diff?user_branch_id=${userBranchId}`;
+                  } else {
+                    // user_branch_idが取得できない場合はエラーメッセージを表示
+                    setSubmitError(
+                      '差分データの取得に失敗しました。ページを再読み込みしてください。'
+                    );
+                  }
+                }}
               >
                 差分確認画面へ
               </button>
@@ -930,7 +941,16 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-                onClick={() => (window.location.href = '/admin/documents/diff')}
+                onClick={() => {
+                  if (userBranchId) {
+                    window.location.href = `/admin/documents/diff?user_branch_id=${userBranchId}`;
+                  } else {
+                    // user_branch_idが取得できない場合はエラーメッセージを表示
+                    setSubmitError(
+                      '差分データの取得に失敗しました。ページを再読み込みしてください。'
+                    );
+                  }
+                }}
               >
                 差分確認画面へ
               </button>

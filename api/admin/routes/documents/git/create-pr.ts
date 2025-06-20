@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '../../../utils/auth';
 
 const router = Router();
 
-router.post('/create-pr', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const loginUser = await getAuthenticatedUser(req.cookies.sid);
 
