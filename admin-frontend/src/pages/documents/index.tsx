@@ -582,7 +582,7 @@ export default function DocumentsPage(): JSX.Element {
         <div className="mb-6">
           {/* パンくずリスト */}
           <div className="flex items-center text-sm text-gray-400 mb-4">
-            <a href="/admin" className="hover:text-white">
+            <a href="/admin/documents" className="hover:text-white">
               <Home className="w-4 h-4 mx-2" />
             </a>
           </div>
