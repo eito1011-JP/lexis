@@ -227,7 +227,13 @@ router.put('/update-category', async (req: Request, res: Response) => {
       // 編集開始バージョンの作成
       await db.execute({
         sql: `insert into edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at) values (?, ?, ?, ?, ?)`,
-        args: [userBranchId, 'category', existingCategoryId, newCategoryId, new Date().toISOString()],
+        args: [
+          userBranchId,
+          'category',
+          existingCategoryId,
+          newCategoryId,
+          new Date().toISOString(),
+        ],
       });
 
       return res.status(HTTP_STATUS.OK).json({

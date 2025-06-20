@@ -153,7 +153,7 @@ const dbOperations = {
         Number(categoryId),
       ],
     });
-    
+
     // 新しく作成されたレコードのIDを返す
     return Number(result.lastInsertRowid);
   },
