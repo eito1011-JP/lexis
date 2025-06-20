@@ -128,9 +128,9 @@ const dbOperations = {
     finalFileOrder: number,
     categoryId: number,
     loginUserEmail: string
-  ) => {
+  ): Promise<number> => {
     const now = new Date().toISOString();
-    await db.execute({
+    const result = await db.execute({
       sql: `INSERT INTO document_versions (
         user_id, user_branch_id, file_path, status, content, slug,
         sidebar_label, file_order, last_edited_by, created_at, updated_at,
@@ -153,6 +153,9 @@ const dbOperations = {
         Number(categoryId),
       ],
     });
+    
+    // 新しく作成されたレコードのIDを返す
+    return Number(result.lastInsertRowid);
   },
 };
 
@@ -255,7 +258,7 @@ router.put('/', async (req: Request, res: Response) => {
       });
 
       // 7. 新しいドキュメントバージョンの作成
-      await dbOperations.createNewDocumentVersion(
+      const newDocumentId = await dbOperations.createNewDocumentVersion(
         loginUser.userId,
         userBranchId,
         existingDoc,
@@ -265,7 +268,13 @@ router.put('/', async (req: Request, res: Response) => {
         loginUser.email
       );
 
-      // 8. 成功レスポンス
+      // 8. 編集開始バージョンの作成
+      await db.execute({
+        sql: `insert into edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at) values (?, ?, ?, ?, ?)`,
+        args: [userBranchId, 'document', updateData.id, newDocumentId, new Date().toISOString()],
+      });
+
+      // 9. 成功レスポンス
       return res.status(HTTP_STATUS.OK).json({
         success: true,
         message: 'ドキュメントが更新されました',
