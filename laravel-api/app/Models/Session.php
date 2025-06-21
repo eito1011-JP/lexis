@@ -14,14 +14,14 @@ class Session extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'session_id',
+        'id',
         'user_id',
-        'email',
-        'expire_at',
+        'sess',
+        'expired_at',
     ];
 
     protected $casts = [
-        'expire_at' => 'datetime',
+        'expired_at' => 'datetime',
     ];
 
     /**

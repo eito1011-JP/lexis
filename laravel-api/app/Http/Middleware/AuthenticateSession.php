@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Models\Session;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
 
 class AuthenticateSession
 {

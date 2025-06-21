@@ -22,8 +22,8 @@ use App\Http\Controllers\Api\GitController;
 Route::prefix('auth')->group(function () {
     Route::post('/signup', [AuthController::class, 'signup']);
     Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/session', [AuthController::class, 'session']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/session', [AuthController::class, 'session']);
 });
 
 // 認証が必要なルート

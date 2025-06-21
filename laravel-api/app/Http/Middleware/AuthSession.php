@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use App\Models\Session;
+use Illuminate\Support\Facades\Log;
 
 class AuthSession
 {
@@ -25,8 +26,8 @@ class AuthSession
             ], 401);
         }
 
-        $session = Session::where('session_id', $sessionId)
-            ->where('expire_at', '>', now())
+        $session = Session::where('id', $sessionId)
+            ->where('expired_at', '>', now())
             ->first();
 
         if (!$session) {
@@ -35,11 +36,13 @@ class AuthSession
             ], 401);
         }
 
+        $sessionData = json_decode($session->sess, true);
+
         // ユーザー情報をリクエストに追加
         $request->merge([
             'user' => [
-                'userId' => $session->user_id,
-                'email' => $session->email,
+                'userId' => $sessionData['userId'],
+                'email' => $sessionData['email'],
             ]
         ]);
 

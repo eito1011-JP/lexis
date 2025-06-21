@@ -7,6 +7,8 @@ use App\Models\DocumentCategory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DocumentController extends ApiBaseController
 {
@@ -37,7 +39,7 @@ class DocumentController extends ApiBaseController
     public function createCategory(Request $request): JsonResponse
     {
         try {
-            $validator = \Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'slug' => 'required|string|unique:document_categories,slug',
                 'sidebarLabel' => 'nullable|string|max:255',
@@ -79,7 +81,7 @@ class DocumentController extends ApiBaseController
         try {
             $category = DocumentCategory::findOrFail($id);
 
-            $validator = \Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
                 'slug' => 'sometimes|required|string|unique:document_categories,slug,' . $id,
                 'sidebarLabel' => 'nullable|string|max:255',
@@ -177,28 +179,131 @@ class DocumentController extends ApiBaseController
     public function getDocuments(Request $request): JsonResponse
     {
         try {
-            $categorySlug = $request->query('category');
+            Log::info($request->all());
+            // 認証チェック
+            $user = $this->user();
 
-            $query = Document::with('category')
-                ->select('id', 'category_id', 'sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order');
-
-            if ($categorySlug) {
-                $query->whereHas('category', function ($q) use ($categorySlug) {
-                    $q->where('slug', $categorySlug);
-                });
+            Log::info($user);
+            if (!$user) {
+                return response()->json([
+                    'error' => '認証が必要です'
+                ], 401);
             }
 
-            $documents = $query->orderBy('file_order')->get();
-
+            // クエリパラメータからslugを取得
+            $slugParam = $request->query('slug', '');
+            
+            // カテゴリパスの取得と処理
+            $categoryPath = array_filter(explode('/', $slugParam));
+            
+            // カテゴリIDを取得（パスから）
+            $currentCategoryId = $this->getCategoryIdFromPath($categoryPath);
+            
+            // アクティブなブランチを取得
+            $activeBranch = DB::table('user_branches')
+                ->where('user_id', $user->id)
+                ->where('is_active', 1)
+                ->where('pr_status', 'none')
+                ->first();
+            
+            $userBranchId = $activeBranch ? $activeBranch->id : null;
+            
+            // サブカテゴリを取得
+            $subCategories = DB::table('document_categories')
+                ->select('slug', 'sidebar_label', 'position')
+                ->where('parent_id', $currentCategoryId)
+                ->where('user_branch_id', $userBranchId)
+                ->where('is_deleted', 0)
+                ->orderBy('position', 'asc')
+                ->get();
+            
+            // ドキュメントを取得
+            $documents = DB::table('document_versions')
+                ->select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
+                ->where('category_id', $currentCategoryId)
+                ->where('is_deleted', 0)
+                ->where(function ($query) use ($userBranchId) {
+                    $query->whereIn('status', ['pushed', 'merged'])
+                          ->orWhere(function ($q) use ($userBranchId) {
+                              $q->where('user_branch_id', $userBranchId)
+                                ->where('status', 'draft');
+                          });
+                })
+                ->get();
+            
+            // ソート処理
+            $sortedDocuments = $documents
+                ->filter(function ($doc) {
+                    return $doc->file_order !== null;
+                })
+                ->sortBy('file_order')
+                ->map(function ($doc) {
+                    return [
+                        'sidebarLabel' => $doc->sidebar_label,
+                        'slug' => $doc->slug,
+                        'isPublic' => (bool) $doc->is_public,
+                        'status' => $doc->status,
+                        'lastEditedBy' => $doc->last_edited_by,
+                        'fileOrder' => $doc->file_order,
+                    ];
+                });
+            
+            $sortedCategories = $subCategories
+                ->filter(function ($cat) {
+                    return $cat->position !== null;
+                })
+                ->sortBy('position')
+                ->map(function ($cat) {
+                    return [
+                        'slug' => $cat->slug,
+                        'sidebarLabel' => $cat->sidebar_label,
+                    ];
+                });
+            
             return response()->json([
-                'documents' => $documents
+                'documents' => $sortedDocuments->values(),
+                'categories' => $sortedCategories->values()
             ]);
 
         } catch (\Exception $e) {
+            Log::error('ドキュメント一覧の取得に失敗しました: ' . $e);
             return response()->json([
                 'error' => 'ドキュメント一覧の取得に失敗しました'
             ], 500);
         }
+    }
+
+    /**
+     * カテゴリパスからカテゴリIDを取得
+     */
+    private function getCategoryIdFromPath(array $categoryPath): ?int
+    {
+        if (empty($categoryPath)) {
+            // デフォルトカテゴリを取得
+            $defaultCategory = DB::table('document_categories')
+                ->where('slug', 'uncategorized')
+                ->first();
+            return $defaultCategory ? $defaultCategory->id : null;
+        }
+        
+        $parentId = null;
+        $currentCategoryId = null;
+        
+        foreach ($categoryPath as $slug) {
+            $category = DB::table('document_categories')
+                ->where('slug', $slug)
+                ->where('parent_id', $parentId)
+                ->first();
+            
+            if (!$category) {
+                return null;
+            }
+            
+            $currentCategoryId = $category->id;
+            $parentId = $category->id;
+        }
+        
+        return $currentCategoryId;
     }
 
     /**
@@ -207,7 +312,7 @@ class DocumentController extends ApiBaseController
     public function createDocument(Request $request): JsonResponse
     {
         try {
-            $validator = \Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), [
                 'category' => 'required|string',
                 'label' => 'required|string|max:255',
                 'content' => 'required|string',
@@ -295,7 +400,7 @@ class DocumentController extends ApiBaseController
         try {
             $document = Document::findOrFail($id);
 
-            $validator = \Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), [
                 'category' => 'sometimes|required|string',
                 'label' => 'sometimes|required|string|max:255',
                 'content' => 'sometimes|required|string',

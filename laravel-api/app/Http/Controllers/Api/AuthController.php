@@ -47,7 +47,7 @@ class AuthController extends ApiBaseController
             $sessionId = $this->createSession($user->id, $user->email);
 
             // クッキーにセッションIDを設定
-            $cookie = cookie('sid', $sessionId, config('session.custom_lifetime')); // 設定ファイルから取得
+            $cookie = cookie('sid', $sessionId, config('session.lifetime')); // 設定ファイルから取得
 
             return response()->json([
                 'success' => true,
@@ -89,11 +89,22 @@ class AuthController extends ApiBaseController
                 ], 401);
             }
 
-            // セッション作成
-            $sessionId = $this->createSession($user->id, $user->email);
+            // 既存のセッションを確認し、期限を更新
+            $existingSession = Session::where('user_id', $user->id)->first();
+            if ($existingSession) {
+                // 既存のセッションがある場合は期限を更新
+                $expireAt = now()->addMinutes(config('session.lifetime'));
+                $existingSession->update([
+                    'expired_at' => $expireAt,
+                ]);
+                $sessionId = (string) $existingSession->id;
+            } else {
+                // 新規セッションの作成
+                $sessionId = $this->createSession($user->id, $user->email);
+            }
 
             // クッキーにセッションIDを設定
-            $cookie = cookie('sid', $sessionId, config('session.custom_lifetime'));
+            $cookie = cookie('sid', $sessionId, config('session.lifetime'));
 
             return response()->json([
                 'user' => [
@@ -180,7 +191,7 @@ class AuthController extends ApiBaseController
      */
     private function createSession(int $userId, string $email): string
     {
-        $expireAt = now()->addMinutes(config('session.custom_lifetime')); // 設定ファイルから取得
+        $expireAt = now()->addMinutes(config('session.lifetime')); // 設定ファイルから取得
 
         $sessionData = [
             'userId' => $userId,
@@ -218,6 +229,7 @@ class AuthController extends ApiBaseController
             ->where('expired_at', '>', now())
             ->first();
 
+        Log::info($session);
         if (!$session) {
             return null;
         }
