@@ -77,14 +77,14 @@ router.post('/', async (req: Request, res: Response) => {
     if (correctedFileOrder) {
       // file_order重複時、既存のfile_order >= 入力値を+1してずらす
       await db.execute({
-        sql: `UPDATE document_versions SET file_order = file_order + 1 WHERE category = ? AND status = ? AND file_order >= ? AND is_deleted = 0`,
-        args: [category, 'merged', correctedFileOrder],
+        sql: `UPDATE document_versions SET file_order = file_order + 1 WHERE category_id = ? AND status = ? AND file_order >= ? AND is_deleted = 0`,
+        args: [belongedCategoryId, 'merged', correctedFileOrder],
       });
     } else {
       // file_order未入力時、カテゴリ内最大値+1をセット
       const maxOrderResult = await db.execute({
-        sql: `SELECT MAX(file_order) as maxOrder FROM document_versions WHERE category = ?`,
-        args: [category],
+        sql: `SELECT MAX(file_order) as maxOrder FROM document_versions WHERE category_id = ?`,
+        args: [belongedCategoryId],
       });
       const maxOrder = Number(maxOrderResult.rows[0]?.maxOrder) || 0;
       correctedFileOrder = maxOrder + 1;
@@ -122,7 +122,7 @@ router.post('/', async (req: Request, res: Response) => {
       : path.join(process.cwd(), 'docs');
     const filePath = path.join(targetDir, `${slug}.md`);
 
-    await db.execute({
+    const documentVersionResult = await db.execute({
       sql: 'INSERT INTO document_versions (user_id, user_branch_id, file_path, status, content, slug, category, sidebar_label, file_order, last_edited_by, category_id, created_at, updated_at, is_public) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       args: [
         loginUser.userId,
@@ -139,6 +139,20 @@ router.post('/', async (req: Request, res: Response) => {
         now,
         now,
         isPublic,
+      ],
+    });
+
+    const documentVersionId = Number(documentVersionResult.lastInsertRowid);
+
+    await db.execute({
+      sql: 'INSERT INTO edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [
+        userBranchId,
+        'document',
+        null,
+        documentVersionId,
+        now,
+        now,
       ],
     });
 

@@ -17,6 +17,7 @@ type DiffItem = {
   category_id?: number;
   status: string;
   user_branch_id: number;
+  is_deleted: number;
   created_at: string;
   updated_at: string;
 };
@@ -226,6 +227,7 @@ function mapDocumentToDiffItem(doc: any): DiffItem {
     category_id: doc.category_id as number,
     status: doc.status as string,
     user_branch_id: doc.user_branch_id as number,
+    is_deleted: doc.is_deleted as number,
     created_at: doc.created_at as string,
     updated_at: doc.updated_at as string,
   };
@@ -242,6 +244,7 @@ function mapCategoryToDiffItem(cat: any): DiffItem {
     parent_id: cat.parent_id as number,
     status: cat.status as string,
     user_branch_id: cat.user_branch_id as number,
+    is_deleted: cat.is_deleted as number,
     created_at: cat.created_at as string,
     updated_at: cat.updated_at as string,
   };

@@ -76,6 +76,21 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
     // 5. トランザクション処理
     const now = new Date().toISOString();
 
+    // 削除対象のカテゴリが既にedit_start_versionsに存在する場合、そのレコードを更新
+    const existingEditVersions = [];
+    for (const category of categories) {
+      const existingVersion = await db.execute({
+        sql: 'SELECT * FROM edit_start_versions WHERE target_type = ? AND original_version_id = ?',
+        args: ['category', Number(category.id)],
+      });
+      if (existingVersion.rows.length > 0) {
+        existingEditVersions.push({
+          categoryId: Number(category.id),
+          editVersionId: Number(existingVersion.rows[0].id),
+        });
+      }
+    }
+
     // document_categoriesをis_deleted=1に更新
     for (const category of categories) {
       await db.execute({
@@ -96,8 +111,9 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
     }
 
     // 6. ブランチ管理のために削除したcategoriesを追加
+    const insertedCategoryIds = [];
     for (const category of categories) {
-      await db.execute({
+      const result = await db.execute({
         sql: `INSERT INTO document_categories (
           sidebar_label, slug, parent_id, user_branch_id, is_deleted, created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -111,6 +127,7 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
           now,
         ],
       });
+      insertedCategoryIds.push(result.lastInsertRowid);
     }
 
     // 7. ブランチ管理のために削除したdocument_versionsを追加
@@ -118,14 +135,14 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
       for (const doc of documents) {
         await db.execute({
           sql: `INSERT INTO document_versions (
-            user_id, user_branch_id, document_id, file_path, status, content, slug,
+            user_id, user_branch_id, id, file_path, status, content, slug,
             sidebar_label, file_order, last_edited_by, created_at, updated_at,
             is_deleted, is_public, category_id
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           args: [
             loginUser.userId,
             userBranchId,
-            doc.document_id ? Number(doc.document_id) : null,
+            doc.id ? Number(doc.id) : null,
             doc.file_path ? String(doc.file_path) : null,
             doc.status ? String(doc.status) : null,
             doc.content ? String(doc.content) : null,
@@ -143,7 +160,37 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
       }
     }
 
-    // 8. 成功レスポンス
+    // 8. edit_start_versionsに削除履歴を記録
+    for (let i = 0; i < categories.length; i++) {
+      const categoryId = Number(categories[i].id);
+      const newCategoryId = insertedCategoryIds[i];
+      
+      // 既存のedit_start_versionsレコードがある場合は更新、ない場合は新規作成
+      const existingEditVersion = existingEditVersions.find(ev => ev.categoryId === categoryId);
+      
+      if (existingEditVersion) {
+        // 既存レコードを更新
+        await db.execute({
+          sql: 'UPDATE edit_start_versions SET current_version_id = ?, updated_at = ? WHERE id = ?',
+          args: [newCategoryId, now, existingEditVersion.editVersionId],
+        });
+      } else {
+        // 新規レコードを作成
+        await db.execute({
+          sql: 'INSERT INTO edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+          args: [
+            userBranchId,
+            'category',
+            categoryId,
+            newCategoryId,
+            now,
+            now,
+          ],
+        });
+      }
+    }
+
+    // 9. 成功レスポンス
     return res.status(HTTP_STATUS.OK).json({
       success: true,
       message: 'カテゴリとその内容が削除されました',

@@ -153,6 +153,18 @@ router.post('/create-category', async (req: Request, res: Response) => {
 
     const categoryId = categoryResult.rows[0].id;
 
+    await db.execute({
+      sql: 'INSERT INTO edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+      args: [
+        userBranchId,
+        'category',
+        null,
+        categoryId,
+        now,
+        now,
+      ],
+    });
+
     return res.status(HTTP_STATUS.CREATED).json({
       id: categoryId,
       slug,
