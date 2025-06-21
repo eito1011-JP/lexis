@@ -15,7 +15,7 @@ export default defineConfig({
     port: 3002, // 管理画面用に3002ポートを使用
     proxy: {
       '/api': {
-        target: 'http://localhost:3001', // APIサーバーのURL
+        target: 'http://localhost:8000', // APIサーバーのURL
         changeOrigin: true,
       },
     },
