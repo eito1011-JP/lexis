@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\ApiBaseController;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
-class UserController extends Controller
+class UserController extends ApiBaseController
 {
     /**
      * ユーザー一覧を取得

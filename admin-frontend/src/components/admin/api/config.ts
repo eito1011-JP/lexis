@@ -6,9 +6,9 @@ export const API_CONFIG = {
 
   ENDPOINTS: {
     SIGNUP: '/api/admin/signup',
-    LOGIN: '/api/admin/login',
+    LOGIN: '/api/auth/login',
     SESSION: '/api/auth/session',
-    LOGOUT: '/api/admin/logout',
+    LOGOUT: '/api/auth/logout',
     DOCUMENTS: {
       CREATE_FOLDER: '/api/admin/documents/create-category',
       UPDATE_FOLDER: '/api/admin/documents/update-category',

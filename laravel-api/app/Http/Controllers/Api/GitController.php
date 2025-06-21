@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-
-class GitController extends Controller
+use App\Http\Controllers\Api\ApiBaseController;
+class GitController extends ApiBaseController
 {
     /**
      * Git差分チェック
