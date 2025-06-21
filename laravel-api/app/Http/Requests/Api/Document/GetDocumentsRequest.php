@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Api\Auth;
+namespace App\Http\Requests\Api\Document;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class LoginRequest extends FormRequest
+class GetDocumentsRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,20 +22,20 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => 'required|email|string',
-            'password' => 'required|string',
+            'slug' => 'nullable|string|max:1000',
         ];
     }
 
     /**
      * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
      */
     public function messages(): array
     {
         return [
-            'email.required' => 'メールアドレスは必須です',
-            'email.email' => '有効なメールアドレスを入力してください',
-            'password.required' => 'パスワードは必須です',
+            'slug.string' => 'スラッグは文字列である必要があります',
+            'slug.max' => 'スラッグは1000文字以内である必要があります',
         ];
     }
 }

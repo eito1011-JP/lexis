@@ -1,11 +1,11 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DocumentController;
-use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\GitController;
+use App\Http\Controllers\Api\UserController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +41,7 @@ Route::middleware('auth.session')->group(function () {
         Route::put('/categories/{id}', [DocumentController::class, 'updateCategory']);
         Route::delete('/categories/{id}', [DocumentController::class, 'deleteCategory']);
         Route::get('/category-slug', [DocumentController::class, 'getCategoryBySlug']);
-        
+
         // ドキュメント関連
         Route::get('/', [DocumentController::class, 'getDocuments']);
         Route::post('/', [DocumentController::class, 'createDocument']);
@@ -49,7 +49,7 @@ Route::middleware('auth.session')->group(function () {
         Route::put('/{id}', [DocumentController::class, 'updateDocument']);
         Route::delete('/{id}', [DocumentController::class, 'deleteDocument']);
         Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);
-        
+
         // Git関連
         Route::prefix('git')->group(function () {
             Route::get('/check-diff', [GitController::class, 'checkDiff']);
@@ -62,6 +62,6 @@ Route::middleware('auth.session')->group(function () {
 // 認証不要なルート（テスト用）
 Route::get('/user', function (Request $request) {
     return response()->json([
-        'user' => $request->user
+        'user' => $request->user,
     ]);
-}); 
+});

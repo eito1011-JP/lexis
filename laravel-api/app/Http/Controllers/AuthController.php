@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class AuthController extends Controller
 {
@@ -27,7 +27,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'ユーザー登録が完了しました',
-            'user' => $user
+            'user' => $user,
         ], 201);
     }
 
@@ -43,19 +43,19 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => 'ログインしました',
-                'user' => Auth::user()
+                'user' => Auth::user(),
             ]);
         }
 
         return response()->json([
-            'message' => '認証情報が正しくありません'
+            'message' => '認証情報が正しくありません',
         ], 401);
     }
 
     public function session(Request $request)
     {
         return response()->json([
-            'user' => $request->user()
+            'user' => $request->user(),
         ]);
     }
 
@@ -66,7 +66,7 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return response()->json([
-            'message' => 'ログアウトしました'
+            'message' => 'ログアウトしました',
         ]);
     }
-} 
+}

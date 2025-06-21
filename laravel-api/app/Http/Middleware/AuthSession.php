@@ -2,17 +2,15 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Session;
 use Closure;
 use Illuminate\Http\Request;
-use App\Models\Session;
-use Illuminate\Support\Facades\Log;
 
 class AuthSession
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  \Closure(\Illuminate\Http\Request): (\Illuminate\Http\Response|\Illuminate\Http\RedirectResponse)  $next
      * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
      */
@@ -20,9 +18,9 @@ class AuthSession
     {
         $sessionId = $request->cookie('sid');
 
-        if (!$sessionId) {
+        if (! $sessionId) {
             return response()->json([
-                'error' => 'セッションがありません'
+                'error' => 'セッションがありません',
             ], 401);
         }
 
@@ -30,9 +28,9 @@ class AuthSession
             ->where('expired_at', '>', now())
             ->first();
 
-        if (!$session) {
+        if (! $session) {
             return response()->json([
-                'error' => 'セッションが無効または期限切れです'
+                'error' => 'セッションが無効または期限切れです',
             ], 401);
         }
 
@@ -43,9 +41,9 @@ class AuthSession
             'user' => [
                 'userId' => $sessionData['userId'],
                 'email' => $sessionData['email'],
-            ]
+            ],
         ]);
 
         return $next($request);
     }
-} 
+}

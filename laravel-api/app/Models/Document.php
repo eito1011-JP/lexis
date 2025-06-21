@@ -24,8 +24,11 @@ class Document extends Model
         'file_order' => 'integer',
     ];
 
+    /**
+     * カテゴリとのリレーション
+     */
     public function category()
     {
         return $this->belongsTo(DocumentCategory::class, 'category_id');
     }
-} 
+}

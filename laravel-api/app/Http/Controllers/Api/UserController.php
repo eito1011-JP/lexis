@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\ApiBaseController;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class UserController extends ApiBaseController
 {
@@ -18,13 +17,13 @@ class UserController extends ApiBaseController
             $users = User::select('id', 'email', 'created_at')->get();
 
             return response()->json([
-                'users' => $users
+                'users' => $users,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'ユーザー一覧の取得に失敗しました'
+                'error' => 'ユーザー一覧の取得に失敗しました',
             ], 500);
         }
     }
-} 
+}

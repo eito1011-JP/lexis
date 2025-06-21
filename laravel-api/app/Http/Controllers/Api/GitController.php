@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use App\Http\Controllers\Api\ApiBaseController;
+use Illuminate\Http\Request;
+
 class GitController extends ApiBaseController
 {
     /**
@@ -18,12 +18,12 @@ class GitController extends ApiBaseController
 
             return response()->json([
                 'hasChanges' => false,
-                'message' => '差分はありません'
+                'message' => '差分はありません',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Git差分チェックに失敗しました'
+                'error' => 'Git差分チェックに失敗しました',
             ], 500);
         }
     }
@@ -42,7 +42,7 @@ class GitController extends ApiBaseController
 
             if ($validator->fails()) {
                 return response()->json([
-                    'error' => $validator->errors()->first()
+                    'error' => $validator->errors()->first(),
                 ], 400);
             }
 
@@ -52,12 +52,12 @@ class GitController extends ApiBaseController
             return response()->json([
                 'success' => true,
                 'message' => 'プルリクエストを作成しました',
-                'prUrl' => 'https://github.com/example/pull/123'
+                'prUrl' => 'https://github.com/example/pull/123',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'プルリクエストの作成に失敗しました'
+                'error' => 'プルリクエストの作成に失敗しました',
             ], 500);
         }
     }
@@ -73,13 +73,13 @@ class GitController extends ApiBaseController
 
             return response()->json([
                 'diff' => '',
-                'files' => []
+                'files' => [],
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Git差分の取得に失敗しました'
+                'error' => 'Git差分の取得に失敗しました',
             ], 500);
         }
     }
-} 
+}

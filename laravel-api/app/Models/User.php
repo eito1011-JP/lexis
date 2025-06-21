@@ -11,7 +11,9 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens;
+    use HasFactory;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -45,5 +47,29 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * セッションとのリレーション
+     */
+    public function sessions()
+    {
+        return $this->hasMany(Session::class);
+    }
+
+    /**
+     * ユーザーブランチとのリレーション
+     */
+    public function userBranches()
+    {
+        return $this->hasMany(UserBranch::class);
+    }
+
+    /**
+     * ドキュメントバージョンとのリレーション
+     */
+    public function documentVersions()
+    {
+        return $this->hasMany(DocumentVersion::class);
     }
 }

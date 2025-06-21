@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\ApiBaseController;
 use App\Http\Requests\Api\Auth\LoginRequest;
-use App\Models\User;
 use App\Models\Session;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -33,7 +32,7 @@ class AuthController extends ApiBaseController
 
             if ($validator->fails()) {
                 return response()->json([
-                    'error' => $validator->errors()->first()
+                    'error' => $validator->errors()->first(),
                 ], 400);
             }
 
@@ -62,7 +61,7 @@ class AuthController extends ApiBaseController
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'サーバーエラーが発生しました'
+                'error' => 'サーバーエラーが発生しました',
             ], 500);
         }
     }
@@ -76,16 +75,16 @@ class AuthController extends ApiBaseController
             // ユーザーの存在確認
             $user = User::where('email', $request->email)->first();
             Log::info($user);
-            if (!$user) {   
+            if (! $user) {
                 return response()->json([
-                    'error' => 'メールアドレスまたはパスワードが正しくありません'
+                    'error' => 'メールアドレスまたはパスワードが正しくありません',
                 ], 401);
             }
 
             // パスワードの検証
-            if (!Hash::check($request->password, $user->password)) {
+            if (! Hash::check($request->password, $user->password)) {
                 return response()->json([
-                    'error' => 'メールアドレスまたはパスワードが正しくありません'
+                    'error' => 'メールアドレスまたはパスワードが正しくありません',
                 ], 401);
             }
 
@@ -109,15 +108,16 @@ class AuthController extends ApiBaseController
             return response()->json([
                 'user' => [
                     'id' => $user->id,
-                    'email' => $user->email
+                    'email' => $user->email,
                 ],
                 'isAuthenticated' => true,
             ])->withCookie($cookie);
 
         } catch (\Exception $e) {
             Log::error($e);
+
             return response()->json([
-                'error' => 'サーバーエラーが発生しました'
+                'error' => 'サーバーエラーが発生しました',
             ], 500);
         }
     }
@@ -130,7 +130,7 @@ class AuthController extends ApiBaseController
         try {
             $sessionId = $request->cookie('sid');
 
-            if (!$sessionId) {
+            if (! $sessionId) {
                 return response()->json([
                     'authenticated' => false,
                     'message' => 'セッションがありません',
@@ -139,7 +139,7 @@ class AuthController extends ApiBaseController
 
             $user = $this->getSessionUser($sessionId);
 
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'authenticated' => false,
                     'message' => 'セッションが無効または期限切れです',
@@ -181,7 +181,7 @@ class AuthController extends ApiBaseController
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'サーバーエラーが発生しました'
+                'error' => 'サーバーエラーが発生しました',
             ], 500);
         }
     }
@@ -208,6 +208,7 @@ class AuthController extends ApiBaseController
                 'sess' => json_encode($sessionData),
                 'expired_at' => $expireAt,
             ]);
+
             return (string) $existingSession->id;
         } else {
             // 新規セッションの作成
@@ -216,6 +217,7 @@ class AuthController extends ApiBaseController
                 'sess' => json_encode($sessionData),
                 'expired_at' => $expireAt,
             ]);
+
             return (string) $session->id;
         }
     }
@@ -230,11 +232,12 @@ class AuthController extends ApiBaseController
             ->first();
 
         Log::info($session);
-        if (!$session) {
+        if (! $session) {
             return null;
         }
 
         $sessionData = json_decode($session->sess, true);
+
         return [
             'userId' => $sessionData['userId'],
             'email' => $sessionData['email'],
@@ -248,4 +251,4 @@ class AuthController extends ApiBaseController
     {
         Session::where('id', $sessionId)->delete();
     }
-} 
+}

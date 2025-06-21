@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
-use Illuminate\Http\Request;
+use App\Models\DocumentVersion;
+use App\Models\Session;
+use App\Models\UserBranch;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class DocumentController extends ApiBaseController
 {
@@ -23,12 +26,12 @@ class DocumentController extends ApiBaseController
                 ->get();
 
             return response()->json([
-                'categories' => $categories
+                'categories' => $categories,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'カテゴリ一覧の取得に失敗しました'
+                'error' => 'カテゴリ一覧の取得に失敗しました',
             ], 500);
         }
     }
@@ -49,7 +52,7 @@ class DocumentController extends ApiBaseController
 
             if ($validator->fails()) {
                 return response()->json([
-                    'error' => $validator->errors()->first()
+                    'error' => $validator->errors()->first(),
                 ], 400);
             }
 
@@ -63,12 +66,12 @@ class DocumentController extends ApiBaseController
 
             return response()->json([
                 'success' => true,
-                'category' => $category
+                'category' => $category,
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'カテゴリの作成に失敗しました'
+                'error' => 'カテゴリの作成に失敗しました',
             ], 500);
         }
     }
@@ -83,7 +86,7 @@ class DocumentController extends ApiBaseController
 
             $validator = Validator::make($request->all(), [
                 'name' => 'sometimes|required|string|max:255',
-                'slug' => 'sometimes|required|string|unique:document_categories,slug,' . $id,
+                'slug' => 'sometimes|required|string|unique:document_categories,slug,'.$id,
                 'sidebarLabel' => 'nullable|string|max:255',
                 'position' => 'nullable|integer',
                 'description' => 'nullable|string',
@@ -91,7 +94,7 @@ class DocumentController extends ApiBaseController
 
             if ($validator->fails()) {
                 return response()->json([
-                    'error' => $validator->errors()->first()
+                    'error' => $validator->errors()->first(),
                 ], 400);
             }
 
@@ -105,12 +108,12 @@ class DocumentController extends ApiBaseController
 
             return response()->json([
                 'success' => true,
-                'category' => $category
+                'category' => $category,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'カテゴリの更新に失敗しました'
+                'error' => 'カテゴリの更新に失敗しました',
             ], 500);
         }
     }
@@ -126,12 +129,12 @@ class DocumentController extends ApiBaseController
 
             return response()->json([
                 'success' => true,
-                'message' => 'カテゴリを削除しました'
+                'message' => 'カテゴリを削除しました',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'カテゴリの削除に失敗しました'
+                'error' => 'カテゴリの削除に失敗しました',
             ], 500);
         }
     }
@@ -144,17 +147,17 @@ class DocumentController extends ApiBaseController
         try {
             $slug = $request->query('slug');
 
-            if (!$slug) {
+            if (! $slug) {
                 return response()->json([
-                    'error' => '有効なslugが必要です'
+                    'error' => '有効なslugが必要です',
                 ], 400);
             }
 
             $category = DocumentCategory::where('slug', $slug)->first();
 
-            if (!$category) {
+            if (! $category) {
                 return response()->json([
-                    'error' => 'カテゴリが見つかりません'
+                    'error' => 'カテゴリが見つかりません',
                 ], 404);
             }
 
@@ -168,7 +171,7 @@ class DocumentController extends ApiBaseController
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'カテゴリの取得に失敗しました'
+                'error' => 'カテゴリの取得に失敗しました',
             ], 500);
         }
     }
@@ -176,61 +179,42 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメント一覧を取得
      */
-    public function getDocuments(Request $request): JsonResponse
+    public function getDocuments(GetDocumentsRequest $request): JsonResponse
     {
         try {
-            Log::info($request->all());
-            // 認証チェック
-            $user = $this->user();
+            // 認証チェック（cookieセッション）
+            $sessionId = $request->cookie('sid');
 
-            Log::info($user);
-            if (!$user) {
+            if (! $sessionId) {
                 return response()->json([
-                    'error' => '認証が必要です'
+                    'error' => '認証が必要です',
                 ], 401);
             }
 
-            // クエリパラメータからslugを取得
-            $slugParam = $request->query('slug', '');
-            
+            $user = Session::getUserFromSession($sessionId);
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証が必要です',
+                ], 401);
+            }
+
             // カテゴリパスの取得と処理
-            $categoryPath = array_filter(explode('/', $slugParam));
-            
+            $categoryPath = array_filter(explode('/', $request->slug));
+
             // カテゴリIDを取得（パスから）
-            $currentCategoryId = $this->getCategoryIdFromPath($categoryPath);
-            
+            $currentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+
             // アクティブなブランチを取得
-            $activeBranch = DB::table('user_branches')
-                ->where('user_id', $user->id)
-                ->where('is_active', 1)
-                ->where('pr_status', 'none')
-                ->first();
-            
+            $activeBranch = UserBranch::getActiveBranch($user['userId']);
             $userBranchId = $activeBranch ? $activeBranch->id : null;
-            
+
             // サブカテゴリを取得
-            $subCategories = DB::table('document_categories')
-                ->select('slug', 'sidebar_label', 'position')
-                ->where('parent_id', $currentCategoryId)
-                ->where('user_branch_id', $userBranchId)
-                ->where('is_deleted', 0)
-                ->orderBy('position', 'asc')
-                ->get();
-            
+            $subCategories = DocumentCategory::getSubCategories($currentCategoryId, $userBranchId);
+
             // ドキュメントを取得
-            $documents = DB::table('document_versions')
-                ->select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
-                ->where('category_id', $currentCategoryId)
-                ->where('is_deleted', 0)
-                ->where(function ($query) use ($userBranchId) {
-                    $query->whereIn('status', ['pushed', 'merged'])
-                          ->orWhere(function ($q) use ($userBranchId) {
-                              $q->where('user_branch_id', $userBranchId)
-                                ->where('status', 'draft');
-                          });
-                })
-                ->get();
-            
+            $documents = DocumentVersion::getDocumentsByCategory($currentCategoryId, $userBranchId);
+
             // ソート処理
             $sortedDocuments = $documents
                 ->filter(function ($doc) {
@@ -247,7 +231,7 @@ class DocumentController extends ApiBaseController
                         'fileOrder' => $doc->file_order,
                     ];
                 });
-            
+
             $sortedCategories = $subCategories
                 ->filter(function ($cat) {
                     return $cat->position !== null;
@@ -259,51 +243,19 @@ class DocumentController extends ApiBaseController
                         'sidebarLabel' => $cat->sidebar_label,
                     ];
                 });
-            
+
             return response()->json([
                 'documents' => $sortedDocuments->values(),
-                'categories' => $sortedCategories->values()
+                'categories' => $sortedCategories->values(),
             ]);
 
         } catch (\Exception $e) {
-            Log::error('ドキュメント一覧の取得に失敗しました: ' . $e);
+            Log::error('ドキュメント一覧の取得に失敗しました: '.$e);
+
             return response()->json([
-                'error' => 'ドキュメント一覧の取得に失敗しました'
+                'error' => 'ドキュメント一覧の取得に失敗しました',
             ], 500);
         }
-    }
-
-    /**
-     * カテゴリパスからカテゴリIDを取得
-     */
-    private function getCategoryIdFromPath(array $categoryPath): ?int
-    {
-        if (empty($categoryPath)) {
-            // デフォルトカテゴリを取得
-            $defaultCategory = DB::table('document_categories')
-                ->where('slug', 'uncategorized')
-                ->first();
-            return $defaultCategory ? $defaultCategory->id : null;
-        }
-        
-        $parentId = null;
-        $currentCategoryId = null;
-        
-        foreach ($categoryPath as $slug) {
-            $category = DB::table('document_categories')
-                ->where('slug', $slug)
-                ->where('parent_id', $parentId)
-                ->first();
-            
-            if (!$category) {
-                return null;
-            }
-            
-            $currentCategoryId = $category->id;
-            $parentId = $category->id;
-        }
-        
-        return $currentCategoryId;
     }
 
     /**
@@ -323,15 +275,15 @@ class DocumentController extends ApiBaseController
 
             if ($validator->fails()) {
                 return response()->json([
-                    'error' => $validator->errors()->first()
+                    'error' => $validator->errors()->first(),
                 ], 400);
             }
 
             // カテゴリを取得
             $category = DocumentCategory::where('slug', $request->category)->first();
-            if (!$category) {
+            if (! $category) {
                 return response()->json([
-                    'error' => '指定されたカテゴリが見つかりません'
+                    'error' => '指定されたカテゴリが見つかりません',
                 ], 404);
             }
 
@@ -347,12 +299,12 @@ class DocumentController extends ApiBaseController
 
             return response()->json([
                 'success' => true,
-                'document' => $document
+                'document' => $document,
             ], 201);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'ドキュメントの作成に失敗しました'
+                'error' => 'ドキュメントの作成に失敗しました',
             ], 500);
         }
     }
@@ -365,9 +317,9 @@ class DocumentController extends ApiBaseController
         try {
             $slug = $request->query('slug');
 
-            if (!$slug) {
+            if (! $slug) {
                 return response()->json([
-                    'error' => '有効なslugが必要です'
+                    'error' => '有効なslugが必要です',
                 ], 400);
             }
 
@@ -375,19 +327,19 @@ class DocumentController extends ApiBaseController
                 ->where('slug', $slug)
                 ->first();
 
-            if (!$document) {
+            if (! $document) {
                 return response()->json([
-                    'error' => 'ドキュメントが見つかりません'
+                    'error' => 'ドキュメントが見つかりません',
                 ], 404);
             }
 
             return response()->json([
-                'document' => $document
+                'document' => $document,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'ドキュメントの取得に失敗しました'
+                'error' => 'ドキュメントの取得に失敗しました',
             ], 500);
         }
     }
@@ -405,22 +357,22 @@ class DocumentController extends ApiBaseController
                 'label' => 'sometimes|required|string|max:255',
                 'content' => 'sometimes|required|string',
                 'isPublic' => 'boolean',
-                'slug' => 'sometimes|required|string|unique:documents,slug,' . $id,
+                'slug' => 'sometimes|required|string|unique:documents,slug,'.$id,
                 'fileOrder' => 'nullable|integer',
             ]);
 
             if ($validator->fails()) {
                 return response()->json([
-                    'error' => $validator->errors()->first()
+                    'error' => $validator->errors()->first(),
                 ], 400);
             }
 
             // カテゴリが指定されている場合
             if ($request->has('category')) {
                 $category = DocumentCategory::where('slug', $request->category)->first();
-                if (!$category) {
+                if (! $category) {
                     return response()->json([
-                        'error' => '指定されたカテゴリが見つかりません'
+                        'error' => '指定されたカテゴリが見つかりません',
                     ], 404);
                 }
                 $document->category_id = $category->id;
@@ -436,12 +388,12 @@ class DocumentController extends ApiBaseController
 
             return response()->json([
                 'success' => true,
-                'document' => $document
+                'document' => $document,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'ドキュメントの更新に失敗しました'
+                'error' => 'ドキュメントの更新に失敗しました',
             ], 500);
         }
     }
@@ -457,12 +409,12 @@ class DocumentController extends ApiBaseController
 
             return response()->json([
                 'success' => true,
-                'message' => 'ドキュメントを削除しました'
+                'message' => 'ドキュメントを削除しました',
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'ドキュメントの削除に失敗しました'
+                'error' => 'ドキュメントの削除に失敗しました',
             ], 500);
         }
     }
@@ -475,16 +427,16 @@ class DocumentController extends ApiBaseController
         try {
             $slug = $request->query('slug');
 
-            if (!$slug) {
+            if (! $slug) {
                 return response()->json([
-                    'error' => '有効なslugが必要です'
+                    'error' => '有効なslugが必要です',
                 ], 400);
             }
 
             $category = DocumentCategory::where('slug', $slug)->first();
-            if (!$category) {
+            if (! $category) {
                 return response()->json([
-                    'error' => 'カテゴリが見つかりません'
+                    'error' => 'カテゴリが見つかりません',
                 ], 404);
             }
 
@@ -498,7 +450,7 @@ class DocumentController extends ApiBaseController
                         'path' => $doc->slug,
                         'type' => 'document',
                         'label' => $doc->name,
-                        'isDraft' => !$doc->is_public,
+                        'isDraft' => ! $doc->is_public,
                     ];
                 });
 
@@ -516,13 +468,13 @@ class DocumentController extends ApiBaseController
             $items = $documents->concat($subCategories);
 
             return response()->json([
-                'items' => $items
+                'items' => $items,
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'カテゴリコンテンツの取得に失敗しました'
+                'error' => 'カテゴリコンテンツの取得に失敗しました',
             ], 500);
         }
     }
-} 
+}

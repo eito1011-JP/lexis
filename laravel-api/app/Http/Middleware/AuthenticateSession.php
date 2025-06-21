@@ -15,17 +15,17 @@ class AuthenticateSession
     {
         $sessionId = $request->cookie('sid');
 
-        if (!$sessionId) {
+        if (! $sessionId) {
             return response()->json([
-                'error' => '認証が必要です'
+                'error' => '認証が必要です',
             ], 401);
         }
 
         $user = $this->getSessionUser($sessionId);
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
-                'error' => '無効なセッションです'
+                'error' => '無効なセッションです',
             ], 401);
         }
 
@@ -44,14 +44,15 @@ class AuthenticateSession
             ->where('expired_at', '>', now())
             ->first();
 
-        if (!$session) {
+        if (! $session) {
             return null;
         }
 
         $sessionData = json_decode($session->sess, true);
+
         return [
             'userId' => $sessionData['userId'],
             'email' => $sessionData['email'],
         ];
     }
-} 
+}
