@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\ApiBaseController;
+use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Models\User;
 use App\Models\Session;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends ApiBaseController
@@ -45,7 +47,7 @@ class AuthController extends ApiBaseController
             $sessionId = $this->createSession($user->id, $user->email);
 
             // クッキーにセッションIDを設定
-            $cookie = cookie('sid', $sessionId, 90 * 24 * 60); // 90日
+            $cookie = cookie('sid', $sessionId, config('session.custom_lifetime')); // 設定ファイルから取得
 
             return response()->json([
                 'success' => true,
@@ -68,28 +70,13 @@ class AuthController extends ApiBaseController
     /**
      * ログイン
      */
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        dd($request->all());
         try {
-            $validator = Validator::make($request->all(), [
-                'email' => 'required|email',
-                'password' => 'required',
-            ], [
-                'email.required' => 'メールアドレスは必須です',
-                'password.required' => 'パスワードは必須です',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => $validator->errors()->first()
-                ], 400);
-            }
-
             // ユーザーの存在確認
             $user = User::where('email', $request->email)->first();
-
-            if (!$user) {
+            Log::info($user);
+            if (!$user) {   
                 return response()->json([
                     'error' => 'メールアドレスまたはパスワードが正しくありません'
                 ], 401);
@@ -106,20 +93,18 @@ class AuthController extends ApiBaseController
             $sessionId = $this->createSession($user->id, $user->email);
 
             // クッキーにセッションIDを設定
-            $cookie = cookie('sid', $sessionId, 90 * 24 * 60); // 90日
+            $cookie = cookie('sid', $sessionId, config('session.custom_lifetime'));
 
             return response()->json([
-                'success' => true,
-                'message' => 'ログインに成功しました',
                 'user' => [
                     'id' => $user->id,
-                    'email' => $user->email,
-                    'createdAt' => $user->created_at,
+                    'email' => $user->email
                 ],
                 'isAuthenticated' => true,
             ])->withCookie($cookie);
 
         } catch (\Exception $e) {
+            Log::error($e);
             return response()->json([
                 'error' => 'サーバーエラーが発生しました'
             ], 500);
@@ -195,7 +180,7 @@ class AuthController extends ApiBaseController
      */
     private function createSession(int $userId, string $email): string
     {
-        $expireAt = now()->addDays(90); // 90日後に期限切れ
+        $expireAt = now()->addMinutes(config('session.custom_lifetime')); // 設定ファイルから取得
 
         $sessionData = [
             'userId' => $userId,
