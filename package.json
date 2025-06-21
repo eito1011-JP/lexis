@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:api\" \"npm run dev:admin-frontend\" \"turso dev --db-file local.db\" \"npm run start\"",
+    "dev": "concurrently \"npm run dev:laravel-api\" \"npm run dev:admin-frontend\" \"turso dev --db-file local.db\" \"npm run start\"",
+    "dev:laravel-api": "cd laravel-api && php artisan serve --port=8000",
     "dev:api": "npx tsx api/admin/base.ts",
     "dev:admin-frontend": "cd admin-frontend && npm run dev",
     "build": "docusaurus build && cd admin-frontend && npm run build",

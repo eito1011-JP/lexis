@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laravel Auth Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Laravel Auth Test</h1>
+    
+    <div>
+        <h2>サインアップ</h2>
+        <div class="form-group">
+            <label for="signup-email">メールアドレス:</label>
+            <input type="email" id="signup-email" placeholder="test@example.com">
+        </div>
+        <div class="form-group">
+            <label for="signup-password">パスワード:</label>
+            <input type="password" id="signup-password" placeholder="8文字以上">
+        </div>
+        <button onclick="signup()">サインアップ</button>
+    </div>
+
+    <hr>
+
+    <div>
+        <h2>ログイン</h2>
+        <div class="form-group">
+            <label for="login-email">メールアドレス:</label>
+            <input type="email" id="login-email" placeholder="test@example.com">
+        </div>
+        <div class="form-group">
+            <label for="login-password">パスワード:</label>
+            <input type="password" id="login-password" placeholder="パスワード">
+        </div>
+        <button onclick="login()">ログイン</button>
+    </div>
+
+    <hr>
+
+    <div>
+        <h2>セッション確認</h2>
+        <button onclick="checkSession()">セッション確認</button>
+        <button onclick="logout()">ログアウト</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = '/api';
+
+        function showResult(data, isError = false) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result ${isError ? 'error' : 'success'}`;
+            resultDiv.textContent = JSON.stringify(data, null, 2);
+        }
+
+        async function signup() {
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(data);
+                } else {
+                    showResult(data, true);
+                }
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(data);
+                } else {
+                    showResult(data, true);
+                }
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        async function checkSession() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/session`, {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult({ error: error.message }, true);
+            }
+        }
+    </script>
+</body>
+</html> 
