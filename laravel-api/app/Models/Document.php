@@ -9,7 +9,15 @@ class Document extends Model
 {
     use HasFactory;
 
+    /**
+     * モデルが使用するテーブル名
+     */
+    protected $table = 'document_versions';
+
     protected $fillable = [
+        'user_id',
+        'user_branch_id',
+        'file_path',
         'category_id',
         'sidebar_label',
         'slug',

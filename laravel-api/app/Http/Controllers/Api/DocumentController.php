@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Constants\DocumentCategoryConstants;
 use App\Http\Requests\Api\Document\GetDocumentsRequest;
+use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
-use App\Models\Session;
-use App\Models\UserBranch;
+use App\Services\DocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -15,6 +16,13 @@ use Illuminate\Support\Facades\Validator;
 
 class DocumentController extends ApiBaseController
 {
+    protected DocumentService $documentService;
+
+    public function __construct(DocumentService $documentService)
+    {
+        $this->documentService = $documentService;
+    }
+
     /**
      * カテゴリ一覧を取得
      */
@@ -182,16 +190,8 @@ class DocumentController extends ApiBaseController
     public function getDocuments(GetDocumentsRequest $request): JsonResponse
     {
         try {
-            // 認証チェック（cookieセッション）
-            $sessionId = $request->cookie('sid');
-
-            if (! $sessionId) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
-            }
-
-            $user = Session::getUserFromSession($sessionId);
+            // 認証チェック（新しいメソッドを使用）
+            $user = $this->getUserFromSession();
 
             if (! $user) {
                 return response()->json([
@@ -205,9 +205,8 @@ class DocumentController extends ApiBaseController
             // カテゴリIDを取得（パスから）
             $currentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
 
-            // アクティブなブランチを取得
-            $activeBranch = UserBranch::getActiveBranch($user['userId']);
-            $userBranchId = $activeBranch ? $activeBranch->id : null;
+            // アクティブなブランチを取得（既にauthenticatedUserで取得済み）
+            $userBranchId = $user['userBranchId'];
 
             // サブカテゴリを取得
             $subCategories = DocumentCategory::getSubCategories($currentCategoryId, $userBranchId);
@@ -261,40 +260,44 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを作成
      */
-    public function createDocument(Request $request): JsonResponse
+    public function createDocument(CreateDocumentRequest $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'category' => 'required|string',
-                'label' => 'required|string|max:255',
-                'content' => 'required|string',
-                'isPublic' => 'boolean',
-                'slug' => 'required|string|unique:documents,slug',
-                'fileOrder' => 'nullable|integer',
-            ]);
-
-            if ($validator->fails()) {
+            // 認証チェック
+            $user = $this->getUserFromSession();
+            
+            if (! $user) {
                 return response()->json([
-                    'error' => $validator->errors()->first(),
-                ], 400);
+                    'error' => '認証が必要です',
+                ], 401);
             }
-
+            
             // カテゴリを取得
             $category = DocumentCategory::where('slug', $request->category)->first();
-            if (! $category) {
-                return response()->json([
-                    'error' => '指定されたカテゴリが見つかりません',
-                ], 404);
-            }
+
+            // file_orderの重複処理・自動採番
+            $correctedFileOrder = $this->documentService->normalizeFileOrder(
+                $request->fileOrder ? (int) $request->fileOrder : null,
+                $category->id ?? null
+            );
+
+            // ファイルパスの生成
+            $targetDir = $request->category
+                ? base_path('docs/' . $request->category)
+                : base_path('docs');
+            $filePath = $targetDir . '/' . $request->slug . '.md';
 
             $document = Document::create([
-                'category_id' => $category->id,
+                'user_id' => $user['userId'],
+                'user_branch_id' => $user['userBranchId'],
+                'category_id' => $category->id ?? DocumentCategoryConstants::DEFAULT_CATEGORY_ID,
                 'sidebar_label' => $request->label,
                 'slug' => $request->slug,
                 'is_public' => $request->isPublic ?? false,
                 'status' => 'draft',
-                'last_edited_by' => $request->user['email'] ?? 'unknown',
-                'file_order' => $request->fileOrder ?? 0,
+                'last_edited_by' => $user['email'] ?? 'unknown',
+                'file_order' => $correctedFileOrder,
+                'file_path' => $filePath,
             ]);
 
             return response()->json([
@@ -303,6 +306,7 @@ class DocumentController extends ApiBaseController
             ], 201);
 
         } catch (\Exception $e) {
+            Log::error($e);
             return response()->json([
                 'error' => 'ドキュメントの作成に失敗しました',
             ], 500);
@@ -351,13 +355,22 @@ class DocumentController extends ApiBaseController
     {
         try {
             $document = Document::findOrFail($id);
+            
+            // 認証チェック
+            $user = $this->getUserFromSession();
+            
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証が必要です',
+                ], 401);
+            }
 
             $validator = Validator::make($request->all(), [
                 'category' => 'sometimes|required|string',
                 'label' => 'sometimes|required|string|max:255',
                 'content' => 'sometimes|required|string',
                 'isPublic' => 'boolean',
-                'slug' => 'sometimes|required|string|unique:documents,slug,'.$id,
+                'slug' => 'sometimes|required|string|unique:document_versions,slug,'.$id,
                 'fileOrder' => 'nullable|integer',
             ]);
 
@@ -382,7 +395,7 @@ class DocumentController extends ApiBaseController
                 'sidebar_label' => $request->label ?? $document->sidebar_label,
                 'slug' => $request->slug ?? $document->slug,
                 'is_public' => $request->isPublic ?? $document->is_public,
-                'last_edited_by' => $request->user['email'] ?? $document->last_edited_by,
+                'last_edited_by' => $user['email'] ?? $document->last_edited_by,
                 'file_order' => $request->fileOrder ?? $document->file_order,
             ]);
 

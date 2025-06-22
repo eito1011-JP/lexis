@@ -26,6 +26,14 @@ class UserBranch extends Model
     ];
 
     /**
+     * アクティブなブランチのスコープ
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', 1)->where('pr_status', 'none');
+    }
+
+    /**
      * ユーザーのアクティブなブランチを取得
      */
     public static function getActiveBranch(int $userId): ?self

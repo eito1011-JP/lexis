@@ -1,4 +1,5 @@
 import { db } from '../lib/db';
+import { DOCUMENT_CATEGORY_CONSTANTS } from '../../api/const/document-category';
 
 /**
  * カテゴリパスからカテゴリIDを取得する
@@ -99,7 +100,7 @@ export async function getCategoryTreeFromSlug(slug: string, userBranchId: number
 const getDefaultCategoryId = async (): Promise<number | null> => {
   const result = await db.execute({
     sql: 'SELECT id FROM document_categories WHERE slug = ?',
-    args: ['uncategorized'],
+    args: [DOCUMENT_CATEGORY_CONSTANTS.DEFAULT_CATEGORY_SLUG],
   });
   return result.rows[0]?.id ? Number(result.rows[0].id) : null;
 };

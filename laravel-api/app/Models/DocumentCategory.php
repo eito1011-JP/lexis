@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Constants\DocumentCategoryConstants;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -32,7 +33,7 @@ class DocumentCategory extends Model
     {
         if (empty($categoryPath)) {
             // デフォルトカテゴリを取得
-            $defaultCategory = self::where('slug', 'uncategorized')->first();
+            $defaultCategory = self::where('slug', DocumentCategoryConstants::DEFAULT_CATEGORY_SLUG)->first();
 
             return $defaultCategory ? $defaultCategory->id : null;
         }

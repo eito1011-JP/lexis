@@ -1,4 +1,5 @@
 import { db } from '../../src/lib/db';
+import { DOCUMENT_CATEGORY_CONSTANTS } from '../const/document-category';
 
 /**
  * デフォルトカテゴリのIDを取得する
@@ -6,7 +7,7 @@ import { db } from '../../src/lib/db';
 export const getDefaultCategoryId = async (): Promise<number | null> => {
   const result = await db.execute({
     sql: 'SELECT id FROM document_categories WHERE slug = ? AND parent_id IS ?',
-    args: ['uncategorized', null],
+    args: [DOCUMENT_CATEGORY_CONSTANTS.DEFAULT_CATEGORY_SLUG, null],
   });
   return result.rows[0]?.id ? Number(result.rows[0].id) : null;
 };

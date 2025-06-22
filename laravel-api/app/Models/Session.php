@@ -37,11 +37,10 @@ class Session extends Model
             return null;
         }
 
-        $sessionData = json_decode($session->sess, true);
-
         return [
-            'userId' => $sessionData['userId'],
-            'email' => $sessionData['email'],
+            'userId' => $session->user->id,
+            'email' => $session->user->email,
+            'userBranchId' => $session->user->userBranches()->active()->first()?->id,
         ];
     }
 
