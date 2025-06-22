@@ -3,39 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\Api\Auth\LoginRequest;
+use App\Http\Requests\Api\Auth\SignupRequest;
 use App\Models\Session;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class AuthController extends ApiBaseController
 {
     /**
      * ユーザー登録
      */
-    public function signup(Request $request): JsonResponse
+    public function signup(SignupRequest $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'email' => 'required|email|unique:users,email',
-                'password' => 'required|min:8',
-            ], [
-                'email.required' => 'メールアドレスは必須です',
-                'email.email' => '有効なメールアドレスを入力してください',
-                'email.unique' => 'このメールアドレスは既に登録されています',
-                'password.required' => 'パスワードは必須です',
-                'password.min' => 'パスワードは8文字以上である必要があります',
-            ]);
-
-            if ($validator->fails()) {
-                return response()->json([
-                    'error' => $validator->errors()->first(),
-                ], 400);
-            }
-
             // ユーザー作成
             $user = User::create([
                 'email' => $request->email,
@@ -46,11 +29,9 @@ class AuthController extends ApiBaseController
             $sessionId = $this->createSession($user->id, $user->email);
 
             // クッキーにセッションIDを設定
-            $cookie = cookie('sid', $sessionId, config('session.lifetime')); // 設定ファイルから取得
+            $cookie = cookie('sid', $sessionId, config('session.lifetime'));
 
             return response()->json([
-                'success' => true,
-                'message' => 'ユーザー登録が完了しました',
                 'user' => [
                     'id' => $user->id,
                     'email' => $user->email,
@@ -60,6 +41,8 @@ class AuthController extends ApiBaseController
             ])->withCookie($cookie);
 
         } catch (\Exception $e) {
+            Log::error($e);
+
             return response()->json([
                 'error' => 'サーバーエラーが発生しました',
             ], 500);

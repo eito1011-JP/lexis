@@ -5,14 +5,14 @@ export const API_CONFIG = {
   TIMEOUT: 10000,
 
   ENDPOINTS: {
-    SIGNUP: '/api/admin/signup',
+    SIGNUP: '/api/auth/signup',
     LOGIN: '/api/auth/login',
     SESSION: '/api/auth/session',
     LOGOUT: '/api/auth/logout',
     DOCUMENTS: {
-      CREATE_FOLDER: '/api/admin/documents/create-category',
-      UPDATE_FOLDER: '/api/admin/documents/update-category',
-      DELETE_FOLDER: '/api/admin/documents/delete-category',
+      CREATE_FOLDER: '/api/admin/documents/categories',
+      UPDATE_FOLDER: '/api/admin/documents/categories',
+      DELETE_FOLDER: '/api/admin/documents/categories',
       CREATE_DOCUMENT: '/api/admin/documents',
       UPDATE_DOCUMENT: '/api/admin/documents',
       DELETE_DOCUMENT: '/api/admin/documents',
@@ -20,6 +20,7 @@ export const API_CONFIG = {
       GET_DOCUMENT_BY_SLUG: '/api/admin/documents/slug',
       GET_CATEGORY_BY_SLUG: '/api/admin/documents/category-slug',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
+      GET_CATEGORIES: '/api/admin/documents/categories',
     },
     USERS: {
       GET_ALL: '/api/admin/users',
