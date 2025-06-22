@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Constants\DocumentCategoryConstants;
-use App\Http\Requests\Api\Document\GetDocumentsRequest;
+use App\Enums\DocumentStatus;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
+use App\Http\Requests\Api\Document\GetDocumentBySlugRequest;
+use App\Http\Requests\Api\Document\GetDocumentsRequest;
+use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Services\DocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -265,13 +269,13 @@ class DocumentController extends ApiBaseController
         try {
             // 認証チェック
             $user = $this->getUserFromSession();
-            
+
             if (! $user) {
                 return response()->json([
                     'error' => '認証が必要です',
                 ], 401);
             }
-            
+
             // カテゴリを取得
             $category = DocumentCategory::where('slug', $request->category)->first();
 
@@ -283,9 +287,9 @@ class DocumentController extends ApiBaseController
 
             // ファイルパスの生成
             $targetDir = $request->category
-                ? base_path('docs/' . $request->category)
+                ? base_path('docs/'.$request->category)
                 : base_path('docs');
-            $filePath = $targetDir . '/' . $request->slug . '.md';
+            $filePath = $targetDir.'/'.$request->slug.'.md';
 
             $document = Document::create([
                 'user_id' => $user['userId'],
@@ -294,7 +298,7 @@ class DocumentController extends ApiBaseController
                 'sidebar_label' => $request->label,
                 'slug' => $request->slug,
                 'is_public' => $request->isPublic ?? false,
-                'status' => 'draft',
+                'status' => DocumentStatus::DRAFT->value,
                 'last_edited_by' => $user['email'] ?? 'unknown',
                 'file_order' => $correctedFileOrder,
                 'file_path' => $filePath,
@@ -307,6 +311,7 @@ class DocumentController extends ApiBaseController
 
         } catch (\Exception $e) {
             Log::error($e);
+
             return response()->json([
                 'error' => 'ドキュメントの作成に失敗しました',
             ], 500);
@@ -316,32 +321,75 @@ class DocumentController extends ApiBaseController
     /**
      * スラッグでドキュメントを取得
      */
-    public function getDocumentBySlug(Request $request): JsonResponse
+    public function getDocumentBySlug(GetDocumentBySlugRequest $request): JsonResponse
     {
         try {
-            $slug = $request->query('slug');
+            // 認証チェック
+            $user = $this->getUserFromSession();
 
-            if (! $slug) {
+            if (! $user) {
                 return response()->json([
-                    'error' => '有効なslugが必要です',
-                ], 400);
+                    'error' => '認証が必要です',
+                ], 401);
             }
 
-            $document = Document::with('category')
-                ->where('slug', $slug)
+            // パスからslugとcategoryPathを取得
+            $pathParts = explode('/', $request->query('slug'));
+            $slug = end($pathParts);
+            $categoryPath = array_slice($pathParts, 0, -1);
+
+            // カテゴリ情報を取得
+            $categoryId = null;
+            if (empty($categoryPath)) {
+                // カテゴリが指定されていない場合（ルートカテゴリ）
+                $category = DocumentCategory::whereNull('parent_id')
+                    ->where('is_deleted', 0)
+                    ->first();
+                $categoryId = $category ? $category->id : null;
+            } else {
+                // カテゴリが指定されている場合
+                $category = DocumentCategory::where('slug', end($categoryPath))
+                    ->where('is_deleted', 0)
+                    ->first();
+                $categoryId = $category ? $category->id : null;
+            }
+
+            if (! $categoryId) {
+                return response()->json([
+                    'error' => 'カテゴリが見つかりません',
+                ], 404);
+            }
+
+            // ドキュメントバージョンを取得
+            $documentVersion = DocumentVersion::where('slug', $slug)
+                ->where('category_id', $categoryId)
+                ->where('is_deleted', 0)
+                ->select('id', 'slug', 'sidebar_label', 'content', 'file_order', 'is_public', 'last_edited_by')
                 ->first();
 
-            if (! $document) {
+            if (! $documentVersion) {
                 return response()->json([
                     'error' => 'ドキュメントが見つかりません',
                 ], 404);
             }
 
-            return response()->json([
-                'document' => $document,
-            ]);
+            // レスポンスデータを構築
+            $response = [
+                'id' => $documentVersion->id,
+                'slug' => $documentVersion->slug,
+                'label' => $documentVersion->sidebar_label,
+                'content' => $documentVersion->content,
+                'fileOrder' => $documentVersion->file_order,
+                'isPublic' => (bool) $documentVersion->is_public,
+                'lastEditedBy' => $documentVersion->last_edited_by,
+                'source' => 'database',
+            ];
+
+            return response()->json($response);
 
         } catch (\Exception $e) {
+            Log::error('ドキュメント取得エラー: '.$e->getMessage());
+
             return response()->json([
                 'error' => 'ドキュメントの取得に失敗しました',
             ], 500);
@@ -351,64 +399,190 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを更新
      */
-    public function updateDocument(Request $request, $id): JsonResponse
+    public function updateDocument(UpdateDocumentRequest $request, $id): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
-            $document = Document::findOrFail($id);
-            
             // 認証チェック
             $user = $this->getUserFromSession();
-            
+
             if (! $user) {
                 return response()->json([
                     'error' => '認証が必要です',
                 ], 401);
             }
 
-            $validator = Validator::make($request->all(), [
-                'category' => 'sometimes|required|string',
-                'label' => 'sometimes|required|string|max:255',
-                'content' => 'sometimes|required|string',
-                'isPublic' => 'boolean',
-                'slug' => 'sometimes|required|string|unique:document_versions,slug,'.$id,
-                'fileOrder' => 'nullable|integer',
-            ]);
+            // 既存のドキュメントバージョンを取得
+            $existingDoc = DocumentVersion::where('id', $id)
+                ->where('is_deleted', 0)
+                ->first();
 
-            if ($validator->fails()) {
+            if (! $existingDoc) {
                 return response()->json([
-                    'error' => $validator->errors()->first(),
-                ], 400);
+                    'error' => '編集対象のドキュメントが見つかりません',
+                ], 404);
             }
 
-            // カテゴリが指定されている場合
-            if ($request->has('category')) {
-                $category = DocumentCategory::where('slug', $request->category)->first();
-                if (! $category) {
-                    return response()->json([
-                        'error' => '指定されたカテゴリが見つかりません',
-                    ], 404);
-                }
-                $document->category_id = $category->id;
+            // アクティブブランチを取得
+            $userBranch = $this->getUserBranch($user['userId']);
+            if (! $userBranch) {
+                return response()->json([
+                    'error' => 'アクティブなブランチが見つかりません',
+                ], 404);
             }
 
-            $document->update([
-                'sidebar_label' => $request->label ?? $document->sidebar_label,
-                'slug' => $request->slug ?? $document->slug,
-                'is_public' => $request->isPublic ?? $document->is_public,
-                'last_edited_by' => $user['email'] ?? $document->last_edited_by,
-                'file_order' => $request->fileOrder ?? $document->file_order,
+            // file_orderの処理
+            $categoryId = $existingDoc->category_id;
+            $finalFileOrder = $this->processFileOrder($request->fileOrder, $categoryId, $existingDoc->file_order, $userBranch->id, $id);
+
+            // 既存ドキュメントを論理削除
+            $existingDoc->update(['is_deleted' => 1]);
+
+            // 新しいドキュメントバージョンを作成
+            $newDocumentVersion = DocumentVersion::create([
+                'user_id' => $user['userId'],
+                'user_branch_id' => $userBranch->id,
+                'file_path' => $existingDoc->file_path,
+                'status' => DocumentStatus::DRAFT->value,
+                'content' => $request->content,
+                'slug' => $request->slug,
+                'sidebar_label' => $request->label,
+                'file_order' => $finalFileOrder,
+                'last_edited_by' => $user['email'],
+                'is_deleted' => 0,
+                'is_public' => $request->isPublic,
+                'category_id' => $categoryId,
             ]);
+
+            // 編集開始バージョンを記録
+            $this->recordEditStartVersion($userBranch->id, $id, $newDocumentVersion->id);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'document' => $document,
+                'message' => 'ドキュメントが更新されました',
+                'documentId' => $request->slug,
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('ドキュメント更新エラー: '.$e->getMessage());
+
             return response()->json([
                 'error' => 'ドキュメントの更新に失敗しました',
             ], 500);
         }
+    }
+
+    /**
+     * ユーザーのアクティブブランチを取得
+     */
+    private function getUserBranch(int $userId)
+    {
+        return DB::table('user_branches')
+            ->where('user_id', $userId)
+            ->where('is_active', 1)
+            ->where('pr_status', 'none')
+            ->first();
+    }
+
+    /**
+     * file_orderの処理と他のドキュメントの順序調整
+     */
+    private function processFileOrder($fileOrder, int $categoryId, int $oldFileOrder, int $userBranchId, int $excludeId): int
+    {
+        // file_orderが空の場合は最大値+1を設定
+        if (empty($fileOrder) && $fileOrder !== 0) {
+            $maxOrder = DocumentVersion::where('category_id', $categoryId)
+                ->where('status', DocumentStatus::MERGED->value)
+                ->where('is_deleted', 0)
+                ->max('file_order');
+
+            return ($maxOrder ?? 0) + 1;
+        }
+
+        $newFileOrder = (int) $fileOrder;
+
+        // file_orderが変更された場合のみ他のドキュメントを調整
+        if ($newFileOrder !== $oldFileOrder) {
+            $this->adjustOtherDocumentsOrder($categoryId, $newFileOrder, $oldFileOrder, $userBranchId, $excludeId);
+        }
+
+        return $newFileOrder;
+    }
+
+    /**
+     * 他のドキュメントの順序を調整
+     */
+    private function adjustOtherDocumentsOrder(int $categoryId, int $newFileOrder, int $oldFileOrder, int $userBranchId, int $excludeId): void
+    {
+        $documentsToShift = DocumentVersion::where('category_id', $categoryId)
+            ->where('is_deleted', 0)
+            ->where(function ($query) use ($userBranchId) {
+                $query->where('status', DocumentStatus::MERGED->value)
+                    ->orWhere('user_branch_id', $userBranchId);
+            })
+            ->where('id', '!=', $excludeId);
+
+        if ($newFileOrder < $oldFileOrder) {
+            // 上に移動する場合：新しい位置以上、元の位置未満の範囲のレコードを+1
+            $documentsToShift = $documentsToShift
+                ->where('file_order', '>=', $newFileOrder)
+                ->where('file_order', '<', $oldFileOrder)
+                ->orderBy('file_order', 'asc');
+        } else {
+            // 下に移動する場合：元の位置超過、新しい位置以下の範囲のレコードを-1
+            $documentsToShift = $documentsToShift
+                ->where('file_order', '>', $oldFileOrder)
+                ->where('file_order', '<=', $newFileOrder)
+                ->orderBy('file_order', 'asc');
+        }
+
+        $documents = $documentsToShift->get();
+
+        foreach ($documents as $doc) {
+            $newOrder = $newFileOrder < $oldFileOrder ? $doc->file_order + 1 : $doc->file_order - 1;
+
+            // 新しいバージョンを作成して順序を更新
+            DocumentVersion::create([
+                'user_id' => $doc->user_id,
+                'user_branch_id' => $userBranchId,
+                'file_path' => $doc->file_path,
+                'status' => DocumentStatus::DRAFT->value,
+                'content' => $doc->content,
+                'slug' => $doc->slug,
+                'sidebar_label' => $doc->sidebar_label,
+                'file_order' => $newOrder,
+                'last_edited_by' => $doc->last_edited_by,
+                'is_deleted' => 0,
+                'is_public' => $doc->is_public,
+                'category_id' => $doc->category_id,
+            ]);
+
+            // 元のバージョンを論理削除
+            $doc->update(['is_deleted' => 1]);
+        }
+    }
+
+    /**
+     * 編集開始バージョンを記録
+     */
+    private function recordEditStartVersion(int $userBranchId, int $originalVersionId, int $currentVersionId): void
+    {
+        DB::table('edit_start_versions')->updateOrInsert(
+            [
+                'user_branch_id' => $userBranchId,
+                'original_version_id' => $originalVersionId,
+            ],
+            [
+                'target_type' => 'document',
+                'current_version_id' => $currentVersionId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
     }
 
     /**

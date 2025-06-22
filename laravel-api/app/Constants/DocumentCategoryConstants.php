@@ -26,4 +26,4 @@ class DocumentCategoryConstants
      * デフォルトカテゴリ（未分類）のサイドバーラベル
      */
     public const DEFAULT_CATEGORY_SIDEBAR_LABEL = '未分類';
-} 
+}

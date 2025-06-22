@@ -71,7 +71,6 @@ export default function EditDocumentPage(): JSX.Element {
         // クエリパラメータとしてslugを渡す
         const response = await apiClient.get(`${endpoint}?${queryParams.toString()}`);
 
-        console.log('response', response);
         if (response) {
           // 取得したデータをフォームにセット
           setDocumentId(response.id);
@@ -158,8 +157,7 @@ export default function EditDocumentPage(): JSX.Element {
       console.log('fileOrder', fileOrder);
 
       // ドキュメント編集APIを呼び出す
-      const response = await apiClient.put(API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_DOCUMENT, {
-        id: documentId,
+      const response = await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_DOCUMENT}/${documentId}`, {
         category,
         label,
         content,

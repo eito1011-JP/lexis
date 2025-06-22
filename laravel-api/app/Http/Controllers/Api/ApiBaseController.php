@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Models\Session;
+use App\Models\User;
 use App\Models\UserBranch;
 use App\Traits\BaseEncoding;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
@@ -35,13 +34,13 @@ class ApiBaseController extends Controller
         $request = request();
         $sessionId = $request->cookie('sid');
 
-        if (!$sessionId) {
+        if (! $sessionId) {
             return null;
         }
 
         $userData = Session::getUserFromSession($sessionId);
-        
-        if (!$userData) {
+
+        if (! $userData) {
             return null;
         }
 

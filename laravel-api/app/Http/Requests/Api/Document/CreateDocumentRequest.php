@@ -22,7 +22,8 @@ class CreateDocumentRequest extends FormRequest
      */
     public function rules(): array
     {
-        Log::info('createDocument request: ' . json_encode($this->all()));
+        Log::info('createDocument request: '.json_encode($this->all()));
+
         return [
             'category' => 'nullable|string',
             'label' => 'required|string|max:255',
@@ -35,8 +36,6 @@ class CreateDocumentRequest extends FormRequest
 
     /**
      * Get custom attribute names for validator errors.
-     *
-     * @return array
      */
     public function attributes(): array
     {
@@ -48,4 +47,4 @@ class CreateDocumentRequest extends FormRequest
             'fileOrder' => __('attributes.document.fileOrder'),
         ];
     }
-} 
+}

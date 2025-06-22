@@ -10,8 +10,8 @@ class DocumentService
     /**
      * file_orderの重複処理・自動採番を行う
      *
-     * @param int|null $requestedFileOrder リクエストされたfile_order
-     * @param int|null $categoryId カテゴリID
+     * @param  int|null  $requestedFileOrder  リクエストされたfile_order
+     * @param  int|null  $categoryId  カテゴリID
      * @return int 正規化されたfile_order
      */
     public function normalizeFileOrder(?int $requestedFileOrder, ?int $categoryId = null): int
@@ -35,4 +35,4 @@ class DocumentService
             return $maxOrder + 1;
         }
     }
-} 
+}

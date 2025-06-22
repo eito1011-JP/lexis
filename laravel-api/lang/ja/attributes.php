@@ -21,4 +21,4 @@ return [
         'position' => '位置',
         'description' => '説明',
     ],
-]; 
+];

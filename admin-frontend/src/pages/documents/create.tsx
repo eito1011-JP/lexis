@@ -140,7 +140,7 @@ export default function CreateDocumentPage(): JSX.Element {
       if (response.success) {
         alert('ドキュメントが作成されました');
         // 成功したら一覧ページに戻る
-        window.location.href = `/admin/documents/${category}`;
+        window.location.href = `/admin/documents/${category ?? ''}`;
       } else {
         throw new Error(response.message || '不明なエラーが発生しました');
       }
