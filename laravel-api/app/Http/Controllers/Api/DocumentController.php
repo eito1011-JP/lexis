@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Constants\DocumentCategoryConstants;
+use App\Consts\Flag;
 use App\Enums\DocumentStatus;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
+use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\GetDocumentBySlugRequest;
 use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
@@ -342,15 +344,11 @@ class DocumentController extends ApiBaseController
             $categoryId = null;
             if (empty($categoryPath)) {
                 // カテゴリが指定されていない場合（ルートカテゴリ）
-                $category = DocumentCategory::whereNull('parent_id')
-                    ->where('is_deleted', 0)
-                    ->first();
+                $category = DocumentCategory::whereNull('parent_id')->first();
                 $categoryId = $category ? $category->id : null;
             } else {
                 // カテゴリが指定されている場合
-                $category = DocumentCategory::where('slug', end($categoryPath))
-                    ->where('is_deleted', 0)
-                    ->first();
+                $category = DocumentCategory::where('slug', end($categoryPath))->first();
                 $categoryId = $category ? $category->id : null;
             }
 
@@ -363,7 +361,6 @@ class DocumentController extends ApiBaseController
             // ドキュメントバージョンを取得
             $documentVersion = DocumentVersion::where('slug', $slug)
                 ->where('category_id', $categoryId)
-                ->where('is_deleted', 0)
                 ->select('id', 'slug', 'sidebar_label', 'content', 'file_order', 'is_public', 'last_edited_by')
                 ->first();
 
@@ -414,9 +411,7 @@ class DocumentController extends ApiBaseController
             }
 
             // 既存のドキュメントバージョンを取得
-            $existingDoc = DocumentVersion::where('id', $id)
-                ->where('is_deleted', 0)
-                ->first();
+            $existingDoc = DocumentVersion::where('id', $id)->first();
 
             if (! $existingDoc) {
                 return response()->json([
@@ -450,7 +445,6 @@ class DocumentController extends ApiBaseController
                 'sidebar_label' => $request->label,
                 'file_order' => $finalFileOrder,
                 'last_edited_by' => $user['email'],
-                'is_deleted' => 0,
                 'is_public' => $request->isPublic,
                 'category_id' => $categoryId,
             ]);
@@ -497,7 +491,6 @@ class DocumentController extends ApiBaseController
         if (empty($fileOrder) && $fileOrder !== 0) {
             $maxOrder = DocumentVersion::where('category_id', $categoryId)
                 ->where('status', DocumentStatus::MERGED->value)
-                ->where('is_deleted', 0)
                 ->max('file_order');
 
             return ($maxOrder ?? 0) + 1;
@@ -519,7 +512,6 @@ class DocumentController extends ApiBaseController
     private function adjustOtherDocumentsOrder(int $categoryId, int $newFileOrder, int $oldFileOrder, int $userBranchId, int $excludeId): void
     {
         $documentsToShift = DocumentVersion::where('category_id', $categoryId)
-            ->where('is_deleted', 0)
             ->where(function ($query) use ($userBranchId) {
                 $query->where('status', DocumentStatus::MERGED->value)
                     ->orWhere('user_branch_id', $userBranchId);
@@ -588,22 +580,98 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを削除
      */
-    public function deleteDocument(Request $request, $id): JsonResponse
+    public function deleteDocument(DeleteDocumentRequest $request): JsonResponse
     {
-        try {
-            $document = Document::findOrFail($id);
-            $document->delete();
+        DB::beginTransaction();
 
+        try {
+            // 1. 認証チェック
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証が必要です',
+                ], 401);
+            }
+
+            // 2. リクエストデータの取得
+            $slug = $request->input('slug');
+
+            // 3. 削除対象のドキュメントを取得
+            $existingDocument = DocumentVersion::where('slug', $slug)->first();
+
+            if (! $existingDocument) {
+                return response()->json([
+                    'error' => '削除対象のドキュメントが見つかりません',
+                ], 404);
+            }
+
+            // 4. ユーザーのアクティブブランチ確認
+            $userBranch = $this->getUserBranch($user['userId']);
+
+            if (! $userBranch) {
+                // 新しいブランチを作成
+                $userBranch = $this->createUserBranch($user['userId'], $user['email']);
+            }
+
+            // 5. 既存ドキュメントを論理削除（is_deleted = 1に更新）
+            $existingDocument->update(['is_deleted' => Flag::TRUE]);
+
+            // 6. 削除されたドキュメントのレコードを新規挿入（ブランチ管理用）
+            DocumentVersion::create([
+                'user_id' => $user['userId'],
+                'user_branch_id' => $userBranch->id,
+                'file_path' => $existingDocument->file_path,
+                'status' => DocumentStatus::DRAFT->value,
+                'content' => $existingDocument->content,
+                'slug' => $existingDocument->slug,
+                'sidebar_label' => $existingDocument->sidebar_label,
+                'file_order' => $existingDocument->file_order,
+                'last_edited_by' => $user['email'],
+                'is_public' => $existingDocument->is_public,
+                'category_id' => $existingDocument->category_id,
+                'is_deleted' => Flag::TRUE,
+            ]);
+
+            DB::commit();
+
+            // 7. 成功レスポンス
             return response()->json([
                 'success' => true,
-                'message' => 'ドキュメントを削除しました',
+                'message' => 'ドキュメントが削除されました',
+                'documentSlug' => $slug,
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('ドキュメント削除エラー: '.$e->getMessage());
+
             return response()->json([
                 'error' => 'ドキュメントの削除に失敗しました',
             ], 500);
         }
+    }
+
+    /**
+     * ユーザーブランチを作成
+     */
+    private function createUserBranch(int $userId, string $email)
+    {
+        // ブランチスナップショットの初期化処理
+        GitController::initBranchSnapshot($userId, $email);
+
+        // 作成されたブランチを取得
+        $userBranch = DB::table('user_branches')
+            ->where('user_id', $userId)
+            ->where('is_active', 1)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (! $userBranch) {
+            throw new \Exception('ブランチの作成に失敗しました');
+        }
+
+        return $userBranch;
     }
 
     /**

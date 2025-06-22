@@ -47,7 +47,7 @@ Route::middleware('auth.session')->group(function () {
         Route::post('/', [DocumentController::class, 'createDocument']);
         Route::get('/slug', [DocumentController::class, 'getDocumentBySlug']);
         Route::put('/{id}', [DocumentController::class, 'updateDocument']);
-        Route::delete('/{id}', [DocumentController::class, 'deleteDocument']);
+        Route::delete('/', [DocumentController::class, 'deleteDocument']);
         Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);
 
         // Git関連

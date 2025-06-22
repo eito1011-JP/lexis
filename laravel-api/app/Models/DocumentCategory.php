@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Constants\DocumentCategoryConstants;
+use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DocumentCategory extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -63,8 +65,7 @@ class DocumentCategory extends Model
     public static function getSubCategories(int $parentId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('slug', 'sidebar_label', 'position')
-            ->where('parent_id', $parentId)
-            ->where('is_deleted', 0);
+            ->where('parent_id', $parentId);
 
         if ($userBranchId) {
             $query->where('user_branch_id', $userBranchId);

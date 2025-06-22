@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class DocumentVersion extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $table = 'document_versions';
 
@@ -40,8 +42,7 @@ class DocumentVersion extends Model
     public static function getDocumentsByCategory(int $categoryId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
-            ->where('category_id', $categoryId)
-            ->where('is_deleted', 0);
+            ->where('category_id', $categoryId);
 
         if ($userBranchId) {
             $query->where(function ($q) use ($userBranchId) {
