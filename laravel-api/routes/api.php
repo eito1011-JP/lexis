@@ -56,8 +56,8 @@ Route::middleware('auth.session')->group(function () {
     Route::prefix('admin/document-categories')->group(function () {
         Route::get('/', [DocumentCategoryController::class, 'getCategoryByPath']);
         Route::post('/', [DocumentCategoryController::class, 'createCategory']);
-        Route::put('/{id}', [DocumentCategoryController::class, 'updateCategory']);
-        Route::delete('/{id}', [DocumentCategoryController::class, 'deleteCategory']);
+        Route::put('/{category_path}', [DocumentCategoryController::class, 'updateCategory']);
+        Route::delete('/{category_path}', [DocumentCategoryController::class, 'deleteCategory']);
         Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
     });
 });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateDocumentCategoryRequest extends FormRequest
@@ -26,8 +27,9 @@ class UpdateDocumentCategoryRequest extends FormRequest
             'slug' => [
                 'required',
                 'string',
+                new UniqueSlugInSameParent('document_categories', $this->route('category_path')),
             ],
-            'sidebarLabel' => 'required|string|max:255',
+            'sidebar_label' => 'required|string|max:255',
             'position' => 'required|integer',
             'description' => 'nullable|string',
         ];

@@ -65,4 +65,5 @@ return [
         'description' => '説明',
         'categoryPath' => 'カテゴリパス',
     ],
+    'unique_slug_in_same_parent' => ':slugは既に同じカテゴリ内で使われています',
 ];

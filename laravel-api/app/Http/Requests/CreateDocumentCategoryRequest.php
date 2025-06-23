@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
 
 class CreateDocumentCategoryRequest extends FormRequest
@@ -22,11 +23,15 @@ class CreateDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'slug' => 'required|string',
-            'sidebarLabel' => 'required|string',
+            'slug' => [
+                'required',
+                'string',
+                new UniqueSlugInSameParent($this->category_path),
+            ],
+            'sidebar_label' => 'required|string',
             'position' => 'nullable|numeric',
             'description' => 'nullable|string',
-            'categoryPath' => 'array',
+            'category_path' => 'array',
         ];
     }
 }

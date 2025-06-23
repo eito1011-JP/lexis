@@ -10,9 +10,9 @@ export const API_CONFIG = {
     SESSION: '/api/auth/session',
     LOGOUT: '/api/auth/logout',
     DOCUMENTS: {
-      CREATE_FOLDER: '/api/admin/document-categories',
-      UPDATE_FOLDER: '/api/admin/document-categories',
-      DELETE_FOLDER: '/api/admin/document-categories',
+      CREATE_CATEGORY: '/api/admin/document-categories',
+      UPDATE_CATEGORY: '/api/admin/document-categories',
+      DELETE_CATEGORY: '/api/admin/document-categories',
       CREATE_DOCUMENT: '/api/admin/documents',
       UPDATE_DOCUMENT: '/api/admin/documents',
       DELETE_DOCUMENT: '/api/admin/documents',

@@ -175,7 +175,7 @@ export default function DocumentBySlugPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_FOLDER, {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY, {
         slug: categorySlug,
         sidebarLabel: label,
         position: positionNum,

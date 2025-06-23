@@ -187,7 +187,7 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_FOLDER, {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY, {
         slug,
         sidebarLabel: label,
         position: positionNum,
@@ -235,14 +235,16 @@ export default function DocumentsPage(): JSX.Element {
     try {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
-
-      const response = await apiClient.put(API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_FOLDER, {
-        originalSlug: editingCategory.slug,
-        slug,
-        sidebarLabel: label,
-        position: positionNum,
-        description,
-      });
+      console.log(editingCategory.slug);
+      const response = await apiClient.put(
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_CATEGORY}/${editingCategory.slug}`,
+        {
+          slug,
+          sidebar_label: label,
+          position: positionNum,
+          description,
+        }
+      );
 
       // カテゴリリストを更新
       if (response.success) {
@@ -321,7 +323,7 @@ export default function DocumentsPage(): JSX.Element {
     setCategoryDeleteError(null);
 
     try {
-      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE_FOLDER, {
+      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE_CATEGORY, {
         body: JSON.stringify({ slug: categoryToDelete.slug }),
       });
 
