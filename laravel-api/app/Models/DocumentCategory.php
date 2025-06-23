@@ -30,21 +30,19 @@ class DocumentCategory extends Model
 
     /**
      * カテゴリパスからカテゴリIDを取得
-     * 
-     * @param array $categoryPath
-     * parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは['parent', 'child', 'grandchild']のような配列
-     * @return int|null
+     *
+     * @param  array  $categoryPath
+     *                               parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは['parent', 'child', 'grandchild']のような配列
      */
     public static function getIdFromPath(array $categoryPath): ?int
     {
         if (empty($categoryPath)) {
-            // デフォルトカテゴリを取得
-            $defaultCategory = self::where('slug', DocumentCategoryConstants::DEFAULT_CATEGORY_SLUG)->first();
-
-            return $defaultCategory ? $defaultCategory->id : null;
+            // パスが空の場合はデフォルトカテゴリ（uncategorized）のIDを返す
+            return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
         }
 
-        $parentId = null;
+        // デフォルトカテゴリ（uncategorized）から開始
+        $parentId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
         $currentCategoryId = null;
 
         foreach ($categoryPath as $slug) {
@@ -53,7 +51,8 @@ class DocumentCategory extends Model
                 ->first();
 
             if (! $category) {
-                return null;
+                // カテゴリが見つからない場合はデフォルトカテゴリのIDを返す
+                return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
             }
 
             $currentCategoryId = $category->id;
