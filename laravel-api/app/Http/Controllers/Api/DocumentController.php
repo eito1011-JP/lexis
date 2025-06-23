@@ -87,12 +87,12 @@ class DocumentController extends ApiBaseController
                 ->sortBy('file_order')
                 ->map(function ($doc) {
                     return [
-                        'sidebarLabel' => $doc->sidebar_label,
+                        'sidebar_label' => $doc->sidebar_label,
                         'slug' => $doc->slug,
-                        'isPublic' => (bool) $doc->is_public,
+                        'is_public' => (bool) $doc->is_public,
                         'status' => $doc->status,
-                        'lastEditedBy' => $doc->last_edited_by,
-                        'fileOrder' => $doc->file_order,
+                        'last_edited_by' => $doc->last_edited_by,
+                        'file_order' => $doc->file_order,
                     ];
                 });
 
@@ -104,7 +104,7 @@ class DocumentController extends ApiBaseController
                 ->map(function ($cat) {
                     return [
                         'slug' => $cat->slug,
-                        'sidebarLabel' => $cat->sidebar_label,
+                        'sidebar_label' => $cat->sidebar_label,
                     ];
                 });
 

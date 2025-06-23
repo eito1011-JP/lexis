@@ -11,12 +11,12 @@ import { ThreeDots } from '@/components/icon/common/ThreeDots';
 // カテゴリの型定義
 type Category = {
   slug: string;
-  sidebarLabel: string;
+  sidebar_label: string;
 };
 
 // ドキュメントアイテムの型定義
 type DocumentItem = {
-  sidebarLabel: string | null;
+  sidebar_label: string | null;
   slug: string | null;
   isPublic: boolean;
   status: string;
@@ -201,7 +201,7 @@ export default function DocumentsPage(): JSX.Element {
           ...prev,
           {
             slug: response.slug,
-            sidebarLabel: response.label,
+            sidebar_label: response.label,
           },
         ]);
       }
@@ -251,7 +251,7 @@ export default function DocumentsPage(): JSX.Element {
         setCategories(prev =>
           prev.map(cat =>
             cat.slug === editingCategory.slug
-              ? { slug: response.slug || slug, sidebarLabel: response.label || label }
+              ? { slug: response.slug || slug, sidebar_label: response.label || label }
               : cat
           )
         );
@@ -393,7 +393,7 @@ export default function DocumentsPage(): JSX.Element {
           >
             <div className="flex items-center">
               <Folder className="w-5 h-5 mr-2" />
-              <span>{category.sidebarLabel}</span>
+              <span>{category.sidebar_label}</span>
             </div>
             <div className="relative">
               <div
@@ -485,7 +485,7 @@ export default function DocumentsPage(): JSX.Element {
                     <div className="flex items-center">
                       <div className="ml-4">
                         <div className="text-sm font-medium text-white">
-                          {document.sidebarLabel || document.slug}
+                          {document.sidebar_label || document.slug}
                         </div>
                         <div className="text-sm text-gray-400">{document.slug}</div>
                       </div>
@@ -981,7 +981,7 @@ export default function DocumentsPage(): JSX.Element {
             )}
 
             <p className="mb-4 text-gray-300">
-              「{documentToDelete.sidebarLabel || documentToDelete.slug}」を削除しますか？
+              「{documentToDelete.sidebar_label || documentToDelete.slug}」を削除しますか？
             </p>
 
             <div className="flex justify-end gap-2">
@@ -1024,7 +1024,7 @@ export default function DocumentsPage(): JSX.Element {
             )}
 
             <p className="mb-4 text-gray-300">
-              「{categoryToDelete.sidebarLabel}」を削除しますか？
+              「{categoryToDelete.sidebar_label}」を削除しますか？
             </p>
 
             <div className="flex justify-end gap-2">

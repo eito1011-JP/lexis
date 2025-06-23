@@ -93,7 +93,7 @@ class DocumentCategoryController extends ApiBaseController
 
             $category = DocumentCategory::create([
                 'slug' => $request->slug,
-                'sidebar_label' => $request->sidebarLabel,
+                'sidebar_label' => $request->sidebar_label,
                 'position' => $position,
                 'description' => $request->description,
                 'user_branch_id' => $user['userBranchId'],
@@ -159,7 +159,7 @@ class DocumentCategoryController extends ApiBaseController
 
             $newCategory = DocumentCategory::create([
                 'slug' => $request->slug,
-                'sidebar_label' => $request->sidebarLabel,
+                'sidebar_label' => $request->sidebar_label,
                 'position' => $position,
                 'description' => $request->description,
                 'user_branch_id' => $userBranchId,
