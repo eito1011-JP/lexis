@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\GitController;
 use App\Http\Controllers\Api\UserController;
@@ -35,13 +36,6 @@ Route::middleware('auth.session')->group(function () {
 
     // ドキュメント関連
     Route::prefix('admin/documents')->group(function () {
-        // カテゴリ関連
-        Route::get('/categories', [DocumentController::class, 'getCategories']);
-        Route::post('/categories', [DocumentController::class, 'createCategory']);
-        Route::put('/categories/{id}', [DocumentController::class, 'updateCategory']);
-        Route::delete('/categories/{id}', [DocumentController::class, 'deleteCategory']);
-        Route::get('/category-slug', [DocumentController::class, 'getCategoryBySlug']);
-
         // ドキュメント関連
         Route::get('/', [DocumentController::class, 'getDocuments']);
         Route::post('/', [DocumentController::class, 'createDocument']);
@@ -56,6 +50,16 @@ Route::middleware('auth.session')->group(function () {
             Route::post('/create-pr', [GitController::class, 'createPr']);
             Route::get('/diff', [GitController::class, 'diff']);
         });
+    });
+
+    // カテゴリ関連
+    Route::prefix('admin/document-categories')->group(function () {
+        Route::get('/', [DocumentCategoryController::class, 'getCategories']);
+        Route::post('/', [DocumentCategoryController::class, 'createCategory']);
+        Route::put('/{id}', [DocumentCategoryController::class, 'updateCategory']);
+        Route::delete('/{id}', [DocumentCategoryController::class, 'deleteCategory']);
+        Route::get('/slug', [DocumentCategoryController::class, 'getCategoryBySlug']);
+        Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
     });
 });
 

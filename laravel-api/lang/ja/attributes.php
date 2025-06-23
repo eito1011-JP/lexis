@@ -20,5 +20,6 @@ return [
         'sidebarLabel' => 'サイドバーラベル',
         'position' => '位置',
         'description' => '説明',
+        'categoryPath' => 'カテゴリパス',
     ],
 ];

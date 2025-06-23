@@ -31,4 +31,34 @@ return [
             'min' => 'ファイル順序は1以上の有効な整数で入力してください',
         ],
     ],
+    'category' => [
+        'name' => [
+            'required' => 'カテゴリ名は必須です',
+            'max' => 'カテゴリ名は255文字以内で入力してください',
+        ],
+        'slug' => [
+            'required' => 'slug is required and must be a string',
+            'unique' => 'このスラッグは既に使用されています',
+            'string' => 'slug is required and must be a string',
+        ],
+        'sidebarLabel' => [
+            'required' => 'sidebarLabel is required and must be a string',
+            'string' => 'sidebarLabel is required and must be a string',
+            'max' => 'サイドバーラベルは255文字以内で入力してください',
+        ],
+        'position' => [
+            'integer' => 'position must be a number',
+            'numeric' => 'position must be a number',
+        ],
+        'description' => [
+            'string' => 'description must be a string',
+        ],
+    ],
+    'attributes' => [
+        'name' => 'カテゴリ名',
+        'slug' => 'スラッグ',
+        'sidebarLabel' => 'サイドバーラベル',
+        'position' => '位置',
+        'description' => '説明',
+    ],
 ];
