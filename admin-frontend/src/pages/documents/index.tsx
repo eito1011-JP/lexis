@@ -135,14 +135,21 @@ export default function DocumentsPage(): JSX.Element {
   const handleOpenEditModal = async (category: Category) => {
     console.log('category', category.slug);
     const response = await apiClient.get(
-      `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_CATEGORY_BY_SLUG}?slug=${category.slug}`
+      `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_CATEGORIES}?category_path=${category.slug}`
     );
 
-    setEditingCategory(response);
-    setSlug(response.slug);
-    setLabel(response.sidebarLabel);
-    setPosition(response.position?.toString() || '');
-    setDescription(response.description || '');
+    // レスポンスからcategoriesキーでデータを取得
+    const categoryData = response.categories;
+    if (!categoryData) {
+      console.error('カテゴリデータが見つかりません');
+      return;
+    }
+
+    setEditingCategory(categoryData);
+    setSlug(categoryData.slug);
+    setLabel(categoryData.sidebar_label);
+    setPosition(categoryData.position?.toString() || '');
+    setDescription(categoryData.description || '');
     setInvalidSlug(null);
     setShowCategoryEditModal(true);
     setOpenCategoryMenuIndex(null);

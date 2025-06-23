@@ -54,11 +54,10 @@ Route::middleware('auth.session')->group(function () {
 
     // カテゴリ関連
     Route::prefix('admin/document-categories')->group(function () {
-        Route::get('/', [DocumentCategoryController::class, 'getCategories']);
+        Route::get('/', [DocumentCategoryController::class, 'getCategoryByPath']);
         Route::post('/', [DocumentCategoryController::class, 'createCategory']);
         Route::put('/{id}', [DocumentCategoryController::class, 'updateCategory']);
         Route::delete('/{id}', [DocumentCategoryController::class, 'deleteCategory']);
-        Route::get('/slug', [DocumentCategoryController::class, 'getCategoryBySlug']);
         Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
     });
 });

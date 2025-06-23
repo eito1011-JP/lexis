@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\CreateDocumentCategoryRequest;
+use App\Http\Requests\GetDocumentCategoriesRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
@@ -15,20 +16,25 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリ一覧を取得
      */
-    public function getCategories(Request $request): JsonResponse
+    public function getCategoryByPath(GetDocumentCategoriesRequest $request): JsonResponse
     {
         try {
-            $categories = DocumentCategory::select('id', 'name', 'slug', 'sidebar_label', 'position', 'description')
-                ->orderBy('position')
-                ->get();
+            // カテゴリパスの取得と処理
+            $categoryPath = array_filter(explode('/', $request->category_path));
+
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
+
+            $documentCategory = DocumentCategory::find($categoryId);
 
             return response()->json([
-                'categories' => $categories,
+                'categories' => $documentCategory,
             ]);
 
         } catch (\Exception $e) {
+            Log::error('カテゴリ詳細の取得に失敗しました', ['error' => $e->getMessage()]);
+
             return response()->json([
-                'error' => 'カテゴリ一覧の取得に失敗しました',
+                'error' => 'カテゴリ詳細の取得に失敗しました',
             ], 500);
         }
     }
@@ -116,6 +122,8 @@ class DocumentCategoryController extends ApiBaseController
             ]);
 
         } catch (\Exception $e) {
+            Log::error('カテゴリの更新に失敗しました', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'error' => 'カテゴリの更新に失敗しました',
             ], 500);
@@ -139,43 +147,6 @@ class DocumentCategoryController extends ApiBaseController
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'カテゴリの削除に失敗しました',
-            ], 500);
-        }
-    }
-
-    /**
-     * スラッグでカテゴリを取得
-     */
-    public function getCategoryBySlug(Request $request): JsonResponse
-    {
-        try {
-            $slug = $request->query('slug');
-
-            if (! $slug) {
-                return response()->json([
-                    'error' => '有効なslugが必要です',
-                ], 400);
-            }
-
-            $category = DocumentCategory::where('slug', $slug)->first();
-
-            if (! $category) {
-                return response()->json([
-                    'error' => 'カテゴリが見つかりません',
-                ], 404);
-            }
-
-            return response()->json([
-                'id' => $category->id,
-                'slug' => $category->slug,
-                'sidebarLabel' => $category->sidebar_label,
-                'position' => $category->position,
-                'description' => $category->description,
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'カテゴリの取得に失敗しました',
             ], 500);
         }
     }

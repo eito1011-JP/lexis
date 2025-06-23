@@ -53,6 +53,9 @@ return [
         'description' => [
             'string' => 'description must be a string',
         ],
+        'categoryPath' => [
+            'string' => 'カテゴリパスは文字列である必要があります',
+        ],
     ],
     'attributes' => [
         'name' => 'カテゴリ名',
@@ -60,5 +63,6 @@ return [
         'sidebarLabel' => 'サイドバーラベル',
         'position' => '位置',
         'description' => '説明',
+        'categoryPath' => 'カテゴリパス',
     ],
 ];

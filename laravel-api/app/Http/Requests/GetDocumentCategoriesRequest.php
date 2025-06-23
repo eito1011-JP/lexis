@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateDocumentCategoryRequest extends FormRequest
+class GetDocumentCategoriesRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,14 +22,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'slug' => [
-                'required',
-                'string',
-            ],
-            'sidebarLabel' => 'required|string|max:255',
-            'position' => 'required|integer',
-            'description' => 'nullable|string',
+            'category_path' => 'nullable|string',
         ];
     }
 }

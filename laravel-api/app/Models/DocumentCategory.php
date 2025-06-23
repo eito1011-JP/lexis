@@ -56,7 +56,6 @@ class DocumentCategory extends Model
             }
 
             $currentCategoryId = $category->id;
-            $parentId = $category->id;
         }
 
         return $currentCategoryId;
