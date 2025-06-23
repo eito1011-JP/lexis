@@ -3,8 +3,8 @@
 namespace App\Http\Requests\Api\Document;
 
 use Illuminate\Foundation\Http\FormRequest;
-
-class GetDocumentBySlugRequest extends FormRequest
+use Illuminate\Support\Facades\Log;
+class GetDocumentByCategoryPathRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,7 +22,16 @@ class GetDocumentBySlugRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'slug' => 'required|string',
+            'category_path' => 'required|string',
         ];
+    }
+
+    public function prepareForValidation()
+    {
+        $categoryPath = $this->route('category_path');
+        
+        if ($categoryPath) {
+            $this->merge(['category_path' => $categoryPath]);
+        }
     }
 }

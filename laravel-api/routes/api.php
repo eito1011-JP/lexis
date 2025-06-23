@@ -39,7 +39,7 @@ Route::middleware('auth.session')->group(function () {
         // ドキュメント関連
         Route::get('/', [DocumentController::class, 'getDocuments']);
         Route::post('/', [DocumentController::class, 'createDocument']);
-        Route::get('/slug', [DocumentController::class, 'getDocumentBySlug']);
+        Route::get('/{category_path}', [DocumentController::class, 'getDocumentByCategoryPath']);
         Route::put('/{category_path}', [DocumentController::class, 'updateDocument']);
         Route::delete('/{category_path}', [DocumentController::class, 'deleteDocument']);
         Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);

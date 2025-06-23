@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\Document;
 
+use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Log;
 use League\HTMLToMarkdown\HtmlConverter;
@@ -24,12 +25,13 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category' => 'sometimes|nullable|string',
-            'sidebar_label' => 'sometimes|required|string|max:255',
-            'content' => 'sometimes|required|string',
-            'isPublic' => 'sometimes|required|boolean',
-            'slug' => 'sometimes|required|string|regex:/^[a-z0-9-]+$/',
-            'fileOrder' => 'nullable|integer|min:1',
+            'category_path' => 'required|string',
+            'category' => 'nullable|string',
+            'sidebar_label' => 'required|string|max:255',
+            'content' => 'required|string',
+            'is_public' => 'required|boolean',
+            'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path)],
+            'file_order' => 'nullable|integer|min:1',
         ];
     }
 
@@ -40,11 +42,20 @@ class UpdateDocumentRequest extends FormRequest
     {
         return [
             'category' => __('validation.document.category.required'),
-            'sidebar_label' => __('validation.document.sidebar_label.required'),
+            'sidebar_label' => __('validation.document.label.required'),
             'content' => __('validation.document.content.required'),
             'slug' => __('validation.document.slug.required'),
-            'fileOrder' => __('validation.document.fileOrder.integer'),
+            'file_order' => __('validation.document.file_order.integer'),
         ];
+    }
+
+    public function prepareForValidation()
+    {
+        $categoryPath = $this->route('category_path');
+        
+        if ($categoryPath) {
+            $this->merge(['category_path' => $categoryPath]);
+        }
     }
 
     public function passedValidation()

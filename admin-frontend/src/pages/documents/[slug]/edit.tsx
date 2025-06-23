@@ -60,25 +60,22 @@ export default function EditDocumentPage(): JSX.Element {
   useEffect(() => {
     const fetchDocument = async () => {
       if (!slug) return;
-      console.log('slug', slug);
       try {
         setDocumentLoading(true);
-        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_BY_SLUG}`;
-        const queryParams = new URLSearchParams({
-          slug: category ? `${category}/${slug}` : slug,
-        });
+        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_BY_CATEGORY_PATH}`;
 
-        // クエリパラメータとしてslugを渡す
-        const response = await apiClient.get(`${endpoint}?${queryParams.toString()}`);
+        // クエリパラメータとしてcategory_pathを渡す
+        const response = await apiClient.get(`${endpoint}/${category ? `${category}/${slug}` : slug}`);
 
+        console.log('response', response);
         if (response) {
           // 取得したデータをフォームにセット
           setDocumentId(response.id);
           setDocumentSlug(response.slug || '');
-          setLabel(response.label || '');
+          setLabel(response.sidebar_label || '');
           setContent(response.content || '');
-          setPublicOption(response.isPublic ? '公開する' : '公開しない');
-          setFileOrder(response.fileOrder || '');
+          setPublicOption(response.is_public ? '公開する' : '公開しない');
+          setFileOrder(response.file_order || '');
         }
       } catch (error) {
         console.error('ドキュメント取得エラー:', error);
@@ -155,13 +152,13 @@ export default function EditDocumentPage(): JSX.Element {
       }
 
       // ドキュメント編集APIを呼び出す
-      const response = await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_DOCUMENT}/${documentSlug}`, {
+      const response = await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentSlug}`, {
         category,
-        label,
+        sidebar_label: label,
         content,
-        isPublic: publicOption === '公開する',
+        is_public: publicOption === '公開する',
         slug: documentSlug,
-        fileOrder: fileOrder === '' ? null : Number(fileOrder),
+        file_order: fileOrder === '' ? null : Number(fileOrder),
       });
 
       if (response.success) {

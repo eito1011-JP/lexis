@@ -39,7 +39,7 @@ class DocumentVersion extends Model
     /**
      * カテゴリのドキュメントを取得（ブランチ別）
      */
-    public static function getDocumentsByCategory(int $categoryId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
+    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
             ->where('category_id', $categoryId);

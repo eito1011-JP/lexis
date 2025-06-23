@@ -7,7 +7,7 @@ use App\Consts\Flag;
 use App\Enums\DocumentStatus;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
-use App\Http\Requests\Api\Document\GetDocumentBySlugRequest;
+use App\Http\Requests\Api\Document\GetDocumentByCategoryPathRequest;
 use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\Document;
@@ -77,7 +77,7 @@ class DocumentController extends ApiBaseController
             $subCategories = DocumentCategory::getSubCategories($currentCategoryId, $userBranchId);
 
             // ドキュメントを取得
-            $documents = DocumentVersion::getDocumentsByCategory($currentCategoryId, $userBranchId);
+            $documents = DocumentVersion::getDocumentsByCategoryId($currentCategoryId, $userBranchId);
 
             // ソート処理
             $sortedDocuments = $documents
@@ -182,7 +182,7 @@ class DocumentController extends ApiBaseController
     /**
      * スラッグでドキュメントを取得
      */
-    public function getDocumentBySlug(GetDocumentBySlugRequest $request): JsonResponse
+    public function getDocumentByCategoryPath(GetDocumentByCategoryPathRequest $request): JsonResponse
     {
         try {
             // 認証チェック
@@ -195,53 +195,22 @@ class DocumentController extends ApiBaseController
             }
 
             // パスからslugとcategoryPathを取得
-            $pathParts = explode('/', $request->query('slug'));
-            $slug = end($pathParts);
-            $categoryPath = array_slice($pathParts, 0, -1);
+            $pathParts = explode('/', $request->category_path);
+            $slug = array_pop($pathParts);
 
-            // カテゴリ情報を取得
-            $categoryId = null;
-            if (empty($categoryPath)) {
-                // カテゴリが指定されていない場合（ルートカテゴリ）
-                $category = DocumentCategory::whereNull('parent_id')->first();
-                $categoryId = $category ? $category->id : null;
-            } else {
-                // カテゴリが指定されている場合
-                $category = DocumentCategory::where('slug', end($categoryPath))->first();
-                $categoryId = $category ? $category->id : null;
-            }
+            $categoryId = DocumentCategory::getIdFromPath($pathParts);
 
-            if (! $categoryId) {
-                return response()->json([
-                    'error' => 'カテゴリが見つかりません',
-                ], 404);
-            }
-
-            // ドキュメントバージョンを取得
-            $documentVersion = DocumentVersion::where('slug', $slug)
-                ->where('category_id', $categoryId)
-                ->select('id', 'slug', 'sidebar_label', 'content', 'file_order', 'is_public', 'last_edited_by')
+            $document = DocumentVersion::where('category_id', $categoryId)
+                ->where('slug', $slug)
                 ->first();
 
-            if (! $documentVersion) {
+            if (! $document) {
                 return response()->json([
                     'error' => 'ドキュメントが見つかりません',
                 ], 404);
             }
 
-            // レスポンスデータを構築
-            $response = [
-                'id' => $documentVersion->id,
-                'slug' => $documentVersion->slug,
-                'label' => $documentVersion->sidebar_label,
-                'content' => $documentVersion->content,
-                'fileOrder' => $documentVersion->file_order,
-                'isPublic' => (bool) $documentVersion->is_public,
-                'lastEditedBy' => $documentVersion->last_edited_by,
-                'source' => 'database',
-            ];
-
-            return response()->json($response);
+            return response()->json($document);
 
         } catch (\Exception $e) {
             Log::error('ドキュメント取得エラー: '.$e->getMessage());
