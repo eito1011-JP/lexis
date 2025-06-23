@@ -30,6 +30,10 @@ class DocumentCategory extends Model
 
     /**
      * カテゴリパスからカテゴリIDを取得
+     * 
+     * @param array $categoryPath
+     * parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは['parent', 'child', 'grandchild']のような配列
+     * @return int|null
      */
     public static function getIdFromPath(array $categoryPath): ?int
     {

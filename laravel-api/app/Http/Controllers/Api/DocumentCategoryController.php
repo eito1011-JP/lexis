@@ -38,8 +38,6 @@ class DocumentCategoryController extends ApiBaseController
      */
     public function createCategory(CreateDocumentCategoryRequest $request): JsonResponse
     {
-        Log::info('DocumentCategoryController::createCategory メソッドが呼び出されました');
-
         try {
             // 認証チェック
             $user = $this->getUserFromSession();
@@ -54,11 +52,15 @@ class DocumentCategoryController extends ApiBaseController
             $sidebarLabel = $request->sidebarLabel;
             $position = $request->position ?? 0;
             $description = $request->description;
-            $categoryPath = $request->categoryPath;
 
-            // カテゴリの重複チェック
+            // カテゴリパスの取得と処理
+            $categoryPath = array_filter(explode('/', $request->slug));
+
+            // カテゴリIDを取得（パスから）
+            $currentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+
             $existingCategory = DocumentCategory::where('slug', $slug)
-                ->where('parent_id', null) // categoryPathから親IDを取得する必要がある場合は修正
+                ->where('parent_id', $currentCategoryId)
                 ->first();
 
             if ($existingCategory) {
@@ -73,11 +75,8 @@ class DocumentCategoryController extends ApiBaseController
                 'position' => $position,
                 'description' => $description,
                 'user_branch_id' => $user['userBranchId'],
-                'parent_id' => null, // categoryPathから親IDを取得する必要がある場合は修正
+                'parent_id' => $currentCategoryId,
             ]);
-
-            Log::info($category);
-            Log::info('カテゴリ作成成功');
 
             return response()->json([
                 'id' => $category->id,
