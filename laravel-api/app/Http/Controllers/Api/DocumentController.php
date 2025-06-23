@@ -255,7 +255,7 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを更新
      */
-    public function updateDocument(UpdateDocumentRequest $request, $id): JsonResponse
+    public function updateDocument(UpdateDocumentRequest $request): JsonResponse
     {
         DB::beginTransaction();
 

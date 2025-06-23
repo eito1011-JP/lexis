@@ -40,8 +40,8 @@ Route::middleware('auth.session')->group(function () {
         Route::get('/', [DocumentController::class, 'getDocuments']);
         Route::post('/', [DocumentController::class, 'createDocument']);
         Route::get('/slug', [DocumentController::class, 'getDocumentBySlug']);
-        Route::put('/{id}', [DocumentController::class, 'updateDocument']);
-        Route::delete('/', [DocumentController::class, 'deleteDocument']);
+        Route::put('/{category_path}', [DocumentController::class, 'updateDocument']);
+        Route::delete('/{category_path}', [DocumentController::class, 'deleteDocument']);
         Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);
 
         // Git関連

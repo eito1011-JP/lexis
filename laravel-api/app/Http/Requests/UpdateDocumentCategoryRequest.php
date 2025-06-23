@@ -23,11 +23,10 @@ class UpdateDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
             'slug' => [
                 'required',
                 'string',
-                new UniqueSlugInSameParent('document_categories', $this->route('category_path')),
+                new UniqueSlugInSameParent($this->route('category_path')),
             ],
             'sidebar_label' => 'required|string|max:255',
             'position' => 'required|integer',

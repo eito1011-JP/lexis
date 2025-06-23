@@ -7,6 +7,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.9",
+        "knplabs/github-api": "^3.16",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.1",
         "laravel/tinker": "^2.10.1",

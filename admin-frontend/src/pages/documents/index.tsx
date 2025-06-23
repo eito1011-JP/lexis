@@ -189,7 +189,7 @@ export default function DocumentsPage(): JSX.Element {
 
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY, {
         slug,
-        sidebarLabel: label,
+        sidebar_label: label,
         position: positionNum,
         description,
         categoryPath: [],

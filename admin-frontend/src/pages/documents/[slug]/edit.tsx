@@ -154,10 +154,8 @@ export default function EditDocumentPage(): JSX.Element {
         return;
       }
 
-      console.log('fileOrder', fileOrder);
-
       // ドキュメント編集APIを呼び出す
-      const response = await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_DOCUMENT}/${documentId}`, {
+      const response = await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_DOCUMENT}/${documentSlug}`, {
         category,
         label,
         content,

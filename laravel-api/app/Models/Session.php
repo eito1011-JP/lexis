@@ -29,7 +29,7 @@ class Session extends Model
     /**
      * セッションからユーザー情報を取得
      */
-    public static function getUserFromSession(string $sessionId): ?array
+    public static function getUserFromSession(string $sessionId): ?User
     {
         $session = self::where('id', $sessionId)
             ->where('expired_at', '>', now())
@@ -39,11 +39,7 @@ class Session extends Model
             return null;
         }
 
-        return [
-            'userId' => $session->user->id,
-            'email' => $session->user->email,
-            'userBranchId' => $session->user->userBranches()->active()->first()?->id,
-        ];
+        return $session->user;
     }
 
     /**

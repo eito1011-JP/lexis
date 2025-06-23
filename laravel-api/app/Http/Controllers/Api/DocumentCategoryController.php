@@ -7,12 +7,26 @@ use App\Http\Requests\GetDocumentCategoriesRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
+use App\Models\EditStartVersion;
+use App\Services\DocumentCategoryService;
+use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DocumentCategoryController extends ApiBaseController
 {
+    protected $documentCategoryService;
+
+    protected $userBranchService;
+
+    public function __construct(DocumentCategoryService $documentCategoryService, UserBranchService $userBranchService)
+    {
+        $this->documentCategoryService = $documentCategoryService;
+        $this->userBranchService = $userBranchService;
+    }
+
     /**
      * カテゴリ一覧を取得
      */
@@ -44,6 +58,8 @@ class DocumentCategoryController extends ApiBaseController
      */
     public function createCategory(CreateDocumentCategoryRequest $request): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
             // 認証チェック
             $user = $this->getUserFromSession();
@@ -54,18 +70,13 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
-            $slug = $request->slug;
-            $sidebarLabel = $request->sidebarLabel;
-            $position = $request->position ?? 0;
-            $description = $request->description;
-
             // カテゴリパスの取得と処理
             $categoryPath = array_filter(explode('/', $request->slug));
 
             // カテゴリIDを取得（パスから）
             $currentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
 
-            $existingCategory = DocumentCategory::where('slug', $slug)
+            $existingCategory = DocumentCategory::where('slug', $request->slug)
                 ->where('parent_id', $currentCategoryId)
                 ->first();
 
@@ -75,14 +86,21 @@ class DocumentCategoryController extends ApiBaseController
                 ], 409);
             }
 
+            $position = $this->documentCategoryService->normalizePosition(
+                $request->position,
+                $currentCategoryId
+            );
+
             $category = DocumentCategory::create([
-                'slug' => $slug,
-                'sidebar_label' => $sidebarLabel,
+                'slug' => $request->slug,
+                'sidebar_label' => $request->sidebarLabel,
                 'position' => $position,
-                'description' => $description,
+                'description' => $request->description,
                 'user_branch_id' => $user['userBranchId'],
                 'parent_id' => $currentCategoryId,
             ]);
+
+            DB::commit();
 
             return response()->json([
                 'id' => $category->id,
@@ -92,6 +110,7 @@ class DocumentCategoryController extends ApiBaseController
                 'description' => $category->description,
             ]);
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('カテゴリ作成エラー', ['error' => $e->getMessage()]);
 
             return response()->json([
@@ -103,26 +122,68 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリを更新
      */
-    public function updateCategory(UpdateDocumentCategoryRequest $request, $id): JsonResponse
+    public function updateCategory(UpdateDocumentCategoryRequest $request): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
-            $category = DocumentCategory::findOrFail($id);
+            $user = $this->getUserFromSession();
 
-            $category->update([
-                'name' => $request->name ?? $category->name,
-                'slug' => $request->slug ?? $category->slug,
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証が必要です',
+                ], 401);
+            }
+
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+
+            $path = $request->route('category_path');
+            $categoryPath = array_filter(explode('/', $path));
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
+
+            $existingCategory = DocumentCategory::find($categoryId);
+
+            if (! $existingCategory) {
+                return response()->json([
+                    'error' => '更新対象のカテゴリが見つかりません',
+                ], 404);
+            }
+
+            // positionの正規化
+            $position = $this->documentCategoryService->normalizePosition(
+                $request->position,
+                $existingCategory->parent_id
+            );
+
+            $existingCategory->delete();
+
+            $newCategory = DocumentCategory::create([
+                'slug' => $request->slug,
                 'sidebar_label' => $request->sidebarLabel,
-                'position' => $request->position ?? $category->position,
+                'position' => $position,
                 'description' => $request->description,
+                'user_branch_id' => $userBranchId,
+                'parent_id' => $existingCategory->parent_id,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'category' => $category,
+            // 編集開始バージョンの作成
+            EditStartVersion::create([
+                'user_branch_id' => $userBranchId,
+                'target_type' => 'category',
+                'original_version_id' => $existingCategory->id,
+                'current_version_id' => $newCategory->id,
             ]);
+
+            DB::commit();
+
+            return response()->json();
 
         } catch (\Exception $e) {
-            Log::error('カテゴリの更新に失敗しました', ['error' => $e->getMessage()]);
+            DB::rollBack();
+            Log::error('カテゴリの更新に失敗しました', [
+                'error' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
                 'error' => 'カテゴリの更新に失敗しました',
@@ -135,9 +196,13 @@ class DocumentCategoryController extends ApiBaseController
      */
     public function deleteCategory(Request $request, $id): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
             $category = DocumentCategory::findOrFail($id);
             $category->delete();
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -145,6 +210,9 @@ class DocumentCategoryController extends ApiBaseController
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('カテゴリの削除に失敗しました', ['error' => $e->getMessage()]);
+
             return response()->json([
                 'error' => 'カテゴリの削除に失敗しました',
             ], 500);

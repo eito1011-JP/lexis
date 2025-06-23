@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Consts\Flag;
 use App\Enums\DocumentCategoryPrStatus;
 use App\Models\UserBranch;
-use Exception;
+use Github\Client;
 
 class UserBranchService
 {
@@ -13,38 +13,34 @@ class UserBranchService
      * ユーザーのアクティブなブランチを取得または作成する
      *
      * @return int ユーザーブランチID
-     *
-     * @throws Exception
      */
-    public function getOrCreateActiveBranch(int $userId, string $email): int
+    public function fetchOrCreateActiveBranch(int $userId): int
     {
         // アクティブなユーザーブランチを確認
         $activeBranch = UserBranch::getActiveBranch($userId);
 
+        $userBranchId = null;
         if ($activeBranch) {
-            return $activeBranch->id;
+            $userBranchId = $activeBranch->id;
         }
 
         // アクティブなブランチが存在しない場合は新しく作成
-        $this->initBranchSnapshot($userId, $email);
+        $newBranch = $this->initBranchSnapshot($userId);
 
-        $newBranch = UserBranch::where('user_id', $userId)
-            ->active()
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if (! $newBranch) {
-            throw new Exception('ブランチの作成に失敗しました');
+        if ($newBranch) {
+            $userBranchId = $newBranch->id;
         }
 
-        return $newBranch->id;
+        return $userBranchId;
     }
 
     /**
      * ブランチスナップショットを初期化する
      */
-    private function initBranchSnapshot(int $userId): void
+    private function initBranchSnapshot(int $userId): UserBranch
     {
+        $snapshotCommit = $this->findLatestCommit();
+
         // 既存のアクティブブランチを非アクティブにする
         UserBranch::where('user_id', $userId)
             ->active()
@@ -53,21 +49,28 @@ class UserBranchService
         // 新しいブランチを作成
         $branchName = 'branch_'.$userId.'_'.time();
 
-        UserBranch::create([
+        return UserBranch::create([
             'user_id' => $userId,
             'branch_name' => $branchName,
+            'snapshot_commit' => $snapshotCommit,
             'is_active' => Flag::TRUE,
             'pr_status' => DocumentCategoryPrStatus::NONE,
         ]);
     }
 
     /**
-     * ユーザーIDとメールアドレスからユーザーブランチIDを取得する
-     *
-     * @throws Exception
+     * 最新のコミットハッシュを取得
      */
-    public function getUserBranchId(int $userId, string $email): int
+    private function findLatestCommit(): string
     {
-        return $this->getOrCreateActiveBranch($userId, $email);
+        $client = new Client;
+
+        $response = $client->gitData()->references()->show(
+            config('services.github.owner'),
+            config('services.github.repo'),
+            'heads/main'
+        );
+
+        return $response['object']['sha'];
     }
 }

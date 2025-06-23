@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Session;
 use App\Models\User;
-use App\Models\UserBranch;
 use App\Traits\BaseEncoding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +28,7 @@ class ApiBaseController extends Controller
     /**
      * Cookieセッションからユーザー情報を取得
      */
-    protected function getUserFromSession(): ?array
+    protected function getUserFromSession(): ?User
     {
         $request = request();
         $sessionId = $request->cookie('sid');
@@ -38,21 +37,13 @@ class ApiBaseController extends Controller
             return null;
         }
 
-        $userData = Session::getUserFromSession($sessionId);
+        $user = Session::getUserFromSession($sessionId);
 
-        if (! $userData) {
+        if (! $user) {
             return null;
         }
 
-        // アクティブなブランチを取得
-        $activeBranch = UserBranch::getActiveBranch($userData['userId']);
-        $userBranchId = $activeBranch ? $activeBranch->id : null;
-
-        return [
-            'userId' => $userData['userId'],
-            'email' => $userData['email'],
-            'userBranchId' => $userBranchId,
-        ];
+        return $user;
     }
 
     protected function sendError($code, $message, $status, $logLevel = null): JsonResponse

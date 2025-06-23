@@ -21,6 +21,12 @@ export const API_CONFIG = {
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
       GET_CATEGORIES: '/api/admin/document-categories',
     },
+    CATEGORIES: {
+      CREATE: '/api/admin/document-categories',
+      UPDATE: '/api/admin/document-categories',
+      DELETE: '/api/admin/document-categories',
+      GET_BY_PATH: '/api/admin/document-categories',
+    },
     USERS: {
       GET_ALL: '/api/admin/users',
       GET_BY_ID: '/api/admin/users',

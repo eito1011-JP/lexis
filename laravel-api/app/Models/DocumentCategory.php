@@ -13,7 +13,6 @@ class DocumentCategory extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name',
         'slug',
         'sidebar_label',
         'position',
