@@ -323,9 +323,9 @@ export default function DocumentsPage(): JSX.Element {
     setCategoryDeleteError(null);
 
     try {
-      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE_CATEGORY, {
-        body: JSON.stringify({ slug: categoryToDelete.slug }),
-      });
+      const response = await apiClient.delete(
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.DELETE}/${categoryToDelete.slug}`
+      );
 
       if (response.success) {
         // カテゴリ一覧から削除されたカテゴリを除去

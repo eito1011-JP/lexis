@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Document;
 use App\Models\DocumentCategory;
 
 class DocumentCategoryService
@@ -29,5 +30,58 @@ class DocumentCategoryService
 
             return $maxPosition + 1;
         }
+    }
+
+    /**
+     * カテゴリツリーを取得（slugから）
+     *
+     * @param  string  $slug
+     * @param  int  $userBranchId
+     */
+    public function getCategoryTreeFromSlug(string $categoryPath): array
+    {
+        // カテゴリパスを取得
+        $categoryPath = array_filter(explode('/', $categoryPath));
+
+        // ルートカテゴリIDを取得
+        $rootCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+
+        if (! $rootCategoryId) {
+            return ['categories' => [], 'documents' => []];
+        }
+
+        // 削除対象のカテゴリとその子カテゴリを再帰的に取得
+        $categories = $this->getCategoriesRecursively($rootCategoryId);
+
+        // カテゴリに属するドキュメントを取得
+        $categoryIds = collect($categories)->pluck('id')->toArray();
+        $documents = Document::whereIn('category_id', $categoryIds)->get();
+
+        return [
+            'categories' => $categories,
+            'documents' => $documents,
+        ];
+    }
+
+    /**
+     * カテゴリを再帰的に取得
+     */
+    private function getCategoriesRecursively(int $categoryId): array
+    {
+        $categories = [];
+
+        // 現在のカテゴリを取得
+        $category = DocumentCategory::find($categoryId);
+        if ($category) {
+            $categories[] = $category;
+
+            // 子カテゴリを再帰的に取得
+            $childCategories = DocumentCategory::where('parent_id', $categoryId)->get();
+            foreach ($childCategories as $childCategory) {
+                $categories = array_merge($categories, $this->getCategoriesRecursively($childCategory->id));
+            }
+        }
+
+        return $categories;
     }
 }

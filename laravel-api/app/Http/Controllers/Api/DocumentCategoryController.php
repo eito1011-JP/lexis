@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Consts\Flag;
 use App\Http\Requests\CreateDocumentCategoryRequest;
+use App\Http\Requests\DeleteDocumentCategoryRequest;
 use App\Http\Requests\GetDocumentCategoriesRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
 use App\Models\Document;
@@ -194,24 +196,136 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリを削除
      */
-    public function deleteCategory(Request $request, $id): JsonResponse
+    public function deleteCategory(DeleteDocumentCategoryRequest $request): JsonResponse
     {
         DB::beginTransaction();
 
         try {
-            $category = DocumentCategory::findOrFail($id);
-            $category->delete();
+            // 認証チェック
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証が必要です',
+                ], 401);
+            }
+
+            // ユーザーのアクティブブランチ確認
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+
+            // カテゴリツリーを取得
+            $categoryTree = $this->documentCategoryService->getCategoryTreeFromSlug($request->category_path, $userBranchId);
+            $categories = $categoryTree['categories'];
+            $documents = $categoryTree['documents'];
+
+            if (empty($categories)) {
+                return response()->json([
+                    'error' => 'カテゴリが見つかりません',
+                ], 404);
+            }
+
+            $now = now();
+
+            // 削除対象のカテゴリが既にedit_start_versionsに存在する場合、そのレコードを更新
+            $existingEditVersions = [];
+            foreach ($categories as $category) {
+                $existingVersion = EditStartVersion::where('target_type', 'category')
+                    ->where('original_version_id', $category->id)
+                    ->first();
+
+                if ($existingVersion) {
+                    $existingEditVersions[$category->id] = $existingVersion;
+                }
+            }
+
+            // document_categoriesをis_deleted=1に更新
+            foreach ($categories as $category) {
+                $category->update([
+                    'is_deleted' => Flag::TRUE,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            // document_versionsをis_deleted=1に更新
+            if ($documents->isNotEmpty()) {
+                foreach ($documents as $document) {
+                    $document->update([
+                        'is_deleted' => Flag::TRUE,
+                        'updated_at' => $now,
+                    ]);
+                }
+            }
+
+            // ブランチ管理のために削除したcategoriesを追加
+            $insertedCategoryIds = [];
+            foreach ($categories as $category) {
+                $newCategory = DocumentCategory::create([
+                    'sidebar_label' => $category->sidebar_label,
+                    'slug' => $category->slug,
+                    'parent_id' => $category->parent_id,
+                    'user_branch_id' => $userBranchId,
+                    'is_deleted' => Flag::TRUE,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+                $insertedCategoryIds[] = $newCategory->id;
+            }
+
+            // ブランチ管理のために削除したdocument_versionsを追加
+            if ($documents->isNotEmpty()) {
+                foreach ($documents as $document) {
+                    Document::create([
+                        'user_id' => $user['id'],
+                        'user_branch_id' => $userBranchId,
+                        'id' => $document->id,
+                        'file_path' => $document->file_path,
+                        'status' => $document->status,
+                        'content' => $document->content,
+                        'slug' => $document->slug,
+                        'sidebar_label' => $document->sidebar_label,
+                        'file_order' => $document->file_order,
+                        'last_edited_by' => $user['email'],
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                        'is_deleted' => Flag::TRUE,
+                        'is_public' => $document->is_public,
+                        'category_id' => $document->category_id,
+                    ]);
+                }
+            }
+
+            // edit_start_versionsに削除履歴を記録
+            foreach ($categories as $index => $category) {
+                $newCategoryId = $insertedCategoryIds[$index];
+
+                // 既存のedit_start_versionsレコードがある場合は更新、ない場合は新規作成
+                if (isset($existingEditVersions[$category->id])) {
+                    $existingEditVersions[$category->id]->update([
+                        'current_version_id' => $newCategoryId,
+                        'updated_at' => $now,
+                    ]);
+                } else {
+                    EditStartVersion::create([
+                        'user_branch_id' => $userBranchId,
+                        'target_type' => 'category',
+                        'original_version_id' => $category->id,
+                        'current_version_id' => $newCategoryId,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+                }
+            }
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'カテゴリを削除しました',
-            ]);
+            return response()->json();
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('カテゴリの削除に失敗しました', ['error' => $e->getMessage()]);
+            Log::error('カテゴリの削除に失敗しました', [
+                'error' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
                 'error' => 'カテゴリの削除に失敗しました',
