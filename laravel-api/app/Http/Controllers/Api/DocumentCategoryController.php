@@ -72,21 +72,13 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+
             // カテゴリパスの取得と処理
             $categoryPath = array_filter(explode('/', $request->slug));
 
             // カテゴリIDを取得（パスから）
             $currentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
-
-            $existingCategory = DocumentCategory::where('slug', $request->slug)
-                ->where('parent_id', $currentCategoryId)
-                ->first();
-
-            if ($existingCategory) {
-                return response()->json([
-                    'error' => 'このslugのカテゴリは既に存在します',
-                ], 409);
-            }
 
             $position = $this->documentCategoryService->normalizePosition(
                 $request->position,
@@ -98,7 +90,7 @@ class DocumentCategoryController extends ApiBaseController
                 'sidebar_label' => $request->sidebar_label,
                 'position' => $position,
                 'description' => $request->description,
-                'user_branch_id' => $user['userBranchId'],
+                'user_branch_id' => $userBranchId,
                 'parent_id' => $currentCategoryId,
             ]);
 

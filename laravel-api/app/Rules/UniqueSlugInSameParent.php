@@ -10,7 +10,7 @@ class UniqueSlugInSameParent implements ValidationRule
 {
     protected $categoryPath;
 
-    public function __construct(string $categoryPath = '')
+    public function __construct(?string $categoryPath = null)
     {
         $this->categoryPath = $categoryPath;
     }
@@ -20,7 +20,7 @@ class UniqueSlugInSameParent implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $categoryPath = array_filter(explode('/', $this->categoryPath));
+        $categoryPath = $this->categoryPath ? array_filter(explode('/', $this->categoryPath)) : [];
 
         $parentId = DocumentCategory::getIdFromPath($categoryPath);
 

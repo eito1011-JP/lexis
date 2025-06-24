@@ -2,6 +2,7 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { useLocation } from 'react-router-dom';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
@@ -30,6 +31,14 @@ type DocumentItem = {
  */
 export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
+  const location = useLocation();
+
+  // URLからカテゴリパスを取得
+  const pathname = location.pathname;
+  // '/admin/documents/category1/subcategory1' → ['', 'admin', 'documents', 'category1', 'subcategory1']
+  const pathParts = pathname.split('/');
+  // documents以降の部分を取得（adminとdocumentsを除く）
+  const categoryPath = pathParts.slice(3).join('/');
 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
@@ -187,13 +196,15 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY, {
-        slug,
-        sidebar_label: label,
-        position: positionNum,
-        description,
-        categoryPath: [],
-      });
+      const response = await apiClient.post(
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY}/${categoryPath}`,
+        {
+          slug,
+          sidebar_label: label,
+          position: positionNum,
+          description,
+        }
+      );
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {

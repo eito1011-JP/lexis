@@ -31,7 +31,7 @@ class CreateDocumentCategoryRequest extends FormRequest
             'sidebar_label' => 'required|string',
             'position' => 'nullable|numeric',
             'description' => 'nullable|string',
-            'category_path' => 'array',
+            'category_path' => 'string|nullable',
         ];
     }
 }
