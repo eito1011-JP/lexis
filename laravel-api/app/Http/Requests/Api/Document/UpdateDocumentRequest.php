@@ -26,7 +26,6 @@ class UpdateDocumentRequest extends FormRequest
     {
         return [
             'category_path' => 'required|string',
-            'category' => 'nullable|string',
             'sidebar_label' => 'required|string|max:255',
             'content' => 'required|string',
             'is_public' => 'required|boolean',
@@ -41,18 +40,18 @@ class UpdateDocumentRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'category' => __('validation.document.category.required'),
-            'sidebar_label' => __('validation.document.label.required'),
-            'content' => __('validation.document.content.required'),
-            'slug' => __('validation.document.slug.required'),
-            'file_order' => __('validation.document.file_order.integer'),
+            'category' => __('attributes.document.category'),
+            'sidebar_label' => __('attributes.document.sidebarLabel'),
+            'content' => __('attributes.document.content'),
+            'slug' => __('attributes.document.slug'),
+            'file_order' => __('attributes.document.fileOrder'),
         ];
     }
 
     public function prepareForValidation()
     {
         $categoryPath = $this->route('category_path');
-        
+
         if ($categoryPath) {
             $this->merge(['category_path' => $categoryPath]);
         }
@@ -68,8 +67,6 @@ class UpdateDocumentRequest extends FormRequest
 
             // 変換されたMarkdownコンテンツをリクエストデータに設定
             $this->merge(['content' => $markdownContent]);
-
-            Log::info('HTML to Markdown conversion completed');
         }
     }
 }

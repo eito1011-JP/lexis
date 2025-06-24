@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Api\Document;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Log;
+
 class GetDocumentByCategoryPathRequest extends FormRequest
 {
     /**
@@ -29,7 +29,7 @@ class GetDocumentByCategoryPathRequest extends FormRequest
     public function prepareForValidation()
     {
         $categoryPath = $this->route('category_path');
-        
+
         if ($categoryPath) {
             $this->merge(['category_path' => $categoryPath]);
         }

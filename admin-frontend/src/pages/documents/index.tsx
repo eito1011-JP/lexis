@@ -18,11 +18,11 @@ type Category = {
 type DocumentItem = {
   sidebar_label: string | null;
   slug: string | null;
-  isPublic: boolean;
+  is_public: boolean;
   status: string;
-  lastEditedBy: string | null;
+  last_edited_by: string | null;
   position?: number;
-  fileOrder?: number;
+  file_order?: number;
 };
 
 /**
@@ -509,21 +509,21 @@ export default function DocumentsPage(): JSX.Element {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.lastEditedBy || 'eito-morohashi@nexis-inc.com'}
+                    {document.last_edited_by || 'eito-morohashi@nexis-inc.com'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        document.isPublic
+                        document.is_public
                           ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}
                     >
-                      {document.isPublic ? '公開' : '非公開'}
+                      {document.is_public ? '公開' : '非公開'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.fileOrder || '-'}
+                    {document.file_order || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end relative">

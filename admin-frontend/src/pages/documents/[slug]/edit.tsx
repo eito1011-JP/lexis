@@ -5,6 +5,7 @@ import { useSessionCheck } from '@/hooks/useSessionCheck';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
+import { Toast } from '@/components/admin/Toast';
 
 // ユーザー型定義を追加
 interface User {
@@ -35,7 +36,6 @@ export default function EditDocumentPage(): JSX.Element {
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
-  const [reviewer, setReviewer] = useState('');
   const [reviewers, setReviewers] = useState<User[]>([]);
   const [documentSlug, setDocumentSlug] = useState('');
   const [fileOrder, setFileOrder] = useState<number | ''>('');
@@ -45,8 +45,10 @@ export default function EditDocumentPage(): JSX.Element {
   const [showReviewerModal, setShowReviewerModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredReviewers, setFilteredReviewers] = useState<User[]>([]);
-  const [reviewerName, setReviewerName] = useState('');
   const [documentId, setDocumentId] = useState<number | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // URLからslugとcategoryを抽出
   const pathname = location.pathname;
@@ -152,8 +154,7 @@ export default function EditDocumentPage(): JSX.Element {
       }
 
       // ドキュメント編集APIを呼び出す
-      const response = await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentSlug}`, {
-        category,
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentSlug}`, {
         sidebar_label: label,
         content,
         is_public: publicOption === '公開する',
@@ -161,17 +162,23 @@ export default function EditDocumentPage(): JSX.Element {
         file_order: fileOrder === '' ? null : Number(fileOrder),
       });
 
-      if (response.success) {
-        alert('ドキュメントが編集されました');
-        // 成功したら一覧ページに戻る
+      // 成功メッセージを表示
+      setToastMessage('編集が完了しました');
+      setToastType('success');
+      setShowToast(true);
+
+      // トースト表示後にリダイレクト
+      setTimeout(() => {
         window.location.href = category ? `/admin/documents/${category}` : '/admin/documents';
-      } else {
-        throw new Error(response.message || '不明なエラーが発生しました');
-      }
-    } catch (error: unknown) {
+      }, 1500);
+    } catch (error) {
       console.error('ドキュメント編集エラー:', error);
       const apiError = error as ApiError;
-      alert(`ドキュメントの編集に失敗しました: ${apiError.message || '不明なエラー'}`);
+      
+      // エラーメッセージを表示
+      setToastMessage(`ドキュメントの編集に失敗しました: ${apiError.message || '不明なエラー'}`);
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
@@ -313,51 +320,9 @@ export default function EditDocumentPage(): JSX.Element {
         </div>
       </div>
 
-      {/* レビュー担当者選択モーダル */}
-      {showReviewerModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">レビュー担当者を選択</h2>
-            <div className="mb-4">
-              <input
-                type="text"
-                placeholder="ユーザーを検索..."
-                className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="max-h-60 overflow-y-auto mb-4">
-              {filteredReviewers.length > 0 ? (
-                filteredReviewers.map(user => (
-                  <div
-                    key={user.id}
-                    className="p-2 hover:bg-gray-800 rounded cursor-pointer flex items-center"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center mr-2">
-                      {user.email.charAt(0).toUpperCase()}
-                    </div>
-                    <span>{user.email}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-gray-400">
-                  {searchQuery ? '検索結果がありません' : 'ユーザーを読み込み中...'}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
-                onClick={() => setShowReviewerModal(false)}
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* トーストメッセージ */}
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
     </AdminLayout>
   );

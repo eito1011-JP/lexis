@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Constants\DocumentCategoryConstants;
 use App\Consts\Flag;
 use App\Enums\DocumentStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\GetDocumentByCategoryPathRequest;
@@ -13,7 +14,9 @@ use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Services\DocumentService;
+use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,9 +26,12 @@ class DocumentController extends ApiBaseController
 {
     protected DocumentService $documentService;
 
-    public function __construct(DocumentService $documentService)
+    protected UserBranchService $userBranchService;
+
+    public function __construct(DocumentService $documentService, UserBranchService $userBranchService)
     {
         $this->documentService = $documentService;
+        $this->userBranchService = $userBranchService;
     }
 
     /**
@@ -142,7 +148,7 @@ class DocumentController extends ApiBaseController
 
             // file_orderの重複処理・自動採番
             $correctedFileOrder = $this->documentService->normalizeFileOrder(
-                $request->fileOrder ? (int) $request->fileOrder : null,
+                $request->file_order ? (int) $request->file_order : null,
                 $category->id ?? null
             );
 
@@ -156,9 +162,9 @@ class DocumentController extends ApiBaseController
                 'user_id' => $user['userId'],
                 'user_branch_id' => $user['userBranchId'],
                 'category_id' => $category->id ?? DocumentCategoryConstants::DEFAULT_CATEGORY_ID,
-                'sidebar_label' => $request->label,
+                'sidebar_label' => $request->sidebar_label,
                 'slug' => $request->slug,
-                'is_public' => $request->isPublic ?? false,
+                'is_public' => $request->is_public ?? false,
                 'status' => DocumentStatus::DRAFT->value,
                 'last_edited_by' => $user['email'] ?? 'unknown',
                 'file_order' => $correctedFileOrder,
@@ -237,60 +243,67 @@ class DocumentController extends ApiBaseController
                     'error' => '認証が必要です',
                 ], 401);
             }
+            // パスからslugとcategoryPathを取得
+            $pathParts = explode('/', $request->category_path);
+            $slug = array_pop($pathParts);
 
-            // 既存のドキュメントバージョンを取得
-            $existingDoc = DocumentVersion::where('id', $id)->first();
+            $categoryId = DocumentCategory::getIdFromPath($pathParts);
 
-            if (! $existingDoc) {
+            $existingDocument = DocumentVersion::where('category_id', $categoryId)
+                ->where('slug', $slug)
+                ->first();
+
+            if (! $existingDocument) {
                 return response()->json([
                     'error' => '編集対象のドキュメントが見つかりません',
                 ], 404);
             }
 
             // アクティブブランチを取得
-            $userBranch = $this->getUserBranch($user['userId']);
-            if (! $userBranch) {
-                return response()->json([
-                    'error' => 'アクティブなブランチが見つかりません',
-                ], 404);
-            }
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
 
             // file_orderの処理
-            $categoryId = $existingDoc->category_id;
-            $finalFileOrder = $this->processFileOrder($request->fileOrder, $categoryId, $existingDoc->file_order, $userBranch->id, $id);
+            $categoryId = $existingDocument->category_id;
+            $finalFileOrder = $this->processFileOrder($request->file_order, $categoryId, $existingDocument->file_order, $userBranchId, $existingDocument->id);
 
             // 既存ドキュメントを論理削除
-            $existingDoc->update(['is_deleted' => 1]);
+            $existingDocument->delete();
 
             // 新しいドキュメントバージョンを作成
             $newDocumentVersion = DocumentVersion::create([
-                'user_id' => $user['userId'],
-                'user_branch_id' => $userBranch->id,
-                'file_path' => $existingDoc->file_path,
+                'user_id' => $user->id,
+                'user_branch_id' => $userBranchId,
+                'file_path' => $existingDocument->file_path,
                 'status' => DocumentStatus::DRAFT->value,
                 'content' => $request->content,
                 'slug' => $request->slug,
-                'sidebar_label' => $request->label,
+                'sidebar_label' => $request->sidebar_label,
                 'file_order' => $finalFileOrder,
-                'last_edited_by' => $user['email'],
-                'is_public' => $request->isPublic,
+                'last_edited_by' => $user->email,
+                'is_public' => $request->is_public,
                 'category_id' => $categoryId,
             ]);
 
             // 編集開始バージョンを記録
-            $this->recordEditStartVersion($userBranch->id, $id, $newDocumentVersion->id);
+            EditStartVersion::create([
+                'user_branch_id' => $userBranchId,
+                'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+                'original_version_id' => $existingDocument->id,
+                'current_version_id' => $newDocumentVersion->id,
+            ]);
 
             DB::commit();
 
             return response()->json([
-                'success' => true,
-                'message' => 'ドキュメントが更新されました',
-                'documentId' => $request->slug,
+                'updated_document' => $newDocumentVersion,
             ]);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('ドキュメント更新エラー: '.$e->getMessage());
+            Log::error('ドキュメント更新エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
                 'error' => 'ドキュメントの更新に失敗しました',
@@ -313,10 +326,10 @@ class DocumentController extends ApiBaseController
     /**
      * file_orderの処理と他のドキュメントの順序調整
      */
-    private function processFileOrder($fileOrder, int $categoryId, int $oldFileOrder, int $userBranchId, int $excludeId): int
+    private function processFileOrder($file_order, int $categoryId, int $old_file_order, int $userBranchId, int $excludeId): int
     {
         // file_orderが空の場合は最大値+1を設定
-        if (empty($fileOrder) && $fileOrder !== 0) {
+        if (empty($file_order) && $file_order !== 0) {
             $maxOrder = DocumentVersion::where('category_id', $categoryId)
                 ->where('status', DocumentStatus::MERGED->value)
                 ->max('file_order');
@@ -324,20 +337,20 @@ class DocumentController extends ApiBaseController
             return ($maxOrder ?? 0) + 1;
         }
 
-        $newFileOrder = (int) $fileOrder;
+        $new_file_order = (int) $file_order;
 
         // file_orderが変更された場合のみ他のドキュメントを調整
-        if ($newFileOrder !== $oldFileOrder) {
-            $this->adjustOtherDocumentsOrder($categoryId, $newFileOrder, $oldFileOrder, $userBranchId, $excludeId);
+        if ($new_file_order !== $old_file_order) {
+            $this->adjustOtherDocumentsOrder($categoryId, $new_file_order, $old_file_order, $userBranchId, $excludeId);
         }
 
-        return $newFileOrder;
+        return $new_file_order;
     }
 
     /**
      * 他のドキュメントの順序を調整
      */
-    private function adjustOtherDocumentsOrder(int $categoryId, int $newFileOrder, int $oldFileOrder, int $userBranchId, int $excludeId): void
+    private function adjustOtherDocumentsOrder(int $categoryId, int $new_file_order, int $old_file_order, int $userBranchId, int $excludeId): void
     {
         $documentsToShift = DocumentVersion::where('category_id', $categoryId)
             ->where(function ($query) use ($userBranchId) {
@@ -346,24 +359,24 @@ class DocumentController extends ApiBaseController
             })
             ->where('id', '!=', $excludeId);
 
-        if ($newFileOrder < $oldFileOrder) {
+        if ($new_file_order < $old_file_order) {
             // 上に移動する場合：新しい位置以上、元の位置未満の範囲のレコードを+1
             $documentsToShift = $documentsToShift
-                ->where('file_order', '>=', $newFileOrder)
-                ->where('file_order', '<', $oldFileOrder)
+                ->where('file_order', '>=', $new_file_order)
+                ->where('file_order', '<', $old_file_order)
                 ->orderBy('file_order', 'asc');
         } else {
             // 下に移動する場合：元の位置超過、新しい位置以下の範囲のレコードを-1
             $documentsToShift = $documentsToShift
-                ->where('file_order', '>', $oldFileOrder)
-                ->where('file_order', '<=', $newFileOrder)
+                ->where('file_order', '>', $old_file_order)
+                ->where('file_order', '<=', $new_file_order)
                 ->orderBy('file_order', 'asc');
         }
 
         $documents = $documentsToShift->get();
 
         foreach ($documents as $doc) {
-            $newOrder = $newFileOrder < $oldFileOrder ? $doc->file_order + 1 : $doc->file_order - 1;
+            $newOrder = $new_file_order < $old_file_order ? $doc->file_order + 1 : $doc->file_order - 1;
 
             // 新しいバージョンを作成して順序を更新
             DocumentVersion::create([
@@ -472,7 +485,10 @@ class DocumentController extends ApiBaseController
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('ドキュメント削除エラー: '.$e->getMessage());
+            Log::error('ドキュメント削除エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return response()->json([
                 'error' => 'ドキュメントの削除に失敗しました',
@@ -555,6 +571,11 @@ class DocumentController extends ApiBaseController
             ]);
 
         } catch (\Exception $e) {
+            Log::error('カテゴリコンテンツ取得エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'error' => 'カテゴリコンテンツの取得に失敗しました',
             ], 500);

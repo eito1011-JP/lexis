@@ -26,11 +26,11 @@ class CreateDocumentRequest extends FormRequest
 
         return [
             'category' => 'nullable|string',
-            'label' => 'required|string|max:255',
+            'sidebar_label' => 'required|string|max:255',
             'content' => 'required|string',
-            'isPublic' => 'boolean',
+            'is_public' => 'boolean',
             'slug' => 'required|string|unique:document_versions,slug',
-            'fileOrder' => 'nullable|integer',
+            'file_order' => 'nullable|integer',
         ];
     }
 
@@ -40,11 +40,11 @@ class CreateDocumentRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'category' => __('attributes.document.category'),
-            'label' => __('attributes.document.label'),
-            'content' => __('attributes.document.content'),
-            'slug' => __('attributes.document.slug'),
-            'fileOrder' => __('attributes.document.fileOrder'),
+            'category' => __('validation.document.category.required'),
+            'sidebar_label' => __('validation.document.label.required'),
+            'content' => __('validation.document.content.required'),
+            'slug' => __('validation.document.slug.required'),
+            'file_order' => __('validation.document.file_order.integer'),
         ];
     }
 }
