@@ -36,7 +36,6 @@ class DocumentCategory extends Model
     public static function getIdFromPath(array $categoryPath): ?int
     {
         if (empty($categoryPath)) {
-            // パスが空の場合はデフォルトカテゴリ（uncategorized）のIDを返す
             return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
         }
 
@@ -50,7 +49,6 @@ class DocumentCategory extends Model
                 ->first();
 
             if (! $category) {
-                // カテゴリが見つからない場合はデフォルトカテゴリのIDを返す
                 return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
             }
 

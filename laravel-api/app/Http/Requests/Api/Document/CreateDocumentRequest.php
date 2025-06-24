@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Api\Document;
 
+use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Log;
 
 class CreateDocumentRequest extends FormRequest
 {
@@ -22,14 +22,12 @@ class CreateDocumentRequest extends FormRequest
      */
     public function rules(): array
     {
-        Log::info('createDocument request: '.json_encode($this->all()));
-
         return [
-            'category' => 'nullable|string',
+            'category_path' => 'nullable|string',
             'sidebar_label' => 'required|string|max:255',
             'content' => 'required|string',
             'is_public' => 'boolean',
-            'slug' => 'required|string|unique:document_versions,slug',
+            'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path)],
             'file_order' => 'nullable|integer',
         ];
     }
@@ -40,7 +38,7 @@ class CreateDocumentRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'category' => __('validation.document.category.required'),
+            'category_path' => __('validation.document..required'),
             'sidebar_label' => __('validation.document.label.required'),
             'content' => __('validation.document.content.required'),
             'slug' => __('validation.document.slug.required'),

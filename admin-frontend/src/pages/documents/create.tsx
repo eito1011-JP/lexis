@@ -128,22 +128,18 @@ export default function CreateDocumentPage(): JSX.Element {
       const category = queryParams.get('category');
 
       // ドキュメント作成APIを呼び出す
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT, {
-        category,
-        label,
+      await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT, {
+        category_path: category,
+        sidebar_label: label,
         content,
-        isPublic: publicOption === '公開する', // 公開設定を真偽値に変換
+        is_public: publicOption === '公開する', // 公開設定を真偽値に変換
         slug,
-        fileOrder,
+        file_order: fileOrder,
       });
 
-      if (response.success) {
         alert('ドキュメントが作成されました');
         // 成功したら一覧ページに戻る
         window.location.href = `/admin/documents/${category ?? ''}`;
-      } else {
-        throw new Error(response.message || '不明なエラーが発生しました');
-      }
     } catch (error: unknown) {
       console.error('ドキュメント作成エラー:', error);
       const apiError = error as ApiError;

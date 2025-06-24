@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Constants\DocumentCategoryConstants;
+use App\Constants\DocumentPathConstants;
 use App\Consts\Flag;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
@@ -129,6 +129,22 @@ class DocumentController extends ApiBaseController
     }
 
     /**
+     * ドキュメントファイルパスを生成
+     *
+     * @param  string|null  $category  カテゴリ名
+     * @param  string  $slug  ドキュメントのスラッグ
+     * @return string 生成されたファイルパス
+     */
+    private function generateDocumentFilePath(?string $category, string $slug): string
+    {
+        $targetDir = $category
+            ? base_path(DocumentPathConstants::DOCS_BASE_PATH.'/'.$category)
+            : base_path(DocumentPathConstants::DOCS_BASE_PATH);
+
+        return $targetDir.'/'.$slug.DocumentPathConstants::DOCUMENT_FILE_EXTENSION;
+    }
+
+    /**
      * ドキュメントを作成
      */
     public function createDocument(CreateDocumentRequest $request): JsonResponse
@@ -143,38 +159,36 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            // カテゴリを取得
-            $category = DocumentCategory::where('slug', $request->category)->first();
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+
+            $categoryPath = array_filter(explode('/', $request->category_path));
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             // file_orderの重複処理・自動採番
             $correctedFileOrder = $this->documentService->normalizeFileOrder(
                 $request->file_order ? (int) $request->file_order : null,
-                $category->id ?? null
+                $categoryId ?? null
             );
 
             // ファイルパスの生成
-            $targetDir = $request->category
-                ? base_path('docs/'.$request->category)
-                : base_path('docs');
-            $filePath = $targetDir.'/'.$request->slug.'.md';
+            $filePath = $this->generateDocumentFilePath($request->category, $request->slug);
 
             $document = Document::create([
-                'user_id' => $user['userId'],
-                'user_branch_id' => $user['userBranchId'],
-                'category_id' => $category->id ?? DocumentCategoryConstants::DEFAULT_CATEGORY_ID,
+                'user_id' => $user->id,
+                'user_branch_id' => $userBranchId,
+                'category_id' => $categoryId,
                 'sidebar_label' => $request->sidebar_label,
                 'slug' => $request->slug,
-                'is_public' => $request->is_public ?? false,
+                'is_public' => $request->is_public,
                 'status' => DocumentStatus::DRAFT->value,
-                'last_edited_by' => $user['email'] ?? 'unknown',
+                'last_edited_by' => $user->email,
                 'file_order' => $correctedFileOrder,
                 'file_path' => $filePath,
             ]);
 
             return response()->json([
-                'success' => true,
                 'document' => $document,
-            ], 201);
+            ]);
 
         } catch (\Exception $e) {
             Log::error($e);

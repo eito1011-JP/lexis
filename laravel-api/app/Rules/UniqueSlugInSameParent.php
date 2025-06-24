@@ -16,7 +16,7 @@ class UniqueSlugInSameParent implements ValidationRule
     }
 
     /**
-     * Run the validation rule.
+     * 同じ親カテゴリ内でslugが重複していないかをチェック
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
