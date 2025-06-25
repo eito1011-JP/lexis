@@ -64,13 +64,17 @@ export default function EditDocumentPage(): JSX.Element {
       if (!slug) return;
       try {
         setDocumentLoading(true);
-        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_BY_CATEGORY_PATH}`;
+        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_DETAIL}`;
 
-        // クエリパラメータとしてcategory_pathを渡す
-        const response = await apiClient.get(`${endpoint}/${category ? `${category}/${slug}` : slug}`);
+        // category_pathとslugの両方をクエリストリングとして送信
+        const params = new URLSearchParams();
+        if (category) {
+          params.append('category_path', category);
+        }
+        params.append('slug', slug);
+        const url = `${endpoint}?${params.toString()}`;
+        const response = await apiClient.get(url);
 
-        console.log('response', response);
-        if (response) {
           // 取得したデータをフォームにセット
           setDocumentId(response.id);
           setDocumentSlug(response.slug || '');
@@ -78,7 +82,6 @@ export default function EditDocumentPage(): JSX.Element {
           setContent(response.content || '');
           setPublicOption(response.is_public ? '公開する' : '公開しない');
           setFileOrder(response.file_order || '');
-        }
       } catch (error) {
         console.error('ドキュメント取得エラー:', error);
         setError('ドキュメントの取得に失敗しました');

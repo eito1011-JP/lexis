@@ -17,7 +17,7 @@ export const API_CONFIG = {
       UPDATE: '/api/admin/documents',
       DELETE: '/api/admin/documents',
       GET: '/api/admin/documents',
-      GET_DOCUMENT_BY_CATEGORY_PATH: '/api/admin/documents',
+      GET_DOCUMENT_DETAIL: '/api/admin/documents/detail',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
       GET_CATEGORIES: '/api/admin/document-categories',
     },

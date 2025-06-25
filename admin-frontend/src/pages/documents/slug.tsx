@@ -152,6 +152,11 @@ export default function DocumentBySlugPage(): JSX.Element {
   };
 
   const handleCreateNewCategory = async () => {
+    // ダブルクリック防止：既に処理中の場合は何もしない
+    if (isCreating) {
+      return;
+    }
+
     if (!categorySlug.trim()) return;
 
     // 表示順のバリデーション：数値以外が入力されていたらエラー

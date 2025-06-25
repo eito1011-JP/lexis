@@ -8,7 +8,7 @@ use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
-use App\Http\Requests\Api\Document\GetDocumentByCategoryPathRequest;
+use App\Http\Requests\Api\Document\GetDocumentDetailRequest;
 use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\Document;
@@ -74,7 +74,6 @@ class DocumentController extends ApiBaseController
 
             // カテゴリIDを取得（パスから）
             $parentId = DocumentCategory::getIdFromPath($categoryPath);
-
 
             // サブカテゴリを取得
             $subCategories = DocumentCategory::getSubCategories($parentId, $user->userBranches()->id ?? null);
@@ -199,7 +198,7 @@ class DocumentController extends ApiBaseController
     /**
      * スラッグでドキュメントを取得
      */
-    public function getDocumentByCategoryPath(GetDocumentByCategoryPathRequest $request): JsonResponse
+    public function getDocumentDetail(GetDocumentDetailRequest $request): JsonResponse
     {
         try {
             // 認証チェック
@@ -211,14 +210,13 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            // パスからslugとcategoryPathを取得
-            $pathParts = explode('/', $request->category_path);
-            $slug = array_pop($pathParts);
-
-            $categoryId = DocumentCategory::getIdFromPath($pathParts);
+            // パスから所属しているカテゴリのcategoryIdを取得
+            $categoryPath = explode('/', $request->category_path);
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             $document = DocumentVersion::where('category_id', $categoryId)
-                ->where('slug', $slug)
+                ->where('slug', $request->slug)
+                ->orWhere('user_branch_id', $user->userBranches()->orderBy('id', 'desc')->first()->id) // 最新のbranchを取得
                 ->first();
 
             if (! $document) {
@@ -230,7 +228,7 @@ class DocumentController extends ApiBaseController
             return response()->json($document);
 
         } catch (\Exception $e) {
-            Log::error('ドキュメント取得エラー: '.$e->getMessage());
+            Log::error('ドキュメント取得エラー: '.$e);
 
             return response()->json([
                 'error' => 'ドキュメントの取得に失敗しました',
