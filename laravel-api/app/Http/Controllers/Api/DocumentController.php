@@ -70,20 +70,17 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            // カテゴリパスの取得と処理
-            $categoryPath = array_filter(explode('/', $request->slug));
+            $categoryPath = array_filter(explode('/', $request->category_path));
 
             // カテゴリIDを取得（パスから）
-            $currentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $parentId = DocumentCategory::getIdFromPath($categoryPath);
 
-            // アクティブなブランチを取得（既にauthenticatedUserで取得済み）
-            $userBranchId = $user['userBranchId'];
 
             // サブカテゴリを取得
-            $subCategories = DocumentCategory::getSubCategories($currentCategoryId, $userBranchId);
+            $subCategories = DocumentCategory::getSubCategories($parentId, $user->userBranches()->id ?? null);
 
             // ドキュメントを取得
-            $documents = DocumentVersion::getDocumentsByCategoryId($currentCategoryId, $userBranchId);
+            $documents = DocumentVersion::getDocumentsByCategoryId($parentId, $user->userBranches()->id ?? null);
 
             // ソート処理
             $sortedDocuments = $documents

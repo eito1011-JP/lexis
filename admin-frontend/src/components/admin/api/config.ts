@@ -12,11 +12,11 @@ export const API_CONFIG = {
     DOCUMENTS: {
       CREATE_CATEGORY: '/api/admin/document-categories',
       UPDATE_CATEGORY: '/api/admin/document-categories',
-      DELETE_CATEGORY: '/api/admin/document-categories',
+      DELETE_CATEGORY: '/api/admiwn/document-categories',
       CREATE_DOCUMENT: '/api/admin/documents',
       UPDATE: '/api/admin/documents',
       DELETE: '/api/admin/documents',
-      GET_DOCUMENT: '/api/admin/documents',
+      GET: '/api/admin/documents',
       GET_DOCUMENT_BY_CATEGORY_PATH: '/api/admin/documents',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/admin/documents/category-contents',
       GET_CATEGORIES: '/api/admin/document-categories',

@@ -87,12 +87,6 @@ export default function DocumentsPage(): JSX.Element {
 
   // slugのバリデーション関数
   const validateSlug = (value: string) => {
-    // 空の場合はエラーなし（必須チェックは別で行う）
-    if (!value.trim()) {
-      setInvalidSlug(null);
-      return;
-    }
-
     // 予約語チェック
     if (reservedSlugs.includes(value.toLowerCase())) {
       setInvalidSlug(`"${value}" は予約語のため使用できません`);
@@ -111,7 +105,7 @@ export default function DocumentsPage(): JSX.Element {
   useEffect(() => {
     const getDocuments = async () => {
       try {
-        const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT);
+        const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET);
 
         if (response) {
           setCategories(response.categories);

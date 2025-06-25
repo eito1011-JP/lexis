@@ -17,30 +17,30 @@ type Item = {
   type: 'folder' | 'file';
   slug: string;
   label: string;
-  sidebarLabel?: string;
+  sidebar_label?: string;
   name?: string;
   position?: number;
   description?: string;
-  isDraft: boolean;
-  lastEditedBy?: string;
+  is_draft: boolean;
+  last_edited_by?: string;
   content?: string;
 };
 
 type Category = {
   slug: string;
-  sidebarLabel: string;
+  sidebar_label: string;
   position?: number;
   description?: string;
-  isDraft: boolean;
+  is_draft: boolean;
 };
 
 type Document = {
   slug: string;
-  sidebarLabel: string;
+  sidebar_label: string;
   isPublic: boolean;
   status: string;
-  lastEditedBy: string | null;
-  fileOrder: number | null;
+  last_edited_by: string | null;
+  file_order: number | null;
 };
 
 /**
@@ -54,7 +54,8 @@ export default function DocumentBySlugPage(): JSX.Element {
   } else if (location.pathname.endsWith('/diff')) {
     return <DiffDocumentPage />;
   }
-  const slug = location.pathname.replace('/documents/', '');
+  // /admin/documentsより下のパスを取得（可変長に対応）
+  const pathAfterDocuments = location.pathname.replace('/documents/', '');
   const { isLoading } = useSessionCheck('/login', false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categorySlug, setCategorySlug] = useState('');
@@ -113,10 +114,9 @@ export default function DocumentBySlugPage(): JSX.Element {
   useEffect(() => {
     const getDocuments = async () => {
       try {
-        const currentPath = location.pathname;
-        const pathAfterDocuments = currentPath.replace('/documents/', '');
+        console.log('pathAfterDocuments', pathAfterDocuments);
         const response = await apiClient.get(
-          `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT}?slug=${pathAfterDocuments}`
+          `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}?category_path=${pathAfterDocuments}`
         );
 
         if (response) {
@@ -136,11 +136,9 @@ export default function DocumentBySlugPage(): JSX.Element {
     };
 
     getDocuments();
-  }, []);
+  }, [pathAfterDocuments]);
 
   const handleCreateCategoryModal = async () => {
-    if (!slug) return;
-
     setShowCategoryModal(true);
   };
 
@@ -175,13 +173,15 @@ export default function DocumentBySlugPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY, {
-        slug: categorySlug,
-        sidebar_label: label,
-        position: positionNum,
-        description,
-        categoryPath: slug ? [slug] : [], // 親カテゴリのパスを追加
-      });
+      const response = await apiClient.post(
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY}/${pathAfterDocuments}`,
+        {
+          slug: categorySlug,
+          sidebar_label: label,
+          position: positionNum,
+          description,
+        }
+      );
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {
@@ -193,7 +193,7 @@ export default function DocumentBySlugPage(): JSX.Element {
             label: response.label,
             position: positionNum,
             description: description,
-            isDraft: false,
+            is_draft: false,
           },
         ]);
       }
@@ -215,8 +215,10 @@ export default function DocumentBySlugPage(): JSX.Element {
 
     try {
       const response = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.GET_DIFF, {
-        title: '更新内容の提出',
-        description: 'このPRはハンドブックの更新を含みます。',
+        params: {
+          title: '更新内容の提出',
+          description: 'このPRはハンドブックの更新を含みます。',
+        },
       });
 
       if (response.success) {
@@ -242,8 +244,8 @@ export default function DocumentBySlugPage(): JSX.Element {
     setDeleteError(null);
 
     try {
-      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE_DOCUMENT, {
-        body: JSON.stringify({ slug: documentToDelete.slug }),
+      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE, {
+        params: { slug: documentToDelete.slug },
       });
 
       if (response.success) {
@@ -308,13 +310,13 @@ export default function DocumentBySlugPage(): JSX.Element {
           <div
             key={index}
             onClick={() => {
-              window.location.href = `/admin/documents/${slug ? `${slug}/` : ''}${category.slug}`;
+              window.location.href = `/admin/documents/${pathAfterDocuments}/${category.slug}`;
             }}
             className="flex items-center justify-between p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
             <div className="flex items-center">
               <Folder className="w-5 h-5 mr-2" />
-              <span className="text-white hover:underline">{category.sidebarLabel}</span>
+              <span className="text-white hover:underline">{category.sidebar_label}</span>
             </div>
             <div
               onClick={e => {
@@ -372,7 +374,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                     <div className="flex items-center">
                       <div className="ml-4">
                         <div className="text-sm font-medium text-white">
-                          {document.sidebarLabel}
+                          {document.sidebar_label}
                         </div>
                       </div>
                     </div>
@@ -395,7 +397,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.lastEditedBy || '未設定'}
+                    {document.last_edited_by || '未設定'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
@@ -409,7 +411,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.fileOrder !== null ? document.fileOrder : '-'}
+                    {document.file_order !== null ? document.file_order : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end relative">
@@ -430,7 +432,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                             <ul className="py-1">
                               <li>
                                 <Link
-                                  to={`/documents/${slug ? `${slug}/` : ''}${document.slug}/edit`}
+                                  to={`/documents/${pathAfterDocuments}/${document.slug}/edit`}
                                   className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer text-left"
                                   style={{ textAlign: 'left' }}
                                 >
@@ -471,10 +473,10 @@ export default function DocumentBySlugPage(): JSX.Element {
 
   // パンくずリスト
   const renderBreadcrumbs = () => {
-    if (!slug) return null;
+    if (!pathAfterDocuments) return null;
 
     // スラグを/で分割して階層構造を作成
-    const slugParts = slug.split('/');
+    const slugParts = pathAfterDocuments.split('/');
     let currentPath = '';
 
     return (
@@ -531,7 +533,7 @@ export default function DocumentBySlugPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title={`${slug || 'ドキュメント'} - ドキュメント管理`}>
+    <AdminLayout title={`${pathAfterDocuments || 'ドキュメント'} - ドキュメント管理`}>
       <div className="flex flex-col h-full">
         <div className="mb-6">
           {renderBreadcrumbs()}
@@ -631,7 +633,7 @@ export default function DocumentBySlugPage(): JSX.Element {
               </button>
 
               <Link
-                to={`/documents/create?category=${slug}`}
+                to={`/documents/create?category=${pathAfterDocuments}`}
                 className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
               >
                 <svg
@@ -803,7 +805,7 @@ export default function DocumentBySlugPage(): JSX.Element {
             )}
 
             <p className="mb-4 text-gray-300">
-              「{documentToDelete.sidebarLabel || documentToDelete.slug}」を削除しますか？
+              「{documentToDelete.sidebar_label || documentToDelete.slug}」を削除しますか？
             </p>
 
             <div className="flex justify-end gap-2">

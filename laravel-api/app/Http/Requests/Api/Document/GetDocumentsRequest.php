@@ -22,20 +22,7 @@ class GetDocumentsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'slug' => 'nullable|string|max:1000',
-        ];
-    }
-
-    /**
-     * Get custom messages for validator errors.
-     *
-     * @return array<string, string>
-     */
-    public function messages(): array
-    {
-        return [
-            'slug.string' => 'スラッグは文字列である必要があります',
-            'slug.max' => 'スラッグは1000文字以内である必要があります',
+            'category_path' => 'nullable|string|max:1000',
         ];
     }
 }
