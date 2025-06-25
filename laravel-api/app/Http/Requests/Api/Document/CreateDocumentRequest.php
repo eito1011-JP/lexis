@@ -27,7 +27,7 @@ class CreateDocumentRequest extends FormRequest
             'sidebar_label' => 'required|string|max:255',
             'content' => 'required|string',
             'is_public' => 'boolean',
-            'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path)],
+            'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path, null, null)],
             'file_order' => 'nullable|integer',
         ];
     }
