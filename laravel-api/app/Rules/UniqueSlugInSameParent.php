@@ -10,9 +10,12 @@ class UniqueSlugInSameParent implements ValidationRule
 {
     protected $categoryPath;
 
-    public function __construct(?string $categoryPath = null)
+    protected $currentCategoryId;
+
+    public function __construct(?string $categoryPath = null, ?int $currentCategoryId = null)
     {
         $this->categoryPath = $categoryPath;
+        $this->currentCategoryId = $currentCategoryId;
     }
 
     /**
@@ -26,6 +29,7 @@ class UniqueSlugInSameParent implements ValidationRule
 
         $duplicateSlug = DocumentCategory::where('slug', $value)
             ->where('parent_id', $parentId)
+            ->where('id', '!=', $this->currentCategoryId) // 自身のレコードを除外
             ->first();
 
         if ($duplicateSlug) {

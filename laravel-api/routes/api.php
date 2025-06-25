@@ -38,7 +38,7 @@ Route::middleware('auth.session')->group(function () {
     Route::prefix('admin/documents')->group(function () {
         // ドキュメント関連
         Route::get('/', [DocumentController::class, 'getDocuments']);
-        Route::post('/', [DocumentController::class, 'createDocument']);
+        Route::post('/{category_path}', [DocumentController::class, 'createDocument']);
         Route::get('/{category_path}', [DocumentController::class, 'getDocumentByCategoryPath']);
         Route::put('/{category_path}', [DocumentController::class, 'updateDocument']);
         Route::delete('/{category_path}', [DocumentController::class, 'deleteDocument']);
@@ -55,7 +55,7 @@ Route::middleware('auth.session')->group(function () {
     // カテゴリ関連
     Route::prefix('admin/document-categories')->group(function () {
         Route::get('/', [DocumentCategoryController::class, 'getCategoryByPath']);
-        Route::post('/', [DocumentCategoryController::class, 'createCategory']);
+        Route::post('/{category_path}', [DocumentCategoryController::class, 'createCategory']);
         Route::put('/{category_path}', [DocumentCategoryController::class, 'updateCategory']);
         Route::delete('/{category_path}', [DocumentCategoryController::class, 'deleteCategory']);
         Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);

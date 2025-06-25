@@ -13,6 +13,7 @@ import { Toast } from '@/components/admin/Toast';
 import { encodeCategoryPath } from '@/utils/url';
 // カテゴリの型定義
 type Category = {
+  id: number;
   slug: string;
   sidebar_label: string;
 };
@@ -202,8 +203,9 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
+      const encodedPath = encodeCategoryPath(categoryPath, slug);
       const response = await apiClient.post(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY}/${categoryPath}`,
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY}/${encodedPath}`,
         {
           slug,
           sidebar_label: label,
@@ -217,6 +219,7 @@ export default function DocumentsPage(): JSX.Element {
         setCategories(prev => [
           ...prev,
           {
+            id: response.id,
             slug: response.slug,
             sidebar_label: response.label,
           },
@@ -252,10 +255,14 @@ export default function DocumentsPage(): JSX.Element {
     try {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
-      console.log(editingCategory.slug);
-      const response = await apiClient.put(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE_CATEGORY}/${editingCategory.slug}`,
+
+      const currentCategoryPath = categoryPath;
+      const encodedPath = encodeCategoryPath(currentCategoryPath, editingCategory.slug);
+
+      await apiClient.put(
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${encodedPath}`,
         {
+          current_category_id: editingCategory.id,
           slug,
           sidebar_label: label,
           position: positionNum,
@@ -263,17 +270,12 @@ export default function DocumentsPage(): JSX.Element {
         }
       );
 
-      // カテゴリリストを更新
-      if (response.success) {
-        setCategories(prev =>
-          prev.map(cat =>
-            cat.slug === editingCategory.slug
-              ? { slug: response.slug || slug, sidebar_label: response.label || label }
-              : cat
-          )
-        );
-        setSubmitSuccess('カテゴリが更新されました');
-      }
+      setToastMessage('カテゴリが更新されました');
+      setToastType('success');
+      setShowToast(true);
+
+      window.location.reload();
+
       handleCloseEditModal();
     } catch (err) {
       console.error('カテゴリ更新エラー:', err);

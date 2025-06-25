@@ -94,6 +94,13 @@ class DocumentCategoryController extends ApiBaseController
                 'parent_id' => $currentCategoryId,
             ]);
 
+            EditStartVersion::create([
+                'user_branch_id' => $userBranchId,
+                'target_type' => 'category',
+                'original_version_id' => $currentCategoryId,
+                'current_version_id' => $category->id,
+            ]);
+
             DB::commit();
 
             return response()->json([

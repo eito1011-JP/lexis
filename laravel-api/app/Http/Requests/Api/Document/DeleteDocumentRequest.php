@@ -61,19 +61,4 @@ class DeleteDocumentRequest extends FormRequest
             'slug' => __('attributes.document.slug'),
         ];
     }
-
-    /**
-     * Get custom messages for validator errors.
-     */
-    public function messages(): array
-    {
-        return [
-            'category_path.required' => 'category_pathは必須です',
-            'category_path.string' => 'category_pathは文字列である必要があります',
-            'category_path.max' => 'category_pathは255文字以内である必要があります',
-            'slug.required' => 'slugは必須です',
-            'slug.string' => 'slugは文字列である必要があります',
-            'slug.max' => 'slugは255文字以内である必要があります',
-        ];
-    }
 }

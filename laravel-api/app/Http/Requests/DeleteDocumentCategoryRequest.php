@@ -22,29 +22,43 @@ class DeleteDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_path' => 'required|string',
+            'category_path' => 'nullable|string|max:255',
+            'slug' => 'required|string|max:255',
         ];
     }
 
     /**
-     * バリデーション前にデータを準備
+     * document削除はcategory_pathには該当のドキュメントのslugも含めたpathが渡される
      */
-    protected function prepareForValidation(): void
+    public function prepareForValidation(): void
     {
+        // URLパラメータから値を取得
         $categoryPath = $this->route('category_path');
 
         if ($categoryPath) {
-            $this->merge(['category_path' => $categoryPath]);
+            // URLデコード(パスパラメータは/一個区切りの値しか認識しないため)
+            $decodedPath = urldecode($categoryPath);
+
+            // パスを分割してカテゴリパスとスラッグを分離
+            $pathParts = explode('/', $decodedPath);
+            $slug = array_pop($pathParts); // 最後の要素がスラッグ
+            $categoryPathOnly = implode('/', $pathParts); // 残りがカテゴリパス
+
+            $this->merge([
+                'category_path' => $categoryPathOnly,
+                'slug' => $slug,
+            ]);
         }
     }
 
     /**
-     * Get custom messages for validator errors.
+     * Get custom attribute names for validator errors.
      */
-    public function messages(): array
+    public function attributes(): array
     {
         return [
-            'category_path.required' => 'category_pathは必須です',
+            'category_path' => __('attributes.document.category_path'),
+            'slug' => __('attributes.document.slug'),
         ];
     }
 }
