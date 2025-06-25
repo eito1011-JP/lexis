@@ -9,6 +9,8 @@ import { Folder } from '@/components/icon/common/Folder';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
+import { Toast } from '@/components/admin/Toast';
+import { encodeCategoryPath } from '@/utils/url';
 // カテゴリの型定義
 type Category = {
   slug: string;
@@ -24,6 +26,7 @@ type DocumentItem = {
   last_edited_by: string | null;
   position?: number;
   file_order?: number;
+  category_path?: string;
 };
 
 /**
@@ -74,6 +77,9 @@ export default function DocumentsPage(): JSX.Element {
   const [isCategoryDeleting, setIsCategoryDeleting] = useState(false);
   const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
   const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -285,25 +291,31 @@ export default function DocumentsPage(): JSX.Element {
 
   // ドキュメント削除のハンドラー
   const handleDeleteDocument = async () => {
-    if (!documentToDelete) return;
+    if (!documentToDelete || !documentToDelete.slug) return;
 
     setIsDeleting(true);
     setDeleteError(null);
 
     try {
-      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE_DOCUMENT, {
-        body: JSON.stringify({ slug: documentToDelete.slug }),
-      });
+      // URLからカテゴリパスを取得（documents以降の部分）
+      const currentCategoryPath = categoryPath || '';
+      
+      // カテゴリパスとスラッグを結合してエンコード
+      const encodedPath = encodeCategoryPath(currentCategoryPath, documentToDelete.slug);
+      
+      await apiClient.delete(
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}/${encodedPath}`
+      );
 
-      if (response.success) {
-        // ドキュメント一覧から削除されたドキュメントを除去
-        setDocuments(prev => prev.filter(doc => doc.slug !== documentToDelete.slug));
-        setShowDeleteModal(false);
-        setDocumentToDelete(null);
-        setSubmitSuccess('ドキュメントが削除されました');
-      } else {
-        setDeleteError(response.message || 'ドキュメントの削除に失敗しました');
-      }
+            // 即座にページをリロード
+            window.location.reload();
+
+      // トーストメッセージを表示
+      setToastMessage('ドキュメントが削除されました');
+      setToastType('success');
+      setShowToast(true);
+    
+      
     } catch (err) {
       console.error('ドキュメント削除エラー:', err);
       setDeleteError('ドキュメントの削除中にエラーが発生しました');
@@ -343,7 +355,12 @@ export default function DocumentsPage(): JSX.Element {
         setCategories(prev => prev.filter(cat => cat.slug !== categoryToDelete.slug));
         setShowCategoryDeleteModal(false);
         setCategoryToDelete(null);
-        setSubmitSuccess('カテゴリが削除されました');
+        
+        // トーストメッセージを表示
+        setToastMessage('カテゴリが削除されました');
+        setToastType('success');
+        setShowToast(true);
+        
       } else {
         setCategoryDeleteError(response.message || 'カテゴリの削除に失敗しました');
       }
@@ -1063,6 +1080,11 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           </div>
         </div>
+      )}
+
+      {/* トーストメッセージ */}
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
     </AdminLayout>
   );

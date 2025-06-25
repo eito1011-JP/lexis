@@ -449,11 +449,15 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            // 2. リクエストデータの取得
-            $slug = $request->input('slug');
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+
+            $categoryPath = array_filter(explode('/', $request->category_path));
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             // 3. 削除対象のドキュメントを取得
-            $existingDocument = DocumentVersion::where('slug', $slug)->first();
+            $existingDocument = DocumentVersion::where('category_id', $categoryId)
+                ->where('slug', $request->slug)
+                ->first();
 
             if (! $existingDocument) {
                 return response()->json([
@@ -462,40 +466,43 @@ class DocumentController extends ApiBaseController
             }
 
             // 4. ユーザーのアクティブブランチ確認
-            $userBranch = $this->getUserBranch($user['userId']);
+            $userBranch = $this->getUserBranch($user->id);
 
             if (! $userBranch) {
                 // 新しいブランチを作成
-                $userBranch = $this->createUserBranch($user['userId'], $user['email']);
+                $userBranch = $this->createUserBranch($user->id, $user->email);
             }
 
             // 5. 既存ドキュメントを論理削除（is_deleted = 1に更新）
-            $existingDocument->update(['is_deleted' => Flag::TRUE]);
+            $existingDocument->delete();
 
             // 6. 削除されたドキュメントのレコードを新規挿入（ブランチ管理用）
-            DocumentVersion::create([
-                'user_id' => $user['userId'],
-                'user_branch_id' => $userBranch->id,
+            $newDocumentVersion = DocumentVersion::create([
+                'user_id' => $user->id,
+                'user_branch_id' => $userBranchId,
                 'file_path' => $existingDocument->file_path,
                 'status' => DocumentStatus::DRAFT->value,
                 'content' => $existingDocument->content,
                 'slug' => $existingDocument->slug,
                 'sidebar_label' => $existingDocument->sidebar_label,
                 'file_order' => $existingDocument->file_order,
-                'last_edited_by' => $user['email'],
+                'last_edited_by' => $user->email,
                 'is_public' => $existingDocument->is_public,
                 'category_id' => $existingDocument->category_id,
                 'is_deleted' => Flag::TRUE,
             ]);
 
+            EditStartVersion::create([
+                'user_branch_id' => $userBranchId,
+                'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+                'original_version_id' => $existingDocument->id,
+                'current_version_id' => $newDocumentVersion->id,
+            ]);
+
             DB::commit();
 
             // 7. 成功レスポンス
-            return response()->json([
-                'success' => true,
-                'message' => 'ドキュメントが削除されました',
-                'documentSlug' => $slug,
-            ]);
+            return response()->json();
 
         } catch (\Exception $e) {
             DB::rollBack();
