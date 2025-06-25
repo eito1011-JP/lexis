@@ -155,6 +155,7 @@ export default function EditDocumentPage(): JSX.Element {
 
       // ドキュメント編集APIを呼び出す
       await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentSlug}`, {
+        current_document_id: documentId,
         sidebar_label: label,
         content,
         is_public: publicOption === '公開する',

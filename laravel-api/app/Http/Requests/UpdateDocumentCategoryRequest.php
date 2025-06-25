@@ -26,7 +26,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
             'slug' => [
                 'required',
                 'string',
-                new UniqueSlugInSameParent($this->category_path, $this->current_category_id),
+                new UniqueSlugInSameParent($this->category_path, $this->current_category_id, null),
             ],
             'current_category_id' => 'required|integer',
             'category_path' => 'nullable|string|max:255',

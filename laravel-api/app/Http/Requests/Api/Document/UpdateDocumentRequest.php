@@ -24,11 +24,12 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'current_document_id' => 'required|integer',
             'category_path' => 'required|string',
             'sidebar_label' => 'required|string|max:255',
             'content' => 'required|string',
             'is_public' => 'required|boolean',
-            'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path)],
+            'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path, null, $this->current_document_id)],
             'file_order' => 'nullable|integer|min:1',
         ];
     }
