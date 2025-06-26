@@ -39,9 +39,9 @@ Route::middleware('auth.session')->group(function () {
         // ドキュメント関連
         Route::get('/', [DocumentController::class, 'getDocuments']);
         Route::get('/detail', [DocumentController::class, 'getDocumentDetail']);
-        Route::post('/{category_path}', [DocumentController::class, 'createDocument']);
-        Route::put('/{category_path}', [DocumentController::class, 'updateDocument']);
-        Route::delete('/{category_path}', [DocumentController::class, 'deleteDocument']);
+        Route::post('/create', [DocumentController::class, 'createDocument']);
+        Route::put('/update', [DocumentController::class, 'updateDocument']);
+        Route::delete('/delete', [DocumentController::class, 'deleteDocument']);
         Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);
 
         // Git関連
@@ -54,10 +54,10 @@ Route::middleware('auth.session')->group(function () {
 
     // カテゴリ関連
     Route::prefix('admin/document-categories')->group(function () {
-        Route::get('/', [DocumentCategoryController::class, 'getCategoryByPath']);
-        Route::post('/{category_path}', [DocumentCategoryController::class, 'createCategory']);
-        Route::put('/{category_path}', [DocumentCategoryController::class, 'updateCategory']);
-        Route::delete('/{category_path}', [DocumentCategoryController::class, 'deleteCategory']);
+        Route::get('/', [DocumentCategoryController::class, 'getCategory']);
+        Route::post('/create', [DocumentCategoryController::class, 'createCategory']);
+        Route::put('/update', [DocumentCategoryController::class, 'updateCategory']);
+        Route::delete('/delete', [DocumentCategoryController::class, 'deleteCategory']);
         Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
     });
 });

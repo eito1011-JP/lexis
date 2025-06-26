@@ -253,10 +253,12 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
             // パスからslugとcategoryPathを取得
-            $pathParts = explode('/', $request->category_path);
+            $pathParts = explode('/', $request->category_path_with_slug);
             $slug = array_pop($pathParts);
 
-            $categoryId = DocumentCategory::getIdFromPath($pathParts);
+            $categoryPath = $pathParts;
+
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             $existingDocument = DocumentVersion::where('category_id', $categoryId)
                 ->where('slug', $slug)
@@ -446,12 +448,15 @@ class DocumentController extends ApiBaseController
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
 
-            $categoryPath = array_filter(explode('/', $request->category_path));
+            $pathParts = array_filter(explode('/', $request->category_path_with_slug));
+            $slug = array_pop($pathParts);
+            $categoryPath = $pathParts;
+
             $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             // 3. 削除対象のドキュメントを取得
             $existingDocument = DocumentVersion::where('category_id', $categoryId)
-                ->where('slug', $request->slug)
+                ->where('slug', $slug)
                 ->first();
 
             if (! $existingDocument) {

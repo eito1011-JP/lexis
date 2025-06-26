@@ -28,7 +28,7 @@ class DocumentCategory extends Model
     ];
 
     /**
-     * カテゴリパスからカテゴリIDを取得
+     * カテゴリパスからparentとなるcategory idを再帰的に取得
      *
      * @param  array  $categoryPath
      *                               parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは['parent', 'child', 'grandchild']のような配列
@@ -41,7 +41,7 @@ class DocumentCategory extends Model
 
         // デフォルトカテゴリ（uncategorized）から開始
         $parentId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-        $currentCategoryId = null;
+        $currentParentCategoryId = null;
 
         foreach ($categoryPath as $slug) {
             $category = self::where('slug', $slug)
@@ -52,10 +52,10 @@ class DocumentCategory extends Model
                 return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
             }
 
-            $currentCategoryId = $category->id;
+            $currentParentCategoryId = $category->id;
         }
 
-        return $currentCategoryId;
+        return $currentParentCategoryId;
     }
 
     /**

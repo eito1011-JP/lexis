@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Consts\Flag;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
-use App\Http\Requests\GetDocumentCategoriesRequest;
+use App\Http\Requests\GetDocumentCategoryRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
@@ -32,15 +32,21 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリ一覧を取得
      */
-    public function getCategoryByPath(GetDocumentCategoriesRequest $request): JsonResponse
+    public function getCategory(GetDocumentCategoryRequest $request): JsonResponse
     {
         try {
             // カテゴリパスの取得と処理
-            $categoryPath = array_filter(explode('/', $request->category_path));
+            $pathParts = array_filter(explode('/', $request->category_path));
 
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
+            // 最後の値をslugとして取得、それ以外をcategoryPathとして取得
+            $slug = array_pop($pathParts);
+            $categoryPath = $pathParts;
 
-            $documentCategory = DocumentCategory::find($categoryId);
+            $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+
+            $documentCategory = DocumentCategory::where('parent_id', $parentCategoryId)
+                ->where('slug', $slug)
+                ->first();
 
             return response()->json([
                 'categories' => $documentCategory,
@@ -75,14 +81,14 @@ class DocumentCategoryController extends ApiBaseController
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
 
             // カテゴリパスの取得と処理
-            $categoryPath = array_filter(explode('/', $request->slug));
+            $categoryPath = array_filter(explode('/', $request->category_path));
 
             // カテゴリIDを取得（パスから）
-            $currentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $currentParentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             $position = $this->documentCategoryService->normalizePosition(
                 $request->position,
-                $currentCategoryId
+                $currentParentCategoryId
             );
 
             $category = DocumentCategory::create([
@@ -91,13 +97,13 @@ class DocumentCategoryController extends ApiBaseController
                 'position' => $position,
                 'description' => $request->description,
                 'user_branch_id' => $userBranchId,
-                'parent_id' => $currentCategoryId,
+                'parent_id' => $currentParentCategoryId,
             ]);
 
             EditStartVersion::create([
                 'user_branch_id' => $userBranchId,
                 'target_type' => 'category',
-                'original_version_id' => $currentCategoryId,
+                'original_version_id' => $currentParentCategoryId,
                 'current_version_id' => $category->id,
             ]);
 
@@ -138,11 +144,10 @@ class DocumentCategoryController extends ApiBaseController
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
 
-            $path = $request->route('category_path');
-            $categoryPath = array_filter(explode('/', $path));
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $categoryPath = array_filter(explode('/', $request->category_path));
+            $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
 
-            $existingCategory = DocumentCategory::find($categoryId);
+            $existingCategory = DocumentCategory::where('parent_id', $parentCategoryId)->where('slug', $request->slug)->first();
 
             if (! $existingCategory) {
                 return response()->json([
@@ -213,7 +218,7 @@ class DocumentCategoryController extends ApiBaseController
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
 
             // カテゴリツリーを取得
-            $categoryTree = $this->documentCategoryService->getCategoryTreeFromSlug($request->category_path, $userBranchId);
+            $categoryTree = $this->documentCategoryService->getCategoryTreeFromSlug($request->category_path_with_slug, $userBranchId);
             $categories = $categoryTree['categories'];
             $documents = $categoryTree['documents'];
 

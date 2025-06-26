@@ -128,7 +128,8 @@ export default function CreateDocumentPage(): JSX.Element {
       const category = queryParams.get('category');
 
       // ドキュメント作成APIを呼び出す（パスパラメータでcategory_pathを渡す）
-      await apiClient.post(`${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_DOCUMENT}/${category}`, {
+      await apiClient.post(`${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE}`, {
+        category_path: category,
         sidebar_label: label,
         content,
         is_public: publicOption === '公開する', // 公開設定を真偽値に変換

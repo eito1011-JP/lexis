@@ -10,7 +10,6 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
-import { encodeCategoryPath } from '@/utils/url';
 // カテゴリの型定義
 type Category = {
   id: number;
@@ -145,7 +144,7 @@ export default function DocumentsPage(): JSX.Element {
   const handleOpenEditModal = async (category: Category) => {
     console.log('category', category.slug);
     const response = await apiClient.get(
-      `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_CATEGORIES}?category_path=${category.slug}`
+      `${API_CONFIG.ENDPOINTS.CATEGORIES.GET}?category_path=${category.slug}`
     );
 
     // レスポンスからcategoriesキーでデータを取得
@@ -197,14 +196,14 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const encodedPath = encodeCategoryPath(categoryPath, slug);
       const response = await apiClient.post(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY}/${encodedPath}`,
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`,
         {
           slug,
           sidebar_label: label,
           position: positionNum,
           description,
+          category_path: null, // index.tsxはカテゴリ階層の一番上なので、category_pathはnull
         }
       );
 
@@ -250,13 +249,11 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const currentCategoryPath = categoryPath;
-      const encodedPath = encodeCategoryPath(currentCategoryPath, editingCategory.slug);
-
       await apiClient.put(
-        `${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${encodedPath}`,
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`,
         {
           current_category_id: editingCategory.id,
+          category_path: null,
           slug,
           sidebar_label: label,
           position: positionNum,
@@ -293,18 +290,12 @@ export default function DocumentsPage(): JSX.Element {
     setDeleteError(null);
 
     try {
-      // URLからカテゴリパスを取得（documents以降の部分）
-      const currentCategoryPath = categoryPath || '';
-      
-      // カテゴリパスとスラッグを結合してエンコード
-      const encodedPath = encodeCategoryPath(currentCategoryPath, documentToDelete.slug);
-      
       await apiClient.delete(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}/${encodedPath}`
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}`
       );
 
-            // 即座にページをリロード
-            window.location.reload();
+      // 即座にページをリロード
+      window.location.reload();
 
       // トーストメッセージを表示
       setToastMessage('ドキュメントが削除されました');

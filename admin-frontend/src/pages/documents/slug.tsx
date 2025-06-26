@@ -11,6 +11,7 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import EditDocumentPage from './[slug]/edit';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import DiffDocumentPage from './diff';
+import { Toast } from '@/components/admin/Toast';
 
 // アイテムの型定義
 type Item = {
@@ -27,6 +28,7 @@ type Item = {
 };
 
 type Category = {
+  id: number;
   slug: string;
   sidebar_label: string;
   position?: number;
@@ -37,7 +39,7 @@ type Category = {
 type Document = {
   slug: string;
   sidebar_label: string;
-  isPublic: boolean;
+  is_public: boolean;
   status: string;
   last_edited_by: string | null;
   file_order: number | null;
@@ -84,6 +86,17 @@ export default function DocumentBySlugPage(): JSX.Element {
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [openCategoryMenuIndex, setOpenCategoryMenuIndex] = useState<number | null>(null);
+  const [showCategoryDeleteModal, setShowCategoryDeleteModal] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [isCategoryDeleting, setIsCategoryDeleting] = useState(false);
+  const [categoryDeleteError, setCategoryDeleteError] = useState<string | null>(null);
+  const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -114,7 +127,6 @@ export default function DocumentBySlugPage(): JSX.Element {
   useEffect(() => {
     const getDocuments = async () => {
       try {
-        console.log('pathAfterDocuments', pathAfterDocuments);
         const response = await apiClient.get(
           `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}?category_path=${pathAfterDocuments}`
         );
@@ -179,8 +191,9 @@ export default function DocumentBySlugPage(): JSX.Element {
       const positionNum = position ? parseInt(position, 10) : undefined;
 
       const response = await apiClient.post(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE_CATEGORY}/${pathAfterDocuments}`,
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`,
         {
+          category_path: pathAfterDocuments,
           slug: categorySlug,
           sidebar_label: label,
           position: positionNum,
@@ -203,10 +216,16 @@ export default function DocumentBySlugPage(): JSX.Element {
         ]);
       }
       handleCloseModal();
+      setToastMessage('カテゴリが作成されました');
+      setToastType('success');
+      setShowToast(true);
       window.location.reload();
     } catch (err) {
       console.error('カテゴリ作成エラー:', err);
       setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      setToastMessage(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsCreating(false);
     }
@@ -229,13 +248,18 @@ export default function DocumentBySlugPage(): JSX.Element {
       if (response.success) {
         setShowSubmitModal(false);
         setShowPrSubmitButton(false);
-        setSubmitSuccess('差分の提出が完了しました');
+        setToastMessage('差分の提出が完了しました');
+        setToastType('success');
+        setShowToast(true);
       } else {
         setSubmitError(response.message || '差分の提出に失敗しました');
       }
     } catch (err) {
       console.error('差分提出エラー:', err);
       setSubmitError('差分の提出中にエラーが発生しました');
+      setToastMessage('差分の提出中にエラーが発生しました');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -249,22 +273,21 @@ export default function DocumentBySlugPage(): JSX.Element {
     setDeleteError(null);
 
     try {
-      const response = await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE, {
-        params: { slug: documentToDelete.slug },
-      });
+      await apiClient.delete(
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${pathAfterDocuments}/${documentToDelete.slug}`
+      );
 
-      if (response.success) {
-        // ドキュメント一覧から削除されたドキュメントを除去
-        setDocuments(prev => prev.filter(doc => doc.slug !== documentToDelete.slug));
-        setShowDeleteModal(false);
+      window.location.reload();
         setDocumentToDelete(null);
-        setSubmitSuccess('ドキュメントが削除されました');
-      } else {
-        setDeleteError(response.message || 'ドキュメントの削除に失敗しました');
-      }
+        setToastMessage('ドキュメントが削除されました');
+        setToastType('success');
+        setShowToast(true);
     } catch (err) {
       console.error('ドキュメント削除エラー:', err);
       setDeleteError('ドキュメントの削除中にエラーが発生しました');
+      setToastMessage('ドキュメントの削除中にエラーが発生しました');
+      setToastType('error');
+      setShowToast(true);
     } finally {
       setIsDeleting(false);
     }
@@ -282,6 +305,144 @@ export default function DocumentBySlugPage(): JSX.Element {
     setShowDeleteModal(false);
     setDocumentToDelete(null);
     setDeleteError(null);
+  };
+
+  // カテゴリメニューを閉じるためのハンドラ
+  const handleCloseCategoryMenu = () => setOpenCategoryMenuIndex(null);
+
+  // カテゴリ編集モーダルを開く
+  const handleOpenEditModal = async (category: Category) => {
+    console.log('category', category.slug);
+    console.log('pathAfterDocuments', pathAfterDocuments);
+    const response = await apiClient.get(
+      `${API_CONFIG.ENDPOINTS.CATEGORIES.GET}?category_path=${pathAfterDocuments}/${category.slug}`
+    );
+
+    console.log('response', response);
+    // レスポンスからcategoriesキーでデータを取得
+    const categoryData = response.categories;
+    if (!categoryData) {
+      console.error('カテゴリデータが見つかりません');
+      return;
+    }
+
+    setEditingCategory(categoryData);
+    setCategorySlug(categoryData.slug);
+    setLabel(categoryData.sidebar_label);
+    setPosition(categoryData.position?.toString() || '');
+    setDescription(categoryData.description || '');
+    setInvalidSlug(null);
+    setShowCategoryEditModal(true);
+    setOpenCategoryMenuIndex(null);
+  };
+
+  // カテゴリ編集モーダルを閉じる
+  const handleCloseEditModal = () => {
+    setShowCategoryEditModal(false);
+    setEditingCategory(null);
+    setCategorySlug('');
+    setLabel('');
+    setPosition('');
+    setDescription('');
+    setInvalidSlug(null);
+  };
+
+  // カテゴリ編集のハンドラー
+  const handleEditCategory = async () => {
+    if (!categorySlug.trim() || !editingCategory) return;
+
+    // 表示順のバリデーション：数値以外が入力されていたらエラー
+    if (position.trim() !== '' && isNaN(Number(position))) {
+      setError('表示順は数値を入力してください');
+      return;
+    }
+
+    // slugのバリデーション（元のslugと同じ場合はスキップ）
+    if (categorySlug !== editingCategory.slug && invalidSlug) {
+      setError(invalidSlug);
+      return;
+    }
+
+    setIsEditing(true);
+    setError(null);
+
+    try {
+      // positionを数値に変換
+      const positionNum = position ? parseInt(position, 10) : undefined;
+
+      await apiClient.put(
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`,
+        {
+          current_category_id: editingCategory.id,
+          category_path: pathAfterDocuments,
+          slug: categorySlug,
+          sidebar_label: label,
+          position: positionNum,
+          description,
+        }
+      );
+
+      setToastMessage('カテゴリが更新されました');
+      setToastType('success');
+      setShowToast(true);
+
+      window.location.reload();
+
+      handleCloseEditModal();
+    } catch (err) {
+      console.error('カテゴリ更新エラー:', err);
+      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  // カテゴリ削除のハンドラー
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    setIsCategoryDeleting(true);
+    setCategoryDeleteError(null);
+
+    try {
+      const response = await apiClient.delete(
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.DELETE}/${categoryToDelete.slug}`
+      );
+
+      if (response.success) {
+        // カテゴリ一覧から削除されたカテゴリを除去
+        setCategories(prev => prev.filter(cat => cat.slug !== categoryToDelete.slug));
+        setShowCategoryDeleteModal(false);
+        setCategoryToDelete(null);
+        
+        // トーストメッセージを表示
+        setToastMessage('カテゴリが削除されました');
+        setToastType('success');
+        setShowToast(true);
+        
+      } else {
+        setCategoryDeleteError(response.message || 'カテゴリの削除に失敗しました');
+      }
+    } catch (err) {
+      console.error('カテゴリ削除エラー:', err);
+      setCategoryDeleteError('カテゴリの削除中にエラーが発生しました');
+    } finally {
+      setIsCategoryDeleting(false);
+    }
+  };
+
+  // カテゴリ削除確認モーダルを開く
+  const openCategoryDeleteModal = (category: Category) => {
+    setCategoryToDelete(category);
+    setShowCategoryDeleteModal(true);
+    setOpenCategoryMenuIndex(null);
+  };
+
+  // カテゴリ削除確認モーダルを閉じる
+  const closeCategoryDeleteModal = () => {
+    setShowCategoryDeleteModal(false);
+    setCategoryToDelete(null);
+    setCategoryDeleteError(null);
   };
 
   // セッション確認中はローディング表示
@@ -323,12 +484,46 @@ export default function DocumentBySlugPage(): JSX.Element {
               <Folder className="w-5 h-5 mr-2" />
               <span className="text-white hover:underline">{category.sidebar_label}</span>
             </div>
-            <div
-              onClick={e => {
-                e.stopPropagation();
-              }}
-            >
-              <ThreeDots className="w-4 h-4 text-gray-400 hover:text-white" />
+            <div className="relative">
+              <div
+                onClick={e => {
+                  e.stopPropagation();
+                  setOpenCategoryMenuIndex(openCategoryMenuIndex === index ? null : index);
+                }}
+              >
+                <ThreeDots className="w-4 h-4 text-gray-400 hover:text-white" />
+              </div>
+              {openCategoryMenuIndex === index && (
+                <>
+                  {/* 背景クリックで閉じる */}
+                  <div className="fixed inset-0 z-40" onClick={handleCloseCategoryMenu} />
+                  <div
+                    className="absolute right-0 top-6 w-30 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <ul className="py-1">
+                      <li>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer"
+                          onClick={() => handleOpenEditModal(category)}
+                        >
+                          編集する
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 cursor-pointer"
+                          onClick={() => {
+                            openCategoryDeleteModal(category);
+                          }}
+                        >
+                          削除する
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ))}
@@ -407,12 +602,12 @@ export default function DocumentBySlugPage(): JSX.Element {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        document.isPublic
+                        document.is_public
                           ? 'bg-green-100 text-green-800'
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {document.isPublic ? '公開' : '非公開'}
+                      {document.is_public ? '公開' : '非公開'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
@@ -430,8 +625,7 @@ export default function DocumentBySlugPage(): JSX.Element {
                         <>
                           <div className="fixed inset-0 z-40" onClick={handleCloseMenu} />
                           <div
-                            className="fixed  w-30 mr-6 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
-                            style={{ zIndex: 100 }}
+                            className="absolute right-0 top-6 w-30 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
                             onClick={e => e.stopPropagation()}
                           >
                             <ul className="py-1">
@@ -838,6 +1032,137 @@ export default function DocumentBySlugPage(): JSX.Element {
             </div>
           </div>
         </div>
+      )}
+
+      {/* カテゴリ削除確認モーダル */}
+      {showCategoryDeleteModal && categoryToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">カテゴリを削除</h2>
+
+            {categoryDeleteError && (
+              <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
+                {categoryDeleteError}
+              </div>
+            )}
+
+            <p className="mb-4 text-gray-300">
+              「{categoryToDelete.sidebar_label || categoryToDelete.slug}」を削除しますか？
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={closeCategoryDeleteModal}
+                disabled={isCategoryDeleting}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 rounded-md hover:bg-red-700 focus:outline-none flex items-center"
+                onClick={handleDeleteCategory}
+                disabled={isCategoryDeleting}
+              >
+                {isCategoryDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    <span>削除中...</span>
+                  </>
+                ) : (
+                  <span>はい</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* カテゴリ編集モーダル */}
+      {showCategoryEditModal && editingCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">カテゴリを編集</h2>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
+                {error}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-400">Slug</label>
+              <input
+                type="text"
+                className={`w-full p-2 bg-gray-800 border ${invalidSlug ? 'border-red-500' : 'border-gray-700'} rounded-md focus:outline-none focus:border-[#3832A5] mb-2`}
+                placeholder="sample-document"
+                value={categorySlug}
+                onChange={e => {
+                  const value = e.target.value;
+                  setCategorySlug(value);
+                  // 元のslugと同じ場合はバリデーションをスキップ
+                  if (value !== editingCategory.slug) {
+                    validateSlug(value);
+                  } else {
+                    setInvalidSlug(null);
+                  }
+                }}
+              />
+              {invalidSlug && <p className="text-red-500 text-xs mt-1 mb-2">{invalidSlug}</p>}
+              <label className="block text-sm font-medium text-gray-400">カテゴリ名</label>
+              <input
+                type="text"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
+                placeholder="カテゴリ名を入力"
+                value={label}
+                onChange={e => setLabel(e.target.value)}
+              />
+              <label className="block text-sm font-medium text-gray-400">表示順</label>
+              <input
+                type="text"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
+                placeholder="1"
+                value={position}
+                onChange={e => setPosition(e.target.value)}
+              />
+              <label className="block text-sm font-medium text-gray-400">説明</label>
+              <input
+                type="text"
+                className="w-full p-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-[#3832A5] mb-2"
+                placeholder="カテゴリの説明を入力"
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={handleCloseEditModal}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
+                onClick={handleEditCategory}
+                disabled={!categorySlug.trim() || !label.trim() || isEditing}
+              >
+                {isEditing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    <span>更新中...</span>
+                  </>
+                ) : (
+                  <span>更新</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* トーストメッセージ */}
+      {showToast && (
+        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
     </AdminLayout>
   );

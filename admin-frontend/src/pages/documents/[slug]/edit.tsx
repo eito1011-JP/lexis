@@ -157,7 +157,8 @@ export default function EditDocumentPage(): JSX.Element {
       }
 
       // ドキュメント編集APIを呼び出す
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentSlug}`, {
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}`, {
+        category_path_with_slug: category ? `${category}/${documentSlug}` : documentSlug,
         current_document_id: documentId,
         sidebar_label: label,
         content,

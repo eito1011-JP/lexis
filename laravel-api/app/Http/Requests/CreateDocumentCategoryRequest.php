@@ -31,31 +31,7 @@ class CreateDocumentCategoryRequest extends FormRequest
             'sidebar_label' => 'required|string',
             'position' => 'nullable|numeric',
             'description' => 'nullable|string',
-            'category_path' => 'string|nullable',
+            'category_path' => 'nullable|string',
         ];
-    }
-
-    /**
-     * category_pathには該当のドキュメントのslugも含めたpathが渡される
-     */
-    public function prepareForValidation(): void
-    {
-        // URLパラメータから値を取得
-        $categoryPath = $this->route('category_path');
-
-        if ($categoryPath) {
-            // URLデコード(パスパラメータは/一個区切りの値しか認識しないため)
-            $decodedPath = urldecode($categoryPath);
-
-            // パスを分割してカテゴリパスとスラッグを分離
-            $pathParts = explode('/', $decodedPath);
-            $slug = array_pop($pathParts); // 最後の要素がスラッグ
-            $categoryPathOnly = implode('/', $pathParts); // 残りがカテゴリパス
-
-            $this->merge([
-                'category_path' => $categoryPathOnly,
-                'slug' => $slug,
-            ]);
-        }
     }
 }

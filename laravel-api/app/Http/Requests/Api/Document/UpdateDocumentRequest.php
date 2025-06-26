@@ -24,8 +24,8 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'category_path_with_slug' => 'required|string',
             'current_document_id' => 'required|integer',
-            'category_path' => 'required|string',
             'sidebar_label' => 'required|string|max:255',
             'content' => 'required|string',
             'is_public' => 'required|boolean',
@@ -46,15 +46,6 @@ class UpdateDocumentRequest extends FormRequest
             'slug' => __('attributes.document.slug'),
             'file_order' => __('attributes.document.fileOrder'),
         ];
-    }
-
-    public function prepareForValidation()
-    {
-        $categoryPath = $this->route('category_path');
-
-        if ($categoryPath) {
-            $this->merge(['category_path' => $categoryPath]);
-        }
     }
 
     public function passedValidation()
