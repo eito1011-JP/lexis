@@ -312,13 +312,10 @@ export default function DocumentBySlugPage(): JSX.Element {
 
   // カテゴリ編集モーダルを開く
   const handleOpenEditModal = async (category: Category) => {
-    console.log('category', category.slug);
-    console.log('pathAfterDocuments', pathAfterDocuments);
     const response = await apiClient.get(
       `${API_CONFIG.ENDPOINTS.CATEGORIES.GET}?category_path=${pathAfterDocuments}/${category.slug}`
     );
 
-    console.log('response', response);
     // レスポンスからcategoriesキーでデータを取得
     const categoryData = response.categories;
     if (!categoryData) {
@@ -476,6 +473,10 @@ export default function DocumentBySlugPage(): JSX.Element {
           <div
             key={index}
             onClick={() => {
+              // メニューが開いている場合はクリックを無効にする
+              if (openCategoryMenuIndex !== null) {
+                return;
+              }
               window.location.href = `/admin/documents/${pathAfterDocuments}/${category.slug}`;
             }}
             className="flex items-center justify-between p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"

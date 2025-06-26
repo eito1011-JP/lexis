@@ -404,7 +404,13 @@ export default function DocumentsPage(): JSX.Element {
           <div
             key={index}
             className="flex items-center justify-between p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
-            onClick={() => (window.location.href = `/admin/documents/${category.slug}`)}
+            onClick={() => {
+              // メニューが開いている場合はクリックを無効にする
+              if (openCategoryMenuIndex !== null) {
+                return;
+              }
+              window.location.href = `/admin/documents/${category.slug}`;
+            }}
           >
             <div className="flex items-center">
               <Folder className="w-5 h-5 mr-2" />
