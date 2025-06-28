@@ -75,13 +75,13 @@ export default function EditDocumentPage(): JSX.Element {
         const url = `${endpoint}?${params.toString()}`;
         const response = await apiClient.get(url);
 
-          // 取得したデータをフォームにセット
-          setDocumentId(response.id);
-          setDocumentSlug(response.slug || '');
-          setLabel(response.sidebar_label || '');
-          setContent(response.content || '');
-          setPublicOption(response.is_public ? '公開する' : '公開しない');
-          setFileOrder(response.file_order || '');
+        // 取得したデータをフォームにセット
+        setDocumentId(response.id);
+        setDocumentSlug(response.slug || '');
+        setLabel(response.sidebar_label || '');
+        setContent(response.content || '');
+        setPublicOption(response.is_public ? '公開する' : '公開しない');
+        setFileOrder(response.file_order || '');
       } catch (error) {
         console.error('ドキュメント取得エラー:', error);
         setError('ドキュメントの取得に失敗しました');
@@ -179,7 +179,7 @@ export default function EditDocumentPage(): JSX.Element {
     } catch (error) {
       console.error('ドキュメント編集エラー:', error);
       const apiError = error as ApiError;
-      
+
       // エラーメッセージを表示
       setToastMessage(`ドキュメントの編集に失敗しました: ${apiError.message || '不明なエラー'}`);
       setToastType('error');

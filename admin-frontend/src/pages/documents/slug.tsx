@@ -190,16 +190,13 @@ export default function DocumentBySlugPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post(
-        `${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`,
-        {
-          category_path: pathAfterDocuments,
-          slug: categorySlug,
-          sidebar_label: label,
-          position: positionNum,
-          description,
-        }
-      );
+      const response = await apiClient.post(`${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`, {
+        category_path: pathAfterDocuments,
+        slug: categorySlug,
+        sidebar_label: label,
+        position: positionNum,
+        description,
+      });
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {
@@ -278,10 +275,10 @@ export default function DocumentBySlugPage(): JSX.Element {
       );
 
       window.location.reload();
-        setDocumentToDelete(null);
-        setToastMessage('ドキュメントが削除されました');
-        setToastType('success');
-        setShowToast(true);
+      setDocumentToDelete(null);
+      setToastMessage('ドキュメントが削除されました');
+      setToastType('success');
+      setShowToast(true);
     } catch (err) {
       console.error('ドキュメント削除エラー:', err);
       setDeleteError('ドキュメントの削除中にエラーが発生しました');
@@ -367,17 +364,14 @@ export default function DocumentBySlugPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      await apiClient.put(
-        `${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`,
-        {
-          current_category_id: editingCategory.id,
-          category_path: pathAfterDocuments,
-          slug: categorySlug,
-          sidebar_label: label,
-          position: positionNum,
-          description,
-        }
-      );
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`, {
+        current_category_id: editingCategory.id,
+        category_path: pathAfterDocuments,
+        slug: categorySlug,
+        sidebar_label: label,
+        position: positionNum,
+        description,
+      });
 
       setToastMessage('カテゴリが更新されました');
       setToastType('success');
@@ -411,12 +405,11 @@ export default function DocumentBySlugPage(): JSX.Element {
         setCategories(prev => prev.filter(cat => cat.slug !== categoryToDelete.slug));
         setShowCategoryDeleteModal(false);
         setCategoryToDelete(null);
-        
+
         // トーストメッセージを表示
         setToastMessage('カテゴリが削除されました');
         setToastType('success');
         setShowToast(true);
-        
       } else {
         setCategoryDeleteError(response.message || 'カテゴリの削除に失敗しました');
       }

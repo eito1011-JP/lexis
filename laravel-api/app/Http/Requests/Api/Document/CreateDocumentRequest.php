@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\Document;
 
 use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
+use League\HTMLToMarkdown\HtmlConverter;
 
 class CreateDocumentRequest extends FormRequest
 {
@@ -44,5 +45,18 @@ class CreateDocumentRequest extends FormRequest
             'slug' => __('validation.document.slug.required'),
             'file_order' => __('validation.document.file_order.integer'),
         ];
+    }
+
+    public function passedValidation()
+    {
+        // HTMLコンテンツをMarkdown形式に変換
+        if ($this->has('content') && ! empty($this->input('content'))) {
+            $htmlContent = $this->input('content');
+            $converter = new HtmlConverter;
+            $markdownContent = $converter->convert($htmlContent);
+
+            // 変換されたMarkdownコンテンツをリクエストデータに設定
+            $this->merge(['content' => $markdownContent]);
+        }
     }
 }

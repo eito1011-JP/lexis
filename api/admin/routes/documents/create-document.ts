@@ -146,14 +146,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     await db.execute({
       sql: 'INSERT INTO edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-      args: [
-        userBranchId,
-        'document',
-        null,
-        documentVersionId,
-        now,
-        now,
-      ],
+      args: [userBranchId, 'document', null, documentVersionId, now, now],
     });
 
     // 8. 成功レスポンスを返す

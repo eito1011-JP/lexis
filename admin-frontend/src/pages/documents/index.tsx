@@ -196,16 +196,13 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post(
-        `${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`,
-        {
-          slug,
-          sidebar_label: label,
-          position: positionNum,
-          description,
-          category_path: null, // index.tsxはカテゴリ階層の一番上なので、category_pathはnull
-        }
-      );
+      const response = await apiClient.post(`${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`, {
+        slug,
+        sidebar_label: label,
+        position: positionNum,
+        description,
+        category_path: null, // index.tsxはカテゴリ階層の一番上なので、category_pathはnull
+      });
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {
@@ -249,17 +246,14 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      await apiClient.put(
-        `${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`,
-        {
-          current_category_id: editingCategory.id,
-          category_path: null,
-          slug,
-          sidebar_label: label,
-          position: positionNum,
-          description,
-        }
-      );
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`, {
+        current_category_id: editingCategory.id,
+        category_path: null,
+        slug,
+        sidebar_label: label,
+        position: positionNum,
+        description,
+      });
 
       setToastMessage('カテゴリが更新されました');
       setToastType('success');
@@ -301,8 +295,6 @@ export default function DocumentsPage(): JSX.Element {
       setToastMessage('ドキュメントが削除されました');
       setToastType('success');
       setShowToast(true);
-    
-      
     } catch (err) {
       console.error('ドキュメント削除エラー:', err);
       setDeleteError('ドキュメントの削除中にエラーが発生しました');
@@ -333,24 +325,16 @@ export default function DocumentsPage(): JSX.Element {
     setCategoryDeleteError(null);
 
     try {
-      const response = await apiClient.delete(
-        `${API_CONFIG.ENDPOINTS.CATEGORIES.DELETE}/${categoryToDelete.slug}`
+      await apiClient.delete(
+        `${API_CONFIG.ENDPOINTS.CATEGORIES.DELETE}?category_path_with_slug=${categoryToDelete.slug}`
       );
 
-      if (response.success) {
-        // カテゴリ一覧から削除されたカテゴリを除去
-        setCategories(prev => prev.filter(cat => cat.slug !== categoryToDelete.slug));
-        setShowCategoryDeleteModal(false);
-        setCategoryToDelete(null);
-        
-        // トーストメッセージを表示
-        setToastMessage('カテゴリが削除されました');
-        setToastType('success');
-        setShowToast(true);
-        
-      } else {
-        setCategoryDeleteError(response.message || 'カテゴリの削除に失敗しました');
-      }
+      // トーストメッセージを表示
+      setToastMessage('カテゴリが削除されました');
+      setToastType('success');
+      setShowToast(true);
+
+      window.location.reload();
     } catch (err) {
       console.error('カテゴリ削除エラー:', err);
       setCategoryDeleteError('カテゴリの削除中にエラーが発生しました');

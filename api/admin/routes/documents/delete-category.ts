@@ -164,10 +164,10 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
     for (let i = 0; i < categories.length; i++) {
       const categoryId = Number(categories[i].id);
       const newCategoryId = insertedCategoryIds[i];
-      
+
       // 既存のedit_start_versionsレコードがある場合は更新、ない場合は新規作成
       const existingEditVersion = existingEditVersions.find(ev => ev.categoryId === categoryId);
-      
+
       if (existingEditVersion) {
         // 既存レコードを更新
         await db.execute({
@@ -178,14 +178,7 @@ router.delete('/delete-category', async (req: Request, res: Response) => {
         // 新規レコードを作成
         await db.execute({
           sql: 'INSERT INTO edit_start_versions (user_branch_id, target_type, original_version_id, current_version_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
-          args: [
-            userBranchId,
-            'category',
-            categoryId,
-            newCategoryId,
-            now,
-            now,
-          ],
+          args: [userBranchId, 'category', categoryId, newCategoryId, now, now],
         });
       }
     }

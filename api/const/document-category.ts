@@ -21,4 +21,4 @@ export const DOCUMENT_CATEGORY_CONSTANTS = {
    * デフォルトカテゴリ（未分類）のサイドバーラベル
    */
   DEFAULT_CATEGORY_SIDEBAR_LABEL: '未分類',
-} as const; 
+} as const;

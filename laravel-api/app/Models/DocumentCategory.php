@@ -17,9 +17,13 @@ class DocumentCategory extends Model
         'sidebar_label',
         'position',
         'description',
+        'status',
         'parent_id',
         'user_branch_id',
         'is_deleted',
+        'created_at',
+        'updated_at',
+        'deleted_at',
     ];
 
     protected $casts = [

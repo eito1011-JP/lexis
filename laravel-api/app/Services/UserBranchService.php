@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Consts\Flag;
 use App\Enums\DocumentCategoryPrStatus;
+use App\Models\User;
 use App\Models\UserBranch;
 use Github\Client;
 
@@ -14,21 +15,16 @@ class UserBranchService
      *
      * @return int ユーザーブランチID
      */
-    public function fetchOrCreateActiveBranch(int $userId): int
+    public function fetchOrCreateActiveBranch(User $user): int
     {
         // アクティブなユーザーブランチを確認
-        $activeBranch = UserBranch::getActiveBranch($userId);
+        $activeBranch = $user->userBranches()->where('pr_status', DocumentCategoryPrStatus::NONE->value)->active()->first();
 
         $userBranchId = null;
         if ($activeBranch) {
             $userBranchId = $activeBranch->id;
-        }
-
-        // アクティブなブランチが存在しない場合は新しく作成
-        $newBranch = $this->initBranchSnapshot($userId);
-
-        if ($newBranch) {
-            $userBranchId = $newBranch->id;
+        } else {
+            $userBranchId = $this->initBranchSnapshot($user->id)->id;
         }
 
         return $userBranchId;
@@ -41,11 +37,6 @@ class UserBranchService
     {
         $snapshotCommit = $this->findLatestCommit();
 
-        // 既存のアクティブブランチを非アクティブにする
-        UserBranch::where('user_id', $userId)
-            ->active()
-            ->update(['is_active' => Flag::FALSE]);
-
         // 新しいブランチを作成
         $branchName = 'branch_'.$userId.'_'.time();
 
@@ -54,7 +45,7 @@ class UserBranchService
             'branch_name' => $branchName,
             'snapshot_commit' => $snapshotCommit,
             'is_active' => Flag::TRUE,
-            'pr_status' => DocumentCategoryPrStatus::NONE,
+            'pr_status' => DocumentCategoryPrStatus::NONE->value,
         ]);
     }
 

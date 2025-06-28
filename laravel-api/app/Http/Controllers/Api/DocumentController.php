@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Constants\DocumentPathConstants;
 use App\Consts\Flag;
+use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
@@ -155,7 +156,7 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
             $categoryId = DocumentCategory::getIdFromPath($categoryPath);
@@ -175,11 +176,19 @@ class DocumentController extends ApiBaseController
                 'category_id' => $categoryId,
                 'sidebar_label' => $request->sidebar_label,
                 'slug' => $request->slug,
+                'content' => $request->content,
                 'is_public' => $request->is_public,
                 'status' => DocumentStatus::DRAFT->value,
                 'last_edited_by' => $user->email,
                 'file_order' => $correctedFileOrder,
                 'file_path' => $filePath,
+            ]);
+
+            EditStartVersion::create([
+                'user_branch_id' => $userBranchId,
+                'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+                'original_version_id' => $document->id,
+                'current_version_id' => $document->id,
             ]);
 
             return response()->json([
@@ -271,7 +280,7 @@ class DocumentController extends ApiBaseController
             }
 
             // アクティブブランチを取得
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
             // file_orderの処理
             $categoryId = $existingDocument->category_id;
@@ -279,6 +288,15 @@ class DocumentController extends ApiBaseController
 
             // 既存ドキュメントを論理削除
             $existingDocument->delete();
+
+            // 既存のEditStartVersionを削除
+            $userBranch = $user->userBranches()->active()->where('pr_status', DocumentCategoryStatus::DRAFT->value)->first();
+
+            $userBranch->editStartVersions()
+                ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
+                ->where('current_version_id', $existingDocument->id)
+                ->first()
+                ->delete();
 
             // 新しいドキュメントバージョンを作成
             $newDocumentVersion = DocumentVersion::create([
@@ -411,25 +429,6 @@ class DocumentController extends ApiBaseController
     }
 
     /**
-     * 編集開始バージョンを記録
-     */
-    private function recordEditStartVersion(int $userBranchId, int $originalVersionId, int $currentVersionId): void
-    {
-        DB::table('edit_start_versions')->updateOrInsert(
-            [
-                'user_branch_id' => $userBranchId,
-                'original_version_id' => $originalVersionId,
-            ],
-            [
-                'target_type' => 'document',
-                'current_version_id' => $currentVersionId,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]
-        );
-    }
-
-    /**
      * ドキュメントを削除
      */
     public function deleteDocument(DeleteDocumentRequest $request): JsonResponse
@@ -446,7 +445,7 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));
             $slug = array_pop($pathParts);

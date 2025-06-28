@@ -23,6 +23,7 @@ class Document extends Model
         'category_id',
         'sidebar_label',
         'slug',
+        'content',
         'is_public',
         'status',
         'last_edited_by',

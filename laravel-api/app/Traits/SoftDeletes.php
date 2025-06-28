@@ -6,6 +6,7 @@ namespace App\Traits;
 
 use App\Consts\Flag;
 use App\Scopes\SoftDeletingScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes as TimestampsSoftDelete;
 
 /**
@@ -26,6 +27,17 @@ trait SoftDeletes
     public static function bootSoftDeletes(): void
     {
         static::addGlobalScope(new SoftDeletingScope);
+
+        // Register withTrashed macro for Builder
+        Builder::macro('withTrashed', function () {
+            return $this->withoutGlobalScope(SoftDeletingScope::class);
+        });
+
+        // Register onlyTrashed macro for Builder
+        Builder::macro('onlyTrashed', function () {
+            return $this->withoutGlobalScope(SoftDeletingScope::class)
+                ->where('is_deleted', Flag::TRUE);
+        });
     }
 
     /**
@@ -82,5 +94,26 @@ trait SoftDeletes
         $this->{$this->getDeletedAtColumn()} = Flag::TRUE;
 
         $query->update($columns);
+    }
+
+    /**
+     * Include soft deleted models in the results.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|static
+     */
+    public static function withTrashed()
+    {
+        return static::withoutGlobalScope(SoftDeletingScope::class);
+    }
+
+    /**
+     * Get only soft deleted models.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder|static
+     */
+    public static function onlyTrashed()
+    {
+        return static::withoutGlobalScope(SoftDeletingScope::class)
+            ->where('is_deleted', Flag::TRUE);
     }
 }

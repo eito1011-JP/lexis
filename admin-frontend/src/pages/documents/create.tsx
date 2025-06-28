@@ -31,6 +31,7 @@ export default function CreateDocumentPage(): JSX.Element {
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -118,7 +119,11 @@ export default function CreateDocumentPage(): JSX.Element {
   };
 
   const handleSave = async () => {
+    if (isSubmitting) return; // 既に送信中なら何もしない
+
     try {
+      setIsSubmitting(true);
+
       if (!label) {
         alert('タイトルを入力してください');
         return;
@@ -144,6 +149,8 @@ export default function CreateDocumentPage(): JSX.Element {
       console.error('ドキュメント作成エラー:', error);
       const apiError = error as ApiError;
       alert(`ドキュメントの作成に失敗しました: ${apiError.message || '不明なエラー'}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -264,11 +271,11 @@ export default function CreateDocumentPage(): JSX.Element {
 
           <div className="flex flex-col items-center gap-4 mt-8">
             <button
-              className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80 border-none w-45"
+              className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80 border-none w-45 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSave}
-              disabled={!!invalidSlug}
+              disabled={!!invalidSlug || isSubmitting}
             >
-              保存
+              {isSubmitting ? '保存中...' : '保存'}
             </button>
           </div>
         </div>

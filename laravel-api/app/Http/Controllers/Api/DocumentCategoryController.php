@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\Flag;
+use App\Enums\DocumentCategoryPrStatus;
+use App\Enums\DocumentStatus;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
 use App\Http\Requests\GetDocumentCategoryRequest;
@@ -78,7 +80,7 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
             // カテゴリパスの取得と処理
             $categoryPath = array_filter(explode('/', $request->category_path));
@@ -103,7 +105,7 @@ class DocumentCategoryController extends ApiBaseController
             EditStartVersion::create([
                 'user_branch_id' => $userBranchId,
                 'target_type' => 'category',
-                'original_version_id' => $currentParentCategoryId,
+                'original_version_id' => $category->id,
                 'current_version_id' => $category->id,
             ]);
 
@@ -142,7 +144,7 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
             $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
@@ -215,109 +217,197 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             // ユーザーのアクティブブランチ確認
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user->id);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
-            // カテゴリツリーを取得
-            $categoryTree = $this->documentCategoryService->getCategoryTreeFromSlug($request->category_path_with_slug, $userBranchId);
-            $categories = $categoryTree['categories'];
-            $documents = $categoryTree['documents'];
+            // カテゴリパスの取得と処理
+            $pathParts = array_filter(explode('/', $request->category_path_with_slug));
+            $slug = array_pop($pathParts);
+            $categoryPath = $pathParts;
+            $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
 
-            if (empty($categories)) {
+            // 削除対象のルートカテゴリの存在確認
+            $rootCategory = DocumentCategory::where('slug', $slug)
+                ->where('parent_id', $parentCategoryId)
+                ->where(function ($query) use ($userBranchId) {
+                    $query->where('status', DocumentCategoryPrStatus::MERGED->value)
+                        ->orWhere(function ($subQuery) use ($userBranchId) {
+                            $subQuery->where('status', '!=', DocumentCategoryPrStatus::MERGED->value)
+                                ->where('user_branch_id', $userBranchId);
+                        });
+                })
+                ->first();
+
+            if (! $rootCategory) {
                 return response()->json([
                     'error' => 'カテゴリが見つかりません',
                 ], 404);
             }
 
+            // 再帰CTEを使用して削除対象のカテゴリIDを取得
+            $categoryIds = DB::select('
+                WITH RECURSIVE tree AS (
+                    SELECT id FROM document_categories
+                    WHERE slug = ? AND parent_id = ?
+                    AND (status = ? OR (status != ? AND user_branch_id = ?))
+                    
+                    UNION ALL
+                    
+                    SELECT dc.id
+                    FROM document_categories dc
+                    INNER JOIN tree t ON dc.parent_id = t.id
+                    WHERE (dc.status = ? OR (dc.status != ? AND dc.user_branch_id = ?))
+                )
+                SELECT id FROM tree
+            ', [$slug, $parentCategoryId, DocumentCategoryPrStatus::MERGED->value, DocumentCategoryPrStatus::MERGED->value, $userBranchId, DocumentCategoryPrStatus::MERGED->value, DocumentCategoryPrStatus::MERGED->value, $userBranchId]);
+
+            $categoryIdArray = array_column($categoryIds, 'id');
+
+            if (empty($categoryIdArray)) {
+                return response()->json([
+                    'error' => 'カテゴリが見つかりません',
+                ], 404);
+            }
+
+            // 削除対象のカテゴリを取得
+            $categories = DocumentCategory::whereIn('id', $categoryIdArray)->get();
+
+            // 削除対象のドキュメントを取得
+            $documents = Document::whereIn('category_id', $categoryIdArray)
+                ->where(function ($query) use ($userBranchId) {
+                    $query->where('status', DocumentStatus::MERGED->value)
+                        ->orWhere(function ($subQuery) use ($userBranchId) {
+                            $subQuery->where('status', '!=', DocumentStatus::MERGED->value)
+                                ->where('user_branch_id', $userBranchId);
+                        });
+                })
+                ->get();
+
             $now = now();
 
-            // 削除対象のカテゴリが既にedit_start_versionsに存在する場合、そのレコードを更新
-            $existingEditVersions = [];
-            foreach ($categories as $category) {
-                $existingVersion = EditStartVersion::where('target_type', 'category')
-                    ->where('original_version_id', $category->id)
-                    ->first();
+            // 既存のedit_start_versionsレコードを取得
+            $existingEditVersions = EditStartVersion::where('target_type', 'category')
+                ->whereIn('original_version_id', $categoryIdArray)
+                ->get()
+                ->keyBy('original_version_id');
 
-                if ($existingVersion) {
-                    $existingEditVersions[$category->id] = $existingVersion;
-                }
-            }
+            // 論理削除前の件数を取得
+            $beforeCount = DocumentCategory::whereIn('id', $categoryIdArray)
+                ->where('is_deleted', Flag::FALSE)
+                ->count();
 
-            // document_categoriesをis_deleted=1に更新
-            foreach ($categories as $category) {
-                $category->update([
+            // カテゴリを一括で論理削除(ここは消えている)
+            DocumentCategory::whereIn('id', $categoryIdArray)
+                ->update([
                     'is_deleted' => Flag::TRUE,
-                    'updated_at' => $now,
+                    'deleted_at' => $now,
                 ]);
-            }
 
-            // document_versionsをis_deleted=1に更新
+            // ドキュメントを論理削除
             if ($documents->isNotEmpty()) {
-                foreach ($documents as $document) {
-                    $document->update([
+                Document::whereIn('id', $documents->pluck('id'))
+                    ->update([
                         'is_deleted' => Flag::TRUE,
-                        'updated_at' => $now,
+                        'deleted_at' => $now,
                     ]);
-                }
             }
 
-            // ブランチ管理のために削除したcategoriesを追加
-            $insertedCategoryIds = [];
+            // 削除されたカテゴリの新しいバージョンをバルク作成
+            $newCategoryData = [];
+
             foreach ($categories as $category) {
-                $newCategory = DocumentCategory::create([
+                $newCategoryData[] = [
                     'sidebar_label' => $category->sidebar_label,
                     'slug' => $category->slug,
                     'parent_id' => $category->parent_id,
+                    'position' => $category->position,
+                    'description' => $category->description,
                     'user_branch_id' => $userBranchId,
                     'is_deleted' => Flag::TRUE,
+                    'deleted_at' => $now,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]);
-                $insertedCategoryIds[] = $newCategory->id;
+                ];
             }
 
-            // ブランチ管理のために削除したdocument_versionsを追加
+            // バルクインサートを実行
+            DocumentCategory::insert($newCategoryData);
+
+            // 挿入されたレコードのIDを取得
+            $insertedCategoryIds = DocumentCategory::where('user_branch_id', $userBranchId)
+                ->onlyTrashed()
+                ->orderBy('id', 'desc')
+                ->limit(count($newCategoryData))
+                ->pluck('id')
+                ->reverse()
+                ->values()
+                ->toArray();
+
+            // カテゴリのマッピングを作成
+            foreach ($categories as $index => $category) {
+                $deletedCategory[$category->id] = $insertedCategoryIds[$index];
+            }
+
+            // 削除されたドキュメントの新しいバージョンをバルク作成
             if ($documents->isNotEmpty()) {
+                $newDocumentData = [];
                 foreach ($documents as $document) {
-                    Document::create([
-                        'user_id' => $user['id'],
+                    $newDocumentData[] = [
+                        'user_id' => $user->id,
                         'user_branch_id' => $userBranchId,
-                        'id' => $document->id,
                         'file_path' => $document->file_path,
                         'status' => $document->status,
                         'content' => $document->content,
                         'slug' => $document->slug,
                         'sidebar_label' => $document->sidebar_label,
                         'file_order' => $document->file_order,
-                        'last_edited_by' => $user['email'],
+                        'last_edited_by' => $user->email,
                         'created_at' => $now,
                         'updated_at' => $now,
                         'is_deleted' => Flag::TRUE,
                         'is_public' => $document->is_public,
                         'category_id' => $document->category_id,
-                    ]);
+                    ];
                 }
+
+                // バルクインサートを実行
+                Document::insert($newDocumentData);
             }
 
-            // edit_start_versionsに削除履歴を記録
+            // edit_start_versionsの更新・作成
+            $editVersionsToCreate = [];
+            $existingEditVersionIds = [];
+
             foreach ($categories as $index => $category) {
                 $newCategoryId = $insertedCategoryIds[$index];
 
-                // 既存のedit_start_versionsレコードがある場合は更新、ない場合は新規作成
                 if (isset($existingEditVersions[$category->id])) {
-                    $existingEditVersions[$category->id]->update([
-                        'current_version_id' => $newCategoryId,
-                        'updated_at' => $now,
-                    ]);
-                } else {
-                    EditStartVersion::create([
-                        'user_branch_id' => $userBranchId,
-                        'target_type' => 'category',
-                        'original_version_id' => $category->id,
-                        'current_version_id' => $newCategoryId,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
+                    // 既存レコードのIDを収集
+                    $existingEditVersionIds[] = $existingEditVersions[$category->id]->id;
                 }
+
+                // 全ての更新操作を表す新しいレコードを作成
+                $editVersionsToCreate[] = [
+                    'user_branch_id' => $userBranchId,
+                    'target_type' => 'category',
+                    'original_version_id' => $category->id,
+                    'current_version_id' => $newCategoryId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            // 既存のedit_start_versionsを一括で論理削除
+            if (! empty($existingEditVersionIds)) {
+                EditStartVersion::whereIn('id', $existingEditVersionIds)
+                    ->update([
+                        'is_deleted' => Flag::TRUE,
+                        'deleted_at' => $now,
+                    ]);
+            }
+
+            // バルク作成
+            if (! empty($editVersionsToCreate)) {
+                EditStartVersion::insert($editVersionsToCreate);
             }
 
             DB::commit();
@@ -329,6 +419,8 @@ class DocumentCategoryController extends ApiBaseController
             Log::error('カテゴリの削除に失敗しました', [
                 'error' => $e->getMessage(),
                 'stack_trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
             ]);
 
             return response()->json([
