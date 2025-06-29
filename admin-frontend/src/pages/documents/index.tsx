@@ -2,7 +2,6 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { useLocation } from 'react-router-dom';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
@@ -34,15 +33,6 @@ type DocumentItem = {
  */
 export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
-  const location = useLocation();
-
-  // URLからカテゴリパスを取得
-  const pathname = location.pathname;
-  // '/admin/documents/category1/subcategory1' → ['', 'admin', 'documents', 'category1', 'subcategory1']
-  const pathParts = pathname.split('/');
-  // documents以降の部分を取得（adminとdocumentsを除く）
-  const categoryPath = pathParts.slice(3).join('/');
-
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -58,7 +48,6 @@ export default function DocumentsPage(): JSX.Element {
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [documentsLoading, setDocumentsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [showSubmitButton, setShowSubmitButton] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
   const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
@@ -83,7 +72,9 @@ export default function DocumentsPage(): JSX.Element {
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
-
+  console.log('showSubmitModal', showSubmitModal);
+  console.log('showDiffConfirmModal', showDiffConfirmModal);
+  console.log('showPrSubmitButton', showPrSubmitButton);
   // slugのバリデーション関数
   const validateSlug = (value: string) => {
     // 予約語チェック
@@ -111,10 +102,12 @@ export default function DocumentsPage(): JSX.Element {
           setDocuments(response.documents);
         }
 
-        const hasUserDraft = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.CHECK_DIFF);
-        if (hasUserDraft && hasUserDraft.exists) {
+        const hasUserChanges = await apiClient.get(
+          API_CONFIG.ENDPOINTS.USER_BRANCHES.HAS_USER_CHANGES
+        );
+        if (hasUserChanges && hasUserChanges.has_user_changes) {
           setShowPrSubmitButton(true);
-          setUserBranchId(hasUserDraft.user_branch_id);
+          setUserBranchId(hasUserChanges.user_branch_id);
         }
       } catch (err) {
         console.error('ドキュメント取得エラー:', err);
@@ -676,8 +669,10 @@ export default function DocumentsPage(): JSX.Element {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4 ml-auto">
               <button
-                className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-                onClick={() => setShowDiffConfirmModal(true)}
+                className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  setShowDiffConfirmModal(true);
+                }}
                 disabled={!showPrSubmitButton}
               >
                 <svg
@@ -901,7 +896,7 @@ export default function DocumentsPage(): JSX.Element {
       )}
 
       {/* 差分提出確認モーダル */}
-      {showSubmitModal && (
+      {showDiffConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">変更内容を提出</h2>
@@ -913,48 +908,13 @@ export default function DocumentsPage(): JSX.Element {
             <div className="flex justify-end gap-2">
               <button
                 className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
-                onClick={() => setShowSubmitModal(false)}
+                onClick={() => setShowDiffConfirmModal(false)}
                 disabled={isSubmitting}
               >
                 キャンセル
               </button>
               <button
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
-                onClick={() => {
-                  if (userBranchId) {
-                    window.location.href = `/admin/documents/diff?user_branch_id=${userBranchId}`;
-                  } else {
-                    // user_branch_idが取得できない場合はエラーメッセージを表示
-                    setSubmitError(
-                      '差分データの取得に失敗しました。ページを再読み込みしてください。'
-                    );
-                  }
-                }}
-              >
-                差分確認画面へ
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 差分確認画面への遷移確認モーダル */}
-      {showDiffConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">変更内容の確認</h2>
-
-            <p className="mb-4 text-gray-300">変更された内容を確認してから提出しますか？</p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
-                onClick={() => setShowDiffConfirmModal(false)}
-              >
-                キャンセル
-              </button>
-              <button
-                className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
                 onClick={() => {
                   if (userBranchId) {
                     window.location.href = `/admin/documents/diff?user_branch_id=${userBranchId}`;

@@ -38,6 +38,23 @@ type DiffResponse = {
   }>;
 };
 
+// Laravel APIレスポンスの型定義
+type LaravelDiffResponse = {
+  user_branch: any;
+  edit_start_versions: Array<{
+    id: number;
+    target_type: string;
+    original_version_id?: number;
+    current_version_id?: number;
+    original_document_version?: any;
+    current_document_version?: any;
+    original_document_category?: any;
+    current_document_category?: any;
+  }>;
+  document_versions: Array<any>;
+  document_categories: Array<any>;
+};
+
 // 差分表示コンポーネント
 const DiffField = ({
   label,
@@ -147,15 +164,27 @@ export default function DiffPage(): JSX.Element {
           return;
         }
 
-        const response = await apiClient.get(API_CONFIG.ENDPOINTS.GIT.GET_DIFF, {
-          params: {
-            user_branch_id: userBranchId,
-          },
-        });
+        const response = await apiClient.get(
+          `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}?user_branch_id=${userBranchId}`
+        );
 
         console.log('response', response);
         if (response) {
-          setDiffData(response);
+          // Laravel APIのレスポンス構造から差分データを構築
+          const laravelResponse = response as LaravelDiffResponse;
+
+          // レスポンスの構造を検証
+          if (!laravelResponse.edit_start_versions) {
+            setError('差分データの形式が正しくありません');
+            setLoading(false);
+            return;
+          }
+
+          const processedDiffData = processLaravelDiffResponse(laravelResponse);
+          console.log('Processed diff data:', processedDiffData);
+          setDiffData(processedDiffData);
+        } else {
+          setError('差分データの取得に失敗しました');
         }
       } catch (err) {
         console.error('差分取得エラー:', err);
@@ -168,6 +197,72 @@ export default function DiffPage(): JSX.Element {
     fetchDiff();
   }, []);
 
+  // Laravel APIレスポンスをフロントエンド用の差分データに変換する関数
+  const processLaravelDiffResponse = (laravelResponse: LaravelDiffResponse): DiffResponse => {
+    const documents: Array<{ original: DiffItem | null; current: DiffItem }> = [];
+    const categories: Array<{ original: DiffItem | null; current: DiffItem }> = [];
+
+    // edit_start_versionsから差分データを構築
+    laravelResponse.edit_start_versions.forEach(editVersion => {
+      if (editVersion.target_type === 'document') {
+        const original = editVersion.original_document_version
+          ? mapToDiffItem(editVersion.original_document_version, 'document')
+          : null;
+        const current = editVersion.current_document_version
+          ? mapToDiffItem(editVersion.current_document_version, 'document')
+          : null;
+
+        if (current) {
+          documents.push({ original, current });
+        }
+      } else if (editVersion.target_type === 'category') {
+        const original = editVersion.original_document_category
+          ? mapToDiffItem(editVersion.original_document_category, 'category')
+          : null;
+        const current = editVersion.current_document_category
+          ? mapToDiffItem(editVersion.current_document_category, 'category')
+          : null;
+
+        if (current) {
+          categories.push({ original, current });
+        }
+      }
+    });
+
+    return { documents, categories };
+  };
+
+  // LaravelのデータをDiffItemにマッピングする関数
+  const mapToDiffItem = (item: any, type: 'document' | 'category'): DiffItem => {
+    if (type === 'document') {
+      return {
+        id: item.id,
+        slug: item.slug,
+        sidebar_label: item.sidebar_label,
+        content: item.content,
+        file_order: item.file_order,
+        category_id: item.category_id,
+        status: item.status,
+        user_branch_id: item.user_branch_id,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      };
+    } else {
+      return {
+        id: item.id,
+        slug: item.slug,
+        sidebar_label: item.sidebar_label,
+        description: item.description,
+        position: item.position,
+        parent_id: item.parent_id,
+        status: item.status,
+        user_branch_id: item.user_branch_id,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+      };
+    }
+  };
+
   // PR作成のハンドラー
   const handleSubmitPR = async () => {
     setIsSubmitting(true);
@@ -175,7 +270,7 @@ export default function DiffPage(): JSX.Element {
     setSubmitSuccess(null);
 
     try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.GIT.CREATE_PR, {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.USER_BRANCHES.CREATE_PR, {
         title: '更新内容の提出',
         description: 'このPRはハンドブックの更新を含みます。',
       });
@@ -415,8 +510,8 @@ export default function DiffPage(): JSX.Element {
                   />
                   <DiffField
                     label="公開設定"
-                    before={document.original ? '公開する' : undefined}
-                    after={document.current ? '公開しない' : '公開する'}
+                    before={document.original?.status === 'published' ? '公開する' : '公開しない'}
+                    after={document.current.status === 'published' ? '公開する' : '公開しない'}
                   />
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-300 mb-2">本文</label>

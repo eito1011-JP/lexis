@@ -2,31 +2,47 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DocumentCategoryPrStatus;
+use App\Http\Requests\FetchDiffRequest;
+use App\Models\UserBranch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
-class GitController extends ApiBaseController
+class UserBranchController extends ApiBaseController
 {
     /**
      * Git差分チェック
      */
-    public function checkDiff(Request $request): JsonResponse
+    public function hasUserChanges(Request $request): JsonResponse
     {
         try {
-            // Git差分チェックの実装
-            // 実際の実装ではGitコマンドを実行して差分を確認
+            // Cookieセッションからユーザー情報を取得
+            $loginUser = $this->getUserFromSession();
+
+            if (! $loginUser) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // アクティブなユーザーブランチを取得
+            $activeBranch = $loginUser->userBranches()->active()->where('pr_status', DocumentCategoryPrStatus::NONE->value)->first();
+
+            $hasUserChanges = ! is_null($activeBranch);
+            $userBranchId = $hasUserChanges ? $activeBranch->id : null;
 
             return response()->json([
-                'hasChanges' => false,
-                'message' => '差分はありません',
+                'has_user_changes' => $hasUserChanges,
+                'user_branch_id' => $userBranchId,
             ]);
-
         } catch (\Exception $e) {
+            Log::error('Error checking document versions: '.$e->getMessage());
+
             return response()->json([
-                'error' => 'Git差分チェックに失敗しました',
+                'error' => 'Internal server error',
             ], 500);
         }
     }
@@ -68,18 +84,39 @@ class GitController extends ApiBaseController
     /**
      * Git差分取得
      */
-    public function diff(Request $request): JsonResponse
+    public function fetchDiff(FetchDiffRequest $request): JsonResponse
     {
         try {
-            // Git差分取得の実装
-            // 実際の実装ではGitコマンドを実行して差分を取得
+            // ユーザーブランチと関連データを一括取得
+            $userBranch = UserBranch::where('pr_status', DocumentCategoryPrStatus::NONE->value)
+                ->with([
+                    'editStartVersions',
+                    'editStartVersions.originalDocumentVersion',
+                    'editStartVersions.currentDocumentVersion',
+                    'editStartVersions.originalDocumentVersion.category',
+                    'editStartVersions.currentDocumentVersion.category',
+                    'documentVersions',
+                    'documentVersions.category',
+                    'documentCategories',
+                ])
+                ->findOrFail($request->user_branch_id);
+
+            if (! $userBranch) {
+                return response()->json([
+                    'error' => 'ユーザーブランチが見つかりません',
+                ], 404);
+            }
 
             return response()->json([
-                'diff' => '',
-                'files' => [],
+                'user_branch' => $userBranch,
+                'edit_start_versions' => $userBranch->editStartVersions,
+                'document_versions' => $userBranch->documentVersions,
+                'document_categories' => $userBranch->documentCategories,
             ]);
 
         } catch (\Exception $e) {
+            Log::error('Git差分の取得に失敗しました: '.$e->getMessage());
+
             return response()->json([
                 'error' => 'Git差分の取得に失敗しました',
             ], 500);

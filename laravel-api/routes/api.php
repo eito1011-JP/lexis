@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
-use App\Http\Controllers\Api\GitController;
+use App\Http\Controllers\Api\UserBranchController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -43,13 +43,6 @@ Route::middleware('auth.session')->group(function () {
         Route::put('/update', [DocumentController::class, 'updateDocument']);
         Route::delete('/delete', [DocumentController::class, 'deleteDocument']);
         Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);
-
-        // Git関連
-        Route::prefix('git')->group(function () {
-            Route::get('/check-diff', [GitController::class, 'checkDiff']);
-            Route::post('/create-pr', [GitController::class, 'createPr']);
-            Route::get('/diff', [GitController::class, 'diff']);
-        });
     });
 
     // カテゴリ関連
@@ -59,6 +52,13 @@ Route::middleware('auth.session')->group(function () {
         Route::put('/update', [DocumentCategoryController::class, 'updateCategory']);
         Route::delete('/delete', [DocumentCategoryController::class, 'deleteCategory']);
         Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
+    });
+
+    // ユーザーブランチ関連
+    Route::prefix('admin/user-branches')->group(function () {
+        Route::get('/has-changes', [UserBranchController::class, 'hasUserChanges']);
+        Route::post('/create-pr', [UserBranchController::class, 'createPr']);
+        Route::get('/diff', [UserBranchController::class, 'fetchDiff']);
     });
 });
 

@@ -63,6 +63,13 @@ return [
             'max' => 'カテゴリパスは1000文字以内である必要があります',
         ],
     ],
+    'user_branch' => [
+        'id' => [
+            'required' => 'ユーザーブランチIDは必須です',
+            'integer' => 'ユーザーブランチIDは整数である必要があります',
+            'exists' => '指定されたユーザーブランチが存在しません',
+        ],
+    ],
     'attributes' => [
         'name' => 'カテゴリ名',
         'slug' => 'スラッグ',
@@ -70,6 +77,7 @@ return [
         'position' => '位置',
         'description' => '説明',
         'categoryPath' => 'カテゴリパス',
+        'user_branch_id' => 'ユーザーブランチID',
     ],
     'unique_slug_in_same_parent' => ':slugは既に同じカテゴリ内で使われています',
 ];

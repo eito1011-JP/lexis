@@ -27,10 +27,10 @@ export const API_CONFIG = {
       GET_ALL: '/api/admin/users',
       GET_BY_ID: '/api/admin/users',
     },
-    GIT: {
-      CHECK_DIFF: '/api/admin/documents/git/check-diff',
-      CREATE_PR: '/api/admin/documents/git/create-pr',
-      GET_DIFF: '/api/admin/documents/git/diff',
+    USER_BRANCHES: {
+      HAS_USER_CHANGES: '/api/admin/user-branches/has-changes',
+      CREATE_PR: '/api/admin/user-branches/create-pr',
+      GET_DIFF: '/api/admin/user-branches/diff',
     },
   },
 };
