@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\DocumentCategoryPrStatus;
 use App\Http\Requests\FetchDiffRequest;
-use App\Models\UserBranch;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -87,17 +86,25 @@ class UserBranchController extends ApiBaseController
     public function fetchDiff(FetchDiffRequest $request): JsonResponse
     {
         try {
+
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
             // ユーザーブランチと関連データを一括取得
-            $userBranch = UserBranch::where('pr_status', DocumentCategoryPrStatus::NONE->value)
+            $userBranch = $user->userBranches()->active()->where('pr_status', DocumentCategoryPrStatus::NONE->value)
                 ->with([
                     'editStartVersions',
                     'editStartVersions.originalDocumentVersion',
                     'editStartVersions.currentDocumentVersion',
                     'editStartVersions.originalDocumentVersion.category',
                     'editStartVersions.currentDocumentVersion.category',
-                    'documentVersions',
-                    'documentVersions.category',
-                    'documentCategories',
+                    'editStartVersions.originalCategory',
+                    'editStartVersions.currentCategory',
                 ])
                 ->findOrFail($request->user_branch_id);
 
@@ -107,11 +114,39 @@ class UserBranchController extends ApiBaseController
                 ], 404);
             }
 
+            // document_versionsを取得（current_version_idとoriginal_version_idに紐づいたもの）
+            $documentVersions = collect();
+            $documentCategories = collect();
+            $originalDocumentVersions = collect();
+            $originalDocumentCategories = collect();
+
+            foreach ($userBranch->editStartVersions as $editStartVersion) {
+                if ($editStartVersion->target_type === 'document') {
+                    if ($editStartVersion->currentDocumentVersion) {
+                        $documentVersions->push($editStartVersion->currentDocumentVersion);
+                    }
+                    // original_version_idとcurrent_version_idが異なる場合のみoriginalに追加（新規作成でない場合）
+                    if ($editStartVersion->originalDocumentVersion &&
+                        $editStartVersion->original_version_id !== $editStartVersion->current_version_id) {
+                        $originalDocumentVersions->push($editStartVersion->originalDocumentVersion);
+                    }
+                } elseif ($editStartVersion->target_type === 'category') {
+                    if ($editStartVersion->currentCategory) {
+                        $documentCategories->push($editStartVersion->currentCategory);
+                    }
+                    // original_version_idとcurrent_version_idが異なる場合のみoriginalに追加（新規作成でない場合）
+                    if ($editStartVersion->originalCategory &&
+                        $editStartVersion->original_version_id !== $editStartVersion->current_version_id) {
+                        $originalDocumentCategories->push($editStartVersion->originalCategory);
+                    }
+                }
+            }
+
             return response()->json([
-                'user_branch' => $userBranch,
-                'edit_start_versions' => $userBranch->editStartVersions,
-                'document_versions' => $userBranch->documentVersions,
-                'document_categories' => $userBranch->documentCategories,
+                'document_versions' => $documentVersions->unique('id')->values(),
+                'document_categories' => $documentCategories->unique('id')->values(),
+                'original_document_versions' => $originalDocumentVersions->unique('id')->values(),
+                'original_document_categories' => $originalDocumentCategories->unique('id')->values(),
             ]);
 
         } catch (\Exception $e) {

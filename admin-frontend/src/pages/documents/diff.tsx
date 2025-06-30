@@ -9,6 +9,7 @@ import { Folder } from '@/components/icon/common/Folder';
 import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
+
 // 差分データの型定義
 type DiffItem = {
   id: number;
@@ -28,69 +29,56 @@ type DiffItem = {
 };
 
 type DiffResponse = {
-  documents: Array<{
-    original: DiffItem | null;
-    current: DiffItem;
-  }>;
-  categories: Array<{
-    original: DiffItem | null;
-    current: DiffItem;
-  }>;
-};
-
-// Laravel APIレスポンスの型定義
-type LaravelDiffResponse = {
-  user_branch: any;
-  edit_start_versions: Array<{
-    id: number;
-    target_type: string;
-    original_version_id?: number;
-    current_version_id?: number;
-    original_document_version?: any;
-    current_document_version?: any;
-    original_document_category?: any;
-    current_document_category?: any;
-  }>;
-  document_versions: Array<any>;
-  document_categories: Array<any>;
+  document_versions: DiffItem[];
+  document_categories: DiffItem[];
+  original_document_versions?: DiffItem[];
+  original_document_categories?: DiffItem[];
 };
 
 // 差分表示コンポーネント
-const DiffField = ({
-  label,
-  before,
-  after,
-}: {
-  label: string;
-  before?: string;
-  after?: string;
-}) => {
-  // 変更がない場合
-  if (before === after) {
-    return (
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-        <div className="bg-gray-800 rounded-md p-3 text-sm text-gray-300">{after || '-'}</div>
-      </div>
-    );
-  }
-
+const DiffField = ({ label, value }: { label: string; value?: string }) => {
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-      <div className="space-y-2">
-        {before && (
-          <div className="bg-red-900/30 border border-red-800 rounded-md p-3 text-sm text-red-200">
-            {before}
-          </div>
-        )}
-        <div className="bg-green-900/30 border border-green-800 rounded-md p-3 text-sm text-green-200">
-          {after || '（新規追加）'}
-        </div>
-      </div>
+      <div className="bg-gray-800 rounded-md p-3 text-sm text-gray-300">{value || '-'}</div>
     </div>
   );
 };
+
+// 差分表示（original: 赤, current: 緑）
+const DiffValue = ({
+  label,
+  original,
+  current,
+  isMarkdown = false,
+}: {
+  label: string;
+  original?: string;
+  current?: string;
+  isMarkdown?: boolean;
+}) => (
+  <div className="mb-4">
+    <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+    {original !== undefined && (
+      <div className="bg-red-900/50 border border-red-800 rounded-md p-3 text-sm text-red-200 mb-1">
+        {isMarkdown ? (
+          <div dangerouslySetInnerHTML={{ __html: markdownToHtml(original || '-') }} />
+        ) : (
+          original || '-'
+        )}
+      </div>
+    )}
+    {current !== undefined && (
+      <div className="bg-green-900/50 border border-green-800 rounded-md p-3 text-sm text-green-200">
+        {isMarkdown ? (
+          <div dangerouslySetInnerHTML={{ __html: markdownToHtml(current || '-') }} />
+        ) : (
+          current || '-'
+        )}
+      </div>
+    )}
+  </div>
+);
 
 // 階層パンくずリストコンポーネント
 const SlugBreadcrumb = ({ slug }: { slug: string }) => {
@@ -168,24 +156,7 @@ export default function DiffPage(): JSX.Element {
           `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}?user_branch_id=${userBranchId}`
         );
 
-        console.log('response', response);
-        if (response) {
-          // Laravel APIのレスポンス構造から差分データを構築
-          const laravelResponse = response as LaravelDiffResponse;
-
-          // レスポンスの構造を検証
-          if (!laravelResponse.edit_start_versions) {
-            setError('差分データの形式が正しくありません');
-            setLoading(false);
-            return;
-          }
-
-          const processedDiffData = processLaravelDiffResponse(laravelResponse);
-          console.log('Processed diff data:', processedDiffData);
-          setDiffData(processedDiffData);
-        } else {
-          setError('差分データの取得に失敗しました');
-        }
+        setDiffData(response);
       } catch (err) {
         console.error('差分取得エラー:', err);
         setError('差分データの取得に失敗しました');
@@ -196,72 +167,6 @@ export default function DiffPage(): JSX.Element {
 
     fetchDiff();
   }, []);
-
-  // Laravel APIレスポンスをフロントエンド用の差分データに変換する関数
-  const processLaravelDiffResponse = (laravelResponse: LaravelDiffResponse): DiffResponse => {
-    const documents: Array<{ original: DiffItem | null; current: DiffItem }> = [];
-    const categories: Array<{ original: DiffItem | null; current: DiffItem }> = [];
-
-    // edit_start_versionsから差分データを構築
-    laravelResponse.edit_start_versions.forEach(editVersion => {
-      if (editVersion.target_type === 'document') {
-        const original = editVersion.original_document_version
-          ? mapToDiffItem(editVersion.original_document_version, 'document')
-          : null;
-        const current = editVersion.current_document_version
-          ? mapToDiffItem(editVersion.current_document_version, 'document')
-          : null;
-
-        if (current) {
-          documents.push({ original, current });
-        }
-      } else if (editVersion.target_type === 'category') {
-        const original = editVersion.original_document_category
-          ? mapToDiffItem(editVersion.original_document_category, 'category')
-          : null;
-        const current = editVersion.current_document_category
-          ? mapToDiffItem(editVersion.current_document_category, 'category')
-          : null;
-
-        if (current) {
-          categories.push({ original, current });
-        }
-      }
-    });
-
-    return { documents, categories };
-  };
-
-  // LaravelのデータをDiffItemにマッピングする関数
-  const mapToDiffItem = (item: any, type: 'document' | 'category'): DiffItem => {
-    if (type === 'document') {
-      return {
-        id: item.id,
-        slug: item.slug,
-        sidebar_label: item.sidebar_label,
-        content: item.content,
-        file_order: item.file_order,
-        category_id: item.category_id,
-        status: item.status,
-        user_branch_id: item.user_branch_id,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-      };
-    } else {
-      return {
-        id: item.id,
-        slug: item.slug,
-        sidebar_label: item.sidebar_label,
-        description: item.description,
-        position: item.position,
-        parent_id: item.parent_id,
-        status: item.status,
-        user_branch_id: item.user_branch_id,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-      };
-    }
-  };
 
   // PR作成のハンドラー
   const handleSubmitPR = async () => {
@@ -350,7 +255,10 @@ export default function DiffPage(): JSX.Element {
   }
 
   // データが空の場合
-  if (!diffData || (diffData.categories.length === 0 && diffData.documents.length === 0)) {
+  if (
+    !diffData ||
+    (diffData.document_categories.length === 0 && diffData.document_versions.length === 0)
+  ) {
     return (
       <AdminLayout title="差分確認">
         <div className="flex flex-col items-center justify-center h-full">
@@ -365,6 +273,27 @@ export default function DiffPage(): JSX.Element {
       </AdminLayout>
     );
   }
+
+  // original/currentをslugでマッピング
+  const mapBySlug = (arr: DiffItem[]) => Object.fromEntries(arr.map(item => [item.slug, item]));
+
+  const originalDocs = mapBySlug(diffData.original_document_versions || []);
+  const currentDocs = mapBySlug(diffData.document_versions || []);
+  const allDocSlugs = Array.from(
+    new Set([
+      ...(diffData.original_document_versions || []).map(d => d.slug),
+      ...(diffData.document_versions || []).map(d => d.slug),
+    ])
+  );
+
+  const originalCats = mapBySlug(diffData.original_document_categories || []);
+  const currentCats = mapBySlug(diffData.document_categories || []);
+  const allCatSlugs = Array.from(
+    new Set([
+      ...(diffData.original_document_categories || []).map(c => c.slug),
+      ...(diffData.document_categories || []).map(c => c.slug),
+    ])
+  );
 
   return (
     <AdminLayout title="差分確認">
@@ -443,41 +372,38 @@ export default function DiffPage(): JSX.Element {
         </div>
 
         {/* 変更されたカテゴリの詳細 */}
-        {diffData.categories.length > 0 && (
+        {allCatSlugs.length > 0 && (
           <div className="mb-10">
             <h2 className="text-xl font-bold mb-4 flex items-center">
               <Folder className="w-5 h-5 mr-2" />
-              カテゴリの変更 × {diffData.categories.length}
+              カテゴリの変更 × {allCatSlugs.length}
             </h2>
             <div className="space-y-4">
-              {diffData.categories.map(category => (
-                <div
-                  key={category.current.id}
-                  className="bg-gray-900 rounded-lg border border-gray-800 p-6"
-                >
-                  <SlugBreadcrumb slug={category.current.slug} />
-                  <DiffField
-                    label="Slug"
-                    before={category.original?.slug}
-                    after={category.current.slug}
-                  />
-                  <DiffField
-                    label="カテゴリ名"
-                    before={category.original?.sidebar_label}
-                    after={category.current.sidebar_label}
-                  />
-                  <DiffField
-                    label="表示順"
-                    before={category.original?.position?.toString()}
-                    after={category.current.position?.toString()}
-                  />
-                  <DiffField
-                    label="説明"
-                    before={category.original?.description}
-                    after={category.current.description}
-                  />
-                </div>
-              ))}
+              {allCatSlugs.map(slug => {
+                const original = originalCats[slug];
+                const current = currentCats[slug];
+                return (
+                  <div key={slug} className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+                    <SlugBreadcrumb slug={slug} />
+                    <DiffValue label="Slug" original={original?.slug} current={current?.slug} />
+                    <DiffValue
+                      label="カテゴリ名"
+                      original={original?.sidebar_label}
+                      current={current?.sidebar_label}
+                    />
+                    <DiffValue
+                      label="表示順"
+                      original={original?.position?.toString()}
+                      current={current?.position?.toString()}
+                    />
+                    <DiffValue
+                      label="説明"
+                      original={original?.description}
+                      current={current?.description}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -485,59 +411,51 @@ export default function DiffPage(): JSX.Element {
         {/* ドキュメントの変更数表示 */}
         <h2 className="text-xl font-bold mb-4 flex items-center">
           <DocumentDetailed className="w-6 h-6 mr-2" />
-          ドキュメントの変更 × {diffData.documents.length}
+          ドキュメントの変更 × {allDocSlugs.length}
         </h2>
 
         {/* 変更されたドキュメントの詳細 */}
-        {diffData.documents.length > 0 && (
+        {allDocSlugs.length > 0 && (
           <div className="mb-8">
             <div className="space-y-6">
-              {diffData.documents.map(document => (
-                <div
-                  key={document.current.id}
-                  className="bg-gray-900 rounded-lg border border-gray-800 p-6"
-                >
-                  <SlugBreadcrumb slug={document.current.slug} />
-                  <DiffField
-                    label="Slug"
-                    before={document.original?.slug}
-                    after={document.current.slug}
-                  />
-                  <DiffField
-                    label="タイトル"
-                    before={document.original?.sidebar_label}
-                    after={document.current.sidebar_label}
-                  />
-                  <DiffField
-                    label="公開設定"
-                    before={document.original?.status === 'published' ? '公開する' : '公開しない'}
-                    after={document.current.status === 'published' ? '公開する' : '公開しない'}
-                  />
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">本文</label>
-                    <div className="space-y-2">
-                      {document.original?.content && (
-                        <div className="bg-red-900/30 border border-red-800 rounded-md p-3 text-sm text-red-200">
-                          <div
-                            dangerouslySetInnerHTML={{
-                              __html: markdownToHtml(document.original.content),
-                            }}
-                            className="[&>h1]:text-lg [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-bold [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-4 [&>ol]:mb-2 [&>li]:mb-1 [&>blockquote]:border-l-4 [&>blockquote]:border-red-400 [&>blockquote]:pl-2 [&>blockquote]:mb-2 [&>pre]:bg-red-800/50 [&>pre]:p-2 [&>pre]:rounded [&>pre]:mb-2 [&>code]:bg-red-800/50 [&>code]:px-1 [&>code]:rounded [&>a]:text-blue-300 [&>a]:underline [&>strong]:font-bold [&>em]:italic"
-                          />
-                        </div>
-                      )}
-                      <div className="bg-green-900/30 border border-green-800 rounded-md p-3 text-sm text-green-200">
-                        <div
-                          dangerouslySetInnerHTML={{
-                            __html: markdownToHtml(document.current.content || '（新規追加）'),
-                          }}
-                          className="[&>h1]:text-lg [&>h1]:font-bold [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-bold [&>h2]:mb-2 [&>h3]:text-sm [&>h3]:font-bold [&>h3]:mb-1 [&>p]:mb-2 [&>ul]:list-disc [&>ul]:ml-4 [&>ul]:mb-2 [&>ol]:list-decimal [&>ol]:ml-4 [&>ol]:mb-2 [&>li]:mb-1 [&>blockquote]:border-l-4 [&>blockquote]:border-green-400 [&>blockquote]:pl-2 [&>blockquote]:mb-2 [&>pre]:bg-green-800/50 [&>pre]:p-2 [&>pre]:rounded [&>pre]:mb-2 [&>code]:bg-green-800/50 [&>code]:px-1 [&>code]:rounded [&>a]:text-blue-300 [&>a]:underline [&>strong]:font-bold [&>em]:italic"
-                        />
-                      </div>
-                    </div>
+              {allDocSlugs.map(slug => {
+                const original = originalDocs[slug];
+                const current = currentDocs[slug];
+                return (
+                  <div key={slug} className="bg-gray-900 rounded-lg border border-gray-800 p-6">
+                    <SlugBreadcrumb slug={slug} />
+                    <DiffValue label="Slug" original={original?.slug} current={current?.slug} />
+                    <DiffValue
+                      label="タイトル"
+                      original={original?.sidebar_label}
+                      current={current?.sidebar_label}
+                    />
+                    <DiffValue
+                      label="公開設定"
+                      original={
+                        original
+                          ? original.status === 'published'
+                            ? '公開する'
+                            : '公開しない'
+                          : undefined
+                      }
+                      current={
+                        current
+                          ? current.status === 'published'
+                            ? '公開する'
+                            : '公開しない'
+                          : undefined
+                      }
+                    />
+                    <DiffValue
+                      label="本文"
+                      original={original?.content}
+                      current={current?.content}
+                      isMarkdown
+                    />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
