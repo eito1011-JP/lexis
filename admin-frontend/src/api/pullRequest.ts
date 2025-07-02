@@ -34,7 +34,7 @@ export const createPullRequest = async (
     return response;
   } catch (error: any) {
     console.error('プルリクエスト作成エラー:', error);
-    
+
     // エラーレスポンスの処理
     if (error.response?.data?.error) {
       return {
@@ -43,11 +43,11 @@ export const createPullRequest = async (
         error: error.response.data.error,
       };
     }
-    
+
     return {
       success: false,
       message: 'プルリクエストの作成に失敗しました',
       error: error.message || 'Unknown error',
     };
   }
-}; 
+};

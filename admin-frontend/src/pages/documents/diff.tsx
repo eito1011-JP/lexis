@@ -4,11 +4,11 @@ import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
-import { Home } from '@/components/icon/common/Home';
 import { Folder } from '@/components/icon/common/Folder';
 import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
+import { Settings } from '@/components/icon/common/Settings';
 import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequest';
 
 // 差分データの型定義
@@ -139,6 +139,20 @@ export default function DiffPage(): JSX.Element {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [prTitle, setPrTitle] = useState('');
+  const [prDescription, setPrDescription] = useState('');
+  // レビューアー選択用の仮データと状態
+  const reviewersList = [
+    { id: 1, name: 'ユーザーA' },
+    { id: 2, name: 'ユーザーB' },
+    { id: 3, name: 'ユーザーC' },
+  ];
+  const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
+
+  const handleReviewerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const options = Array.from(e.target.selectedOptions);
+    setSelectedReviewers(options.map(opt => Number(opt.value)));
+  };
 
   useEffect(() => {
     const fetchDiff = async () => {
@@ -187,36 +201,37 @@ export default function DiffPage(): JSX.Element {
 
       // diffアイテムを構築
       const diffItems: ApiDiffItem[] = [];
-      
+
       // ドキュメントバージョンを追加
       if (diffData?.document_versions) {
         diffData.document_versions.forEach(doc => {
           diffItems.push({
             id: doc.id,
-            type: 'document'
+            type: 'document',
           });
         });
       }
-      
+
       // カテゴリを追加
       if (diffData?.document_categories) {
         diffData.document_categories.forEach(cat => {
           diffItems.push({
             id: cat.id,
-            type: 'category'
+            type: 'category',
           });
         });
       }
 
+      // PRタイトル・説明をAPIに渡す
       const response = await createPullRequest({
         user_branch_id: parseInt(userBranchId),
-        title: '更新内容の提出',
-        body: 'このPRはハンドブックの更新を含みます。',
+        title: prTitle || '更新内容の提出',
+        body: prDescription || 'このPRはハンドブックの更新を含みます。',
         diff_items: diffItems,
       });
 
       if (response.success) {
-        const successMessage = response.pr_url 
+        const successMessage = response.pr_url
           ? `差分の提出が完了しました。PR: ${response.pr_url}`
           : '差分の提出が完了しました';
         setSubmitSuccess(successMessage);
@@ -358,9 +373,9 @@ export default function DiffPage(): JSX.Element {
             <p className="text-sm mt-2">3秒後にドキュメント一覧に戻ります...</p>
             {submitSuccess.includes('PR:') && (
               <p className="text-sm mt-1">
-                <a 
-                  href={submitSuccess.split('PR: ')[1]} 
-                  target="_blank" 
+                <a
+                  href={submitSuccess.split('PR: ')[1]}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-300 hover:text-blue-200 underline"
                 >
@@ -393,31 +408,68 @@ export default function DiffPage(): JSX.Element {
           </div>
         )}
 
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">作業内容の確認</h1>
-          <div className="flex gap-2">
-            <button
-              className="px-4 py-2 bg-red-700 rounded-md hover:bg-red-600 focus:outline-none text-white"
-              onClick={() => (window.location.href = '/admin/documents')}
-              disabled={isSubmitting}
-            >
-              戻る
-            </button>
-            <button
-              className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center text-white"
-              onClick={handleSubmitPR}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                  <span>提出中...</span>
-                </>
-              ) : (
-                <span>差分を提出する</span>
-              )}
-            </button>
+        {/* PR作成セクション（画像のようなデザイン） */}
+        <div className="mb-20 w-full rounded-lg relative">
+          {/* タイトル入力欄とレビュアーを重ねて配置 */}
+          <div className="mb-6 relative w-full">
+            <div className="mb-6 relative max-w-3xl w-full">
+              <label className="block text-white text-base font-medium mb-3">タイトル</label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 pr-40 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                placeholder=""
+                value={prTitle}
+                onChange={e => setPrTitle(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+
+            <div className="absolute right-0 top-0 flex flex-col items-start mr-20">
+              <div className="flex items-center gap-40">
+                <span className="text-white text-base font-bold">レビュアー</span>
+                <Settings className="w-5 h-5 text-gray-300 ml-2" />
+              </div>
+              <p className="text-white text-base font-medium mt-5 text-sm">レビュアーなし</p>
+            </div>
+            <div className="mb-8">
+              <div className="mb-6 relative max-w-3xl w-full">
+                <label className="block text-white text-base font-medium mb-3 max-w-3xl">
+                  本文
+                </label>
+                <textarea
+                  className="w-full px-4 py-3 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                  placeholder=""
+                  rows={5}
+                  value={prDescription}
+                  onChange={e => setPrDescription(e.target.value)}
+                  disabled={isSubmitting}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4 justify-end max-w-3xl">
+              <button
+                className="px-6 py-2.5 bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none text-white font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => (window.location.href = '/admin/documents')}
+                disabled={isSubmitting}
+              >
+                戻る
+              </button>
+              <button
+                className="px-6 py-2.5 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none flex items-center text-white font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSubmitPR}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    <span>差分を提出中...</span>
+                  </>
+                ) : (
+                  <span>差分を提出する</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -428,7 +480,7 @@ export default function DiffPage(): JSX.Element {
               <Folder className="w-5 h-5 mr-2" />
               カテゴリの変更 × {allCatSlugs.length}
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-4 mr-20">
               {allCatSlugs.map(slug => {
                 const original = originalCats[slug];
                 const current = currentCats[slug];
@@ -466,7 +518,7 @@ export default function DiffPage(): JSX.Element {
 
         {/* 変更されたドキュメントの詳細 */}
         {allDocSlugs.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-8 mr-20">
             <div className="space-y-6">
               {allDocSlugs.map(slug => {
                 const original = originalDocs[slug];
