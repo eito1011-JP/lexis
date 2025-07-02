@@ -72,6 +72,7 @@ export default function EditDocumentPage(): JSX.Element {
           params.append('category_path', category);
         }
         params.append('slug', slug);
+
         const url = `${endpoint}?${params.toString()}`;
         const response = await apiClient.get(url);
 

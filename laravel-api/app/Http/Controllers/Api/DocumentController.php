@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Constants\DocumentPathConstants;
 use App\Consts\Flag;
-use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
@@ -223,9 +222,10 @@ class DocumentController extends ApiBaseController
             $categoryPath = explode('/', $request->category_path);
             $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
-            $document = DocumentVersion::where('category_id', $categoryId)
-                ->where('slug', $request->slug)
-                ->orWhere('user_branch_id', $user->userBranches()->orderBy('id', 'desc')->first()->id) // 最新のbranchを取得
+            $document = DocumentVersion::where(function ($query) use ($categoryId, $request) {
+                $query->where('category_id', $categoryId)
+                    ->where('slug', $request->slug);
+            })
                 ->first();
 
             if (! $document) {
@@ -289,11 +289,8 @@ class DocumentController extends ApiBaseController
             // 既存ドキュメントを論理削除
             $existingDocument->delete();
 
-            // 既存のEditStartVersionを削除
-            $userBranch = $user->userBranches()->active()->where('pr_status', DocumentCategoryStatus::DRAFT->value)->first();
-
-            $userBranch->editStartVersions()
-                ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
+            Log::info('existingDocument: '.$existingDocument->id);
+            EditStartVersion::where('target_type', EditStartVersionTargetType::DOCUMENT->value)
                 ->where('current_version_id', $existingDocument->id)
                 ->first()
                 ->delete();
@@ -338,18 +335,6 @@ class DocumentController extends ApiBaseController
                 'error' => 'ドキュメントの更新に失敗しました',
             ], 500);
         }
-    }
-
-    /**
-     * ユーザーのアクティブブランチを取得
-     */
-    private function getUserBranch(int $userId)
-    {
-        return DB::table('user_branches')
-            ->where('user_id', $userId)
-            ->where('is_active', 1)
-            ->where('pr_status', 'none')
-            ->first();
     }
 
     /**
@@ -465,12 +450,7 @@ class DocumentController extends ApiBaseController
             }
 
             // 4. ユーザーのアクティブブランチ確認
-            $userBranch = $this->getUserBranch($user->id);
-
-            if (! $userBranch) {
-                // 新しいブランチを作成
-                $userBranch = $this->createUserBranch($user->id, $user->email);
-            }
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
             // 5. 既存ドキュメントを論理削除（is_deleted = 1に更新）
             $existingDocument->delete();
@@ -514,28 +494,6 @@ class DocumentController extends ApiBaseController
                 'error' => 'ドキュメントの削除に失敗しました',
             ], 500);
         }
-    }
-
-    /**
-     * ユーザーブランチを作成
-     */
-    private function createUserBranch(int $userId, string $email)
-    {
-        // ブランチスナップショットの初期化処理
-        GitController::initBranchSnapshot($userId, $email);
-
-        // 作成されたブランチを取得
-        $userBranch = DB::table('user_branches')
-            ->where('user_id', $userId)
-            ->where('is_active', 1)
-            ->orderBy('id', 'desc')
-            ->first();
-
-        if (! $userBranch) {
-            throw new \Exception('ブランチの作成に失敗しました');
-        }
-
-        return $userBranch;
     }
 
     /**

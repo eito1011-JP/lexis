@@ -9,6 +9,7 @@ import { Folder } from '@/components/icon/common/Folder';
 import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
+import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequest';
 
 // 差分データの型定義
 type DiffItem = {
@@ -175,13 +176,50 @@ export default function DiffPage(): JSX.Element {
     setSubmitSuccess(null);
 
     try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.USER_BRANCHES.CREATE_PR, {
+      // URLパラメータからuser_branch_idを取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const userBranchId = urlParams.get('user_branch_id');
+
+      if (!userBranchId) {
+        setSubmitError('user_branch_idパラメータが必要です');
+        return;
+      }
+
+      // diffアイテムを構築
+      const diffItems: ApiDiffItem[] = [];
+      
+      // ドキュメントバージョンを追加
+      if (diffData?.document_versions) {
+        diffData.document_versions.forEach(doc => {
+          diffItems.push({
+            id: doc.id,
+            type: 'document'
+          });
+        });
+      }
+      
+      // カテゴリを追加
+      if (diffData?.document_categories) {
+        diffData.document_categories.forEach(cat => {
+          diffItems.push({
+            id: cat.id,
+            type: 'category'
+          });
+        });
+      }
+
+      const response = await createPullRequest({
+        user_branch_id: parseInt(userBranchId),
         title: '更新内容の提出',
-        description: 'このPRはハンドブックの更新を含みます。',
+        body: 'このPRはハンドブックの更新を含みます。',
+        diff_items: diffItems,
       });
 
       if (response.success) {
-        setSubmitSuccess('差分の提出が完了しました');
+        const successMessage = response.pr_url 
+          ? `差分の提出が完了しました。PR: ${response.pr_url}`
+          : '差分の提出が完了しました';
+        setSubmitSuccess(successMessage);
         // 3秒後にドキュメント一覧に戻る
         setTimeout(() => {
           window.location.href = '/admin/documents';
@@ -318,6 +356,18 @@ export default function DiffPage(): JSX.Element {
               <span>{submitSuccess}</span>
             </div>
             <p className="text-sm mt-2">3秒後にドキュメント一覧に戻ります...</p>
+            {submitSuccess.includes('PR:') && (
+              <p className="text-sm mt-1">
+                <a 
+                  href={submitSuccess.split('PR: ')[1]} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-300 hover:text-blue-200 underline"
+                >
+                  PRを開く
+                </a>
+              </p>
+            )}
           </div>
         )}
 

@@ -57,7 +57,7 @@ Route::middleware('auth.session')->group(function () {
     // ユーザーブランチ関連
     Route::prefix('admin/user-branches')->group(function () {
         Route::get('/has-changes', [UserBranchController::class, 'hasUserChanges']);
-        Route::post('/create-pr', [UserBranchController::class, 'createPr']);
+        Route::post('/create-pull-request', [UserBranchController::class, 'createPullRequest']);
         Route::get('/diff', [UserBranchController::class, 'fetchDiff']);
     });
 });

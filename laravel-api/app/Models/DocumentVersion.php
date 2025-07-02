@@ -96,4 +96,16 @@ class DocumentVersion extends Model
     {
         return $this->hasMany(EditStartVersion::class, 'current_version_id');
     }
+
+    /**
+     * カテゴリパスを取得
+     */
+    public function getCategoryPathAttribute(): ?string
+    {
+        if (! $this->category) {
+            return null;
+        }
+
+        return $this->category->parent_path;
+    }
 }

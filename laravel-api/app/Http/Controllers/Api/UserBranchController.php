@@ -3,15 +3,29 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\DocumentCategoryPrStatus;
+use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchDiffRequest;
+use App\Models\DocumentCategory;
+use App\Models\DocumentVersion;
+use App\Services\GitService;
+use App\Services\MarkdownFileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Validator;
 
 class UserBranchController extends ApiBaseController
 {
+    protected GitService $gitService;
+
+    protected MarkdownFileService $markdownFileService;
+
+    public function __construct(GitService $gitService, MarkdownFileService $markdownFileService)
+    {
+        $this->gitService = $gitService;
+        $this->markdownFileService = $markdownFileService;
+    }
+
     /**
      * Git差分チェック
      */
@@ -49,31 +63,120 @@ class UserBranchController extends ApiBaseController
     /**
      * プルリクエスト作成
      */
-    public function createPr(Request $request): JsonResponse
+    public function createPullRequest(CreatePullRequestRequest $request): JsonResponse
     {
         try {
-            $validator = Validator::make($request->all(), [
-                'title' => 'required|string',
-                'body' => 'nullable|string',
-                'branch' => 'required|string',
-            ]);
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
 
-            if ($validator->fails()) {
+            if (! $user) {
                 return response()->json([
-                    'error' => $validator->errors()->first(),
-                ], 400);
+                    'error' => '認証されていません',
+                ], 401);
             }
 
-            // プルリクエスト作成の実装
-            // 実際の実装ではGitHub APIなどを使用
+            // 2. ユーザーブランチを取得
+            $userBranch = $user->userBranches()
+                ->where('id', $request->user_branch_id)
+                ->where('pr_status', DocumentCategoryPrStatus::NONE->value)
+                ->first();
+
+            if (! $userBranch) {
+                return response()->json([
+                    'error' => 'ユーザーブランチが見つかりません',
+                ], 404);
+            }
+
+            // 3. diffアイテムを取得
+            $diffItems = $request->diff_items;
+            $documentVersions = collect();
+            $documentCategories = collect();
+
+            foreach ($diffItems as $item) {
+                if ($item['type'] === 'document') {
+                    $documentVersion = DocumentVersion::where('id', $item['id'])
+                        ->where('user_branch_id', $request->user_branch_id)
+                        ->first();
+
+                    if ($documentVersion) {
+                        $documentVersions->push($documentVersion);
+                    }
+                } elseif ($item['type'] === 'category') {
+                    $documentCategory = DocumentCategory::where('id', $item['id'])
+                        ->whereHas('editStartVersions', function ($query) use ($request) {
+                            $query->where('user_branch_id', $request->user_branch_id);
+                        })
+                        ->first();
+
+                    if ($documentCategory) {
+                        $documentCategories->push($documentCategory);
+                    }
+                }
+            }
+
+            // 4. Markdownファイルを作成してGitHubにコミット
+            $commitMessage = 'Update documents: '.$request->title;
+
+            foreach ($documentVersions as $documentVersion) {
+                $markdownContent = $this->markdownFileService->createDocumentMarkdown($documentVersion);
+                $filePath = $this->markdownFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
+
+                $this->gitService->createOrUpdateFile(
+                    $filePath,
+                    $markdownContent,
+                    $userBranch->branch_name,
+                    $commitMessage
+                );
+            }
+
+            foreach ($documentCategories as $documentCategory) {
+                $markdownContent = $this->markdownFileService->createCategoryMarkdown($documentCategory);
+                $filePath = $this->markdownFileService->generateFilePath($documentCategory->slug, $documentCategory->parent_path);
+
+                $this->gitService->createOrUpdateFile(
+                    $filePath,
+                    $markdownContent,
+                    $userBranch->branch_name,
+                    $commitMessage
+                );
+
+                // カテゴリJSONファイルも作成
+                $categoryJsonContent = $this->markdownFileService->createCategoryJson($documentCategory);
+                $categoryJsonPath = $this->markdownFileService->generateCategoryFilePath($documentCategory->slug, $documentCategory->parent_path);
+
+                $this->gitService->createOrUpdateFile(
+                    $categoryJsonPath,
+                    $categoryJsonContent,
+                    $userBranch->branch_name,
+                    $commitMessage
+                );
+            }
+
+            // 5. GitHub APIでプルリクエストを作成
+            $prResult = $this->gitService->createPullRequest(
+                $userBranch->branch_name,
+                $request->title,
+                $request->body ?? ''
+            );
+
+            // 6. ユーザーブランチのステータスを更新
+            $userBranch->update([
+                'pr_status' => DocumentCategoryPrStatus::CREATED->value,
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'プルリクエストを作成しました',
-                'prUrl' => 'https://github.com/example/pull/123',
+                'pr_url' => $prResult['pr_url'],
+                'pr_number' => $prResult['pr_number'],
             ]);
 
         } catch (\Exception $e) {
+            Log::error('プルリクエスト作成エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'error' => 'プルリクエストの作成に失敗しました',
             ], 500);

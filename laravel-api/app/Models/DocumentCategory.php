@@ -116,4 +116,24 @@ class DocumentCategory extends Model
     {
         return $this->belongsTo(UserBranch::class, 'user_branch_id');
     }
+
+    /**
+     * 親カテゴリのパスを取得
+     */
+    public function getParentPathAttribute(): ?string
+    {
+        if (! $this->parent_id) {
+            return null;
+        }
+
+        $path = [];
+        $current = $this->parent;
+
+        while ($current) {
+            array_unshift($path, $current->slug);
+            $current = $current->parent;
+        }
+
+        return implode('/', $path);
+    }
 }

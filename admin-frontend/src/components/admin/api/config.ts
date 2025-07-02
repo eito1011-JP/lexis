@@ -30,6 +30,7 @@ export const API_CONFIG = {
     USER_BRANCHES: {
       HAS_USER_CHANGES: '/api/admin/user-branches/has-changes',
       CREATE_PR: '/api/admin/user-branches/create-pr',
+      CREATE_PULL_REQUEST: '/api/admin/user-branches/create-pull-request',
       GET_DIFF: '/api/admin/user-branches/diff',
     },
   },
