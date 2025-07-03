@@ -7,6 +7,9 @@ use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchDiffRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\PullRequest;
+use App\Models\PullRequestReviewer;
+use App\Models\User;
 use App\Services\GitService;
 use App\Services\MarkdownFileService;
 use Illuminate\Http\JsonResponse;
@@ -65,6 +68,8 @@ class UserBranchController extends ApiBaseController
      */
     public function createPullRequest(CreatePullRequestRequest $request): JsonResponse
     {
+        DB::beginTransaction();
+
         try {
             // 1. 認証ユーザーか確認
             $user = $this->getUserFromSession();
@@ -75,8 +80,9 @@ class UserBranchController extends ApiBaseController
                 ], 401);
             }
 
-            // 2. ユーザーブランチを取得
+            // 2. diffをidとuser_branch_idで絞り込んでfetch
             $userBranch = $user->userBranches()
+                ->active()
                 ->where('id', $request->user_branch_id)
                 ->where('pr_status', DocumentCategoryPrStatus::NONE->value)
                 ->first();
@@ -114,7 +120,7 @@ class UserBranchController extends ApiBaseController
                 }
             }
 
-            // 4. Markdownファイルを作成してGitHubにコミット
+            // 4. 2でfetchしたデータを元にmdファイルをdocsディレクトリ下に作成
             $commitMessage = 'Update documents: '.$request->title;
 
             foreach ($documentVersions as $documentVersion) {
@@ -152,17 +158,56 @@ class UserBranchController extends ApiBaseController
                 );
             }
 
-            // 5. GitHub APIでプルリクエストを作成
+            // 5. レビュアーのGitHubユーザー名を取得
+            $reviewerUsernames = [];
+            $reviewerUserIds = [];
+
+            if ($request->reviewers) {
+                // 一括でレビュアーユーザーを取得
+                $reviewerUsers = User::whereIn('email', $request->reviewers)->get();
+
+                foreach ($reviewerUsers as $reviewerUser) {
+                    $reviewerUserIds[] = $reviewerUser->id;
+                    // GitHubユーザー名がある場合は追加（今回は仮でemailのローカル部分を使用）
+                    $reviewerUsernames[] = explode('@', $reviewerUser->email)[0];
+                }
+            }
+
+            // 6. GitHub APIでプルリクエストを作成
             $prResult = $this->gitService->createPullRequest(
                 $userBranch->branch_name,
                 $request->title,
-                $request->body ?? ''
+                $request->body ?? '',
+                $reviewerUsernames
             );
 
-            // 6. ユーザーブランチのステータスを更新
+            // 7. pull_requestsテーブルにデータを保存
+            $pullRequest = PullRequest::create([
+                'user_branch_id' => $userBranch->id,
+                'title' => $request->title,
+                'description' => $request->body,
+                'github_url' => $prResult['pr_url'],
+                'status' => 'opened',
+            ]);
+
+            // 8. pull_request_reviewersテーブルにレビュアーを保存
+            if (! empty($reviewerUserIds)) {
+                $reviewerData = array_map(function ($reviewerUserId) use ($pullRequest) {
+                    return [
+                        'pull_request_id' => $pullRequest->id,
+                        'user_id' => $reviewerUserId,
+                    ];
+                }, $reviewerUserIds);
+
+                PullRequestReviewer::insert($reviewerData);
+            }
+
+            // 9. ユーザーブランチのステータスを更新
             $userBranch->update([
                 'pr_status' => DocumentCategoryPrStatus::CREATED->value,
             ]);
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
@@ -172,6 +217,7 @@ class UserBranchController extends ApiBaseController
             ]);
 
         } catch (\Exception $e) {
+            DB::rollBack();
             Log::error('プルリクエスト作成エラー: '.$e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),

@@ -77,4 +77,12 @@ class UserBranch extends Model
     {
         return $this->hasMany(EditStartVersion::class);
     }
+
+    /**
+     * プルリクエストとのリレーション
+     */
+    public function pullRequests()
+    {
+        return $this->hasMany(PullRequest::class);
+    }
 }

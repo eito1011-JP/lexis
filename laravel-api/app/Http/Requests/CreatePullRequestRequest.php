@@ -28,6 +28,8 @@ class CreatePullRequestRequest extends FormRequest
             'diff_items' => 'required|array',
             'diff_items.*.id' => 'required|integer',
             'diff_items.*.type' => 'required|string|in:document,category',
+            'reviewers' => 'nullable|array|max:15',
+            'reviewers.*' => 'required|string|email|exists:users,email',
         ];
     }
 
@@ -43,6 +45,8 @@ class CreatePullRequestRequest extends FormRequest
             'diff_items' => '差分アイテム',
             'diff_items.*.id' => 'アイテムID',
             'diff_items.*.type' => 'アイテムタイプ',
+            'reviewers' => 'レビュアー',
+            'reviewers.*' => 'レビュアーのメールアドレス',
         ];
     }
 }

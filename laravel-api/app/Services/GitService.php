@@ -13,6 +13,8 @@ class GitService
 
     private string $repo;
 
+    private const DEFAULT_BASE_BRANCH = 'main';
+
     public function __construct()
     {
         $this->client = new Client;
@@ -24,25 +26,48 @@ class GitService
     /**
      * プルリクエストを作成
      */
-    public function createPullRequest(string $branchName, string $title, string $body = ''): array
+    public function createPullRequest(string $branchName, string $title, string $body = '', array $reviewers = []): array
     {
         try {
             $response = $this->client->pullRequests()->create($this->owner, $this->repo, [
                 'title' => $title,
                 'body' => $body,
                 'head' => $branchName,
-                'base' => 'main',
+                'base' => self::DEFAULT_BASE_BRANCH,
             ]);
+
+            $prNumber = $response['number'];
+            $prUrl = $response['html_url'];
+
+            // レビュアーが指定されている場合、追加する
+            if (! empty($reviewers)) {
+                $this->addReviewers($prNumber, $reviewers);
+            }
 
             return [
                 'success' => true,
-                'pr_url' => $response['html_url'],
-                'pr_number' => $response['number'],
+                'pr_url' => $prUrl,
+                'pr_number' => $prNumber,
             ];
         } catch (\Exception $e) {
             Log::error('GitHub API プルリクエスト作成エラー: '.$e->getMessage());
 
             throw new \Exception('プルリクエストの作成に失敗しました: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * プルリクエストにレビュアーを追加
+     */
+    public function addReviewers(int $prNumber, array $reviewers): void
+    {
+        try {
+            $this->client->pullRequests()->reviewRequests()->create($this->owner, $this->repo, $prNumber, [
+                'reviewers' => $reviewers,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('GitHub API レビュアー追加エラー: '.$e->getMessage());
+            // レビュアー追加に失敗してもPR作成は成功とする
         }
     }
 
@@ -71,7 +96,7 @@ class GitService
     public function getLatestCommit(): string
     {
         try {
-            $response = $this->client->gitData()->references()->show($this->owner, $this->repo, 'heads/main');
+            $response = $this->client->gitData()->references()->show($this->owner, $this->repo, 'heads/'.self::DEFAULT_BASE_BRANCH);
 
             return $response['object']['sha'];
         } catch (\Exception $e) {

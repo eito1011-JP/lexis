@@ -78,4 +78,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(DocumentVersion::class);
     }
+
+    /**
+     * レビュアーとして参加しているプルリクエストとのリレーション
+     */
+    public function reviewingPullRequests()
+    {
+        return $this->belongsToMany(PullRequest::class, 'pull_request_reviewers');
+    }
+
+    /**
+     * プルリクエストレビュアーとのリレーション
+     */
+    public function pullRequestReviewers()
+    {
+        return $this->hasMany(PullRequestReviewer::class);
+    }
 }
