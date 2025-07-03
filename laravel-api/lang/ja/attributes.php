@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'email' => 'メールアドレス',
     'document' => [
         'category' => 'カテゴリ',
         'label' => 'ラベル',

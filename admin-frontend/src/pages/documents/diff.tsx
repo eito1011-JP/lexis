@@ -141,74 +141,53 @@ export default function DiffPage(): JSX.Element {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
   const [prTitle, setPrTitle] = useState('');
   const [prDescription, setPrDescription] = useState('');
-  // レビューアー選択用の仮データと状態
-  const reviewersList = [
-    {
-      id: 1,
-      name: 'ユーザーA',
-      username: 'jotasugiyama',
-      icon: '🧑‍💻',
-      suggestion: true,
-      description: 'Recently edited and reviewed changes to these files',
-    },
-    {
-      id: 2,
-      name: 'ユーザーB',
-      username: 'casharine',
-      icon: '🦊',
-      suggestion: true,
-      description: 'Recently edited these files',
-    },
-    {
-      id: 3,
-      name: 'ユーザーC',
-      username: 'yosatak',
-      icon: '👨‍💼',
-      suggestion: false,
-      description: 'Yoshitaka Takeuchi',
-    },
-    {
-      id: 4,
-      name: 'ユーザーD',
-      username: 'lambdasawa',
-      icon: '🦁',
-      suggestion: false,
-      description: 'Tsubasa Irisawa',
-    },
-    {
-      id: 5,
-      name: 'ユーザーE',
-      username: 'maimeeeee',
-      icon: '🐻',
-      suggestion: false,
-      description: 'Mai Hirose',
-    },
-    {
-      id: 6,
-      name: 'LATRICO/administrator',
-      username: 'administrator',
-      icon: '🏢',
-      suggestion: false,
-      description: 'administrator',
-    },
-    {
-      id: 7,
-      name: 'LATRICO/developers',
-      username: 'developers',
-      icon: '👥',
-      suggestion: false,
-      description: 'developers',
-    },
-  ];
   const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
   const [showReviewerModal, setShowReviewerModal] = useState(false);
   const [reviewerSearch, setReviewerSearch] = useState('');
   const reviewerModalRef = useRef<HTMLDivElement | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
 
   const handleReviewerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const options = Array.from(e.target.selectedOptions);
     setSelectedReviewers(options.map(opt => Number(opt.value)));
   };
+
+  // ユーザー一覧を取得する関数
+  const handleFetchUser = async (searchEmail?: string) => {
+    setLoadingUsers(true);
+    try {
+      const endpoint = searchEmail
+        ? `${API_CONFIG.ENDPOINTS.USERS.GET_ALL}?email=${encodeURIComponent(searchEmail)}`
+        : API_CONFIG.ENDPOINTS.USERS.GET_ALL;
+
+      const response = await apiClient.get(endpoint);
+      setUsers(response.users || []);
+    } catch (error) {
+      console.error('ユーザー取得エラー:', error);
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // レビュアーモーダルが表示された時にユーザー一覧を取得
+  useEffect(() => {
+    if (showReviewerModal) {
+      handleFetchUser();
+    }
+  }, [showReviewerModal]);
+
+  // レビュアー検索時の処理
+  useEffect(() => {
+    if (showReviewerModal && reviewerSearch) {
+      const timeoutId = setTimeout(() => {
+        handleFetchUser(reviewerSearch);
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [reviewerSearch, showReviewerModal]);
 
   useEffect(() => {
     const fetchDiff = async () => {
@@ -521,19 +500,14 @@ export default function DiffPage(): JSX.Element {
                       {/* Suggestionsセクション */}
                       <div className="px-5 pt-3">
                         <div className="text-xs text-gray-400 font-semibold mb-2">Suggestions</div>
-                        {reviewersList.filter(
-                          u =>
-                            u.suggestion &&
-                            (u.name.includes(reviewerSearch) || u.username.includes(reviewerSearch))
-                        ).length === 0 ? (
-                          <div className="text-gray-500 text-sm py-2">No suggestions</div>
+                        {loadingUsers ? (
+                          <div className="text-gray-500 text-sm py-2">読み込み中...</div>
+                        ) : users.length === 0 ? (
+                          <div className="text-gray-500 text-sm py-2">ユーザーが見つかりません</div>
                         ) : (
-                          reviewersList
-                            .filter(
-                              u =>
-                                u.suggestion &&
-                                (u.name.includes(reviewerSearch) ||
-                                  u.username.includes(reviewerSearch))
+                          users
+                            .filter(user =>
+                              user.email.toLowerCase().includes(reviewerSearch.toLowerCase())
                             )
                             .map(user => (
                               <div
@@ -547,62 +521,13 @@ export default function DiffPage(): JSX.Element {
                                   )
                                 }
                               >
-                                <span className="text-2xl">{user.icon}</span>
+                                <span className="text-2xl">👤</span>
                                 <div className="flex-1 min-w-0">
                                   <div className="text-white font-medium leading-tight">
-                                    {user.username}{' '}
-                                    <span className="text-gray-400 text-xs ml-1">{user.name}</span>
+                                    {user.email}
                                   </div>
                                   <div className="text-xs text-gray-400 truncate">
-                                    {user.description}
-                                  </div>
-                                </div>
-                                {selectedReviewers.includes(user.id) && (
-                                  <span className="text-green-400 text-lg font-bold ml-2">✓</span>
-                                )}
-                              </div>
-                            ))
-                        )}
-                      </div>
-                      {/* Everyone elseセクション */}
-                      <div className="px-5 pt-3 pb-4">
-                        <div className="text-xs text-gray-400 font-semibold mb-2">
-                          Everyone else
-                        </div>
-                        {reviewersList.filter(
-                          u =>
-                            !u.suggestion &&
-                            (u.name.includes(reviewerSearch) || u.username.includes(reviewerSearch))
-                        ).length === 0 ? (
-                          <div className="text-gray-500 text-sm py-2">No users</div>
-                        ) : (
-                          reviewersList
-                            .filter(
-                              u =>
-                                !u.suggestion &&
-                                (u.name.includes(reviewerSearch) ||
-                                  u.username.includes(reviewerSearch))
-                            )
-                            .map(user => (
-                              <div
-                                key={user.id}
-                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
-                                onClick={() =>
-                                  setSelectedReviewers(
-                                    selectedReviewers.includes(user.id)
-                                      ? selectedReviewers.filter(id => id !== user.id)
-                                      : [...selectedReviewers, user.id]
-                                  )
-                                }
-                              >
-                                <span className="text-2xl">{user.icon}</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-white font-medium leading-tight">
-                                    {user.username}{' '}
-                                    <span className="text-gray-400 text-xs ml-1">{user.name}</span>
-                                  </div>
-                                  <div className="text-xs text-gray-400 truncate">
-                                    {user.description}
+                                    {user.role || 'editor'}
                                   </div>
                                 </div>
                                 {selectedReviewers.includes(user.id) && (
