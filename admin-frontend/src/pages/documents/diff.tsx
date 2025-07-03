@@ -1,5 +1,5 @@
 import AdminLayout from '@/components/admin/layout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
@@ -143,11 +143,67 @@ export default function DiffPage(): JSX.Element {
   const [prDescription, setPrDescription] = useState('');
   // レビューアー選択用の仮データと状態
   const reviewersList = [
-    { id: 1, name: 'ユーザーA' },
-    { id: 2, name: 'ユーザーB' },
-    { id: 3, name: 'ユーザーC' },
+    {
+      id: 1,
+      name: 'ユーザーA',
+      username: 'jotasugiyama',
+      icon: '🧑‍💻',
+      suggestion: true,
+      description: 'Recently edited and reviewed changes to these files',
+    },
+    {
+      id: 2,
+      name: 'ユーザーB',
+      username: 'casharine',
+      icon: '🦊',
+      suggestion: true,
+      description: 'Recently edited these files',
+    },
+    {
+      id: 3,
+      name: 'ユーザーC',
+      username: 'yosatak',
+      icon: '👨‍💼',
+      suggestion: false,
+      description: 'Yoshitaka Takeuchi',
+    },
+    {
+      id: 4,
+      name: 'ユーザーD',
+      username: 'lambdasawa',
+      icon: '🦁',
+      suggestion: false,
+      description: 'Tsubasa Irisawa',
+    },
+    {
+      id: 5,
+      name: 'ユーザーE',
+      username: 'maimeeeee',
+      icon: '🐻',
+      suggestion: false,
+      description: 'Mai Hirose',
+    },
+    {
+      id: 6,
+      name: 'LATRICO/administrator',
+      username: 'administrator',
+      icon: '🏢',
+      suggestion: false,
+      description: 'administrator',
+    },
+    {
+      id: 7,
+      name: 'LATRICO/developers',
+      username: 'developers',
+      icon: '👥',
+      suggestion: false,
+      description: 'developers',
+    },
   ];
   const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
+  const [showReviewerModal, setShowReviewerModal] = useState(false);
+  const [reviewerSearch, setReviewerSearch] = useState('');
+  const reviewerModalRef = useRef<HTMLDivElement | null>(null);
 
   const handleReviewerChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const options = Array.from(e.target.selectedOptions);
@@ -182,6 +238,19 @@ export default function DiffPage(): JSX.Element {
 
     fetchDiff();
   }, []);
+
+  useEffect(() => {
+    if (!showReviewerModal) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (reviewerModalRef.current && !reviewerModalRef.current.contains(event.target as Node)) {
+        setShowReviewerModal(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showReviewerModal]);
 
   // PR作成のハンドラー
   const handleSubmitPR = async () => {
@@ -425,9 +494,127 @@ export default function DiffPage(): JSX.Element {
             </div>
 
             <div className="absolute right-0 top-0 flex flex-col items-start mr-20">
-              <div className="flex items-center gap-40">
+              <div className="flex items-center gap-40 relative" ref={reviewerModalRef}>
                 <span className="text-white text-base font-bold">レビュアー</span>
-                <Settings className="w-5 h-5 text-gray-300 ml-2" />
+                <Settings
+                  className="w-5 h-5 text-gray-300 ml-2 cursor-pointer"
+                  onClick={() => setShowReviewerModal(v => !v)}
+                />
+                {showReviewerModal && (
+                  <div className="absolute left-0 top-full z-50 mt-2 w-full bg-[#181A1B] rounded-xl border border-gray-700 shadow-2xl">
+                    <div className="flex flex-col">
+                      <div className="px-5 pt-5 pb-2 border-b border-gray-700">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-white font-semibold text-base">
+                            Request up to 15 reviewers
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          className="w-full px-3 py-2 rounded bg-[#222426] border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                          placeholder="Type or choose a user"
+                          value={reviewerSearch}
+                          onChange={e => setReviewerSearch(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      {/* Suggestionsセクション */}
+                      <div className="px-5 pt-3">
+                        <div className="text-xs text-gray-400 font-semibold mb-2">Suggestions</div>
+                        {reviewersList.filter(
+                          u =>
+                            u.suggestion &&
+                            (u.name.includes(reviewerSearch) || u.username.includes(reviewerSearch))
+                        ).length === 0 ? (
+                          <div className="text-gray-500 text-sm py-2">No suggestions</div>
+                        ) : (
+                          reviewersList
+                            .filter(
+                              u =>
+                                u.suggestion &&
+                                (u.name.includes(reviewerSearch) ||
+                                  u.username.includes(reviewerSearch))
+                            )
+                            .map(user => (
+                              <div
+                                key={user.id}
+                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
+                                onClick={() =>
+                                  setSelectedReviewers(
+                                    selectedReviewers.includes(user.id)
+                                      ? selectedReviewers.filter(id => id !== user.id)
+                                      : [...selectedReviewers, user.id]
+                                  )
+                                }
+                              >
+                                <span className="text-2xl">{user.icon}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-white font-medium leading-tight">
+                                    {user.username}{' '}
+                                    <span className="text-gray-400 text-xs ml-1">{user.name}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-400 truncate">
+                                    {user.description}
+                                  </div>
+                                </div>
+                                {selectedReviewers.includes(user.id) && (
+                                  <span className="text-green-400 text-lg font-bold ml-2">✓</span>
+                                )}
+                              </div>
+                            ))
+                        )}
+                      </div>
+                      {/* Everyone elseセクション */}
+                      <div className="px-5 pt-3 pb-4">
+                        <div className="text-xs text-gray-400 font-semibold mb-2">
+                          Everyone else
+                        </div>
+                        {reviewersList.filter(
+                          u =>
+                            !u.suggestion &&
+                            (u.name.includes(reviewerSearch) || u.username.includes(reviewerSearch))
+                        ).length === 0 ? (
+                          <div className="text-gray-500 text-sm py-2">No users</div>
+                        ) : (
+                          reviewersList
+                            .filter(
+                              u =>
+                                !u.suggestion &&
+                                (u.name.includes(reviewerSearch) ||
+                                  u.username.includes(reviewerSearch))
+                            )
+                            .map(user => (
+                              <div
+                                key={user.id}
+                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
+                                onClick={() =>
+                                  setSelectedReviewers(
+                                    selectedReviewers.includes(user.id)
+                                      ? selectedReviewers.filter(id => id !== user.id)
+                                      : [...selectedReviewers, user.id]
+                                  )
+                                }
+                              >
+                                <span className="text-2xl">{user.icon}</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-white font-medium leading-tight">
+                                    {user.username}{' '}
+                                    <span className="text-gray-400 text-xs ml-1">{user.name}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-400 truncate">
+                                    {user.description}
+                                  </div>
+                                </div>
+                                {selectedReviewers.includes(user.id) && (
+                                  <span className="text-green-400 text-lg font-bold ml-2">✓</span>
+                                )}
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <p className="text-white text-base font-medium mt-5 text-sm">レビュアーなし</p>
             </div>

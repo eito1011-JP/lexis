@@ -2,11 +2,18 @@ import React from 'react';
 
 interface SettingsProps {
   className?: string;
+  onClick?: React.MouseEventHandler<SVGSVGElement>;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ className = 'w-6 h-6' }) => {
+export const Settings: React.FC<SettingsProps> = ({ className = 'w-6 h-6', onClick }) => {
   return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      onClick={onClick}
+    >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
