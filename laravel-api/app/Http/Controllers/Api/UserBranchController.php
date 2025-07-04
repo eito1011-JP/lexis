@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\DocumentCategoryPrStatus;
+use App\Enums\DocumentCategoryStatus;
+use App\Enums\UserBranchPrStatus;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchDiffRequest;
 use App\Models\DocumentCategory;
@@ -45,7 +46,7 @@ class UserBranchController extends ApiBaseController
             }
 
             // アクティブなユーザーブランチを取得
-            $activeBranch = $loginUser->userBranches()->active()->where('pr_status', DocumentCategoryPrStatus::NONE->value)->first();
+            $activeBranch = $loginUser->userBranches()->active()->where('pr_status', DocumentCategoryStatus::DRAFT->value)->first();
 
             $hasUserChanges = ! is_null($activeBranch);
             $userBranchId = $hasUserChanges ? $activeBranch->id : null;
@@ -83,8 +84,8 @@ class UserBranchController extends ApiBaseController
             // 2. diffをidとuser_branch_idで絞り込んでfetch
             $userBranch = $user->userBranches()
                 ->active()
-                ->where('id', $request->user_branch_id)
-                ->where('pr_status', DocumentCategoryPrStatus::NONE->value)
+                ->where('pr_status', DocumentCategoryStatus::DRAFT->value)
+                ->orderBy('id', 'desc')
                 ->first();
 
             if (! $userBranch) {
@@ -98,113 +99,169 @@ class UserBranchController extends ApiBaseController
             $documentVersions = collect();
             $documentCategories = collect();
 
+            Log::info('diffItems: '.json_encode($diffItems));
+            
+            // document と category のIDを分別して一括取得用の配列を作成
+            $documentIds = [];
+            $categoryIds = [];
+            
             foreach ($diffItems as $item) {
                 if ($item['type'] === 'document') {
-                    $documentVersion = DocumentVersion::where('id', $item['id'])
-                        ->where('user_branch_id', $request->user_branch_id)
-                        ->first();
-
-                    if ($documentVersion) {
-                        $documentVersions->push($documentVersion);
-                    }
+                    $documentIds[] = $item['id'];
                 } elseif ($item['type'] === 'category') {
-                    $documentCategory = DocumentCategory::where('id', $item['id'])
-                        ->whereHas('editStartVersions', function ($query) use ($request) {
-                            $query->where('user_branch_id', $request->user_branch_id);
-                        })
-                        ->first();
-
-                    if ($documentCategory) {
-                        $documentCategories->push($documentCategory);
-                    }
+                    $categoryIds[] = $item['id'];
                 }
             }
+            
+            // 一括でDocumentVersionsを取得
+            if (!empty($documentIds)) {
+                $documentVersions = DocumentVersion::where('user_branch_id', $userBranch->id)
+                    ->whereIn('id', $documentIds)
+                    ->get();
+            }
+            
+            // 一括でDocumentCategoriesを取得
+            if (!empty($categoryIds)) {
+                $documentCategories = DocumentCategory::where('user_branch_id', $userBranch->id)
+                    ->whereIn('id', $categoryIds)
+                    ->get();
+            }
 
-            // 4. 2でfetchしたデータを元にmdファイルをdocsディレクトリ下に作成
-            $commitMessage = 'Update documents: '.$request->title;
+            // 4. tree api用にpath, contentを動的に作成
+            $treeItems = [];
 
             foreach ($documentVersions as $documentVersion) {
                 $markdownContent = $this->markdownFileService->createDocumentMarkdown($documentVersion);
                 $filePath = $this->markdownFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-
-                $this->gitService->createOrUpdateFile(
-                    $filePath,
-                    $markdownContent,
-                    $userBranch->branch_name,
-                    $commitMessage
-                );
+                
+                $treeItems[] = [
+                    'path' => $filePath,
+                    'mode' => '100644',
+                    'type' => 'blob',
+                    'content' => $markdownContent,
+                ];
             }
 
             foreach ($documentCategories as $documentCategory) {
                 $markdownContent = $this->markdownFileService->createCategoryMarkdown($documentCategory);
                 $filePath = $this->markdownFileService->generateFilePath($documentCategory->slug, $documentCategory->parent_path);
+                
+                $treeItems[] = [
+                    'path' => $filePath,
+                    'mode' => '100644',
+                    'type' => 'blob',
+                    'content' => $markdownContent,
+                ];
 
-                $this->gitService->createOrUpdateFile(
-                    $filePath,
-                    $markdownContent,
-                    $userBranch->branch_name,
-                    $commitMessage
-                );
+                // _category_.jsonファイルも追加
+                $categoryJsonData = [
+                    'label' => $documentCategory->sidebar_label,
+                    'position' => $documentCategory->position,
+                    'link' => [
+                        'type' => 'generated-index',
+                        'description' => $documentCategory->description
+                    ]
+                ];
+                $categoryJsonContent = json_encode($categoryJsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                $categoryFolderPath = trim($documentCategory->parent_path, '/') . '/' . $documentCategory->slug;
+                
+                $treeItems[] = [
+                    'path' => $categoryFolderPath . '/_category_.json',
+                    'mode' => '100644',
+                    'type' => 'blob',
+                    'content' => $categoryJsonContent,
+                ];
 
-                // カテゴリJSONファイルも作成
-                $categoryJsonContent = $this->markdownFileService->createCategoryJson($documentCategory);
-                $categoryJsonPath = $this->markdownFileService->generateCategoryFilePath($documentCategory->slug, $documentCategory->parent_path);
-
-                $this->gitService->createOrUpdateFile(
-                    $categoryJsonPath,
-                    $categoryJsonContent,
-                    $userBranch->branch_name,
-                    $commitMessage
-                );
+                // 元のカテゴリJSONファイルも追加
+                $originalCategoryJsonContent = $this->markdownFileService->createCategoryJson($documentCategory);
+                $originalCategoryJsonPath = $this->markdownFileService->generateCategoryFilePath($documentCategory->slug, $documentCategory->parent_path);
+                
+                $treeItems[] = [
+                    'path' => $originalCategoryJsonPath,
+                    'mode' => '100644',
+                    'type' => 'blob',
+                    'content' => $originalCategoryJsonContent,
+                ];
             }
 
-            // 5. レビュアーのGitHubユーザー名を取得
-            $reviewerUsernames = [];
-            $reviewerUserIds = [];
+            // 5. GitHubのrepositoryにリモートbranchを作成
+            $branchResult = $this->gitService->createRemoteBranch(
+                $userBranch->branch_name,
+                $userBranch->snapshot_commit
+            );
 
-            if ($request->reviewers) {
-                // 一括でレビュアーユーザーを取得
+            // 6. リモートレポジトリで直接ファイルを編集（tree作成）
+            $treeResult = $this->gitService->createTree(
+                $userBranch->snapshot_commit,
+                $treeItems
+            );
+
+            // 7. コミット作成
+            $commitResult = $this->gitService->createCommit(
+                $request->title,
+                $treeResult['sha'],
+                [$userBranch->snapshot_commit]
+            );
+
+            // 8. ブランチの最新コミットを更新
+            $this->gitService->updateBranchReference(
+                $userBranch->branch_name,
+                $commitResult['sha']
+            );
+
+            // 9. プルリクエスト作成
+            $prResult = $this->gitService->createPullRequest(
+                $userBranch->branch_name,
+                $request->title,
+                $request->description ?? ''
+            );
+
+            // 10. レビュアー設定
+            $reviewerUserIds = [];
+            if ($request->reviewers && !empty($request->reviewers)) {
+                // レビュアーのGitHubユーザー名を取得
                 $reviewerUsers = User::whereIn('email', $request->reviewers)->get();
+                $reviewerUsernames = [];
 
                 foreach ($reviewerUsers as $reviewerUser) {
                     $reviewerUserIds[] = $reviewerUser->id;
                     // GitHubユーザー名がある場合は追加（今回は仮でemailのローカル部分を使用）
                     $reviewerUsernames[] = explode('@', $reviewerUser->email)[0];
                 }
+
+                // レビュアーを設定
+                $this->gitService->addReviewersToPullRequest(
+                    $prResult['pr_number'],
+                    $reviewerUsernames
+                );
             }
 
-            // 6. GitHub APIでプルリクエストを作成
-            $prResult = $this->gitService->createPullRequest(
-                $userBranch->branch_name,
-                $request->title,
-                $request->body ?? '',
-                $reviewerUsernames
-            );
-
-            // 7. pull_requestsテーブルにデータを保存
+            // 11. pull_requestsテーブルにデータを保存
             $pullRequest = PullRequest::create([
                 'user_branch_id' => $userBranch->id,
                 'title' => $request->title,
-                'description' => $request->body,
+                'description' => $request->description,
                 'github_url' => $prResult['pr_url'],
                 'status' => 'opened',
             ]);
 
-            // 8. pull_request_reviewersテーブルにレビュアーを保存
-            if (! empty($reviewerUserIds)) {
+            // 12. pull_request_reviewersテーブルにレビュアーを保存
+            if (!empty($reviewerUserIds)) {
                 $reviewerData = array_map(function ($reviewerUserId) use ($pullRequest) {
                     return [
                         'pull_request_id' => $pullRequest->id,
                         'user_id' => $reviewerUserId,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ];
                 }, $reviewerUserIds);
 
                 PullRequestReviewer::insert($reviewerData);
             }
 
-            // 9. ユーザーブランチのステータスを更新
+            // 13. ユーザーブランチのステータスを更新
             $userBranch->update([
-                'pr_status' => DocumentCategoryPrStatus::CREATED->value,
+                'pr_status' => DocumentCategoryStatus::PUSHED->value,
             ]);
 
             DB::commit();
@@ -245,7 +302,7 @@ class UserBranchController extends ApiBaseController
             }
 
             // ユーザーブランチと関連データを一括取得
-            $userBranch = $user->userBranches()->active()->where('pr_status', DocumentCategoryPrStatus::NONE->value)
+            $userBranch = $user->userBranches()->active()->where('pr_status', UserBranchPrStatus::NONE->value)
                 ->with([
                     'editStartVersions',
                     'editStartVersions.originalDocumentVersion',

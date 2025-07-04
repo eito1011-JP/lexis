@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\Flag;
-use App\Enums\DocumentCategoryPrStatus;
+use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
@@ -229,9 +229,9 @@ class DocumentCategoryController extends ApiBaseController
             $rootCategory = DocumentCategory::where('slug', $slug)
                 ->where('parent_id', $parentCategoryId)
                 ->where(function ($query) use ($userBranchId) {
-                    $query->where('status', DocumentCategoryPrStatus::MERGED->value)
+                    $query->where('status', DocumentCategoryStatus::MERGED->value)
                         ->orWhere(function ($subQuery) use ($userBranchId) {
-                            $subQuery->where('status', '!=', DocumentCategoryPrStatus::MERGED->value)
+                            $subQuery->where('status', '!=', DocumentCategoryStatus::MERGED->value)
                                 ->where('user_branch_id', $userBranchId);
                         });
                 })
@@ -258,7 +258,7 @@ class DocumentCategoryController extends ApiBaseController
                     WHERE (dc.status = ? OR (dc.status != ? AND dc.user_branch_id = ?))
                 )
                 SELECT id FROM tree
-            ', [$slug, $parentCategoryId, DocumentCategoryPrStatus::MERGED->value, DocumentCategoryPrStatus::MERGED->value, $userBranchId, DocumentCategoryPrStatus::MERGED->value, DocumentCategoryPrStatus::MERGED->value, $userBranchId]);
+            ', [$slug, $parentCategoryId, DocumentCategoryStatus::MERGED->value, DocumentCategoryStatus::MERGED->value, $userBranchId, DocumentCategoryStatus::MERGED->value, DocumentCategoryStatus::MERGED->value, $userBranchId]);
 
             $categoryIdArray = array_column($categoryIds, 'id');
 

@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum DocumentCategoryPrStatus: string
+enum UserBranchPrStatus: string
 {
     case NONE = 'none';
     case CONFLICT = 'conflict';
@@ -31,4 +31,4 @@ enum DocumentCategoryPrStatus: string
     {
         return array_column(self::cases(), 'value');
     }
-}
+} 

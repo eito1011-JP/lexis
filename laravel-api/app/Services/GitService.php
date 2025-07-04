@@ -2,107 +2,167 @@
 
 namespace App\Services;
 
-use Github\Client;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GitService
 {
-    private Client $client;
-
-    private string $owner;
-
-    private string $repo;
-
-    private const DEFAULT_BASE_BRANCH = 'main';
+    protected string $githubToken;
+    protected string $githubOwner;
+    protected string $githubRepo;
+    protected string $baseBranch;
 
     public function __construct()
     {
-        $this->client = new Client;
-        $this->client->authenticate(config('services.github.token'), null, Client::AUTH_ACCESS_TOKEN);
-        $this->owner = config('services.github.owner');
-        $this->repo = config('services.github.repo');
+        $this->githubToken = config('services.github.token');
+        $this->githubOwner = config('services.github.owner');
+        $this->githubRepo = config('services.github.repo');
+        $this->baseBranch = config('services.github.base_branch', 'main');
+    }
+
+    /**
+     * リモートブランチを作成
+     */
+    public function createRemoteBranch(string $branchName, string $sha): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/refs";
+        
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->post($url, [
+            'ref' => "refs/heads/{$branchName}",
+            'sha' => $sha,
+        ]);
+
+        if (!$response->successful()) {
+            Log::error('GitHub API Error - Create Branch: ' . $response->body());
+            throw new \Exception('ブランチの作成に失敗しました');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * ツリーを作成
+     */
+    public function createTree(string $baseTreeSha, array $treeItems): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/trees";
+        
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->post($url, [
+            'base_tree' => $baseTreeSha,
+            'tree' => $treeItems,
+        ]);
+
+        if (!$response->successful()) {
+            Log::error('GitHub API Error - Create Tree: ' . $response->body());
+            throw new \Exception('ツリーの作成に失敗しました');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * コミットを作成
+     */
+    public function createCommit(string $message, string $treeSha, array $parents): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/commits";
+        
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->post($url, [
+            'message' => $message,
+            'tree' => $treeSha,
+            'parents' => $parents,
+        ]);
+
+        if (!$response->successful()) {
+            Log::error('GitHub API Error - Create Commit: ' . $response->body());
+            throw new \Exception('コミットの作成に失敗しました');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * ブランチの参照を更新
+     */
+    public function updateBranchReference(string $branchName, string $sha): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/refs/heads/{$branchName}";
+        
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->patch($url, [
+            'sha' => $sha,
+            'force' => false,
+        ]);
+
+        if (!$response->successful()) {
+            Log::error('GitHub API Error - Update Branch Reference: ' . $response->body());
+            throw new \Exception('ブランチ参照の更新に失敗しました');
+        }
+
+        return $response->json();
     }
 
     /**
      * プルリクエストを作成
      */
-    public function createPullRequest(string $branchName, string $title, string $body = '', array $reviewers = []): array
+    public function createPullRequest(string $branchName, string $title, string $body): array
     {
-        try {
-            $response = $this->client->pullRequests()->create($this->owner, $this->repo, [
-                'title' => $title,
-                'body' => $body,
-                'head' => $branchName,
-                'base' => self::DEFAULT_BASE_BRANCH,
-            ]);
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/pulls";
+        
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->post($url, [
+            'title' => $title,
+            'body' => $body,
+            'head' => $branchName,
+            'base' => $this->baseBranch,
+        ]);
 
-            $prNumber = $response['number'];
-            $prUrl = $response['html_url'];
-
-            // レビュアーが指定されている場合、追加する
-            if (! empty($reviewers)) {
-                $this->addReviewers($prNumber, $reviewers);
-            }
-
-            return [
-                'success' => true,
-                'pr_url' => $prUrl,
-                'pr_number' => $prNumber,
-            ];
-        } catch (\Exception $e) {
-            Log::error('GitHub API プルリクエスト作成エラー: '.$e->getMessage());
-
-            throw new \Exception('プルリクエストの作成に失敗しました: '.$e->getMessage());
+        if (!$response->successful()) {
+            Log::error('GitHub API Error - Create Pull Request: ' . $response->body());
+            throw new \Exception('プルリクエストの作成に失敗しました');
         }
+
+        $responseData = $response->json();
+        
+        return [
+            'pr_url' => $responseData['html_url'],
+            'pr_number' => $responseData['number'],
+        ];
     }
 
     /**
      * プルリクエストにレビュアーを追加
      */
-    public function addReviewers(int $prNumber, array $reviewers): void
+    public function addReviewersToPullRequest(int $prNumber, array $reviewers): array
     {
-        try {
-            $this->client->pullRequests()->reviewRequests()->create($this->owner, $this->repo, $prNumber, [
-                'reviewers' => $reviewers,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('GitHub API レビュアー追加エラー: '.$e->getMessage());
-            // レビュアー追加に失敗してもPR作成は成功とする
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/pulls/{$prNumber}/requested_reviewers";
+        
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->post($url, [
+            'reviewers' => $reviewers,
+            'team_reviewers' => [],
+        ]);
+
+        if (!$response->successful()) {
+            Log::error('GitHub API Error - Add Reviewers: ' . $response->body());
+            throw new \Exception('レビュアーの追加に失敗しました');
         }
-    }
 
-    /**
-     * ファイルを作成または更新
-     */
-    public function createOrUpdateFile(string $path, string $content, string $branchName, string $message): array
-    {
-        try {
-            $response = $this->client->repositories()->contents()->create($this->owner, $this->repo, $path, $content, $message, $branchName);
-
-            return [
-                'success' => true,
-                'sha' => $response['content']['sha'],
-            ];
-        } catch (\Exception $e) {
-            Log::error('GitHub API ファイル作成エラー: '.$e->getMessage());
-
-            throw new \Exception('ファイルの作成に失敗しました: '.$e->getMessage());
-        }
-    }
-
-    /**
-     * 最新のコミットハッシュを取得
-     */
-    public function getLatestCommit(): string
-    {
-        try {
-            $response = $this->client->gitData()->references()->show($this->owner, $this->repo, 'heads/'.self::DEFAULT_BASE_BRANCH);
-
-            return $response['object']['sha'];
-        } catch (\Exception $e) {
-            Log::error('GitHub API 最新コミット取得エラー: '.$e->getMessage());
-
-            throw new \Exception('最新のコミット取得に失敗しました: '.$e->getMessage());
-        }
+        return $response->json();
     }
 }

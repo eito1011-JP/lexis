@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Consts\Flag;
-use App\Enums\DocumentCategoryPrStatus;
+use App\Enums\UserBranchPrStatus;
 use App\Models\User;
 use App\Models\UserBranch;
 use Github\Client;
@@ -18,7 +18,7 @@ class UserBranchService
     public function fetchOrCreateActiveBranch(User $user): int
     {
         // アクティブなユーザーブランチを確認
-        $activeBranch = $user->userBranches()->where('pr_status', DocumentCategoryPrStatus::NONE->value)->active()->first();
+        $activeBranch = $user->userBranches()->where('pr_status', UserBranchPrStatus::NONE->value)->active()->first();
 
         $userBranchId = null;
         if ($activeBranch) {
@@ -45,7 +45,7 @@ class UserBranchService
             'branch_name' => $branchName,
             'snapshot_commit' => $snapshotCommit,
             'is_active' => Flag::TRUE,
-            'pr_status' => DocumentCategoryPrStatus::NONE->value,
+            'pr_status' => UserBranchPrStatus::NONE->value,
         ]);
     }
 

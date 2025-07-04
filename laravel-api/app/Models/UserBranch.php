@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Consts\Flag;
-use App\Enums\DocumentCategoryPrStatus;
+use App\Enums\UserBranchPrStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -32,7 +32,7 @@ class UserBranch extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', Flag::TRUE)->where('pr_status', DocumentCategoryPrStatus::NONE->value);
+        return $query->where('is_active', Flag::TRUE)->where('pr_status', UserBranchPrStatus::NONE->value);
     }
 
     /**
@@ -42,7 +42,7 @@ class UserBranch extends Model
     {
         return self::where('user_id', $userId)
             ->active()
-            ->where('pr_status', DocumentCategoryPrStatus::NONE->value)
+            ->where('pr_status', UserBranchPrStatus::NONE->value)
             ->first();
     }
 

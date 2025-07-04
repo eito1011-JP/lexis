@@ -530,9 +530,6 @@ export default function DiffPage(): JSX.Element {
                                     {user.role || 'editor'}
                                   </div>
                                 </div>
-                                {selectedReviewers.includes(user.id) && (
-                                  <span className="text-green-400 text-lg font-bold ml-2">✓</span>
-                                )}
                               </div>
                             ))
                         )}
@@ -541,7 +538,29 @@ export default function DiffPage(): JSX.Element {
                   </div>
                 )}
               </div>
-              <p className="text-white text-base font-medium mt-5 text-sm">レビュアーなし</p>
+              {selectedReviewers.length === 0 ? (
+                <p className="text-white text-base font-medium mt-5 text-sm">レビュアーなし</p>
+              ) : (
+                <div className="mt-5">
+                  <div className="space-y-1">
+                    {selectedReviewers.map(reviewerId => {
+                      const user = users.find(u => u.id === reviewerId);
+                      return user ? (
+                        <div key={reviewerId} className="flex items-center gap-2 text-sm">
+                          <span className="text-xl">👤</span>
+                          <span className="text-gray-300">{user.email}</span>
+                          <button
+                            onClick={() => setSelectedReviewers(selectedReviewers.filter(id => id !== reviewerId))}
+                            className="text-red-400 hover:text-red-300 ml-1"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="mb-8">
               <div className="mb-6 relative max-w-3xl w-full">

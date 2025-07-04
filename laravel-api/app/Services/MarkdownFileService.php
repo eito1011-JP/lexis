@@ -17,9 +17,27 @@ class MarkdownFileService
 
         // Front matterを追加
         $content .= "---\n";
-        $content .= "sidebar_label: '{$documentVersion->sidebar_label}'\n";
-        $content .= "last_edited_by: '{$documentVersion->last_edited_by}'\n";
-        $content .= "---\n\n";
+        $content .= "slug: {$documentVersion->slug}\n";
+        
+        // カテゴリ情報を追加
+        if ($documentVersion->category) {
+            $content .= "category: {$documentVersion->category->sidebar_label}\n";
+        }
+        
+        $content .= "sidebar_label: {$documentVersion->sidebar_label}\n";
+        $content .= "file_order: {$documentVersion->file_order}\n";
+        
+        // ステータスがdraftの場合のみdraftフラグを追加
+        if ($documentVersion->status === 'draft') {
+            $content .= "draft: true\n";
+        }
+        
+        if ($documentVersion->last_reviewed_by) {
+            $content .= "last_reviewed_by: {$documentVersion->last_reviewed_by}\n";
+        }
+        
+        $content .= "last_edited_by: {$documentVersion->last_edited_by}\n";
+        $content .= "---\n";
 
         // コンテンツを追加
         $content .= $documentVersion->content;
