@@ -6,7 +6,7 @@ enum UserBranchPrStatus: string
 {
     case NONE = 'none';
     case CONFLICT = 'conflict';
-    case CREATED = 'created';
+    case OPENED = 'opened';
     case MERGED = 'merged';
     case CLOSED = 'closed';
 
@@ -18,7 +18,7 @@ enum UserBranchPrStatus: string
         return match ($this) {
             self::NONE => 'なし',
             self::CONFLICT => 'コンフリクト',
-            self::CREATED => '作成済み',
+            self::OPENED => 'オープン',
             self::MERGED => 'マージ済み',
             self::CLOSED => 'クローズ済み',
         };

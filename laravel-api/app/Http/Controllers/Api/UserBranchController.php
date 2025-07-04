@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\DocumentCategoryStatus;
+use App\Enums\DocumentStatus;
 use App\Enums\UserBranchPrStatus;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchDiffRequest;
@@ -84,7 +85,7 @@ class UserBranchController extends ApiBaseController
             // 2. diffをidとuser_branch_idで絞り込んでfetch
             $userBranch = $user->userBranches()
                 ->active()
-                ->where('pr_status', DocumentCategoryStatus::DRAFT->value)
+                ->where('pr_status', UserBranchPrStatus::NONE->value)
                 ->orderBy('id', 'desc')
                 ->first();
 
@@ -118,6 +119,11 @@ class UserBranchController extends ApiBaseController
                 $documentVersions = DocumentVersion::where('user_branch_id', $userBranch->id)
                     ->whereIn('id', $documentIds)
                     ->get();
+
+                // 取得したdocumentsのstatusをpushedにbulk update
+                DocumentVersion::where('user_branch_id', $userBranch->id)
+                    ->whereIn('id', $documentIds)
+                    ->update(['status' => DocumentStatus::PUSHED->value]);
             }
 
             // 一括でDocumentCategoriesを取得
@@ -125,6 +131,11 @@ class UserBranchController extends ApiBaseController
                 $documentCategories = DocumentCategory::where('user_branch_id', $userBranch->id)
                     ->whereIn('id', $categoryIds)
                     ->get();
+
+                // 取得したcategoriesのstatusをpushedにbulk update
+                DocumentCategory::where('user_branch_id', $userBranch->id)
+                    ->whereIn('id', $categoryIds)
+                    ->update(['status' => DocumentCategoryStatus::PUSHED->value]);
             }
 
             // 4. tree api用にpath, contentを動的に作成
@@ -251,8 +262,6 @@ class UserBranchController extends ApiBaseController
                     return [
                         'pull_request_id' => $pullRequest->id,
                         'user_id' => $reviewerUserId,
-                        'created_at' => now(),
-                        'updated_at' => now(),
                     ];
                 }, $reviewerUserIds);
 
@@ -261,7 +270,7 @@ class UserBranchController extends ApiBaseController
 
             // 13. ユーザーブランチのステータスを更新
             $userBranch->update([
-                'pr_status' => DocumentCategoryStatus::PUSHED->value,
+                'pr_status' => UserBranchPrStatus::OPENED->value,
             ]);
 
             DB::commit();
