@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\PullRequestReviewerController;
 use App\Http\Controllers\Api\UserBranchController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
@@ -32,6 +33,11 @@ Route::middleware('auth.session')->group(function () {
     // ユーザー関連
     Route::prefix('admin/users')->group(function () {
         Route::get('/', [UserController::class, 'index']);
+    });
+
+    // プルリクエストレビュアー関連
+    Route::prefix('admin/pull-request-reviewers')->group(function () {
+        Route::get('/', [PullRequestReviewerController::class, 'index']);
     });
 
     // ドキュメント関連

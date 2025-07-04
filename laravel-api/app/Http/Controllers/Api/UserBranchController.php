@@ -46,7 +46,7 @@ class UserBranchController extends ApiBaseController
             }
 
             // アクティブなユーザーブランチを取得
-            $activeBranch = $loginUser->userBranches()->active()->where('pr_status', DocumentCategoryStatus::DRAFT->value)->first();
+            $activeBranch = $loginUser->userBranches()->active()->where('pr_status', UserBranchPrStatus::NONE->value)->first();
 
             $hasUserChanges = ! is_null($activeBranch);
             $userBranchId = $hasUserChanges ? $activeBranch->id : null;
@@ -100,11 +100,11 @@ class UserBranchController extends ApiBaseController
             $documentCategories = collect();
 
             Log::info('diffItems: '.json_encode($diffItems));
-            
+
             // document と category のIDを分別して一括取得用の配列を作成
             $documentIds = [];
             $categoryIds = [];
-            
+
             foreach ($diffItems as $item) {
                 if ($item['type'] === 'document') {
                     $documentIds[] = $item['id'];
@@ -112,16 +112,16 @@ class UserBranchController extends ApiBaseController
                     $categoryIds[] = $item['id'];
                 }
             }
-            
+
             // 一括でDocumentVersionsを取得
-            if (!empty($documentIds)) {
+            if (! empty($documentIds)) {
                 $documentVersions = DocumentVersion::where('user_branch_id', $userBranch->id)
                     ->whereIn('id', $documentIds)
                     ->get();
             }
-            
+
             // 一括でDocumentCategoriesを取得
-            if (!empty($categoryIds)) {
+            if (! empty($categoryIds)) {
                 $documentCategories = DocumentCategory::where('user_branch_id', $userBranch->id)
                     ->whereIn('id', $categoryIds)
                     ->get();
@@ -133,7 +133,7 @@ class UserBranchController extends ApiBaseController
             foreach ($documentVersions as $documentVersion) {
                 $markdownContent = $this->markdownFileService->createDocumentMarkdown($documentVersion);
                 $filePath = $this->markdownFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-                
+
                 $treeItems[] = [
                     'path' => $filePath,
                     'mode' => '100644',
@@ -145,7 +145,7 @@ class UserBranchController extends ApiBaseController
             foreach ($documentCategories as $documentCategory) {
                 $markdownContent = $this->markdownFileService->createCategoryMarkdown($documentCategory);
                 $filePath = $this->markdownFileService->generateFilePath($documentCategory->slug, $documentCategory->parent_path);
-                
+
                 $treeItems[] = [
                     'path' => $filePath,
                     'mode' => '100644',
@@ -159,14 +159,14 @@ class UserBranchController extends ApiBaseController
                     'position' => $documentCategory->position,
                     'link' => [
                         'type' => 'generated-index',
-                        'description' => $documentCategory->description
-                    ]
+                        'description' => $documentCategory->description,
+                    ],
                 ];
                 $categoryJsonContent = json_encode($categoryJsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                $categoryFolderPath = trim($documentCategory->parent_path, '/') . '/' . $documentCategory->slug;
-                
+                $categoryFolderPath = trim($documentCategory->parent_path, '/').'/'.$documentCategory->slug;
+
                 $treeItems[] = [
-                    'path' => $categoryFolderPath . '/_category_.json',
+                    'path' => $categoryFolderPath.'/_category_.json',
                     'mode' => '100644',
                     'type' => 'blob',
                     'content' => $categoryJsonContent,
@@ -175,7 +175,7 @@ class UserBranchController extends ApiBaseController
                 // 元のカテゴリJSONファイルも追加
                 $originalCategoryJsonContent = $this->markdownFileService->createCategoryJson($documentCategory);
                 $originalCategoryJsonPath = $this->markdownFileService->generateCategoryFilePath($documentCategory->slug, $documentCategory->parent_path);
-                
+
                 $treeItems[] = [
                     'path' => $originalCategoryJsonPath,
                     'mode' => '100644',
@@ -218,7 +218,7 @@ class UserBranchController extends ApiBaseController
 
             // 10. レビュアー設定
             $reviewerUserIds = [];
-            if ($request->reviewers && !empty($request->reviewers)) {
+            if ($request->reviewers && ! empty($request->reviewers)) {
                 // レビュアーのGitHubユーザー名を取得
                 $reviewerUsers = User::whereIn('email', $request->reviewers)->get();
                 $reviewerUsernames = [];
@@ -246,7 +246,7 @@ class UserBranchController extends ApiBaseController
             ]);
 
             // 12. pull_request_reviewersテーブルにレビュアーを保存
-            if (!empty($reviewerUserIds)) {
+            if (! empty($reviewerUserIds)) {
                 $reviewerData = array_map(function ($reviewerUserId) use ($pullRequest) {
                     return [
                         'pull_request_id' => $pullRequest->id,

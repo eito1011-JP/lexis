@@ -33,5 +33,8 @@ export const API_CONFIG = {
       CREATE_PULL_REQUEST: '/api/admin/user-branches/create-pull-request',
       GET_DIFF: '/api/admin/user-branches/diff',
     },
+    PULL_REQUEST_REVIEWERS: {
+      GET: '/api/admin/pull-request-reviewers',
+    },
   },
 };

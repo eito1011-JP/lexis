@@ -158,8 +158,8 @@ export default function DiffPage(): JSX.Element {
     setLoadingUsers(true);
     try {
       const endpoint = searchEmail
-        ? `${API_CONFIG.ENDPOINTS.USERS.GET_ALL}?email=${encodeURIComponent(searchEmail)}`
-        : API_CONFIG.ENDPOINTS.USERS.GET_ALL;
+        ? `${API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET}?email=${encodeURIComponent(searchEmail)}`
+        : API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
 
       const response = await apiClient.get(endpoint);
       setUsers(response.users || []);
@@ -485,7 +485,7 @@ export default function DiffPage(): JSX.Element {
                       <div className="px-5 pt-5 pb-2 border-b border-gray-700">
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-white font-semibold text-base">
-                            Request up to 15 reviewers
+                            最大15人までリクエストできます
                           </span>
                         </div>
                         <input
@@ -550,7 +550,11 @@ export default function DiffPage(): JSX.Element {
                           <span className="text-xl">👤</span>
                           <span className="text-gray-300">{user.email}</span>
                           <button
-                            onClick={() => setSelectedReviewers(selectedReviewers.filter(id => id !== reviewerId))}
+                            onClick={() =>
+                              setSelectedReviewers(
+                                selectedReviewers.filter(id => id !== reviewerId)
+                              )
+                            }
                             className="text-red-400 hover:text-red-300 ml-1"
                           >
                             ×

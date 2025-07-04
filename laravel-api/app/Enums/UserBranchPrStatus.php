@@ -31,4 +31,4 @@ enum UserBranchPrStatus: string
     {
         return array_column(self::cases(), 'value');
     }
-} 
+}
