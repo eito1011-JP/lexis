@@ -72,6 +72,46 @@ return [
             'exists' => '指定されたユーザーブランチが存在しません',
         ],
     ],
+    'pull_request' => [
+        'user_branch_id' => [
+            'required' => 'ユーザーブランチIDは必須です',
+            'integer' => 'ユーザーブランチIDは整数である必要があります',
+            'exists' => '指定されたユーザーブランチが存在しません',
+        ],
+        'title' => [
+            'required' => 'プルリクエストタイトルは必須です',
+            'string' => 'プルリクエストタイトルは文字列である必要があります',
+            'max' => 'プルリクエストタイトルは255文字以内で入力してください',
+        ],
+        'description' => [
+            'nullable' => 'プルリクエスト本文は任意です',
+            'string' => 'プルリクエスト本文は文字列である必要があります',
+        ],
+        'diff_items' => [
+            'required' => '差分アイテムは必須です',
+            'array' => '差分アイテムは配列である必要があります',
+        ],
+        'diff_items.*.id' => [
+            'required' => 'アイテムIDは必須です',
+            'integer' => 'アイテムIDは整数である必要があります',
+        ],
+        'diff_items.*.type' => [
+            'required' => 'アイテムタイプは必須です',
+            'string' => 'アイテムタイプは文字列である必要があります',
+            'in' => 'アイテムタイプはdocumentまたはcategoryである必要があります',
+        ],
+        'reviewers' => [
+            'nullable' => 'レビュアーは任意です',
+            'array' => 'レビュアーは配列である必要があります',
+            'max' => 'レビュアーは最大15人まで指定できます',
+        ],
+        'reviewers.*' => [
+            'required' => 'レビュアーのメールアドレスは必須です',
+            'string' => 'レビュアーのメールアドレスは文字列である必要があります',
+            'email' => '有効なメールアドレスを入力してください',
+            'exists' => '指定されたメールアドレスのユーザーが存在しません',
+        ],
+    ],
     'attributes' => [
         'name' => 'カテゴリ名',
         'slug' => 'スラッグ',
@@ -80,6 +120,12 @@ return [
         'description' => '説明',
         'categoryPath' => 'カテゴリパス',
         'user_branch_id' => 'ユーザーブランチID',
+        'title' => 'プルリクエストタイトル',
+        'diff_items' => '差分アイテム',
+        'diff_items.*.id' => 'アイテムID',
+        'diff_items.*.type' => 'アイテムタイプ',
+        'reviewers' => 'レビュアー',
+        'reviewers.*' => 'レビュアーのメールアドレス',
     ],
     'unique_slug_in_same_parent' => ':slugは既に同じカテゴリ内で使われています',
 ];

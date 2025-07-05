@@ -3,15 +3,16 @@
 namespace App\Services;
 
 use App\Constants\DocumentPathConstants;
+use App\Consts\Flag;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 
-class MarkdownFileService
+class MdFileService
 {
     /**
      * ドキュメントバージョンからMarkdownファイルを作成
      */
-    public function createDocumentMarkdown(DocumentVersion $documentVersion): string
+    public function createMdFileContent(DocumentVersion $documentVersion): string
     {
         $content = '';
 
@@ -27,16 +28,16 @@ class MarkdownFileService
         $content .= "sidebar_label: {$documentVersion->sidebar_label}\n";
         $content .= "file_order: {$documentVersion->file_order}\n";
 
-        // ステータスがdraftの場合のみdraftフラグを追加
-        if ($documentVersion->status === 'draft') {
+        // is_publicが0の場合のみdraftフラグを追加
+        if ($documentVersion->is_public === Flag::FALSE) {
             $content .= "draft: true\n";
         }
 
-        if ($documentVersion->last_reviewed_by) {
-            $content .= "last_reviewed_by: {$documentVersion->last_reviewed_by}\n";
+        // last_edited_byが存在する場合のみ追加
+        if ($documentVersion->last_edited_by) {
+            $content .= "last_edited_by: {$documentVersion->last_edited_by}\n";
         }
 
-        $content .= "last_edited_by: {$documentVersion->last_edited_by}\n";
         $content .= "---\n";
 
         // コンテンツを追加
@@ -80,22 +81,6 @@ class MarkdownFileService
         }
 
         $path .= '/'.$slug.DocumentPathConstants::DOCUMENT_FILE_EXTENSION;
-
-        return $path;
-    }
-
-    /**
-     * カテゴリファイルパスを生成
-     */
-    public function generateCategoryFilePath(string $slug, ?string $categoryPath = null): string
-    {
-        $path = DocumentPathConstants::DOCS_BASE_PATH;
-
-        if ($categoryPath) {
-            $path .= '/'.trim($categoryPath, '/');
-        }
-
-        $path .= '/'.$slug.'/_category.json';
 
         return $path;
     }

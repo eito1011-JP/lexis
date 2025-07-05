@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\UserBranchPrStatus;
@@ -12,8 +13,9 @@ use App\Models\DocumentVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
+use App\Services\CategoryFolderService;
 use App\Services\GitService;
-use App\Services\MarkdownFileService;
+use App\Services\MdFileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,12 +25,15 @@ class UserBranchController extends ApiBaseController
 {
     protected GitService $gitService;
 
-    protected MarkdownFileService $markdownFileService;
+    protected MdFileService $mdFileService;
 
-    public function __construct(GitService $gitService, MarkdownFileService $markdownFileService)
+    protected CategoryFolderService $categoryFolderService;
+
+    public function __construct(GitService $gitService, MdFileService $mdFileService, CategoryFolderService $categoryFolderService)
     {
         $this->gitService = $gitService;
-        $this->markdownFileService = $markdownFileService;
+        $this->mdFileService = $mdFileService;
+        $this->categoryFolderService = $categoryFolderService;
     }
 
     /**
@@ -71,6 +76,8 @@ class UserBranchController extends ApiBaseController
     public function createPullRequest(CreatePullRequestRequest $request): JsonResponse
     {
         DB::beginTransaction();
+
+        Log::info('createPullRequest: '.json_encode($request->all()));
 
         try {
             // 1. 認証ユーザーか確認
@@ -142,9 +149,11 @@ class UserBranchController extends ApiBaseController
             $treeItems = [];
 
             foreach ($documentVersions as $documentVersion) {
-                $markdownContent = $this->markdownFileService->createDocumentMarkdown($documentVersion);
-                $filePath = $this->markdownFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-
+                $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
+                Log::info('slug: '.$documentVersion->slug);
+                Log::info('category_path: '.$documentVersion->category_path);
+                $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
+                Log::info('filePath: '.$filePath);
                 $treeItems[] = [
                     'path' => $filePath,
                     'mode' => '100644',
@@ -154,17 +163,7 @@ class UserBranchController extends ApiBaseController
             }
 
             foreach ($documentCategories as $documentCategory) {
-                $markdownContent = $this->markdownFileService->createCategoryMarkdown($documentCategory);
-                $filePath = $this->markdownFileService->generateFilePath($documentCategory->slug, $documentCategory->parent_path);
-
-                $treeItems[] = [
-                    'path' => $filePath,
-                    'mode' => '100644',
-                    'type' => 'blob',
-                    'content' => $markdownContent,
-                ];
-
-                // _category_.jsonファイルも追加
+                // _category_.jsonファイルの内容を作成
                 $categoryJsonData = [
                     'label' => $documentCategory->sidebar_label,
                     'position' => $documentCategory->position,
@@ -174,8 +173,11 @@ class UserBranchController extends ApiBaseController
                     ],
                 ];
                 $categoryJsonContent = json_encode($categoryJsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                $categoryFolderPath = trim($documentCategory->parent_path, '/').'/'.$documentCategory->slug;
 
+                $categoryFolderPath = $this->categoryFolderService->generateCategoryFilePath($documentCategory->slug, $documentCategory->parent_id && $documentCategory->parent_id !== DocumentCategoryConstants::DEFAULT_CATEGORY_ID ? $documentCategory->parent_id : null);
+
+                Log::info('categoryFolderPath: '.$categoryFolderPath);
+                // _category_.jsonファイルを作成
                 $treeItems[] = [
                     'path' => $categoryFolderPath.'/_category_.json',
                     'mode' => '100644',
@@ -183,15 +185,12 @@ class UserBranchController extends ApiBaseController
                     'content' => $categoryJsonContent,
                 ];
 
-                // 元のカテゴリJSONファイルも追加
-                $originalCategoryJsonContent = $this->markdownFileService->createCategoryJson($documentCategory);
-                $originalCategoryJsonPath = $this->markdownFileService->generateCategoryFilePath($documentCategory->slug, $documentCategory->parent_path);
-
+                // .gitkeepファイルを作成（空のフォルダをGitで追跡するため）
                 $treeItems[] = [
-                    'path' => $originalCategoryJsonPath,
+                    'path' => $categoryFolderPath.'/.gitkeep',
                     'mode' => '100644',
                     'type' => 'blob',
-                    'content' => $originalCategoryJsonContent,
+                    'content' => '',
                 ];
             }
 

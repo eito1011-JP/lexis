@@ -270,12 +270,30 @@ export default function DiffPage(): JSX.Element {
         });
       }
 
+      // レビュアーのメールアドレスを取得
+      const reviewerEmails =
+        selectedReviewers.length > 0
+          ? users.filter(user => selectedReviewers.includes(user.id)).map(user => user.email)
+          : undefined;
+
+      // デバッグログ
+      console.log('送信データ:', {
+        user_branch_id: parseInt(userBranchId),
+        title: prTitle || '更新内容の提出',
+        description: prDescription || 'このPRはハンドブックの更新を含みます。',
+        diff_items: diffItems,
+        reviewers: reviewerEmails,
+        selectedReviewers,
+        users: users.map(u => ({ id: u.id, email: u.email })),
+      });
+
       // PRタイトル・説明をAPIに渡す
       const response = await createPullRequest({
         user_branch_id: parseInt(userBranchId),
         title: prTitle || '更新内容の提出',
-        body: prDescription || 'このPRはハンドブックの更新を含みます。',
+        description: prDescription || 'このPRはハンドブックの更新を含みます。',
         diff_items: diffItems,
+        reviewers: reviewerEmails,
       });
 
       if (response.success) {
