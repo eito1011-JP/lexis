@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Constants\DocumentCategoryConstants;
+use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\UserBranchPrStatus;
@@ -275,6 +276,7 @@ class UserBranchController extends ApiBaseController
 
             // 13. ユーザーブランチのステータスを更新
             $userBranch->update([
+                'is_active' => Flag::FALSE,
                 'pr_status' => UserBranchPrStatus::OPENED->value,
             ]);
 

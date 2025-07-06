@@ -5,6 +5,7 @@ import LoginPage from './pages/login';
 import SignupPage from './pages/signup';
 import CreateDocumentPage from './pages/documents/create';
 import EditDocumentPage from './pages/documents/[slug]/edit';
+import ChangeSuggestionsPage from './pages/change-suggestions';
 import { ROUTE_PATHS } from './routes';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -15,6 +16,7 @@ function App() {
         <Route path={ROUTE_PATHS.home} element={<DocumentsPage />} />
         <Route path={ROUTE_PATHS.login} element={<LoginPage />} />
         <Route path={ROUTE_PATHS.signup} element={<SignupPage />} />
+        <Route path={ROUTE_PATHS['change-suggestions']} element={<ChangeSuggestionsPage />} />
         <Route path={ROUTE_PATHS.documents} element={<DocumentsPage />} />
         <Route path={ROUTE_PATHS['create-document']} element={<CreateDocumentPage />} />
         <Route path={ROUTE_PATHS['edit-document']} element={<EditDocumentPage />} />

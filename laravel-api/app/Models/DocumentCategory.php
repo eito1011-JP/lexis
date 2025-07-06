@@ -68,10 +68,14 @@ class DocumentCategory extends Model
     public static function getSubCategories(int $parentId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('slug', 'sidebar_label', 'position')
-            ->where('parent_id', $parentId);
+            ->where('parent_id', $parentId)
+            ->orWhere('status', 'merged');
 
         if ($userBranchId) {
-            $query->where('user_branch_id', $userBranchId);
+            $query->where(function ($q) use ($userBranchId) {
+                $q->where('user_branch_id', $userBranchId)
+                    ->orWhere('status', 'draft');
+            });
         }
 
         return $query->orderBy('position', 'asc')->get();

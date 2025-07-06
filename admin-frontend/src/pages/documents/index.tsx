@@ -95,7 +95,7 @@ export default function DocumentsPage(): JSX.Element {
   useEffect(() => {
     const getDocuments = async () => {
       try {
-        const response = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENTS.GET);
+        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}`);
 
         if (response) {
           setCategories(response.categories);

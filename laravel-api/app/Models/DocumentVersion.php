@@ -39,18 +39,16 @@ class DocumentVersion extends Model
     /**
      * カテゴリのドキュメントを取得（ブランチ別）
      */
-    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
+    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null, ?string $status = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
-            ->where('category_id', $categoryId);
+            ->where('category_id', $categoryId)
+            ->orWhere('status', 'merged');
 
         if ($userBranchId) {
             $query->where(function ($q) use ($userBranchId) {
-                $q->whereIn('status', ['pushed', 'merged'])
-                    ->orWhere(function ($subQ) use ($userBranchId) {
-                        $subQ->where('user_branch_id', $userBranchId)
-                            ->where('status', 'draft');
-                    });
+                $q->where('user_branch_id', $userBranchId)
+                    ->orWhere('status', 'draft');
             });
         }
 

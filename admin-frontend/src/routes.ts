@@ -6,6 +6,7 @@ export const ROUTES = {
   CREATE_DOCUMENT: 'create-document',
   EDIT_DOCUMENT: 'edit-document',
   DOCUMENT_BY_SLUG: 'document-by-slug',
+  CHANGE_SUGGESTIONS: 'change-suggestions',
 } as const;
 
 export const ROUTE_PATHS = {
@@ -15,7 +16,8 @@ export const ROUTE_PATHS = {
   [ROUTES.DOCUMENTS]: '/documents',
   [ROUTES.CREATE_DOCUMENT]: '/documents/create',
   [ROUTES.EDIT_DOCUMENT]: '/documents/**/edit',
-  [ROUTES.DOCUMENT_BY_SLUG]: '/documents/:paths*',
+  [ROUTES.DOCUMENT_BY_SLUG]: '/documents/:paths/*',
+  [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
 } as const;
 
 export const generatePath = (

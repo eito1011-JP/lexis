@@ -75,11 +75,13 @@ class DocumentController extends ApiBaseController
             // カテゴリIDを取得（パスから）
             $parentId = DocumentCategory::getIdFromPath($categoryPath);
 
+            $userBranchId = $user->userBranches()->active()->orderBy('id', 'desc')->first()->id ?? null;
+
             // サブカテゴリを取得
-            $subCategories = DocumentCategory::getSubCategories($parentId, $user->userBranches()->id ?? null);
+            $subCategories = DocumentCategory::getSubCategories($parentId, $userBranchId);
 
             // ドキュメントを取得
-            $documents = DocumentVersion::getDocumentsByCategoryId($parentId, $user->userBranches()->id ?? null);
+            $documents = DocumentVersion::getDocumentsByCategoryId($parentId, $userBranchId);
 
             // ソート処理
             $sortedDocuments = $documents
