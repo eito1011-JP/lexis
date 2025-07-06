@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Enums\UserBranchPrStatus;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchDiffRequest;
@@ -300,7 +301,6 @@ class UserBranchController extends ApiBaseController
     public function fetchDiff(FetchDiffRequest $request): JsonResponse
     {
         try {
-
             $user = $this->getUserFromSession();
 
             if (! $user) {
@@ -322,45 +322,42 @@ class UserBranchController extends ApiBaseController
                 ])
                 ->findOrFail($request->user_branch_id);
 
-            if (! $userBranch) {
-                return response()->json([
-                    'error' => 'ユーザーブランチが見つかりません',
-                ], 404);
-            }
-
-            // document_versionsを取得（current_version_idとoriginal_version_idに紐づいたもの）
+            // 結果を格納するコレクション
             $documentVersions = collect();
             $documentCategories = collect();
             $originalDocumentVersions = collect();
             $originalDocumentCategories = collect();
 
             foreach ($userBranch->editStartVersions as $editStartVersion) {
-                if ($editStartVersion->target_type === 'document') {
-                    if ($editStartVersion->currentDocumentVersion) {
-                        $documentVersions->push($editStartVersion->currentDocumentVersion);
+                $currentObject = $editStartVersion->getCurrentObject();
+                $originalObject = $editStartVersion->getOriginalObject();
+                $isNewCreation = $editStartVersion->original_version_id === $editStartVersion->current_version_id;
+                $isDocument = $editStartVersion->target_type === EditStartVersionTargetType::DOCUMENT->value;
+
+                // 現在のオブジェクトを追加
+                if ($currentObject) {
+                    if ($isDocument) {
+                        $documentVersions->push($currentObject);
+                    } else {
+                        $documentCategories->push($currentObject);
                     }
-                    // original_version_idとcurrent_version_idが異なる場合のみoriginalに追加（新規作成でない場合）
-                    if ($editStartVersion->originalDocumentVersion &&
-                        $editStartVersion->original_version_id !== $editStartVersion->current_version_id) {
-                        $originalDocumentVersions->push($editStartVersion->originalDocumentVersion);
-                    }
-                } elseif ($editStartVersion->target_type === 'category') {
-                    if ($editStartVersion->currentCategory) {
-                        $documentCategories->push($editStartVersion->currentCategory);
-                    }
-                    // original_version_idとcurrent_version_idが異なる場合のみoriginalに追加（新規作成でない場合）
-                    if ($editStartVersion->originalCategory &&
-                        $editStartVersion->original_version_id !== $editStartVersion->current_version_id) {
-                        $originalDocumentCategories->push($editStartVersion->originalCategory);
+                }
+
+                // 編集の場合のみ元のオブジェクトを追加（新規作成でない場合）
+                if ($originalObject && ! $isNewCreation) {
+                    if ($isDocument) {
+                        $originalDocumentVersions->push($originalObject);
+                    } else {
+                        $originalDocumentCategories->push($originalObject);
                     }
                 }
             }
 
             return response()->json([
-                'document_versions' => $documentVersions->unique('id')->values(),
-                'document_categories' => $documentCategories->unique('id')->values(),
-                'original_document_versions' => $originalDocumentVersions->unique('id')->values(),
-                'original_document_categories' => $originalDocumentCategories->unique('id')->values(),
+                'document_versions' => $documentVersions->unique('id')->values()->toArray(),
+                'document_categories' => $documentCategories->unique('id')->values()->toArray(),
+                'original_document_versions' => $originalDocumentVersions->unique('id')->values()->toArray(),
+                'original_document_categories' => $originalDocumentCategories->unique('id')->values()->toArray(),
             ]);
 
         } catch (\Exception $e) {

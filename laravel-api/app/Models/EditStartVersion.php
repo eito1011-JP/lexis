@@ -66,4 +66,32 @@ class EditStartVersion extends Model
     {
         return $this->belongsTo(DocumentCategory::class, 'current_version_id');
     }
+
+    /**
+     * target_typeに基づいてオリジナルオブジェクトを動的に取得（クエリビルダー使用）
+     */
+    public function getOriginalObject()
+    {
+        if ($this->target_type === 'document') {
+            return DocumentVersion::withTrashed()->find($this->original_version_id);
+        } elseif ($this->target_type === 'category') {
+            return DocumentCategory::withTrashed()->find($this->original_version_id);
+        }
+
+        return null;
+    }
+
+    /**
+     * target_typeに基づいて現在のオブジェクトを動的に取得（クエリビルダー使用）
+     */
+    public function getCurrentObject()
+    {
+        if ($this->target_type === 'document') {
+            return DocumentVersion::withTrashed()->find($this->current_version_id);
+        } elseif ($this->target_type === 'category') {
+            return DocumentCategory::withTrashed()->find($this->current_version_id);
+        }
+
+        return null;
+    }
 }

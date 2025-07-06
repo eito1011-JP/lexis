@@ -10,8 +10,9 @@ export interface DiffItem {
 export interface CreatePullRequestRequest {
   user_branch_id: number;
   title: string;
-  body?: string;
+  description?: string;
   diff_items: DiffItem[];
+  reviewers?: string[];
 }
 
 // プルリクエスト作成レスポンスの型定義
