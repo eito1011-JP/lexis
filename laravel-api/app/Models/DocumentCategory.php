@@ -69,14 +69,13 @@ class DocumentCategory extends Model
     {
         $query = self::select('slug', 'sidebar_label', 'position')
             ->where('parent_id', $parentId)
-            ->orWhere('status', 'merged');
-
-        if ($userBranchId) {
-            $query->where(function ($q) use ($userBranchId) {
-                $q->where('user_branch_id', $userBranchId)
-                    ->orWhere('status', 'draft');
+            ->where(function ($q) use ($userBranchId) {
+                $q->where('status', 'merged')
+                    ->orWhere(function ($subQ) use ($userBranchId) {
+                        $subQ->where('user_branch_id', $userBranchId)
+                            ->where('status', 'draft');
+                    });
             });
-        }
 
         return $query->orderBy('position', 'asc')->get();
     }

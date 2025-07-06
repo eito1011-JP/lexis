@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class DocumentVersion extends Model
 {
@@ -39,18 +40,17 @@ class DocumentVersion extends Model
     /**
      * カテゴリのドキュメントを取得（ブランチ別）
      */
-    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null, ?string $status = null): \Illuminate\Database\Eloquent\Collection
+    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
             ->where('category_id', $categoryId)
-            ->orWhere('status', 'merged');
-
-        if ($userBranchId) {
-            $query->where(function ($q) use ($userBranchId) {
-                $q->where('user_branch_id', $userBranchId)
-                    ->orWhere('status', 'draft');
+            ->where(function ($q) use ($userBranchId) {
+                $q->where('status', 'merged')
+                    ->orWhere(function ($subQ) use ($userBranchId) {
+                        $subQ->where('user_branch_id', $userBranchId)
+                            ->where('status', 'draft');
+                    });
             });
-        }
 
         return $query->get();
     }
