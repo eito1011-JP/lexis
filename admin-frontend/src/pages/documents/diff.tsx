@@ -30,7 +30,7 @@ type DiffItem = {
 };
 
 type DiffFieldInfo = {
-  status: 'added' | 'removed' | 'modified' | 'unchanged';
+  status: 'added' | 'deleted' | 'modified' | 'unchanged';
   current: any;
   original: any;
 };
@@ -38,7 +38,7 @@ type DiffFieldInfo = {
 type DiffDataInfo = {
   id: number;
   type: 'document' | 'category';
-  operation: 'create' | 'update' | 'delete';
+  operation: 'created' | 'updated' | 'deleted';
   changed_fields: Record<string, DiffFieldInfo>;
 };
 
@@ -48,16 +48,6 @@ type DiffResponse = {
   original_document_versions?: DiffItem[];
   original_document_categories?: DiffItem[];
   diff_data: DiffDataInfo[];
-};
-
-// 差分表示コンポーネント
-const DiffField = ({ label, value }: { label: string; value?: string }) => {
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-      <div className="bg-gray-800 rounded-md p-3 text-sm text-gray-300">{value || '-'}</div>
-    </div>
-  );
 };
 
 // 新しい差分表示コンポーネント（GitHubライク）
@@ -94,7 +84,7 @@ const SmartDiffValue = ({
         </div>
       )}
 
-      {fieldInfo.status === 'removed' && (
+      {fieldInfo.status === 'deleted' && (
         <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
           {renderContent(renderValue(fieldInfo.original), isMarkdown)}
         </div>
@@ -370,7 +360,24 @@ export default function DiffPage(): JSX.Element {
     currentValue: any,
     originalValue?: any
   ): DiffFieldInfo => {
-    if (!diffInfo || !diffInfo.changed_fields[fieldName]) {
+    if (!diffInfo) {
+      return {
+        status: 'unchanged',
+        current: currentValue,
+        original: originalValue,
+      };
+    }
+
+    // 削除されたアイテムの場合、すべてのフィールドを削除済みとして扱う
+    if (diffInfo.operation === 'deleted') {
+      return {
+        status: 'deleted',
+        current: null,
+        original: originalValue,
+      };
+    }
+
+    if (!diffInfo.changed_fields[fieldName]) {
       return {
         status: 'unchanged',
         current: currentValue,

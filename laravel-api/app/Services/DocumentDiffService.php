@@ -27,6 +27,11 @@ class DocumentDiffService
             $isNewCreation = $this->isNewCreation($editStartVersion, $currentObject);
             $isDocument = $editStartVersion->target_type === EditStartVersionTargetType::DOCUMENT->value;
 
+            // 同一ブランチで作成されたデータが削除された場合は差分から除外
+            if ($isNewCreation && $currentObject && $currentObject->is_deleted) {
+                continue;
+            }
+
             // 現在のオブジェクトを追加
             if ($currentObject) {
                 if ($isDocument) {
@@ -36,7 +41,6 @@ class DocumentDiffService
                 }
             }
 
-            Log::info('isNewCreation: '.$isNewCreation);
             // 同一ブランチで作成されたデータでない場合のみ元のオブジェクトを追加
             if ($originalObject && ! $isNewCreation) {
                 if ($isDocument) {
@@ -50,6 +54,12 @@ class DocumentDiffService
             $diffInfo = $this->generateDiffInfo($currentObject, $originalObject, $isDocument, $isNewCreation);
             $diffData->push($diffInfo);
         }
+
+        Log::info('documentVersions: '.json_encode($documentVersions->values()->toArray()));
+        Log::info('documentCategories: '.json_encode($documentCategories->values()->toArray()));
+        Log::info('originalDocumentVersions: '.json_encode($originalDocumentVersions->values()->toArray()));
+        Log::info('originalDocumentCategories: '.json_encode($originalDocumentCategories->values()->toArray()));
+        Log::info('diffData: '.json_encode($diffData->toArray()));
 
         return [
             'document_versions' => $documentVersions->values()->toArray(),
@@ -106,14 +116,16 @@ class DocumentDiffService
     private function determineOperation($currentObject, $originalObject, bool $isNewCreation): string
     {
         if ($isNewCreation) {
-            return 'create';
+            return 'created';
         }
 
-        if ($currentObject && property_exists($currentObject, 'is_deleted') && $currentObject->is_deleted) {
-            return 'delete';
+        Log::info('currentObject: '.json_encode($currentObject));
+        Log::info('is_deleted: '.json_encode($currentObject->is_deleted));
+        if ($currentObject && $currentObject->is_deleted) {
+            return 'deleted';
         }
 
-        return 'update';
+        return 'updated';
     }
 
     /**
@@ -136,12 +148,12 @@ class DocumentDiffService
         if ($currentDocument && property_exists($currentDocument, 'is_deleted') && $currentDocument->is_deleted) {
             // 削除時は全フィールドが削除対象
             return [
-                'sidebar_label' => ['status' => 'removed', 'current' => null, 'original' => $originalDocument->sidebar_label],
-                'slug' => ['status' => 'removed', 'current' => null, 'original' => $originalDocument->slug],
-                'content' => ['status' => 'removed', 'current' => null, 'original' => $originalDocument->content],
-                'category_id' => ['status' => 'removed', 'current' => null, 'original' => $originalDocument->category_id],
-                'file_order' => ['status' => 'removed', 'current' => null, 'original' => $originalDocument->file_order],
-                'is_public' => ['status' => 'removed', 'current' => null, 'original' => $originalDocument->status === 'published'],
+                'sidebar_label' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->sidebar_label],
+                'slug' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->slug],
+                'content' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->content],
+                'category_id' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->category_id],
+                'file_order' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->file_order],
+                'is_public' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->status === 'published'],
             ];
         }
 
@@ -192,11 +204,11 @@ class DocumentDiffService
         if ($currentCategory && property_exists($currentCategory, 'is_deleted') && $currentCategory->is_deleted) {
             // 削除時は全フィールドが削除対象
             return [
-                'sidebar_label' => ['status' => 'removed', 'current' => null, 'original' => $originalCategory->sidebar_label],
-                'slug' => ['status' => 'removed', 'current' => null, 'original' => $originalCategory->slug],
-                'description' => ['status' => 'removed', 'current' => null, 'original' => $originalCategory->description],
-                'position' => ['status' => 'removed', 'current' => null, 'original' => $originalCategory->position],
-                'parent_id' => ['status' => 'removed', 'current' => null, 'original' => $originalCategory->parent_id],
+                'sidebar_label' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->sidebar_label],
+                'slug' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->slug],
+                'description' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->description],
+                'position' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->position],
+                'parent_id' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->parent_id],
             ];
         }
 
