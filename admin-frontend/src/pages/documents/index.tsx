@@ -208,6 +208,16 @@ export default function DocumentsPage(): JSX.Element {
           },
         ]);
       }
+
+      // カテゴリ作成後にhasUserChangesの状態を再確認
+      const hasUserChanges = await apiClient.get(
+        API_CONFIG.ENDPOINTS.USER_BRANCHES.HAS_USER_CHANGES
+      );
+      if (hasUserChanges && hasUserChanges.has_user_changes) {
+        setShowPrSubmitButton(true);
+        setUserBranchId(hasUserChanges.user_branch_id);
+      }
+
       handleCloseModal();
     } catch (err) {
       console.error('カテゴリ作成エラー:', err);
