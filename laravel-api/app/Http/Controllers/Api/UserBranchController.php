@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
-use App\Enums\EditStartVersionTargetType;
 use App\Enums\UserBranchPrStatus;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchDiffRequest;
@@ -15,6 +14,7 @@ use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
 use App\Services\CategoryFolderService;
+use App\Services\DocumentDiffService;
 use App\Services\GitService;
 use App\Services\MdFileService;
 use Illuminate\Http\JsonResponse;
@@ -30,11 +30,18 @@ class UserBranchController extends ApiBaseController
 
     protected CategoryFolderService $categoryFolderService;
 
-    public function __construct(GitService $gitService, MdFileService $mdFileService, CategoryFolderService $categoryFolderService)
-    {
+    protected DocumentDiffService $documentDiffService;
+
+    public function __construct(
+        GitService $gitService,
+        MdFileService $mdFileService,
+        CategoryFolderService $categoryFolderService,
+        DocumentDiffService $documentDiffService
+    ) {
         $this->gitService = $gitService;
         $this->mdFileService = $mdFileService;
         $this->categoryFolderService = $categoryFolderService;
+        $this->documentDiffService = $documentDiffService;
     }
 
     /**
@@ -77,8 +84,6 @@ class UserBranchController extends ApiBaseController
     public function createPullRequest(CreatePullRequestRequest $request): JsonResponse
     {
         DB::beginTransaction();
-
-        Log::info('createPullRequest: '.json_encode($request->all()));
 
         try {
             // 1. 認証ユーザーか確認
@@ -322,43 +327,9 @@ class UserBranchController extends ApiBaseController
                 ])
                 ->findOrFail($request->user_branch_id);
 
-            // 結果を格納するコレクション
-            $documentVersions = collect();
-            $documentCategories = collect();
-            $originalDocumentVersions = collect();
-            $originalDocumentCategories = collect();
+            $diffResult = $this->documentDiffService->generateDiffData($userBranch->editStartVersions);
 
-            foreach ($userBranch->editStartVersions as $editStartVersion) {
-                $currentObject = $editStartVersion->getCurrentObject();
-                $originalObject = $editStartVersion->getOriginalObject();
-                $isNewCreation = $editStartVersion->original_version_id === $editStartVersion->current_version_id;
-                $isDocument = $editStartVersion->target_type === EditStartVersionTargetType::DOCUMENT->value;
-
-                // 現在のオブジェクトを追加
-                if ($currentObject) {
-                    if ($isDocument) {
-                        $documentVersions->push($currentObject);
-                    } else {
-                        $documentCategories->push($currentObject);
-                    }
-                }
-
-                // 編集の場合のみ元のオブジェクトを追加（新規作成でない場合）
-                if ($originalObject && ! $isNewCreation) {
-                    if ($isDocument) {
-                        $originalDocumentVersions->push($originalObject);
-                    } else {
-                        $originalDocumentCategories->push($originalObject);
-                    }
-                }
-            }
-
-            return response()->json([
-                'document_versions' => $documentVersions->unique('id')->values()->toArray(),
-                'document_categories' => $documentCategories->unique('id')->values()->toArray(),
-                'original_document_versions' => $originalDocumentVersions->unique('id')->values()->toArray(),
-                'original_document_categories' => $originalDocumentCategories->unique('id')->values()->toArray(),
-            ]);
+            return response()->json($diffResult);
 
         } catch (\Exception $e) {
             Log::error('Git差分の取得に失敗しました: '.$e->getMessage());

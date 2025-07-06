@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
 use App\Http\Requests\GetDocumentCategoryRequest;
@@ -162,6 +163,11 @@ class DocumentCategoryController extends ApiBaseController
                 $request->position,
                 $existingCategory->parent_id
             );
+
+            EditStartVersion::where('current_version_id', $existingCategory->id)
+                ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
+                ->first()
+                ->delete();
 
             $existingCategory->delete();
 

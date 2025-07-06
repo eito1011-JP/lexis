@@ -29,11 +29,25 @@ type DiffItem = {
   updated_at: string;
 };
 
+type DiffFieldInfo = {
+  status: 'added' | 'removed' | 'modified' | 'unchanged';
+  current: any;
+  original: any;
+};
+
+type DiffDataInfo = {
+  id: number;
+  type: 'document' | 'category';
+  operation: 'create' | 'update' | 'delete';
+  changed_fields: Record<string, DiffFieldInfo>;
+};
+
 type DiffResponse = {
   document_versions: DiffItem[];
   document_categories: DiffItem[];
   original_document_versions?: DiffItem[];
   original_document_categories?: DiffItem[];
+  diff_data: DiffDataInfo[];
 };
 
 // 差分表示コンポーネント
@@ -46,40 +60,67 @@ const DiffField = ({ label, value }: { label: string; value?: string }) => {
   );
 };
 
-// 差分表示（original: 赤, current: 緑）
-const DiffValue = ({
+// 新しい差分表示コンポーネント（GitHubライク）
+const SmartDiffValue = ({
   label,
-  original,
-  current,
+  fieldInfo,
   isMarkdown = false,
 }: {
   label: string;
-  original?: string;
-  current?: string;
+  fieldInfo: DiffFieldInfo;
   isMarkdown?: boolean;
-}) => (
-  <div className="mb-4">
-    <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-    {original !== undefined && (
-      <div className="bg-red-900/50 border border-red-800 rounded-md p-3 text-sm text-red-200 mb-1">
-        {isMarkdown ? (
-          <div dangerouslySetInnerHTML={{ __html: markdownToHtml(original || '-') }} />
-        ) : (
-          original || '-'
-        )}
-      </div>
-    )}
-    {current !== undefined && (
-      <div className="bg-green-900/50 border border-green-800 rounded-md p-3 text-sm text-green-200">
-        {isMarkdown ? (
-          <div dangerouslySetInnerHTML={{ __html: markdownToHtml(current || '-') }} />
-        ) : (
-          current || '-'
-        )}
-      </div>
-    )}
-  </div>
-);
+}) => {
+  const renderValue = (value: any) => {
+    if (value === null || value === undefined) return '-';
+    if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
+    if (typeof value === 'number') return value.toString();
+    return value;
+  };
+
+  const renderContent = (content: string, isMarkdown: boolean) => {
+    if (isMarkdown) {
+      return <div dangerouslySetInnerHTML={{ __html: markdownToHtml(content) }} />;
+    }
+    return content;
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+
+      {fieldInfo.status === 'added' && (
+        <div className="bg-green-900/30 border border-green-700 rounded-md p-3 text-sm text-green-200">
+          {renderContent(renderValue(fieldInfo.current), isMarkdown)}
+        </div>
+      )}
+
+      {fieldInfo.status === 'removed' && (
+        <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
+          {renderContent(renderValue(fieldInfo.original), isMarkdown)}
+        </div>
+      )}
+
+      {fieldInfo.status === 'modified' && (
+        <>
+          <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200 mb-1">
+            <span className="text-red-400 text-xs font-medium mr-2">-</span>
+            {renderContent(renderValue(fieldInfo.original), isMarkdown)}
+          </div>
+          <div className="bg-green-900/30 border border-green-700 rounded-md p-3 text-sm text-green-200">
+            <span className="text-green-400 text-xs font-medium mr-2">+</span>
+            {renderContent(renderValue(fieldInfo.current), isMarkdown)}
+          </div>
+        </>
+      )}
+
+      {fieldInfo.status === 'unchanged' && (
+        <div className="bg-gray-800 border border-gray-600 rounded-md p-3 text-sm text-gray-300">
+          {renderContent(renderValue(fieldInfo.current || fieldInfo.original), isMarkdown)}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // 階層パンくずリストコンポーネント
 const SlugBreadcrumb = ({ slug }: { slug: string }) => {
@@ -316,6 +357,29 @@ export default function DiffPage(): JSX.Element {
     }
   };
 
+  // 差分データをIDでマップ化
+  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
+    if (!diffData?.diff_data) return null;
+    return diffData.diff_data.find(diff => diff.id === id && diff.type === type) || null;
+  };
+
+  // フィールド情報を取得（差分データがない場合は未変更として扱う）
+  const getFieldInfo = (
+    diffInfo: DiffDataInfo | null,
+    fieldName: string,
+    currentValue: any,
+    originalValue?: any
+  ): DiffFieldInfo => {
+    if (!diffInfo || !diffInfo.changed_fields[fieldName]) {
+      return {
+        status: 'unchanged',
+        current: currentValue,
+        original: originalValue,
+      };
+    }
+    return diffInfo.changed_fields[fieldName];
+  };
+
   // セッション確認中はローディング表示
   if (isLoading) {
     return (
@@ -398,21 +462,9 @@ export default function DiffPage(): JSX.Element {
 
   const originalDocs = mapBySlug(diffData.original_document_versions || []);
   const currentDocs = mapBySlug(diffData.document_versions || []);
-  const allDocSlugs = Array.from(
-    new Set([
-      ...(diffData.original_document_versions || []).map(d => d.slug),
-      ...(diffData.document_versions || []).map(d => d.slug),
-    ])
-  );
 
   const originalCats = mapBySlug(diffData.original_document_categories || []);
   const currentCats = mapBySlug(diffData.document_categories || []);
-  const allCatSlugs = Array.from(
-    new Set([
-      ...(diffData.original_document_categories || []).map(c => c.slug),
-      ...(diffData.document_categories || []).map(c => c.slug),
-    ])
-  );
 
   return (
     <AdminLayout title="差分確認">
@@ -627,34 +679,58 @@ export default function DiffPage(): JSX.Element {
         </div>
 
         {/* 変更されたカテゴリの詳細 */}
-        {allCatSlugs.length > 0 && (
+        {diffData.document_categories.length > 0 && (
           <div className="mb-10">
             <h2 className="text-xl font-bold mb-4 flex items-center">
               <Folder className="w-5 h-5 mr-2" />
-              カテゴリの変更 × {allCatSlugs.length}
+              カテゴリの変更 × {diffData.document_categories.length}
             </h2>
             <div className="space-y-4 mr-20">
-              {allCatSlugs.map(slug => {
-                const original = originalCats[slug];
-                const current = currentCats[slug];
+              {diffData.document_categories.map(category => {
+                const diffInfo = getDiffInfoById(category.id, 'category');
+                const originalCategory = originalCats[category.slug];
+
                 return (
-                  <div key={slug} className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-                    <SlugBreadcrumb slug={slug} />
-                    <DiffValue label="Slug" original={original?.slug} current={current?.slug} />
-                    <DiffValue
+                  <div
+                    key={category.id}
+                    className="bg-gray-900 rounded-lg border border-gray-800 p-6"
+                  >
+                    <SlugBreadcrumb slug={category.slug} />
+                    <SmartDiffValue
+                      label="Slug"
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'slug',
+                        category.slug,
+                        originalCategory?.slug
+                      )}
+                    />
+                    <SmartDiffValue
                       label="カテゴリ名"
-                      original={original?.sidebar_label}
-                      current={current?.sidebar_label}
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'sidebar_label',
+                        category.sidebar_label,
+                        originalCategory?.sidebar_label
+                      )}
                     />
-                    <DiffValue
+                    <SmartDiffValue
                       label="表示順"
-                      original={original?.position?.toString()}
-                      current={current?.position?.toString()}
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'position',
+                        category.position,
+                        originalCategory?.position
+                      )}
                     />
-                    <DiffValue
+                    <SmartDiffValue
                       label="説明"
-                      original={original?.description}
-                      current={current?.description}
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'description',
+                        category.description,
+                        originalCategory?.description
+                      )}
                     />
                   </div>
                 );
@@ -666,46 +742,58 @@ export default function DiffPage(): JSX.Element {
         {/* ドキュメントの変更数表示 */}
         <h2 className="text-xl font-bold mb-4 flex items-center">
           <DocumentDetailed className="w-6 h-6 mr-2" />
-          ドキュメントの変更 × {allDocSlugs.length}
+          ドキュメントの変更 × {diffData.document_versions.length}
         </h2>
 
         {/* 変更されたドキュメントの詳細 */}
-        {allDocSlugs.length > 0 && (
+        {diffData.document_versions.length > 0 && (
           <div className="mb-8 mr-20">
             <div className="space-y-6">
-              {allDocSlugs.map(slug => {
-                const original = originalDocs[slug];
-                const current = currentDocs[slug];
+              {diffData.document_versions.map(document => {
+                const diffInfo = getDiffInfoById(document.id, 'document');
+                const originalDocument = originalDocs[document.slug];
+
                 return (
-                  <div key={slug} className="bg-gray-900 rounded-lg border border-gray-800 p-6">
-                    <SlugBreadcrumb slug={slug} />
-                    <DiffValue label="Slug" original={original?.slug} current={current?.slug} />
-                    <DiffValue
+                  <div
+                    key={document.id}
+                    className="bg-gray-900 rounded-lg border border-gray-800 p-6"
+                  >
+                    <SlugBreadcrumb slug={document.slug} />
+                    <SmartDiffValue
+                      label="Slug"
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'slug',
+                        document.slug,
+                        originalDocument?.slug
+                      )}
+                    />
+                    <SmartDiffValue
                       label="タイトル"
-                      original={original?.sidebar_label}
-                      current={current?.sidebar_label}
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'sidebar_label',
+                        document.sidebar_label,
+                        originalDocument?.sidebar_label
+                      )}
                     />
-                    <DiffValue
+                    <SmartDiffValue
                       label="公開設定"
-                      original={
-                        original
-                          ? original.status === 'published'
-                            ? '公開する'
-                            : '公開しない'
-                          : undefined
-                      }
-                      current={
-                        current
-                          ? current.status === 'published'
-                            ? '公開する'
-                            : '公開しない'
-                          : undefined
-                      }
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'is_public',
+                        document.status === 'published',
+                        originalDocument?.status === 'published'
+                      )}
                     />
-                    <DiffValue
+                    <SmartDiffValue
                       label="本文"
-                      original={original?.content}
-                      current={current?.content}
+                      fieldInfo={getFieldInfo(
+                        diffInfo,
+                        'content',
+                        document.content,
+                        originalDocument?.content
+                      )}
                       isMarkdown
                     />
                   </div>
