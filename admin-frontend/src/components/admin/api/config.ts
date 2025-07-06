@@ -36,5 +36,8 @@ export const API_CONFIG = {
     PULL_REQUEST_REVIEWERS: {
       GET: '/api/admin/pull-request-reviewers',
     },
+    PULL_REQUESTS: {
+      GET: '/api/admin/pull-requests',
+    },
   },
 };

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
-import { Folder } from '@/components/icon/common/Folder';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
@@ -28,6 +27,15 @@ type DocumentItem = {
   category_path?: string;
 };
 
+// 変更提案の型定義
+type ChangeProposal = {
+  id: number;
+  title: string;
+  status: string;
+  email: string | null;
+  created_at: string;
+};
+
 /**
  * 変更提案一覧ページコンポーネント
  */
@@ -35,8 +43,10 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [changeProposals, setChangeProposals] = useState<ChangeProposal[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [documentsLoading, setDocumentsLoading] = useState(true);
+  const [changeProposalsLoading, setChangeProposalsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -50,12 +60,11 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   useEffect(() => {
     const getChangeSuggestions = async () => {
       try {
-        // document_version_status=pushed&document_category_status=pushedを追加
-        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}`);
+        // 変更提案一覧を取得
+        const changeProposalsResponse = await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}`);
 
-        if (response) {
-          setCategories(response.categories);
-          setDocuments(response.documents);
+        if (changeProposalsResponse) {
+          setChangeProposals(changeProposalsResponse.pull_requests || []);
         }
       } catch (err) {
         console.error('変更提案取得エラー:', err);
@@ -63,6 +72,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
       } finally {
         setCategoriesLoading(false);
         setDocumentsLoading(false);
+        setChangeProposalsLoading(false);
       }
     };
 
@@ -100,13 +110,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     }
   };
 
-  // 削除確認モーダルを開く
-  const openDeleteModal = (document: DocumentItem) => {
-    setDocumentToDelete(document);
-    setShowDeleteModal(true);
-    setOpenMenuIndex(null);
-  };
-
   // 削除確認モーダルを閉じる
   const closeDeleteModal = () => {
     setShowDeleteModal(false);
@@ -125,43 +128,9 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     );
   }
 
-  // カテゴリセクション
-  const renderCategorySection = () => {
-    if (categoriesLoading) {
-      return (
-        <div className="flex justify-center py-6">
-          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
-        </div>
-      );
-    }
-
-    if (categories.length === 0) {
-      return <p className="text-gray-400 py-4">変更提案されたカテゴリがありません</p>;
-    }
-
-    return (
-      <div className="grid grid-cols-2 gap-4">
-        {categories.map((category, index) => (
-          <div
-            key={index}
-            className="flex items-center justify-between p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
-            onClick={() => {
-              window.location.href = `/admin/documents/${category.slug}`;
-            }}
-          >
-            <div className="flex items-center">
-              <Folder className="w-5 h-5 mr-2" />
-              <span>{category.sidebar_label}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // ドキュメント一覧テーブル
-  const renderDocumentTable = () => {
-    if (documentsLoading) {
+  // 変更提案一覧テーブル
+  const renderChangeProposalsTable = () => {
+    if (changeProposalsLoading) {
       return (
         <div className="flex justify-center py-6">
           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"></div>
@@ -178,69 +147,42 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                 タイトル
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                作業ステータス
+                提案者
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                最終編集者
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                公開ステータス
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                表示順序
+                作成日時
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
                 アクション
               </th>
             </tr>
           </thead>
-          {documents.length > 0 ? (
+          {changeProposals.length > 0 ? (
             <tbody className="divide-y">
-              {documents.map((document, index) => (
-                <tr key={index} className="hover:bg-gray-800">
+              {changeProposals.map((proposal, index) => (
+                <tr key={index} className="hover:bg-gray-800 border-t border-b border-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="ml-4">
                         <div className="text-sm font-medium text-white">
-                          {document.sidebar_label || document.slug}
+                          {proposal.title}
                         </div>
-                        <div className="text-sm text-gray-400">{document.slug}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        document.status === 'pushed'
-                          ? 'bg-blue-100 text-blue-800'
-                          : document.status === 'merged'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {document.status === 'pushed'
-                        ? '確認待ち'
-                        : document.status === 'merged'
-                          ? '採用済み'
-                          : '未提出'}
-                    </span>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                    {proposal.email || '不明'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.last_edited_by || 'eito-morohashi@nexis-inc.com'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        document.is_public
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {document.is_public ? '公開' : '非公開'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {document.file_order || '-'}
+                    {(() => {
+                      const d = new Date(proposal.created_at);
+                      const yyyy = d.getFullYear();
+                      const m = d.getMonth() + 1;
+                      const dd = d.getDate();
+                      const hh = d.getHours();
+                      const mm = d.getMinutes().toString().padStart(2, '0');
+                      return `${yyyy}/${m}/${dd} ${hh}:${mm}`;
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end relative">
@@ -256,29 +198,30 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                           <div className="fixed inset-0 z-40" onClick={handleCloseMenu} />
                           {/* ThreeDotsのすぐ下にabsolute配置 */}
                           <div
-                            className="fixed  w-30 mr-6 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
+                            className="fixed w-30 mr-6 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
                             style={{ zIndex: 100 }}
                             onClick={e => e.stopPropagation()}
                           >
                             <ul className="py-1">
                               <li>
                                 <a
-                                  href={`/admin/documents/${document.slug}/edit`}
+                                  href={`/admin/change-proposals/${proposal.id}`}
                                   className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer text-left"
                                   style={{ textAlign: 'left' }}
                                 >
-                                  編集する
+                                  詳細を見る
                                 </a>
                               </li>
                               <li>
                                 <button
-                                  className="block w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-800 cursor-pointer"
+                                  className="block w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-gray-800 cursor-pointer"
                                   style={{ textAlign: 'left' }}
                                   onClick={() => {
-                                    openDeleteModal(document);
+                                    // GitHubのプルリクエストページを開く
+                                    window.open(`https://github.com/your-repo/pull/${proposal.id}`, '_blank');
                                   }}
                                 >
-                                  削除する
+                                  GitHubで開く
                                 </button>
                               </li>
                             </ul>
@@ -293,8 +236,8 @@ export default function ChangeSuggestionsPage(): JSX.Element {
           ) : (
             <tbody className="divide-y">
               <tr>
-                <td colSpan={6} className="text-gray-400 py-4">
-                  変更提案されたドキュメントがありません
+                <td colSpan={5} className="text-gray-400 py-4">
+                  変更提案がありません
                 </td>
               </tr>
             </tbody>
@@ -340,18 +283,9 @@ export default function ChangeSuggestionsPage(): JSX.Element {
             </div>
           )}
 
-          {/* ヘッダー */}
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">変更提案一覧</h1>
-          </div>
-
-          {/* ドキュメント一覧テーブル */}
-          <div className="mb-8">{renderDocumentTable()}</div>
-
-          {/* カテゴリセクション */}
+          {/* 変更提案一覧テーブル */}
           <div className="mb-8">
-            <h2 className="text-xl font-bold mb-4">カテゴリ</h2>
-            {renderCategorySection()}
+            {renderChangeProposalsTable()}
           </div>
         </div>
       </div>

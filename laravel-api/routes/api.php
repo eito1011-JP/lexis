@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
+use App\Http\Controllers\Api\PullRequestsController;
 use App\Http\Controllers\Api\UserBranchController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
@@ -38,6 +39,11 @@ Route::middleware('auth.session')->group(function () {
     // プルリクエストレビュアー関連
     Route::prefix('admin/pull-request-reviewers')->group(function () {
         Route::get('/', [PullRequestReviewerController::class, 'index']);
+    });
+
+    // プルリクエスト関連
+    Route::prefix('admin/pull-requests')->group(function () {
+        Route::get('/', [PullRequestsController::class, 'fetchPullRequests']);
     });
 
     // ドキュメント関連
