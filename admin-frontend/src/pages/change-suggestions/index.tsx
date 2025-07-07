@@ -7,6 +7,11 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
+import { formatDateTime } from '@/utils/date';
+import { Git } from '@/components/icon/common/Git';
+import { Comment } from '@/components/icon/common/Comment';
+import { CheckMark } from '@/components/icon/common/CheckMark';
+import { ChevronDown } from '@/components/icon/common/ChevronDown';
 
 // カテゴリの型定義
 type Category = {
@@ -34,6 +39,7 @@ type ChangeProposal = {
   status: string;
   email: string | null;
   created_at: string;
+  comments_count?: number;
 };
 
 /**
@@ -56,23 +62,29 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
 
   useEffect(() => {
     const getChangeSuggestions = async () => {
       try {
         // 変更提案一覧を取得
-        const changeProposalsResponse = await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}`);
+        const changeProposalsResponse = await apiClient.get(
+          `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}`
+        );
 
         if (changeProposalsResponse) {
-          setChangeProposals(changeProposalsResponse.pull_requests || []);
+          // ダミーデータを追加してコメント数を設定
+          const proposalsWithComments = (changeProposalsResponse.pull_requests || []).map(
+            (proposal: ChangeProposal) => ({
+              ...proposal,
+              comments_count: Math.floor(Math.random() * 20) + 1, // 1-20のランダムなコメント数
+            })
+          );
+          setChangeProposals(proposalsWithComments);
         }
       } catch (err) {
         console.error('変更提案取得エラー:', err);
         setApiError('変更提案の取得に失敗しました');
-      } finally {
-        setCategoriesLoading(false);
-        setDocumentsLoading(false);
-        setChangeProposalsLoading(false);
       }
     };
 
@@ -128,8 +140,17 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     );
   }
 
-  // 変更提案一覧テーブル
-  const renderChangeProposalsTable = () => {
+  // フィルタリング機能
+  const filteredProposals = changeProposals.filter(proposal => {
+    if (filterStatus === 'all') return true;
+    return proposal.status === filterStatus;
+  });
+
+  const pendingCount = changeProposals.filter(p => p.status === 'pending').length;
+  const completedCount = changeProposals.filter(p => p.status === 'completed').length;
+
+  // 変更提案一覧カード表示
+  const renderChangeProposalsCards = () => {
     if (changeProposalsLoading) {
       return (
         <div className="flex justify-center py-6">
@@ -138,124 +159,144 @@ export default function ChangeSuggestionsPage(): JSX.Element {
       );
     }
 
+    if (filteredProposals.length === 0) {
+      return (
+        <div className="text-center py-12 text-gray-400">
+          {filterStatus === 'all'
+            ? '変更提案がありません'
+            : `${filterStatus === 'pending' ? '未対応' : '完了済み'}の変更提案がありません`}
+        </div>
+      );
+    }
+
     return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y">
-          <thead className="">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                タイトル
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                提案者
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                作成日時
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                アクション
-              </th>
-            </tr>
-          </thead>
-          {changeProposals.length > 0 ? (
-            <tbody className="divide-y">
-              {changeProposals.map((proposal, index) => (
-                <tr key={index} className="hover:bg-gray-800 border-t border-b border-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-white">
-                          {proposal.title}
-                        </div>
+      <div className="space-y-1">
+        {filteredProposals.map((proposal, index) => (
+          <div
+            key={proposal.id}
+            className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                {/* ステータスインジケーター */}
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 accent-green-500 border-2 border-gray-400 rounded focus:ring-2 focus:ring-green-500"
+                    checked={proposal.status === 'completed'}
+                    onChange={() => {
+                      setChangeProposals(prev =>
+                        prev.map((p, i) =>
+                          i === index
+                            ? { ...p, status: p.status === 'completed' ? 'pending' : 'completed' }
+                            : p
+                        )
+                      );
+                    }}
+                  />
+                </div>
+
+                <Git className="w-4 h-4 text-[#00D85B]" />
+
+                {/* タイトル */}
+                <div className="flex-1">
+                  <h3 className="text-white font-medium text-sm">{proposal.title}</h3>
+                  <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
+                    <span>
+                      {formatDateTime(proposal.created_at)} に {proposal.email} から提案されました
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 右側のコメント数とメニュー */}
+              <div className="flex items-center space-x-6">
+                {/* コメント数 */}
+                <div className="flex items-center text-gray-400 gap-1">
+                  <Comment className="w-7 h-7 text-gray-400 mt-2" />
+                  <span className="text-sm w-4 text-left">{proposal.comments_count || 0}</span>
+                </div>
+
+                {/* メニューボタン */}
+                <div className="relative">
+                  <button
+                    className="focus:outline-none p-1 rounded hover:bg-gray-700 transition-colors"
+                    onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
+                  >
+                    <ThreeDots className="w-4 h-4 text-gray-400" />
+                  </button>
+
+                  {openMenuIndex === index && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={handleCloseMenu} />
+                      <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50">
+                        <ul className="py-1">
+                          <li>
+                            <a
+                              href={`/admin/change-proposals/${proposal.id}`}
+                              className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer"
+                            >
+                              詳細を見る
+                            </a>
+                          </li>
+                          <li>
+                            <button
+                              className="block w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-gray-800 cursor-pointer"
+                              onClick={() => {
+                                window.open(
+                                  `https://github.com/your-repo/pull/${proposal.id}`,
+                                  '_blank'
+                                );
+                              }}
+                            >
+                              GitHubで開く
+                            </button>
+                          </li>
+                        </ul>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {proposal.email || '不明'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {(() => {
-                      const d = new Date(proposal.created_at);
-                      const yyyy = d.getFullYear();
-                      const m = d.getMonth() + 1;
-                      const dd = d.getDate();
-                      const hh = d.getHours();
-                      const mm = d.getMinutes().toString().padStart(2, '0');
-                      return `${yyyy}/${m}/${dd} ${hh}:${mm}`;
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end relative">
-                      <button
-                        className="focus:outline-none"
-                        onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
-                      >
-                        <ThreeDots className="w-4 h-4" />
-                      </button>
-                      {openMenuIndex === index && (
-                        <>
-                          {/* 背景クリックで閉じる */}
-                          <div className="fixed inset-0 z-40" onClick={handleCloseMenu} />
-                          {/* ThreeDotsのすぐ下にabsolute配置 */}
-                          <div
-                            className="fixed w-30 mr-6 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50"
-                            style={{ zIndex: 100 }}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            <ul className="py-1">
-                              <li>
-                                <a
-                                  href={`/admin/change-proposals/${proposal.id}`}
-                                  className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer text-left"
-                                  style={{ textAlign: 'left' }}
-                                >
-                                  詳細を見る
-                                </a>
-                              </li>
-                              <li>
-                                <button
-                                  className="block w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-gray-800 cursor-pointer"
-                                  style={{ textAlign: 'left' }}
-                                  onClick={() => {
-                                    // GitHubのプルリクエストページを開く
-                                    window.open(`https://github.com/your-repo/pull/${proposal.id}`, '_blank');
-                                  }}
-                                >
-                                  GitHubで開く
-                                </button>
-                              </li>
-                            </ul>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          ) : (
-            <tbody className="divide-y">
-              <tr>
-                <td colSpan={5} className="text-gray-400 py-4">
-                  変更提案がありません
-                </td>
-              </tr>
-            </tbody>
-          )}
-        </table>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     );
   };
 
   return (
-    <AdminLayout title="変更提案一覧">
+    <AdminLayout title="変更提案">
       <div className="flex flex-col h-full">
+        {/* ヘッダー部分 */}
         <div className="mb-6">
-          {/* パンくずリスト */}
-          <div className="flex items-center text-sm text-gray-400 mb-4">
-            <a href="/change-suggestions" className="hover:text-white">
-              <Home className="w-4 h-4 mx-2" />
-            </a>
+          <div className="flex items-center justify-between mb-6">
+            {/* ステータス表示 */}
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-2 gap-2">
+                <div className="flex items-center space-x-2">
+                  <Git className="w-4 h-4 text-white" />
+                  <span className="text-bold text-white">{pendingCount} 未対応</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CheckMark className="w-4 h-4 text-gray-400" />
+                  <span className="text-bold text-gray-400">{completedCount} 完了済み</span>
+                </div>
+              </div>
+            </div>
+
+            {/* フィルターとソート */}
+            <div className="flex items-center space-x-4 mr-25">
+              <button className="text-sm text-gray-400 hover:text-white flex items-center space-x-1">
+                <span>提案者</span>
+                <ChevronDown className="w-2 h-2" />
+              </button>
+
+              <button className="text-sm text-gray-400 hover:text-white flex items-center space-x-1">
+                <span>確認対応者</span>
+                <ChevronDown className="w-2 h-2" />
+              </button>
+            </div>
           </div>
 
           {/* APIエラー表示 */}
@@ -277,16 +318,11 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                 </svg>
                 <span>{apiError}</span>
               </div>
-              <div className="mt-2 text-sm">
-                <p>APIサーバーとの通信に問題があります。開発モードではダミーデータを使用します。</p>
-              </div>
             </div>
           )}
 
-          {/* 変更提案一覧テーブル */}
-          <div className="mb-8">
-            {renderChangeProposalsTable()}
-          </div>
+          {/* 変更提案一覧 */}
+          <div className="mb-8">{renderChangeProposalsCards()}</div>
         </div>
       </div>
 
