@@ -34,4 +34,4 @@ return new class extends Migration
             $table->enum('status', ['opened', 'merged', 'closed'])->default('opened');
         });
     }
-}; 
+};

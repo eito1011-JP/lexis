@@ -25,4 +25,4 @@ class FetchPullRequestsRequest extends FormRequest
             'email' => 'nullable|string|max:255',
         ];
     }
-} 
+}

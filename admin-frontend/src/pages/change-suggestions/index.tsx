@@ -38,6 +38,7 @@ type ChangeProposal = {
   title: string;
   status: string;
   email: string | null;
+  github_url?: string;
   created_at: string;
   comments_count?: number;
 };
@@ -47,11 +48,7 @@ type ChangeProposal = {
  */
 export default function ChangeSuggestionsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [changeProposals, setChangeProposals] = useState<ChangeProposal[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [documentsLoading, setDocumentsLoading] = useState(true);
   const [changeProposalsLoading, setChangeProposalsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
@@ -63,28 +60,40 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
+  const [pendingCount, setPendingCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
 
   useEffect(() => {
     const getChangeSuggestions = async () => {
       try {
+        setChangeProposalsLoading(true);
         // 変更提案一覧を取得
-        const changeProposalsResponse = await apiClient.get(
-          `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}`
-        );
+        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}`);
 
-        if (changeProposalsResponse) {
-          // ダミーデータを追加してコメント数を設定
-          const proposalsWithComments = (changeProposalsResponse.pull_requests || []).map(
-            (proposal: ChangeProposal) => ({
-              ...proposal,
-              comments_count: Math.floor(Math.random() * 20) + 1, // 1-20のランダムなコメント数
-            })
-          );
-          setChangeProposals(proposalsWithComments);
-        }
+        // APIから返されるデータをフロントエンドの型に合わせて変換
+        const mappedProposals = response.pull_requests.map((proposal: any) => ({
+          id: proposal.id,
+          title: proposal.title,
+          status:
+            proposal.status === 'opened' || proposal.status === 'conflict'
+              ? 'pending'
+              : 'completed', // APIのstatusをフロントエンドのstatusに変換
+          email: proposal.email,
+          github_url: proposal.github_url,
+          created_at: proposal.created_at,
+          comments_count: 5, // 仮の値として5を設定
+        }));
+
+        setChangeProposals(mappedProposals);
+
+        // 集計データを設定
+        setPendingCount(response.total_opened_count || 0);
+        setCompletedCount(response.total_closed_count || 0);
       } catch (err) {
         console.error('変更提案取得エラー:', err);
         setApiError('変更提案の取得に失敗しました');
+      } finally {
+        setChangeProposalsLoading(false);
       }
     };
 
@@ -146,9 +155,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     return proposal.status === filterStatus;
   });
 
-  const pendingCount = changeProposals.filter(p => p.status === 'pending').length;
-  const completedCount = changeProposals.filter(p => p.status === 'completed').length;
-
   // 変更提案一覧カード表示
   const renderChangeProposalsCards = () => {
     if (changeProposalsLoading) {
@@ -186,8 +192,8 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                     checked={proposal.status === 'completed'}
                     onChange={() => {
                       setChangeProposals(prev =>
-                        prev.map((p, i) =>
-                          i === index
+                        prev.map(p =>
+                          p.id === proposal.id
                             ? { ...p, status: p.status === 'completed' ? 'pending' : 'completed' }
                             : p
                         )
@@ -243,10 +249,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                             <button
                               className="block w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-gray-800 cursor-pointer"
                               onClick={() => {
-                                window.open(
-                                  `https://github.com/your-repo/pull/${proposal.id}`,
-                                  '_blank'
-                                );
+                                window.open(proposal.github_url, '_blank');
                               }}
                             >
                               GitHubで開く

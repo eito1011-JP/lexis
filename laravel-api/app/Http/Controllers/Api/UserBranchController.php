@@ -6,6 +6,7 @@ use App\Constants\DocumentCategoryConstants;
 use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
+use App\Enums\PullRequestStatus;
 use App\Enums\UserBranchPrStatus;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchDiffRequest;
@@ -259,7 +260,7 @@ class UserBranchController extends ApiBaseController
                 'title' => $request->title,
                 'description' => $request->description,
                 'github_url' => $prResult['pr_url'],
-                'status' => 'opened',
+                'status' => PullRequestStatus::OPENED->value,
             ]);
 
             // 12. pull_request_reviewersテーブルにレビュアーを保存
