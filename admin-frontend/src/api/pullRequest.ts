@@ -24,6 +24,20 @@ export interface CreatePullRequestResponse {
   error?: string;
 }
 
+// プルリクエスト詳細レスポンスの型定義
+export interface PullRequestDetailResponse {
+  document_versions: any[];
+  document_categories: any[];
+  original_document_versions?: any[];
+  original_document_categories?: any[];
+  diff_data: any[];
+  title: string;
+  description: string;
+  status: string;
+  author_name: string;
+  reviewers: string[];
+}
+
 /**
  * プルリクエストを作成する
  */
@@ -50,5 +64,20 @@ export const createPullRequest = async (
       message: 'プルリクエストの作成に失敗しました',
       error: error.message || 'Unknown error',
     };
+  }
+};
+
+/**
+ * プルリクエストの詳細を取得する
+ */
+export const fetchPullRequestDetail = async (
+  id: string | number
+): Promise<PullRequestDetailResponse> => {
+  try {
+    const response = await apiClient.get(`/admin/pull-requests/${id}`);
+    return response;
+  } catch (error: any) {
+    console.error('プルリクエスト詳細取得エラー:', error);
+    throw error;
   }
 };

@@ -44,6 +44,7 @@ Route::middleware('auth.session')->group(function () {
     // プルリクエスト関連
     Route::prefix('admin/pull-requests')->group(function () {
         Route::get('/', [PullRequestsController::class, 'fetchPullRequests']);
+        Route::get('/{id}', [PullRequestsController::class, 'fetchPullRequestDetail']);
     });
 
     // ドキュメント関連

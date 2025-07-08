@@ -184,7 +184,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
             onClick={e => {
               // メニューボタンがクリックされた場合は詳細ページに遷移しない
               if (!(e.target as Element).closest('.menu-button')) {
-                window.location.href = `/admin/change-suggestions/${proposal.id}`;
+                window.location.href = `/change-suggestions/${proposal.id}`;
               }
             }}
           >
@@ -216,7 +216,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                     className="text-white font-medium text-sm hover:underline hover:text-blue-400 cursor-pointer transition-colors"
                     onClick={e => {
                       e.stopPropagation();
-                      window.location.href = `/admin/change-suggestions/${proposal.id}`;
+                      window.location.href = `/change-suggestions/${proposal.id}`;
                     }}
                   >
                     {proposal.title}
@@ -256,7 +256,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                         <ul className="py-1">
                           <li>
                             <a
-                              href={`/admin/change-suggestions/${proposal.id}`}
+                              href={`/change-suggestions/${proposal.id}`}
                               className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer"
                             >
                               詳細を見る

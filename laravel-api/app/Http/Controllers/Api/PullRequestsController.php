@@ -3,13 +3,22 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\PullRequestStatus;
+use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
 use App\Models\PullRequest;
+use App\Services\DocumentDiffService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 class PullRequestsController extends ApiBaseController
 {
+    protected DocumentDiffService $documentDiffService;
+
+    public function __construct(DocumentDiffService $documentDiffService)
+    {
+        $this->documentDiffService = $documentDiffService;
+    }
+
     /**
      * プルリクエスト一覧を取得
      */
@@ -77,6 +86,70 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => 'プルリクエスト一覧の取得に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエスト詳細を取得
+     */
+    public function fetchPullRequestDetail(FetchPullRequestDetailRequest $request, int $id): JsonResponse
+    {
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. プルリクエストを取得（status = opened or conflict）
+            $pullRequest = PullRequest::with([
+                'userBranch.user',
+                'userBranch.editStartVersions',
+                'userBranch.editStartVersions.originalDocumentVersion',
+                'userBranch.editStartVersions.currentDocumentVersion',
+                'userBranch.editStartVersions.originalDocumentVersion.category',
+                'userBranch.editStartVersions.currentDocumentVersion.category',
+                'userBranch.editStartVersions.originalCategory',
+                'userBranch.editStartVersions.currentCategory',
+                'reviewers.user',
+            ])
+                ->where('id', $id)
+                ->whereIn('status', [PullRequestStatus::OPENED->value, PullRequestStatus::CONFLICT->value])
+                ->firstOrFail();
+
+            // 3. 差分データを生成
+            $diffResult = $this->documentDiffService->generateDiffData($pullRequest->userBranch->editStartVersions);
+
+            // 4. レビュアー情報を取得
+            $reviewers = $pullRequest->reviewers->map(function ($reviewer) {
+                return $reviewer->user->name;
+            })->toArray();
+
+            // 5. プルリクエスト作成者の名前を取得
+            $authorName = $pullRequest->userBranch->user->name ?? null;
+
+            return response()->json([
+                ...$diffResult,
+                'title' => $pullRequest->title,
+                'description' => $pullRequest->description,
+                'status' => $pullRequest->status,
+                'author_name' => $authorName,
+                'reviewers' => $reviewers,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('プルリクエスト詳細取得エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $id,
+            ]);
+
+            return response()->json([
+                'error' => 'プルリクエスト詳細の取得に失敗しました',
             ], 500);
         }
     }

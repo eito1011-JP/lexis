@@ -38,7 +38,7 @@ export const API_CONFIG = {
     },
     PULL_REQUESTS: {
       GET: '/api/admin/pull-requests',
-      GET_DETAIL: '/api/admin/pull-requests/detail',
+      GET_DETAIL: '/api/admin/pull-requests',
     },
     GIT: {
       CHECK_DIFF: '/api/admin/git/check-diff',
