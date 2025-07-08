@@ -126,6 +126,7 @@ const SlugBreadcrumb = ({ slug }: { slug: string }) => {
 
           return (
             <React.Fragment key={index}>
+              <span>/</span>
               {index > 0 && (
                 <span className="mx-2">
                   <svg
@@ -145,7 +146,7 @@ const SlugBreadcrumb = ({ slug }: { slug: string }) => {
                 </span>
               )}
               {index === slugParts.length - 1 ? (
-                <span className="text-white">{part}</span>
+                <span className="text-gray-400">{part}</span>
               ) : (
                 <span className="text-gray-400">{part}</span>
               )}
