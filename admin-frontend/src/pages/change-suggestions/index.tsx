@@ -180,7 +180,13 @@ export default function ChangeSuggestionsPage(): JSX.Element {
         {filteredProposals.map((proposal, index) => (
           <div
             key={proposal.id}
-            className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 transition-colors"
+            className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-700 transition-colors cursor-pointer"
+            onClick={e => {
+              // メニューボタンがクリックされた場合は詳細ページに遷移しない
+              if (!(e.target as Element).closest('.menu-button')) {
+                window.location.href = `/admin/change-suggestions/${proposal.id}`;
+              }
+            }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
@@ -206,7 +212,15 @@ export default function ChangeSuggestionsPage(): JSX.Element {
 
                 {/* タイトル */}
                 <div className="flex-1">
-                  <h3 className="text-white font-medium text-sm">{proposal.title}</h3>
+                  <h3
+                    className="text-white font-medium text-sm hover:underline hover:text-blue-400 cursor-pointer transition-colors"
+                    onClick={e => {
+                      e.stopPropagation();
+                      window.location.href = `/admin/change-suggestions/${proposal.id}`;
+                    }}
+                  >
+                    {proposal.title}
+                  </h3>
                   <div className="flex items-center space-x-4 text-xs text-gray-400 mt-1">
                     <span>
                       {formatDateTime(proposal.created_at)} に {proposal.email} から提案されました
@@ -224,10 +238,13 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                 </div>
 
                 {/* メニューボタン */}
-                <div className="relative">
+                <div className="relative menu-button">
                   <button
                     className="focus:outline-none p-1 rounded hover:bg-gray-700 transition-colors"
-                    onClick={() => setOpenMenuIndex(openMenuIndex === index ? null : index)}
+                    onClick={e => {
+                      e.stopPropagation();
+                      setOpenMenuIndex(openMenuIndex === index ? null : index);
+                    }}
                   >
                     <ThreeDots className="w-4 h-4 text-gray-400" />
                   </button>
@@ -239,7 +256,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                         <ul className="py-1">
                           <li>
                             <a
-                              href={`/admin/change-proposals/${proposal.id}`}
+                              href={`/admin/change-suggestions/${proposal.id}`}
                               className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer"
                             >
                               詳細を見る

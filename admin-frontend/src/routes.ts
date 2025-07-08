@@ -7,6 +7,7 @@ export const ROUTES = {
   EDIT_DOCUMENT: 'edit-document',
   DOCUMENT_BY_SLUG: 'document-by-slug',
   CHANGE_SUGGESTIONS: 'change-suggestions',
+  CHANGE_SUGGESTION_DETAIL: 'change-suggestion-detail',
 } as const;
 
 export const ROUTE_PATHS = {
@@ -18,6 +19,7 @@ export const ROUTE_PATHS = {
   [ROUTES.EDIT_DOCUMENT]: '/documents/**/edit',
   [ROUTES.DOCUMENT_BY_SLUG]: '/documents/:paths/*',
   [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
+  [ROUTES.CHANGE_SUGGESTION_DETAIL]: '/change-suggestions/:id',
 } as const;
 
 export const generatePath = (
