@@ -126,7 +126,7 @@ class PullRequestsController extends ApiBaseController
 
             // 4. レビュアー情報を取得
             $reviewers = $pullRequest->reviewers->map(function ($reviewer) {
-                return $reviewer->user->name;
+                return $reviewer->user->email;
             })->toArray();
 
             // 5. プルリクエスト作成者の名前を取得

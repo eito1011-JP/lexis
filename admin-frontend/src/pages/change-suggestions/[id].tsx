@@ -30,6 +30,14 @@ type DiffItem = {
   updated_at: string;
 };
 
+// ユーザーオブジェクトの型定義
+type User = {
+  id: number;
+  email: string;
+  role?: string;
+  created_at?: string;
+};
+
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
   current: any;
@@ -155,12 +163,15 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   // レビュアーモーダルが表示された時にユーザー一覧を取得
   useEffect(() => {
-    if (showReviewerModal) {
+    if (showReviewerModal && !reviewersInitialized) {
       handleFetchUser();
-      // モーダルを開いた時の初期状態を保存
+    }
+
+    // モーダルを開いた時の初期状態を保存
+    if (showReviewerModal) {
       setInitialReviewers([...selectedReviewers]);
     }
-  }, [showReviewerModal]);
+  }, [showReviewerModal, reviewersInitialized]);
 
   // レビュアー検索時の処理
   useEffect(() => {
@@ -173,17 +184,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   }, [reviewerSearch, showReviewerModal]);
 
-  // 既存のレビュアーをselectedReviewersに設定（一度だけ実行）
-  useEffect(() => {
-    if (pullRequestData?.reviewers && users.length > 0 && !reviewersInitialized) {
-      const reviewerIds = users
-        .filter(user => pullRequestData.reviewers.includes(user.email))
-        .map(user => user.id);
-      setSelectedReviewers(reviewerIds);
-      setInitialReviewers(reviewerIds);
-      setReviewersInitialized(true);
-    }
-  }, [pullRequestData?.reviewers, users, reviewersInitialized]);
+  // 既存のレビュアーをselectedReviewersに設定する処理を削除
+  // （上記のfetchData内で処理するため不要）
 
   useEffect(() => {
     const fetchData = async () => {
@@ -197,6 +199,26 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         setLoading(true);
         const data = await fetchPullRequestDetail(id);
         setPullRequestData(data);
+
+        // プルリクエストデータが取得できた場合、レビュアー設定のためにユーザー一覧を取得
+        if (data.reviewers && data.reviewers.length > 0) {
+          try {
+            const endpoint = API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
+            const response = await apiClient.get(endpoint);
+            const allUsers = response.users || [];
+            setUsers(allUsers);
+
+            // 既存のレビュアーをselectedReviewersに設定
+            const reviewerIds = allUsers
+              .filter((user: User) => data.reviewers.includes(user.email))
+              .map((user: User) => user.id);
+            setSelectedReviewers(reviewerIds);
+            setInitialReviewers(reviewerIds);
+            setReviewersInitialized(true);
+          } catch (userError) {
+            console.error('初期ユーザー取得エラー:', userError);
+          }
+        }
       } catch (err) {
         console.error('プルリクエスト詳細取得エラー:', err);
         setError('プルリクエスト詳細の取得に失敗しました');
