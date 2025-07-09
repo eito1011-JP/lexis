@@ -131,6 +131,9 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const reviewerModalRef = useRef<HTMLDivElement | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
+  const [reviewersInitialized, setReviewersInitialized] = useState(false);
+  const [initialReviewers, setInitialReviewers] = useState<number[]>([]);
 
   // ユーザー一覧を取得する関数
   const handleFetchUser = async (searchEmail?: string) => {
@@ -154,6 +157,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   useEffect(() => {
     if (showReviewerModal) {
       handleFetchUser();
+      // モーダルを開いた時の初期状態を保存
+      setInitialReviewers([...selectedReviewers]);
     }
   }, [showReviewerModal]);
 
@@ -167,6 +172,18 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       return () => clearTimeout(timeoutId);
     }
   }, [reviewerSearch, showReviewerModal]);
+
+  // 既存のレビュアーをselectedReviewersに設定（一度だけ実行）
+  useEffect(() => {
+    if (pullRequestData?.reviewers && users.length > 0 && !reviewersInitialized) {
+      const reviewerIds = users
+        .filter(user => pullRequestData.reviewers.includes(user.email))
+        .map(user => user.id);
+      setSelectedReviewers(reviewerIds);
+      setInitialReviewers(reviewerIds);
+      setReviewersInitialized(true);
+    }
+  }, [pullRequestData?.reviewers, users, reviewersInitialized]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -203,6 +220,22 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showReviewerModal]);
+
+  // レビュアーモーダルが閉じられた時のAPI実行
+  useEffect(() => {
+    if (showReviewerModal === false && reviewersInitialized) {
+      // 初期状態と現在の状態を比較
+      const arraysEqual = (a: number[], b: number[]) => {
+        if (a.length !== b.length) return false;
+        return a.sort().every((val, index) => val === b.sort()[index]);
+      };
+
+      if (!arraysEqual(initialReviewers, selectedReviewers)) {
+        handleSetReviewers();
+        setInitialReviewers(selectedReviewers);
+      }
+    }
+  }, [showReviewerModal, reviewersInitialized, initialReviewers, selectedReviewers]);
 
   // 差分データをIDでマップ化する関数
   const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
@@ -256,6 +289,31 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       },
       {} as Record<string, DiffItem>
     );
+  };
+
+  // レビュアー設定のハンドラー
+  const handleSetReviewers = async () => {
+    if (!id) return;
+
+    try {
+      const selectedEmails = selectedReviewers
+        .map(reviewerId => {
+          const user = users.find(u => u.id === reviewerId);
+          return user?.email;
+        })
+        .filter(Boolean);
+
+      const endpoint = API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
+      await apiClient.post(endpoint, {
+        pull_request_id: parseInt(id),
+        emails: selectedEmails,
+      });
+
+      // 成功時はToast表示などの処理を追加可能
+    } catch (error) {
+      console.error('レビュアー設定エラー:', error);
+      // エラー時の処理を追加可能
+    }
   };
 
   // 戻るボタンのハンドラー
@@ -383,7 +441,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                             .map(user => (
                               <div
                                 key={user.id}
-                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${pullRequestData.reviewers.includes(user.email) ? 'bg-[#23272d]' : ''}`}
+                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
+                                onClick={() =>
+                                  setSelectedReviewers(
+                                    selectedReviewers.includes(user.id)
+                                      ? selectedReviewers.filter(id => id !== user.id)
+                                      : [...selectedReviewers, user.id]
+                                  )
+                                }
                               >
                                 <span className="text-2xl">👤</span>
                                 <div className="flex-1 min-w-0">
@@ -402,17 +467,20 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   </div>
                 )}
               </div>
-              {pullRequestData.reviewers.length === 0 ? (
+              {selectedReviewers.length === 0 ? (
                 <p className="text-white text-base font-medium mt-5 text-sm">レビュアーなし</p>
               ) : (
                 <div className="mt-5">
                   <div className="space-y-1">
-                    {pullRequestData.reviewers.map((reviewer, index) => (
-                      <div key={index} className="flex items-center gap-2 text-sm">
-                        <span className="text-xl">👤</span>
-                        <span className="text-gray-300">{reviewer}</span>
-                      </div>
-                    ))}
+                    {selectedReviewers.map(reviewerId => {
+                      const user = users.find(u => u.id === reviewerId);
+                      return user ? (
+                        <div key={reviewerId} className="flex items-center gap-2 text-sm">
+                          <span className="text-xl">👤</span>
+                          <span className="text-gray-300">{user.email}</span>
+                        </div>
+                      ) : null;
+                    })}
                   </div>
                 </div>
               )}

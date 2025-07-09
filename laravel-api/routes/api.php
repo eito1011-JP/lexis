@@ -39,6 +39,7 @@ Route::middleware('auth.session')->group(function () {
     // プルリクエストレビュアー関連
     Route::prefix('admin/pull-request-reviewers')->group(function () {
         Route::get('/', [PullRequestReviewerController::class, 'index']);
+        Route::post('/', [PullRequestReviewerController::class, 'store']);
     });
 
     // プルリクエスト関連

@@ -627,16 +627,6 @@ export default function DiffPage(): JSX.Element {
                         <div key={reviewerId} className="flex items-center gap-2 text-sm">
                           <span className="text-xl">👤</span>
                           <span className="text-gray-300">{user.email}</span>
-                          <button
-                            onClick={() =>
-                              setSelectedReviewers(
-                                selectedReviewers.filter(id => id !== reviewerId)
-                              )
-                            }
-                            className="text-red-400 hover:text-red-300 ml-1"
-                          >
-                            ×
-                          </button>
                         </div>
                       ) : null;
                     })}

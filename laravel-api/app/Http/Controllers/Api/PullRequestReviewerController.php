@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Requests\FetchPullRequestReviewersRequest;
+use App\Http\Requests\SetPullRequestReviewersRequest;
+use App\Models\PullRequestReviewer;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 
@@ -48,6 +50,56 @@ class PullRequestReviewerController extends ApiBaseController
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'ユーザー一覧の取得に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエストレビュアーを設定
+     */
+    public function store(SetPullRequestReviewersRequest $request): JsonResponse
+    {
+        try {
+            // 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // バリデーション済みデータを取得
+            $validated = $request->validated();
+            $pullRequestId = $validated['pull_request_id'];
+            $emails = $validated['emails'];
+
+            // emailからuser_idを取得
+            $users = User::whereIn('email', $emails)
+                ->whereNull('deleted_at')
+                ->select('id', 'email')
+                ->get();
+
+            // 既存のレビュアーを削除
+            PullRequestReviewer::where('pull_request_id', $pullRequestId)->delete();
+
+            // 新しいレビュアーをbulk insert
+            $reviewerData = [];
+            foreach ($users as $reviewerUser) {
+                $reviewerData[] = [
+                    'pull_request_id' => $pullRequestId,
+                    'user_id' => $reviewerUser->id,
+                ];
+            }
+
+            if (! empty($reviewerData)) {
+                PullRequestReviewer::insert($reviewerData);
+            }
+
+            return response()->json();
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'レビュアーの設定に失敗しました',
             ], 500);
         }
     }
