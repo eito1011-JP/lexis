@@ -14,6 +14,7 @@ class PullRequest extends Model
         'title',
         'description',
         'github_url',
+        'pr_number',
         'status',
     ];
 

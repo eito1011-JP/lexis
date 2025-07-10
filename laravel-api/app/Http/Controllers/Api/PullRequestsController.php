@@ -226,6 +226,7 @@ class PullRequestsController extends ApiBaseController
                 'title' => $request->title,
                 'description' => $request->description,
                 'github_url' => $prResult['pr_url'],
+                'pr_number' => $prResult['pr_number'],
                 'status' => PullRequestStatus::OPENED->value,
             ]);
 
