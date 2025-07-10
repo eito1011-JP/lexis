@@ -7,11 +7,11 @@ use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\PullRequestStatus;
-use App\Enums\UserBranchPrStatus;
+use App\Enums\UserRole;
 use App\Http\Requests\CreatePullRequestRequest;
-use App\Http\Requests\FetchDiffRequest;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
+use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\PullRequest;
@@ -22,7 +22,6 @@ use App\Services\DocumentDiffService;
 use App\Services\GitService;
 use App\Services\MdFileService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -66,7 +65,6 @@ class PullRequestsController extends ApiBaseController
             // 2. diffをidとuser_branch_idで絞り込んでfetch
             $userBranch = $user->userBranches()
                 ->active()
-                ->where('pr_status', UserBranchPrStatus::NONE->value)
                 ->orderBy('id', 'desc')
                 ->first();
 
@@ -245,7 +243,6 @@ class PullRequestsController extends ApiBaseController
             // 13. ユーザーブランチのステータスを更新
             $userBranch->update([
                 'is_active' => Flag::FALSE,
-                'pr_status' => UserBranchPrStatus::OPENED->value,
             ]);
 
             DB::commit();
@@ -401,6 +398,76 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => 'プルリクエスト詳細の取得に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエストをマージ
+     */
+    public function merge(MergePullRequestRequest $request): JsonResponse
+    {
+        DB::beginTransaction();
+
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. ログインユーザーのroleがowner or adminであることを確認
+            if (! UserRole::from($user->role)->isAdmin() && ! UserRole::from($user->role)->isOwner()) {
+                return response()->json([
+                    'error' => '権限がありません',
+                ], 403);
+            }
+
+            // 3. プルリクエストを取得（status = opened）
+            $pullRequest = PullRequest::with('userBranch')
+                ->where('id', $request->pull_request_id)
+                ->where('status', PullRequestStatus::OPENED->value)
+                ->firstOrFail();
+
+            // 4. GitHub APIでプルリクエストをマージ
+            $mergeResult = $this->gitService->mergePullRequest($pullRequest->pr_number);
+
+            // 5. プルリクエストに紐づくuser_branchesテーブルを取得し、
+            // それに紐づくdocument_versionsとdocument_categoriesのstatusをmergedにupdate
+            $userBranch = $pullRequest->userBranch;
+
+            // DocumentVersionsのstatusを更新
+            $userBranch->documentVersions()->update([
+                'status' => DocumentStatus::MERGED->value,
+            ]);
+
+            // DocumentCategoriesのstatusを更新
+            $userBranch->documentCategories()->update([
+                'status' => DocumentCategoryStatus::MERGED->value,
+            ]);
+
+            // 6. pull_requestsテーブルのstatusをmergedにupdate
+            $pullRequest->update([
+                'status' => PullRequestStatus::MERGED->value,
+            ]);
+
+            DB::commit();
+
+            return response()->json();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('プルリクエストマージエラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $request->pull_request_id,
+            ]);
+
+            return response()->json([
+                'error' => 'プルリクエストのマージに失敗しました',
             ], 500);
         }
     }

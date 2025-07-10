@@ -38,6 +38,7 @@ export const API_CONFIG = {
       GET: '/api/admin/pull-requests',
       GET_DETAIL: '/api/admin/pull-requests',
       CREATE: '/api/admin/pull-requests/create',
+      MERGE: '/api/admin/pull-requests',
     },
     GIT: {
       CHECK_DIFF: '/api/admin/git/check-diff',

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\UserBranchPrStatus;
 use App\Http\Requests\FetchDiffRequest;
 use App\Services\DocumentDiffService;
 use Illuminate\Http\JsonResponse;
@@ -35,7 +34,7 @@ class UserBranchController extends ApiBaseController
             }
 
             // アクティブなユーザーブランチを取得
-            $activeBranch = $loginUser->userBranches()->active()->where('pr_status', UserBranchPrStatus::NONE->value)->first();
+            $activeBranch = $loginUser->userBranches()->active()->first();
 
             $hasUserChanges = ! is_null($activeBranch);
             $userBranchId = $hasUserChanges ? $activeBranch->id : null;
@@ -70,17 +69,15 @@ class UserBranchController extends ApiBaseController
             }
 
             // ユーザーブランチと関連データを一括取得
-            $userBranch = $user->userBranches()->active()->where('pr_status', UserBranchPrStatus::NONE->value)
+            $userBranch = $user->userBranches()->active()
                 ->with([
                     'editStartVersions',
                     'editStartVersions.originalDocumentVersion',
                     'editStartVersions.currentDocumentVersion',
-                    'editStartVersions.originalDocumentVersion.category',
-                    'editStartVersions.currentDocumentVersion.category',
                     'editStartVersions.originalCategory',
                     'editStartVersions.currentCategory',
                 ])
-                ->findOrFail($request->user_branch_id);
+                ->first();
 
             $diffResult = $this->documentDiffService->generateDiffData($userBranch->editStartVersions);
 
@@ -113,7 +110,6 @@ class UserBranchController extends ApiBaseController
                 'branch_name' => $branchName,
                 'snapshot_commit' => $latestCommit,
                 'is_active' => 1,
-                'pr_status' => 'none',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

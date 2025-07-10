@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Consts\Flag;
-use App\Enums\UserBranchPrStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -18,7 +17,6 @@ class UserBranch extends Model
         'branch_name',
         'snapshot_commit',
         'is_active',
-        'pr_status',
         'created_at',
         'updated_at',
     ];
@@ -32,7 +30,7 @@ class UserBranch extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', Flag::TRUE)->where('pr_status', UserBranchPrStatus::NONE->value);
+        return $query->where('is_active', Flag::TRUE);
     }
 
     /**
@@ -42,7 +40,6 @@ class UserBranch extends Model
     {
         return self::where('user_id', $userId)
             ->active()
-            ->where('pr_status', UserBranchPrStatus::NONE->value)
             ->first();
     }
 

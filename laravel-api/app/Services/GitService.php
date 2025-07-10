@@ -174,4 +174,27 @@ class GitService
 
         return $response->json();
     }
+
+    /**
+     * プルリクエストをマージ
+     */
+    public function mergePullRequest(int $prNumber, string $mergeMethod = 'merge'): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/pulls/{$prNumber}/merge";
+
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->put($url, [
+            'merge_method' => $mergeMethod,
+        ]);
+
+        if (! $response->successful()) {
+            Log::error('GitHub API Error - Merge Pull Request: '.$response->body());
+
+            throw new \Exception('プルリクエストのマージに失敗しました');
+        }
+
+        return $response->json();
+    }
 }

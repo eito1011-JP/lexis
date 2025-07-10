@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentStatus;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -44,10 +45,10 @@ class DocumentVersion extends Model
         $query = self::select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
             ->where('category_id', $categoryId)
             ->where(function ($q) use ($userBranchId) {
-                $q->where('status', 'merged')
+                $q->where('status', DocumentStatus::MERGED->value)
                     ->orWhere(function ($subQ) use ($userBranchId) {
                         $subQ->where('user_branch_id', $userBranchId)
-                            ->where('status', 'draft');
+                            ->where('status', DocumentStatus::DRAFT->value);
                     });
             });
 

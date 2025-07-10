@@ -11,6 +11,7 @@ import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Folder } from '@/components/icon/common/Folder';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
+import { Toast } from '@/components/admin/Toast';
 
 // 差分データの型定義
 type DiffItem = {
@@ -142,6 +143,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
   const [reviewersInitialized, setReviewersInitialized] = useState(false);
   const [initialReviewers, setInitialReviewers] = useState<number[]>([]);
+  const [isMerging, setIsMerging] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // ユーザー一覧を取得する関数
   const handleFetchUser = async (searchEmail?: string) => {
@@ -340,7 +343,33 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   // 戻るボタンのハンドラー
   const handleGoBack = () => {
-    window.location.href = '/change-suggestions';
+    window.location.href = '/admin/change-suggestions';
+  };
+
+  // マージボタンのハンドラー
+  const handleMerge = async () => {
+    if (!id || isMerging) return;
+
+    setIsMerging(true);
+    try {
+        await apiClient.put(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.MERGE}/${id}`, {
+        pull_request_id: id,
+      });
+
+        setToast({ message: 'プルリクエストをマージしました', type: 'success' });
+        setTimeout(() => {
+          window.location.href = '/admin/change-suggestions';
+        }, 1500);
+
+    } catch (error) {
+      console.error('マージエラー:', error);
+      setToast({ 
+        message: 'マージに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'), 
+        type: 'error' 
+      });
+    } finally {
+      setIsMerging(false);
+    }
   };
 
   // セッション確認中はローディング表示
@@ -409,6 +438,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   return (
     <AdminLayout title="作業内容の確認">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div className="mb-20 w-full rounded-lg relative">
         {/* メインコンテンツエリア */}
         <div className="flex flex-1">
@@ -651,10 +687,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
             戻る
           </button>
           <button
-            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors"
-            disabled
+            onClick={handleMerge}
+            disabled={isMerging}
+            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
           >
-            変更を反映する
+            {isMerging ? 'マージ中...' : '変更を反映する'}
           </button>
         </div>
       </div>
