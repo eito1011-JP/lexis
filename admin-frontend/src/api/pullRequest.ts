@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient } from '../components/admin/api/client';
 import { API_CONFIG } from '../components/admin/api/config';
 
 // 差分アイテムの型定義
