@@ -30,7 +30,6 @@ export const API_CONFIG = {
     USER_BRANCHES: {
       HAS_USER_CHANGES: '/api/admin/user-branches/has-changes',
       CREATE_PR: '/api/admin/user-branches/create-pr',
-      CREATE_PULL_REQUEST: '/api/admin/user-branches/create-pull-request',
       GET_DIFF: '/api/admin/user-branches/diff',
     },
     PULL_REQUEST_REVIEWERS: {
@@ -39,6 +38,7 @@ export const API_CONFIG = {
     PULL_REQUESTS: {
       GET: '/api/admin/pull-requests',
       GET_DETAIL: '/api/admin/pull-requests',
+      CREATE: '/api/admin/pull-requests/create',
     },
     GIT: {
       CHECK_DIFF: '/api/admin/git/check-diff',

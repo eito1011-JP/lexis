@@ -1,4 +1,5 @@
 import { apiClient } from './client';
+import { API_CONFIG } from '../components/admin/api/config';
 
 // 差分アイテムの型定義
 export interface DiffItem {
@@ -45,7 +46,7 @@ export const createPullRequest = async (
   request: CreatePullRequestRequest
 ): Promise<CreatePullRequestResponse> => {
   try {
-    const response = await apiClient.post('/admin/user-branches/create-pull-request', request);
+    const response = await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUESTS.CREATE, request);
     return response;
   } catch (error: any) {
     console.error('プルリクエスト作成エラー:', error);
@@ -74,7 +75,7 @@ export const fetchPullRequestDetail = async (
   id: string | number
 ): Promise<PullRequestDetailResponse> => {
   try {
-    const response = await apiClient.get(`/admin/pull-requests/${id}`);
+    const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET_DETAIL}/${id}`);
     return response;
   } catch (error: any) {
     console.error('プルリクエスト詳細取得エラー:', error);
