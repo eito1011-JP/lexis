@@ -7,10 +7,10 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
 import { formatDateTime } from '@/utils/date';
-import { Git } from '@/components/icon/common/Git';
 import { Comment } from '@/components/icon/common/Comment';
-import { CheckMark } from '@/components/icon/common/CheckMark';
 import { ChevronDown } from '@/components/icon/common/ChevronDown';
+import { Merged } from '@/components/icon/common/Merged';
+import { Merge } from '@/components/icon/common/Merge';
 
 // カテゴリの型定義
 type Category = {
@@ -72,7 +72,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     return proposals.map(proposal => ({
       id: proposal.id,
       title: proposal.title,
-      status: ['opened', 'conflict'].includes(proposal.status) ? 'merged' : 'closed',
+      status: proposal.status,
       email: proposal.email,
       github_url: proposal.github_url,
       created_at: proposal.created_at,
@@ -239,7 +239,9 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                   />
                 </div>
 
-                <Git className="w-4 h-4 text-[#00D85B]" />
+                {proposal.status === 'merged' && <Merged className="w-4 h-4 text-[#3832A5]" />}
+                {proposal.status === 'opened' && <Merge className="w-4 h-4 text-[#00D85B]" />}
+                {proposal.status === 'closed' && <Merge className="w-4 h-4 text-[#DA3633]" />}
 
                 {/* タイトル */}
                 <div className="flex-1">
@@ -326,7 +328,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
             <div className="flex items-center space-x-6">
               <div className="flex items-center space-x-2 gap-2">
                 <div className="flex items-center space-x-2">
-                  <Git className="w-4 h-4 text-white" />
+                  <Merge className="w-4 h-4 text-[#1FF258]" />
                   <a
                     href="/admin/change-suggestions"
                     className={`text-bold hover:underline ${!isCompletedView ? 'text-white' : 'text-gray-400'}`}
@@ -335,7 +337,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                   </a>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <CheckMark className="w-4 h-4 text-gray-400" />
+                  <Merged className="w-4 h-4 text-[#3832A5]" />
                   <a
                     href="/admin/change-suggestions?status=merged&status=closed"
                     className={`text-bold hover:underline ${isCompletedView ? 'text-white' : 'text-gray-400'}`}
