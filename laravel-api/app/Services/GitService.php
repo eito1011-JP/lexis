@@ -197,4 +197,30 @@ class GitService
 
         return $response->json();
     }
+
+    /**
+     * プルリクエストの情報を取得（コンフリクト検知用）
+     */
+    public function getPullRequestInfo(int $prNumber): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/pulls/{$prNumber}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->get($url);
+
+        if (! $response->successful()) {
+            Log::error('GitHub API Error - Get Pull Request Info: '.$response->body());
+
+            throw new \Exception('プルリクエスト情報の取得に失敗しました');
+        }
+
+        $data = $response->json();
+
+        return [
+            'mergeable' => $data['mergeable'],
+            'mergeable_state' => $data['mergeable_state'],
+        ];
+    }
 }

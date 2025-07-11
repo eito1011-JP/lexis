@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Enums\PullRequestStatus;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Log;
 
 class FetchPullRequestsRequest extends FormRequest
 {
@@ -26,7 +25,7 @@ class FetchPullRequestsRequest extends FormRequest
         return [
             'email' => 'nullable|string|max:255',
             'status' => 'nullable|array',
-            'status.*' => 'nullable|string|in:' . implode(',', PullRequestStatus::values()),
+            'status.*' => 'nullable|string|in:'.implode(',', PullRequestStatus::values()),
         ];
     }
 
@@ -38,12 +37,12 @@ class FetchPullRequestsRequest extends FormRequest
         if ($this->has('status') && is_string($this->status)) {
             $statuses = explode(',', $this->status);
             $validStatuses = PullRequestStatus::values();
-            
+
             // 有効なステータスのみをフィルタリング
-            $filteredStatuses = array_filter($statuses, function($status) use ($validStatuses) {
+            $filteredStatuses = array_filter($statuses, function ($status) use ($validStatuses) {
                 return in_array(trim($status), $validStatuses);
             });
-            
+
             $this->merge(['status' => array_values($filteredStatuses)]);
         }
     }

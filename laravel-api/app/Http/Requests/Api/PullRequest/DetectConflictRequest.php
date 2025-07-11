@@ -4,7 +4,7 @@ namespace App\Http\Requests\Api\PullRequest;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class MergePullRequestRequest extends FormRequest
+class DetectConflictRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,7 +22,7 @@ class MergePullRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'pull_request_id' => 'required|integer|exists:pull_requests,id',
+            'id' => 'required|integer|exists:pull_requests,id',
         ];
     }
 
@@ -32,7 +32,9 @@ class MergePullRequestRequest extends FormRequest
     public function messages(): array
     {
         return [
-            // カスタムメッセージを追加
+            'id.required' => trans('validation.pull_request.id.required'),
+            'id.integer' => trans('validation.pull_request.id.integer'),
+            'id.exists' => trans('validation.pull_request.id.exists'),
         ];
     }
 }

@@ -52,8 +52,6 @@ class UserBranchController extends ApiBaseController
         }
     }
 
-
-
     /**
      * Git差分取得
      */

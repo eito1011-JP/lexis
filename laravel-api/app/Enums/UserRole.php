@@ -37,10 +37,10 @@ enum UserRole: string
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::OWNER => 'オーナー',
             self::ADMIN => '管理者',
             self::EDITOR => '編集者',
         };
     }
-} 
+}

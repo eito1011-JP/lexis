@@ -25,4 +25,4 @@ return new class extends Migration
             $table->enum('pr_status', ['none', 'conflict', 'opened', 'merged', 'closed'])->default('none');
         });
     }
-}; 
+};

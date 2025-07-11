@@ -8,10 +8,11 @@ use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\PullRequestStatus;
 use App\Enums\UserRole;
+use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
+use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
-use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\PullRequest;
@@ -28,8 +29,11 @@ use Illuminate\Support\Facades\Log;
 class PullRequestsController extends ApiBaseController
 {
     protected DocumentDiffService $documentDiffService;
+
     protected GitService $gitService;
+
     protected MdFileService $mdFileService;
+
     protected CategoryFolderService $categoryFolderService;
 
     public function __construct(
@@ -371,7 +375,6 @@ class PullRequestsController extends ApiBaseController
                 'reviewers.user',
             ])
                 ->where('id', $id)
-                ->whereIn('status', [PullRequestStatus::OPENED->value, PullRequestStatus::CONFLICT->value])
                 ->firstOrFail();
 
             // 3. 差分データを生成
@@ -473,6 +476,51 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => 'プルリクエストのマージに失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエストのコンフリクト状態を検知
+     */
+    public function detectConflict(DetectConflictRequest $request): JsonResponse
+    {
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. プルリクエストを取得
+            $pullRequest = PullRequest::find($request->id);
+
+            if (! $pullRequest) {
+                return response()->json([
+                    'error' => 'プルリクエストが見つかりません',
+                ], 404);
+            }
+
+            // 3. GitHub APIでプルリクエスト情報を取得
+            $prInfo = $this->gitService->getPullRequestInfo($pullRequest->pr_number);
+
+            return response()->json([
+                'mergeable' => $prInfo['mergeable'],
+                'mergeable_state' => $prInfo['mergeable_state'],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('プルリクエストコンフリクト検知エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $request->id,
+            ]);
+
+            return response()->json([
+                'error' => 'コンフリクト検知に失敗しました',
             ], 500);
         }
     }

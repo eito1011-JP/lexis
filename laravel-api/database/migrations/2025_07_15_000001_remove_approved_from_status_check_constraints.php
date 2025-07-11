@@ -13,13 +13,13 @@ return new class extends Migration
     public function up(): void
     {
         // SQLiteの場合、enum/check制約の変更は複雑なため、テーブルを再作成する
-        
+
         // document_versionsテーブルの更新
         DB::statement('PRAGMA foreign_keys = OFF');
-        
+
         // 既存のデータをバックアップ
         $documentVersions = DB::table('document_versions')->get();
-        
+
         // 一時テーブルを作成
         Schema::create('document_versions_temp', function (Blueprint $table) {
             $table->id();
@@ -40,14 +40,14 @@ return new class extends Migration
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
         });
-        
+
         // データを新しいテーブルに移行（approvedの場合はmergedに変換）
         foreach ($documentVersions as $version) {
             $status = $version->status;
             if ($status === 'approved') {
                 $status = 'merged';
             }
-            
+
             DB::table('document_versions_temp')->insert([
                 'id' => $version->id,
                 'user_id' => $version->user_id,
@@ -69,16 +69,16 @@ return new class extends Migration
                 'updated_at' => $version->updated_at,
             ]);
         }
-        
+
         // 元のテーブルを削除
         Schema::dropIfExists('document_versions');
-        
+
         // 一時テーブルを元の名前にリネーム
         Schema::rename('document_versions_temp', 'document_versions');
-        
+
         // document_categoriesテーブルの更新
         $documentCategories = DB::table('document_categories')->get();
-        
+
         Schema::create('document_categories_temp', function (Blueprint $table) {
             $table->id();
             $table->string('slug');
@@ -92,14 +92,14 @@ return new class extends Migration
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
         });
-        
+
         // データを新しいテーブルに移行
         foreach ($documentCategories as $category) {
             $status = $category->status;
             if ($status === 'approved') {
                 $status = 'merged';
             }
-            
+
             DB::table('document_categories_temp')->insert([
                 'id' => $category->id,
                 'slug' => $category->slug,
@@ -115,13 +115,13 @@ return new class extends Migration
                 'updated_at' => $category->updated_at,
             ]);
         }
-        
+
         // 元のテーブルを削除
         Schema::dropIfExists('document_categories');
-        
+
         // 一時テーブルを元の名前にリネーム
         Schema::rename('document_categories_temp', 'document_categories');
-        
+
         DB::statement('PRAGMA foreign_keys = ON');
     }
 
@@ -132,10 +132,10 @@ return new class extends Migration
     {
         // 元に戻す場合はapprovedを含む制約に戻す
         DB::statement('PRAGMA foreign_keys = OFF');
-        
+
         // document_versionsテーブルの復元
         $documentVersions = DB::table('document_versions')->get();
-        
+
         Schema::create('document_versions_temp', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id');
@@ -155,17 +155,17 @@ return new class extends Migration
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
         });
-        
+
         foreach ($documentVersions as $version) {
             DB::table('document_versions_temp')->insert((array) $version);
         }
-        
+
         Schema::dropIfExists('document_versions');
         Schema::rename('document_versions_temp', 'document_versions');
-        
+
         // document_categoriesテーブルの復元
         $documentCategories = DB::table('document_categories')->get();
-        
+
         Schema::create('document_categories_temp', function (Blueprint $table) {
             $table->id();
             $table->string('slug');
@@ -179,14 +179,14 @@ return new class extends Migration
             $table->timestamp('deleted_at')->nullable();
             $table->timestamps();
         });
-        
+
         foreach ($documentCategories as $category) {
             DB::table('document_categories_temp')->insert((array) $category);
         }
-        
+
         Schema::dropIfExists('document_categories');
         Schema::rename('document_categories_temp', 'document_categories');
-        
+
         DB::statement('PRAGMA foreign_keys = ON');
     }
-}; 
+};

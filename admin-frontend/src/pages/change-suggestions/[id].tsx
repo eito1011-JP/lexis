@@ -686,13 +686,15 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
           >
             戻る
           </button>
-          <button
-            onClick={handleMerge}
-            disabled={isMerging}
-            className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-          >
-            {isMerging ? 'マージ中...' : '変更を反映する'}
-          </button>
+          {pullRequestData && !['merged', 'closed'].includes(pullRequestData.status) && (
+            <button
+              onClick={handleMerge}
+              disabled={isMerging}
+              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+            >
+              {isMerging ? 'マージ中...' : '変更を反映する'}
+            </button>
+          )}
         </div>
       </div>
     </AdminLayout>

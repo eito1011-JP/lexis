@@ -73,6 +73,11 @@ return [
         ],
     ],
     'pull_request' => [
+        'id' => [
+            'required' => 'プルリクエストIDは必須です',
+            'integer' => 'プルリクエストIDは整数である必要があります',
+            'exists' => '指定されたプルリクエストが存在しません',
+        ],
         'user_branch_id' => [
             'required' => 'ユーザーブランチIDは必須です',
             'integer' => 'ユーザーブランチIDは整数である必要があります',
@@ -119,6 +124,7 @@ return [
         'position' => '位置',
         'description' => '説明',
         'categoryPath' => 'カテゴリパス',
+        'id' => 'プルリクエストID',
         'user_branch_id' => 'ユーザーブランチID',
         'title' => 'プルリクエストタイトル',
         'diff_items' => '差分アイテム',
