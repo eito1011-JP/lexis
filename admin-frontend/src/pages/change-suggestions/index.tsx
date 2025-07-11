@@ -62,32 +62,58 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const [pendingCount, setPendingCount] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
 
+  // URLパラメータから完了済み表示フラグを取得
+  const isCompletedView = new URLSearchParams(window.location.search)
+    .getAll('status')
+    .includes('merged') && new URLSearchParams(window.location.search)
+    .getAll('status')
+    .includes('closed');
+
+  // APIレスポンスをフロントエンドの型に変換する関数
+  const transformApiResponse = (proposals: any[]): ChangeProposal[] => {
+    return proposals.map(proposal => ({
+      id: proposal.id,
+      title: proposal.title,
+      status: ['opened', 'conflict'].includes(proposal.status) ? 'merged' : 'closed',
+      email: proposal.email,
+      github_url: proposal.github_url,
+      created_at: proposal.created_at,
+      comments_count: 5, // 仮の値として5を設定
+    }));
+  };
+
+  // 集計データを設定する関数
+  const setCounts = (response: any, isCompleted: boolean) => {
+    if (isCompleted) {
+      setPendingCount(response.total_opened_count || 0);
+      setCompletedCount(response.total_closed_count || 0);
+    } else {
+      setPendingCount(response.total_opened_count || 0);
+      setCompletedCount(response.total_closed_count || 0);
+    }
+  };
+
   useEffect(() => {
     const getChangeSuggestions = async () => {
       try {
         setChangeProposalsLoading(true);
-        // 変更提案一覧を取得
-        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}`);
+        
+        const params: Record<string, string> = isCompletedView ? { status: 'merged,closed' } : {};
+        const queryString = new URLSearchParams(params).toString();
+        const apiUrl = `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}${queryString ? '?' + queryString : ''}`;
+        
+        const response = await apiClient.get(apiUrl);
 
-        // APIから返されるデータをフロントエンドの型に合わせて変換
-        const mappedProposals = response.pull_requests.map((proposal: any) => ({
-          id: proposal.id,
-          title: proposal.title,
-          status:
-            proposal.status === 'opened' || proposal.status === 'conflict'
-              ? 'pending'
-              : 'completed', // APIのstatusをフロントエンドのstatusに変換
-          email: proposal.email,
-          github_url: proposal.github_url,
-          created_at: proposal.created_at,
-          comments_count: 5, // 仮の値として5を設定
-        }));
+        if (!response?.pull_requests) {
+          console.error('API response does not contain pull_requests:', response);
+          setApiError('APIレスポンスの形式が正しくありません');
+          return;
+        }
 
+        const mappedProposals = transformApiResponse(response.pull_requests);
         setChangeProposals(mappedProposals);
+        setCounts(response, isCompletedView);
 
-        // 集計データを設定
-        setPendingCount(response.total_opened_count || 0);
-        setCompletedCount(response.total_closed_count || 0);
       } catch (err) {
         console.error('変更提案取得エラー:', err);
         setApiError('変更提案の取得に失敗しました');
@@ -97,7 +123,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     };
 
     getChangeSuggestions();
-  }, []);
+  }, [isCompletedView]);
 
   const handleCloseMenu = () => {
     setOpenMenuIndex(null);
@@ -150,6 +176,9 @@ export default function ChangeSuggestionsPage(): JSX.Element {
 
   // フィルタリング機能
   const filteredProposals = changeProposals.filter(proposal => {
+    // 完了済み表示の場合は、既にAPIでフィルタリングされているためそのまま表示
+    if (isCompletedView) return true;
+    
     if (filterStatus === 'all') return true;
     return proposal.status === filterStatus;
   });
@@ -167,7 +196,9 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     if (filteredProposals.length === 0) {
       return (
         <div className="text-center py-12 text-gray-400">
-          {filterStatus === 'all'
+          {isCompletedView
+            ? '完了済みの変更提案がありません'
+            : filterStatus === 'all'
             ? '変更提案がありません'
             : `${filterStatus === 'pending' ? '未対応' : '完了済み'}の変更提案がありません`}
         </div>
@@ -194,8 +225,11 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                   <input
                     type="checkbox"
                     className="w-4 h-4 accent-green-500 border-2 border-gray-400 rounded focus:ring-2 focus:ring-green-500"
-                    checked={proposal.status === 'completed'}
+                    checked={isCompletedView || proposal.status === 'completed'}
                     onChange={() => {
+                      // 完了済み表示の場合は状態変更を無効にする
+                      if (isCompletedView) return;
+                      
                       setChangeProposals(prev =>
                         prev.map(p =>
                           p.id === proposal.id
@@ -204,6 +238,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                         )
                       );
                     }}
+                    disabled={isCompletedView}
                   />
                 </div>
 
@@ -285,7 +320,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title="変更提案">
+    <AdminLayout title={isCompletedView ? "変更提案 - 完了済み" : "変更提案"}>
       <div className="flex flex-col h-full">
         {/* ヘッダー部分 */}
         <div className="mb-6">
@@ -295,11 +330,21 @@ export default function ChangeSuggestionsPage(): JSX.Element {
               <div className="flex items-center space-x-2 gap-2">
                 <div className="flex items-center space-x-2">
                   <Git className="w-4 h-4 text-white" />
-                  <span className="text-bold text-white">{pendingCount} 未対応</span>
+                  <a 
+                    href="/admin/change-suggestions"
+                    className={`text-bold hover:underline ${!isCompletedView ? 'text-white' : 'text-gray-400'}`}
+                  >
+                    {pendingCount} 未対応
+                  </a>
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckMark className="w-4 h-4 text-gray-400" />
-                  <span className="text-bold text-gray-400">{completedCount} 完了済み</span>
+                  <a 
+                    href="/admin/change-suggestions?status=merged&status=closed"
+                    className={`text-bold hover:underline ${isCompletedView ? 'text-white' : 'text-gray-400'}`}
+                  >
+                    {completedCount} 完了済み
+                  </a>
                 </div>
               </div>
             </div>

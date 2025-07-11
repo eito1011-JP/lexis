@@ -282,9 +282,14 @@ class PullRequestsController extends ApiBaseController
             }
 
             $email = $request->validated('email');
+            $statusFilters = $request->validated('status');
+
+            // statusパラメータが指定されている場合はそれを使用、そうでなければ未対応のみ
+            $defaultStatuses = [PullRequestStatus::OPENED->value, PullRequestStatus::CONFLICT->value];
+            $statuses = $statusFilters ? $statusFilters : $defaultStatuses;
 
             $query = PullRequest::with('userBranch.user')
-                ->whereIn('status', [PullRequestStatus::OPENED->value, PullRequestStatus::CONFLICT->value])
+                ->whereIn('status', $statuses)
                 ->orderByDesc('created_at')
                 ->when($email, function ($query) use ($email) {
                     return $query->whereHas('userBranch.user', function ($q) use ($email) {
