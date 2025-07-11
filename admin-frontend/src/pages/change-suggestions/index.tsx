@@ -63,11 +63,9 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const [completedCount, setCompletedCount] = useState(0);
 
   // URLパラメータから完了済み表示フラグを取得
-  const isCompletedView = new URLSearchParams(window.location.search)
-    .getAll('status')
-    .includes('merged') && new URLSearchParams(window.location.search)
-    .getAll('status')
-    .includes('closed');
+  const isCompletedView =
+    new URLSearchParams(window.location.search).getAll('status').includes('merged') &&
+    new URLSearchParams(window.location.search).getAll('status').includes('closed');
 
   // APIレスポンスをフロントエンドの型に変換する関数
   const transformApiResponse = (proposals: any[]): ChangeProposal[] => {
@@ -97,11 +95,11 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     const getChangeSuggestions = async () => {
       try {
         setChangeProposalsLoading(true);
-        
+
         const params: Record<string, string> = isCompletedView ? { status: 'merged,closed' } : {};
         const queryString = new URLSearchParams(params).toString();
         const apiUrl = `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}${queryString ? '?' + queryString : ''}`;
-        
+
         const response = await apiClient.get(apiUrl);
 
         if (!response?.pull_requests) {
@@ -113,7 +111,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
         const mappedProposals = transformApiResponse(response.pull_requests);
         setChangeProposals(mappedProposals);
         setCounts(response, isCompletedView);
-
       } catch (err) {
         console.error('変更提案取得エラー:', err);
         setApiError('変更提案の取得に失敗しました');
@@ -178,7 +175,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const filteredProposals = changeProposals.filter(proposal => {
     // 完了済み表示の場合は、既にAPIでフィルタリングされているためそのまま表示
     if (isCompletedView) return true;
-    
+
     if (filterStatus === 'all') return true;
     return proposal.status === filterStatus;
   });
@@ -199,8 +196,8 @@ export default function ChangeSuggestionsPage(): JSX.Element {
           {isCompletedView
             ? '完了済みの変更提案がありません'
             : filterStatus === 'all'
-            ? '変更提案がありません'
-            : `${filterStatus === 'pending' ? '未対応' : '完了済み'}の変更提案がありません`}
+              ? '変更提案がありません'
+              : `${filterStatus === 'pending' ? '未対応' : '完了済み'}の変更提案がありません`}
         </div>
       );
     }
@@ -229,7 +226,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                     onChange={() => {
                       // 完了済み表示の場合は状態変更を無効にする
                       if (isCompletedView) return;
-                      
+
                       setChangeProposals(prev =>
                         prev.map(p =>
                           p.id === proposal.id
@@ -320,7 +317,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title={isCompletedView ? "変更提案 - 完了済み" : "変更提案"}>
+    <AdminLayout title={isCompletedView ? '変更提案 - 完了済み' : '変更提案'}>
       <div className="flex flex-col h-full">
         {/* ヘッダー部分 */}
         <div className="mb-6">
@@ -330,7 +327,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
               <div className="flex items-center space-x-2 gap-2">
                 <div className="flex items-center space-x-2">
                   <Git className="w-4 h-4 text-white" />
-                  <a 
+                  <a
                     href="/admin/change-suggestions"
                     className={`text-bold hover:underline ${!isCompletedView ? 'text-white' : 'text-gray-400'}`}
                   >
@@ -339,7 +336,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                 </div>
                 <div className="flex items-center space-x-2">
                   <CheckMark className="w-4 h-4 text-gray-400" />
-                  <a 
+                  <a
                     href="/admin/change-suggestions?status=merged&status=closed"
                     className={`text-bold hover:underline ${isCompletedView ? 'text-white' : 'text-gray-400'}`}
                   >

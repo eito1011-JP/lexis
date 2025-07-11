@@ -27,6 +27,16 @@ class DetectConflictRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'id' => $this->route('id'),
+        ]);
+    }
+
+    /**
      * Get custom messages for validator errors.
      */
     public function messages(): array

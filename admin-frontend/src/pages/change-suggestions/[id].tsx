@@ -1,5 +1,5 @@
 import AdminLayout from '@/components/admin/layout';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useParams } from 'react-router-dom';
@@ -145,6 +145,39 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [initialReviewers, setInitialReviewers] = useState<number[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [conflictStatus, setConflictStatus] = useState<{
+    mergeable: boolean | null;
+    mergeable_state: string | null;
+  }>({ mergeable: null, mergeable_state: null });
+  const [isCheckingConflict, setIsCheckingConflict] = useState(false);
+  const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
+  // コンフリクト検知API呼び出し関数
+  const checkConflictStatus = useCallback(async () => {
+    if (!id || isCheckingConflict || conflictStatus.mergeable !== null) return;
+
+    setIsCheckingConflict(true);
+    try {
+      const response = await apiClient.get(
+        `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${id}/conflict`
+      );
+      setConflictStatus({
+        mergeable: response.mergeable,
+        mergeable_state: response.mergeable_state,
+      });
+
+      // コンフリクトが検出された場合はトーストで通知
+      if (response.mergeable === false) {
+        setToast({
+          message: 'コンフリクトが検出されました。マージできません。',
+          type: 'error',
+        });
+      }
+    } catch (error) {
+      console.error('コンフリクト検知エラー:', error);
+    } finally {
+      setIsCheckingConflict(false);
+    }
+  }, [id, isCheckingConflict, conflictStatus.mergeable]);
 
   // ユーザー一覧を取得する関数
   const handleFetchUser = async (searchEmail?: string) => {
@@ -262,6 +295,38 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   }, [showReviewerModal, reviewersInitialized, initialReviewers, selectedReviewers]);
 
+  // ボタンの表示を監視してコンフリクトチェックを実行
+  useEffect(() => {
+    if (
+      !mergeButtonRef.current ||
+      !pullRequestData ||
+      ['merged', 'closed'].includes(pullRequestData.status)
+    )
+      return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            // ボタンが画面に表示されたらコンフリクト検知APIを呼び出し
+            checkConflictStatus();
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1, // ボタンの10%が表示されたら発火
+      }
+    );
+
+    observer.observe(mergeButtonRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [pullRequestData, checkConflictStatus]);
+
   // 差分データをIDでマップ化する関数
   const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
     if (!pullRequestData?.diff_data) return null;
@@ -352,20 +417,20 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
     setIsMerging(true);
     try {
-        await apiClient.put(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.MERGE}/${id}`, {
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.MERGE}/${id}`, {
         pull_request_id: id,
       });
 
-        setToast({ message: 'プルリクエストをマージしました', type: 'success' });
-        setTimeout(() => {
-          window.location.href = '/admin/change-suggestions';
-        }, 1500);
-
+      setToast({ message: 'プルリクエストをマージしました', type: 'success' });
+      setTimeout(() => {
+        window.location.href = '/admin/change-suggestions';
+      }, 1500);
     } catch (error) {
       console.error('マージエラー:', error);
-      setToast({ 
-        message: 'マージに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'), 
-        type: 'error' 
+      setToast({
+        message:
+          'マージに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
+        type: 'error',
       });
     } finally {
       setIsMerging(false);
@@ -438,13 +503,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   return (
     <AdminLayout title="作業内容の確認">
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-20 w-full rounded-lg relative">
         {/* メインコンテンツエリア */}
         <div className="flex flex-1">
@@ -688,11 +747,22 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
           </button>
           {pullRequestData && !['merged', 'closed'].includes(pullRequestData.status) && (
             <button
+              ref={mergeButtonRef}
               onClick={handleMerge}
-              disabled={isMerging}
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+              disabled={isMerging || conflictStatus.mergeable === false}
+              className={`px-8 py-3 font-medium rounded-md transition-colors ${
+                conflictStatus.mergeable === false
+                  ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white disabled:bg-gray-500 disabled:cursor-not-allowed`}
             >
-              {isMerging ? 'マージ中...' : '変更を反映する'}
+              {isMerging
+                ? 'マージ中...'
+                : isCheckingConflict
+                  ? 'コンフリクトチェック中...'
+                  : conflictStatus.mergeable === false
+                    ? 'コンフリクトのため反映できません'
+                    : '変更を反映する'}
             </button>
           )}
         </div>
