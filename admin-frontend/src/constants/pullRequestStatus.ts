@@ -5,4 +5,4 @@ export const PULL_REQUEST_STATUS = {
   CONFLICT: 'conflict',
 } as const;
 
-export type PullRequestStatus = typeof PULL_REQUEST_STATUS[keyof typeof PULL_REQUEST_STATUS]; 
+export type PullRequestStatus = (typeof PULL_REQUEST_STATUS)[keyof typeof PULL_REQUEST_STATUS];

@@ -68,4 +68,4 @@ class ClosePullRequestRequest extends FormRequest
             'pull_request_id.exists' => '指定されたプルリクエストが見つからないか、既にクローズされています',
         ];
     }
-} 
+}

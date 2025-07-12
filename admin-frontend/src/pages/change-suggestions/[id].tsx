@@ -145,7 +145,11 @@ const StatusBanner: React.FC<{
   switch (true) {
     case conflict:
       button = (
-        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none" disabled>
+        <button
+          type="button"
+          className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none"
+          disabled
+        >
           <Closed className="w-5 h-5 mr-2" />
           <span className="text-white text-md font-bold">コンフリクト</span>
         </button>
@@ -153,7 +157,11 @@ const StatusBanner: React.FC<{
       break;
     case status === PULL_REQUEST_STATUS.MERGED:
       button = (
-        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#3832A5] focus:outline-none" disabled>
+        <button
+          type="button"
+          className="flex items-center px-7 py-3 rounded-full bg-[#3832A5] focus:outline-none"
+          disabled
+        >
           <Merged className="w-5 h-5 mr-2" />
           <span className="text-white text-md font-bold">反映済み</span>
         </button>
@@ -161,7 +169,11 @@ const StatusBanner: React.FC<{
       break;
     case status === PULL_REQUEST_STATUS.OPENED:
       button = (
-        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#1B6E2A] focus:outline-none" disabled>
+        <button
+          type="button"
+          className="flex items-center px-7 py-3 rounded-full bg-[#1B6E2A] focus:outline-none"
+          disabled
+        >
           <Merge className="w-5 h-5 mr-2" />
           <span className="text-white text-md font-bold">未対応</span>
         </button>
@@ -169,7 +181,11 @@ const StatusBanner: React.FC<{
       break;
     case status === PULL_REQUEST_STATUS.CLOSED:
       button = (
-        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none" disabled>
+        <button
+          type="button"
+          className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none"
+          disabled
+        >
           <Closed className="w-5 h-5 mr-2" />
           <span className="text-white text-md font-bold">取り下げ</span>
         </button>
@@ -182,7 +198,11 @@ const StatusBanner: React.FC<{
     <div className={`mb-10 rounded-lg`}>
       <div className="flex items-center justify-start">
         {button}
-        <span className="font-medium text-[#B1B1B1] ml-4">{authorEmail}さんが {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: ja })} に変更を提出しました</span>
+        <span className="font-medium text-[#B1B1B1] ml-4">
+          {authorEmail}さんが{' '}
+          {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: ja })}{' '}
+          に変更を提出しました
+        </span>
       </div>
     </div>
   );
@@ -845,26 +865,29 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
               {isMerging ? '取り下げ中...' : '提案を取り下げる'}
             </button>
           )}
-          {pullRequestData && ![PULL_REQUEST_STATUS.MERGED, PULL_REQUEST_STATUS.CLOSED].includes(pullRequestData.status as any) && (
-            <button
-              ref={mergeButtonRef}
-              onClick={handleMerge}
-              disabled={isMerging || conflictStatus.mergeable === false}
-              className={`px-8 py-3 font-bold rounded-md transition-colors ${
-                conflictStatus.mergeable === false
-                  ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              } text-white disabled:bg-gray-500 disabled:cursor-not-allowed`}
-            >
-              {isMerging
-                ? 'マージ中...'
-                : isCheckingConflict
-                  ? 'コンフリクトチェック中...'
-                  : conflictStatus.mergeable === false
-                    ? 'コンフリクトのため反映できません'
-                    : '変更を反映する'}
-            </button>
-          )}
+          {pullRequestData &&
+            ![PULL_REQUEST_STATUS.MERGED, PULL_REQUEST_STATUS.CLOSED].includes(
+              pullRequestData.status as any
+            ) && (
+              <button
+                ref={mergeButtonRef}
+                onClick={handleMerge}
+                disabled={isMerging || conflictStatus.mergeable === false}
+                className={`px-8 py-3 font-bold rounded-md transition-colors ${
+                  conflictStatus.mergeable === false
+                    ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                } text-white disabled:bg-gray-500 disabled:cursor-not-allowed`}
+              >
+                {isMerging
+                  ? 'マージ中...'
+                  : isCheckingConflict
+                    ? 'コンフリクトチェック中...'
+                    : conflictStatus.mergeable === false
+                      ? 'コンフリクトのため反映できません'
+                      : '変更を反映する'}
+              </button>
+            )}
         </div>
       </div>
     </AdminLayout>
