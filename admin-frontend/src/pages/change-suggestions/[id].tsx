@@ -12,6 +12,11 @@ import { Folder } from '@/components/icon/common/Folder';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Toast } from '@/components/admin/Toast';
+import { Merge } from '@/components/icon/common/Merge';
+import { Merged } from '@/components/icon/common/Merged';
+import { Closed } from '@/components/icon/common/Closed';
+import { formatDistanceToNow } from 'date-fns';
+import ja from 'date-fns/locale/ja';
 
 // 差分データの型定義
 type DiffItem = {
@@ -505,6 +510,31 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     <AdminLayout title="作業内容の確認">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-20 w-full rounded-lg relative">
+        {/* ステータスバナー */}
+        {(pullRequestData.status === 'merged' || pullRequestData.status === 'opened') && (
+          <div className={`mb-10 rounded-lg`}>
+            <div className="flex items-center justify-start">
+                {pullRequestData.status === 'merged' ? (
+                  <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#3832A5] focus:outline-none" disabled>
+                    <Merged className="w-5 h-5 mr-2" />
+                    <span className="text-white text-md font-bold">反映済み</span>
+                  </button>
+                ) : pullRequestData.status === 'opened' ? (
+                  <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#1B6E2A] focus:outline-none" disabled>
+                    <Merge className="w-5 h-5 mr-2" />
+                    <span className="text-white text-md font-bold">未対応</span>
+                  </button>
+                ) : (
+                  <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none" disabled>
+                    <Closed className="w-5 h-5 mr-2" />
+                    <span className="text-white text-md font-bold">取り下げ</span>
+                  </button>
+                )}
+                <span className="font-medium text-[#B1B1B1] ml-4">{pullRequestData.author_email}さんが {formatDistanceToNow(new Date(pullRequestData.created_at), { addSuffix: true, locale: ja })} に変更を提出しました</span>
+            </div>
+          </div>
+        )}
+
         {/* メインコンテンツエリア */}
         <div className="flex flex-1">
           {/* 左側: タイトルと本文 */}

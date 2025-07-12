@@ -34,9 +34,11 @@ export interface PullRequestDetailResponse {
   diff_data: any[];
   title: string;
   description: string;
-  status: string;
+  status: 'opened' | 'merged' | 'closed' | 'conflict';
   author_name: string;
+  author_email: string;
   reviewers: string[];
+  created_at: string;
 }
 
 /**

@@ -385,8 +385,9 @@ class PullRequestsController extends ApiBaseController
                 return $reviewer->user->email;
             })->toArray();
 
-            // 5. プルリクエスト作成者の名前を取得
+            // 5. プルリクエスト作成者の名前とメールアドレスを取得
             $authorName = $pullRequest->userBranch->user->name ?? null;
+            $authorEmail = $pullRequest->userBranch->user->email ?? null;
 
             return response()->json([
                 ...$diffResult,
@@ -394,7 +395,9 @@ class PullRequestsController extends ApiBaseController
                 'description' => $pullRequest->description,
                 'status' => $pullRequest->status,
                 'author_name' => $authorName,
+                'author_email' => $authorEmail,
                 'reviewers' => $reviewers,
+                'created_at' => $pullRequest->created_at,
             ]);
 
         } catch (\Exception $e) {
