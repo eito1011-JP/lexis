@@ -49,6 +49,7 @@ Route::middleware('auth.session')->group(function () {
         Route::get('/{id}/conflict', [PullRequestsController::class, 'detectConflict']);
         Route::post('/create', [PullRequestsController::class, 'createPullRequest']);
         Route::put('/{id}', [PullRequestsController::class, 'merge']);
+        Route::patch('/{id}/close', [PullRequestsController::class, 'close']);
     });
 
     // ドキュメント関連

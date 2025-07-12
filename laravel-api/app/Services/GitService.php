@@ -223,4 +223,27 @@ class GitService
             'mergeable_state' => $data['mergeable_state'],
         ];
     }
+
+    /**
+     * プルリクエストをクローズ
+     */
+    public function closePullRequest(int $prNumber): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/pulls/{$prNumber}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->patch($url, [
+            'state' => 'closed',
+        ]);
+
+        if (! $response->successful()) {
+            Log::error('GitHub API Error - Close Pull Request: '.$response->body());
+
+            throw new \Exception('プルリクエストのクローズに失敗しました');
+        }
+
+        return $response->json();
+    }
 }

@@ -17,6 +17,7 @@ import { Merged } from '@/components/icon/common/Merged';
 import { Closed } from '@/components/icon/common/Closed';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
+import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
 
 // 差分データの型定義
 type DiffItem = {
@@ -129,6 +130,60 @@ const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
           {index < parts.length - 1 && <span>/</span>}
         </span>
       ))}
+    </div>
+  );
+};
+
+// ステータスバナーコンポーネント
+const StatusBanner: React.FC<{
+  status: string;
+  authorEmail: string;
+  createdAt: string;
+  conflict: boolean;
+}> = ({ status, authorEmail, createdAt, conflict }) => {
+  let button;
+  switch (true) {
+    case conflict:
+      button = (
+        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none" disabled>
+          <Closed className="w-5 h-5 mr-2" />
+          <span className="text-white text-md font-bold">コンフリクト</span>
+        </button>
+      );
+      break;
+    case status === PULL_REQUEST_STATUS.MERGED:
+      button = (
+        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#3832A5] focus:outline-none" disabled>
+          <Merged className="w-5 h-5 mr-2" />
+          <span className="text-white text-md font-bold">反映済み</span>
+        </button>
+      );
+      break;
+    case status === PULL_REQUEST_STATUS.OPENED:
+      button = (
+        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#1B6E2A] focus:outline-none" disabled>
+          <Merge className="w-5 h-5 mr-2" />
+          <span className="text-white text-md font-bold">未対応</span>
+        </button>
+      );
+      break;
+    case status === PULL_REQUEST_STATUS.CLOSED:
+      button = (
+        <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none" disabled>
+          <Closed className="w-5 h-5 mr-2" />
+          <span className="text-white text-md font-bold">取り下げ</span>
+        </button>
+      );
+      break;
+    default:
+      button = null;
+  }
+  return (
+    <div className={`mb-10 rounded-lg`}>
+      <div className="flex items-center justify-start">
+        {button}
+        <span className="font-medium text-[#B1B1B1] ml-4">{authorEmail}さんが {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: ja })} に変更を提出しました</span>
+      </div>
     </div>
   );
 };
@@ -442,6 +497,30 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   };
 
+  // クローズボタンのハンドラー
+  const handleClose = async () => {
+    if (!id || isMerging) return;
+
+    setIsMerging(true);
+    try {
+      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CLOSE}/${id}/close`);
+
+      setToast({ message: 'プルリクエストを取り下げました', type: 'success' });
+      setTimeout(() => {
+        window.location.href = '/admin/change-suggestions';
+      }, 1500);
+    } catch (error) {
+      console.error('クローズエラー:', error);
+      setToast({
+        message:
+          '取り下げに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
+        type: 'error',
+      });
+    } finally {
+      setIsMerging(false);
+    }
+  };
+
   // セッション確認中はローディング表示
   if (isLoading) {
     return (
@@ -511,28 +590,16 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-20 w-full rounded-lg relative">
         {/* ステータスバナー */}
-        {(pullRequestData.status === 'merged' || pullRequestData.status === 'opened') && (
-          <div className={`mb-10 rounded-lg`}>
-            <div className="flex items-center justify-start">
-                {pullRequestData.status === 'merged' ? (
-                  <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#3832A5] focus:outline-none" disabled>
-                    <Merged className="w-5 h-5 mr-2" />
-                    <span className="text-white text-md font-bold">反映済み</span>
-                  </button>
-                ) : pullRequestData.status === 'opened' ? (
-                  <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#1B6E2A] focus:outline-none" disabled>
-                    <Merge className="w-5 h-5 mr-2" />
-                    <span className="text-white text-md font-bold">未対応</span>
-                  </button>
-                ) : (
-                  <button type="button" className="flex items-center px-7 py-3 rounded-full bg-[#DA3633] focus:outline-none" disabled>
-                    <Closed className="w-5 h-5 mr-2" />
-                    <span className="text-white text-md font-bold">取り下げ</span>
-                  </button>
-                )}
-                <span className="font-medium text-[#B1B1B1] ml-4">{pullRequestData.author_email}さんが {formatDistanceToNow(new Date(pullRequestData.created_at), { addSuffix: true, locale: ja })} に変更を提出しました</span>
-            </div>
-          </div>
+        {(pullRequestData.status === PULL_REQUEST_STATUS.MERGED ||
+          pullRequestData.status === PULL_REQUEST_STATUS.OPENED ||
+          pullRequestData.status === PULL_REQUEST_STATUS.CLOSED ||
+          conflictStatus.mergeable === false) && (
+          <StatusBanner
+            status={pullRequestData.status}
+            authorEmail={pullRequestData.author_email}
+            createdAt={pullRequestData.created_at}
+            conflict={conflictStatus.mergeable === false}
+          />
         )}
 
         {/* メインコンテンツエリア */}
@@ -768,19 +835,22 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         </div>
 
         {/* 下部のボタン */}
-        <div className="flex justify-center gap-4 mt-8 pb-6">
-          <button
-            onClick={handleGoBack}
-            className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition-colors"
-          >
-            戻る
-          </button>
-          {pullRequestData && !['merged', 'closed'].includes(pullRequestData.status) && (
+        <div className="flex justify-end gap-4 mt-8 pb-6 mr-20">
+          {pullRequestData && pullRequestData.status === PULL_REQUEST_STATUS.OPENED && (
+            <button
+              onClick={handleClose}
+              disabled={isMerging}
+              className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+            >
+              {isMerging ? '取り下げ中...' : '提案を取り下げる'}
+            </button>
+          )}
+          {pullRequestData && ![PULL_REQUEST_STATUS.MERGED, PULL_REQUEST_STATUS.CLOSED].includes(pullRequestData.status as any) && (
             <button
               ref={mergeButtonRef}
               onClick={handleMerge}
               disabled={isMerging || conflictStatus.mergeable === false}
-              className={`px-8 py-3 font-medium rounded-md transition-colors ${
+              className={`px-8 py-3 font-bold rounded-md transition-colors ${
                 conflictStatus.mergeable === false
                   ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
                   : 'bg-blue-600 hover:bg-blue-700'

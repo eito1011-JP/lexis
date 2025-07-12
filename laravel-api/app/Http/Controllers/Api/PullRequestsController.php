@@ -8,6 +8,7 @@ use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\PullRequestStatus;
 use App\Enums\UserRole;
+use App\Http\Requests\Api\PullRequest\ClosePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Http\Requests\CreatePullRequestRequest;
@@ -524,6 +525,52 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => 'コンフリクト検知に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエストをクローズ
+     */
+    public function close(ClosePullRequestRequest $request, int $id): JsonResponse
+    {
+        DB::beginTransaction();
+
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. プルリクエストを取得（Form Requestでバリデーション済み）
+            $pullRequest = PullRequest::find($id);
+
+            // 3. GitHub APIでプルリクエストをクローズ
+            $this->gitService->closePullRequest($pullRequest->pr_number);
+
+            // 4. pull_requestsテーブルのstatusをclosedに更新
+            $pullRequest->update([
+                'status' => PullRequestStatus::CLOSED->value,
+            ]);
+
+            DB::commit();
+
+            return response()->json();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('プルリクエストクローズエラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $id,
+            ]);
+
+            return response()->json([
+                'error' => 'プルリクエストのクローズに失敗しました',
             ], 500);
         }
     }
