@@ -51,7 +51,6 @@ export default function EditDocumentPage(): JSX.Element {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const [previewMode, setPreviewMode] = useState(false);
 
   // URLからslugとcategoryを抽出
   const pathname = location.pathname;
@@ -84,16 +83,9 @@ export default function EditDocumentPage(): JSX.Element {
         setDocumentSlug(response.slug || '');
         setLabel(response.sidebar_label || '');
         
-        // マークダウンコンテンツをHTMLに変換してSlateEditorに渡す
-        const markdownContent = response.content || '';
-        try {
-          const htmlContent = markdownContent ? markdownToHtml(markdownContent) : '';
-          setContent(htmlContent);
-        } catch (conversionError) {
-          console.error('マークダウン変換エラー:', conversionError);
-          // 変換に失敗した場合は元のマークダウンをそのまま使用
-          setContent(markdownContent);
-        }
+        // マークダウンコンテンツをそのままSlateEditorに渡す
+        const markdownContentFromDb = response.content || '';
+        setContent(markdownContentFromDb);
         
         setPublicOption(response.is_public ? '公開する' : '公開しない');
         setFileOrder(response.file_order || '');
@@ -159,67 +151,7 @@ export default function EditDocumentPage(): JSX.Element {
     setContent(html);
   };
 
-  // HTMLをマークダウンに変換するヘルパー関数
-  const convertHtmlToMarkdown = (html: string): string => {
-    // 簡単なHTMLからマークダウンへの変換
-    return html
-      // 見出し変換
-      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
-      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
-      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
-      .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
-      .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
-      .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
-      // 強調変換
-      .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
-      .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
-      .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
-      .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*')
-      // リンク変換
-      .replace(/<a[^>]*href=['"](.*?)['"][^>]*>(.*?)<\/a>/gi, '[$2]($1)')
-      // リスト変換（改行を適切に処理）
-      .replace(/<ul[^>]*>(.*?)<\/ul>/gis, (match, content) => {
-        const listItems = content
-          .replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1')
-          .replace(/\n\s*\n/g, '\n') // 余分な空行を削除
-          .trim();
-        return '\n' + listItems + '\n\n';
-      })
-      .replace(/<ol[^>]*>(.*?)<\/ol>/gis, (match, content) => {
-        let counter = 1;
-        const listItems = content
-          .replace(/<li[^>]*>(.*?)<\/li>/gi, () => `${counter++}. $1`)
-          .replace(/\n\s*\n/g, '\n') // 余分な空行を削除
-          .trim();
-        return '\n' + listItems + '\n\n';
-      })
-      // コードブロック変換
-      .replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, '```\n$1\n```\n\n')
-      .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
-      // 引用変換
-      .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, '> $1\n\n')
-      // 段落変換
-      .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
-      // 改行変換
-      .replace(/<br[^>]*>/gi, '\n')
-      // HTMLタグの除去
-      .replace(/<[^>]+>/g, '')
-      // HTMLエンティティのデコード
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&nbsp;/g, ' ')
-      // 連続する空白文字を1つに
-      .replace(/[ \t]+/g, ' ')
-      // 行末の空白を削除
-      .replace(/[ \t]+$/gm, '')
-      // 3つ以上の連続する改行を2つに
-      .replace(/\n{3,}/g, '\n\n')
-      // 最初と最後の空白を削除
-      .trim();
-  };
+
 
   const handleSave = async () => {
     try {
@@ -233,15 +165,15 @@ export default function EditDocumentPage(): JSX.Element {
         return;
       }
 
-      // HTMLコンテンツをマークダウンに変換
-      const markdownContent = convertHtmlToMarkdown(content);
+      // HTMLコンテンツをそのまま使用（サーバーサイドで変換される）
+      const finalMarkdownContent = content;
 
       // ドキュメント編集APIを呼び出す
       await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}`, {
         category_path_with_slug: category ? `${category}/${documentSlug}` : documentSlug,
         current_document_id: documentId,
         sidebar_label: label,
-        content: markdownContent,
+        content: finalMarkdownContent,
         is_public: publicOption === '公開する',
         slug: documentSlug,
         file_order: fileOrder === '' ? null : Number(fileOrder),
@@ -383,62 +315,14 @@ export default function EditDocumentPage(): JSX.Element {
 
           <div className="gap-6 mt-8">
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block font-bold">本文</label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode(false)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      !previewMode 
-                        ? 'bg-[#3832A5] text-white' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    編集
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode(true)}
-                    className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                      previewMode 
-                        ? 'bg-[#3832A5] text-white' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                    }`}
-                  >
-                    プレビュー
-                  </button>
-                </div>
+              <label className="block mb-2 font-bold">本文</label>
+              <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
+                <SlateEditor
+                  initialContent={content}
+                  onChange={handleEditorChange}
+                  placeholder="ここにドキュメントを作成してください"
+                />
               </div>
-              
-              {previewMode ? (
-                <div className="w-full p-4 border border-gray-700 rounded bg-gray-900 text-white min-h-72 overflow-auto">
-                  {content && content.trim() ? (
-                    <div 
-                      className="markdown-content prose prose-invert max-w-none"
-                      dangerouslySetInnerHTML={{ __html: content }}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-500">
-                      <div className="text-center">
-                        <svg className="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <p className="text-sm">本文が入力されていません</p>
-                        <p className="text-xs text-gray-600 mt-1">編集タブでコンテンツを追加してください</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
-                  <SlateEditor
-                    initialContent={content}
-                    onChange={handleEditorChange}
-                    placeholder="ここにドキュメントを作成してください"
-                  />
-                </div>
-              )}
             </div>
           </div>
 

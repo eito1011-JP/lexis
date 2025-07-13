@@ -133,11 +133,14 @@ export default function CreateDocumentPage(): JSX.Element {
       const queryParams = new URLSearchParams(window.location.search);
       const category = queryParams.get('category');
 
+      // HTMLコンテンツをそのまま使用（サーバーサイドで変換される）
+      const finalMarkdownContent = content;
+
       // ドキュメント作成APIを呼び出す（パスパラメータでcategory_pathを渡す）
       await apiClient.post(`${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE}`, {
         category_path: category,
         sidebar_label: label,
-        content: markdownContent,
+        content: finalMarkdownContent,
         is_public: publicOption === '公開する', // 公開設定を真偽値に変換
         slug,
         file_order: fileOrder,

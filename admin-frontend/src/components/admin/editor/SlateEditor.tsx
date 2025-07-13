@@ -35,6 +35,7 @@ import Toggle from '../../icon/editor/Toggle';
 interface SlateEditorProps {
   initialContent: string;
   onChange: (html: string) => void;
+  onMarkdownChange?: (markdown: string) => void;
   placeholder?: string;
 }
 
@@ -52,7 +53,7 @@ type CustomElement = {
     | 'code'
     | 'image'
     | 'link';
-  children: CustomText[];
+  children: CustomText[] | CustomElement[];
   url?: string;
 };
 
@@ -79,29 +80,17 @@ const LIST_TYPES = ['numbered-list', 'bulleted-list'] as const;
 const SlateEditor: React.FC<SlateEditorProps> = ({
   initialContent,
   onChange,
+  onMarkdownChange,
   placeholder = 'ここにドキュメントを作成してください',
 }) => {
   const [showParagraphOptions, setShowParagraphOptions] = useState(false);
   const [showFontSizeOptions, setShowFontSizeOptions] = useState(false);
   const editor = useMemo(() => withImages(withHistory(withReact(createEditor()))), []);
 
-  // Markdown→Slate変換は省略し、初期値はプレーンテキストとして挿入
+  // Markdown→Slate変換
   const safeInitialContent = typeof initialContent === 'string' ? initialContent : '';
   const initialValue: Descendant[] = useMemo(
-    () =>
-      safeInitialContent.trim()
-        ? [
-            {
-              type: 'paragraph',
-              children: [{ text: safeInitialContent }],
-            } as CustomElement,
-          ]
-        : [
-            {
-              type: 'paragraph',
-              children: [{ text: '' }],
-            } as CustomElement,
-          ],
+    () => parseMarkdownToSlate(safeInitialContent),
     [safeInitialContent]
   );
 
@@ -140,9 +129,73 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       .join('');
   };
 
+  // Markdown変換（直接）
+  const serializeToMarkdown = (nodes: Descendant[]): string => {
+    return nodes
+      .map(n => {
+        if (Editor.isEditor(n) || !('type' in n)) {
+          if (Text.isText(n)) {
+            let text = n.text;
+            if (n.bold) text = `**${text}**`;
+            if (n.italic) text = `*${text}*`;
+            if (n.underline) text = `<u>${text}</u>`;
+            if (n.strike) text = `~~${text}~~`;
+            if (n.code) text = `\`${text}\``;
+            return text;
+          }
+          return '';
+        }
+        const element = n as CustomElement;
+        switch (element.type) {
+          case 'heading-one':
+            return `# ${serializeToMarkdown(element.children)}\n\n`;
+          case 'heading-two':
+            return `## ${serializeToMarkdown(element.children)}\n\n`;
+          case 'heading-three':
+            return `### ${serializeToMarkdown(element.children)}\n\n`;
+          case 'block-quote':
+            return `> ${serializeToMarkdown(element.children)}\n\n`;
+          case 'bulleted-list':
+            return element.children.map(child => {
+              const childElement = child as CustomElement;
+              if (childElement.type === 'list-item') {
+                return `- ${serializeToMarkdown(childElement.children)}`;
+              }
+              return '';
+            }).join('\n') + '\n\n';
+          case 'numbered-list':
+            let counter = 1;
+            return element.children.map(child => {
+              const childElement = child as CustomElement;
+              if (childElement.type === 'list-item') {
+                return `${counter++}. ${serializeToMarkdown(childElement.children)}`;
+              }
+              return '';
+            }).join('\n') + '\n\n';
+          case 'list-item':
+            return `${serializeToMarkdown(element.children)}`;
+          case 'code':
+            return `\`\`\`\n${serializeToMarkdown(element.children)}\n\`\`\`\n\n`;
+          case 'image':
+            return `![](${element.url})\n\n`;
+          case 'link':
+            return `[${serializeToMarkdown(element.children)}](${element.url})`;
+          case 'paragraph':
+          default:
+            return `${serializeToMarkdown(element.children)}\n\n`;
+        }
+      })
+      .join('')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
   // onChange
   const handleChange = (newValue: Descendant[]) => {
     onChange(serialize(newValue));
+    if (onMarkdownChange) {
+      onMarkdownChange(serializeToMarkdown(newValue));
+    }
   };
 
   // Render Element
@@ -151,7 +204,6 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
   // Toolbarの各種コマンド
   const exec = (format: string, value?: any) => {
-    console.log('Executing format:', format);
     switch (format) {
       case 'bold':
       case 'italic':
@@ -437,6 +489,220 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
       </div>
     </div>
   );
+};
+
+// --- Markdown→Slate変換 ---
+
+const parseMarkdownToSlate = (markdown: string): Descendant[] => {
+  if (!markdown || !markdown.trim()) {
+    return [{ type: 'paragraph', children: [{ text: '' }] } as CustomElement];
+  }
+
+  const lines = markdown.split('\n');
+  const result: Descendant[] = [];
+  let currentListItems: CustomElement[] = [];
+  let currentListType: 'numbered-list' | 'bulleted-list' | null = null;
+
+  const flushList = () => {
+    if (currentListItems.length > 0 && currentListType) {
+      result.push({
+        type: currentListType,
+        children: currentListItems,
+      } as CustomElement);
+      currentListItems = [];
+      currentListType = null;
+    }
+  };
+
+  const parseInlineText = (text: string): CustomText[] => {
+    const parts: CustomText[] = [];
+    let current = text;
+    
+    // 簡単なインライン要素の解析
+    const patterns = [
+      { regex: /\*\*([^*]+)\*\*/g, style: { bold: true } },
+      { regex: /\*([^*]+)\*/g, style: { italic: true } },
+      { regex: /_([^_]+)_/g, style: { italic: true } },
+      { regex: /~~([^~]+)~~/g, style: { strike: true } },
+      { regex: /`([^`]+)`/g, style: { code: true } },
+    ];
+
+    // 単純にテキストを分割して処理
+    let processedText = current;
+    let hasFormatting = false;
+
+    for (const pattern of patterns) {
+      if (pattern.regex.test(processedText)) {
+        hasFormatting = true;
+        break;
+      }
+    }
+
+    if (!hasFormatting) {
+      return [{ text: current }];
+    }
+
+    // 複雑なフォーマットの解析は簡略化
+    // 太字の解析
+    if (processedText.includes('**')) {
+      const boldMatches = processedText.match(/\*\*([^*]+)\*\*/g);
+      if (boldMatches) {
+        let tempText = processedText;
+        boldMatches.forEach(match => {
+          const content = match.replace(/\*\*/g, '');
+          const beforeMatch = tempText.substring(0, tempText.indexOf(match));
+          const afterMatch = tempText.substring(tempText.indexOf(match) + match.length);
+          
+          if (beforeMatch) parts.push({ text: beforeMatch });
+          parts.push({ text: content, bold: true });
+          tempText = afterMatch;
+        });
+        if (tempText) parts.push({ text: tempText });
+        return parts;
+      }
+    }
+
+    return [{ text: current }];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // 空行の処理
+    if (!line.trim()) {
+      flushList();
+      continue;
+    }
+
+    // ATX形式の見出しの処理
+    if (line.startsWith('# ')) {
+      flushList();
+      result.push({
+        type: 'heading-one',
+        children: parseInlineText(line.substring(2)),
+      } as CustomElement);
+      continue;
+    }
+    
+    if (line.startsWith('## ')) {
+      flushList();
+      result.push({
+        type: 'heading-two',
+        children: parseInlineText(line.substring(3)),
+      } as CustomElement);
+      continue;
+    }
+    
+    if (line.startsWith('### ')) {
+      flushList();
+      result.push({
+        type: 'heading-three',
+        children: parseInlineText(line.substring(4)),
+      } as CustomElement);
+      continue;
+    }
+
+    // Setext形式の見出しの処理
+    if (i + 1 < lines.length) {
+      const nextLine = lines[i + 1];
+      if (nextLine.match(/^=+\s*$/)) {
+        // H1 見出し
+        flushList();
+        result.push({
+          type: 'heading-one',
+          children: parseInlineText(line),
+        } as CustomElement);
+        i++; // 次の行（=====）をスキップ
+        continue;
+      }
+      if (nextLine.match(/^-+\s*$/)) {
+        // H2 見出し
+        flushList();
+        result.push({
+          type: 'heading-two',
+          children: parseInlineText(line),
+        } as CustomElement);
+        i++; // 次の行（-----）をスキップ
+        continue;
+      }
+    }
+
+    // 引用の処理
+    if (line.startsWith('> ')) {
+      flushList();
+      result.push({
+        type: 'block-quote',
+        children: parseInlineText(line.substring(2)),
+      } as CustomElement);
+      continue;
+    }
+
+    // 番号付きリストの処理
+    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+    if (numberedMatch) {
+      if (currentListType !== 'numbered-list') {
+        flushList();
+        currentListType = 'numbered-list';
+      }
+      currentListItems.push({
+        type: 'list-item',
+        children: parseInlineText(numberedMatch[1]),
+      } as CustomElement);
+      continue;
+    }
+
+    // 箇条書きリストの処理
+    if (line.match(/^[-*+]\s+(.+)$/)) {
+      const match = line.match(/^[-*+]\s+(.+)$/);
+      if (match) {
+        if (currentListType !== 'bulleted-list') {
+          flushList();
+          currentListType = 'bulleted-list';
+        }
+        currentListItems.push({
+          type: 'list-item',
+          children: parseInlineText(match[1]),
+        } as CustomElement);
+        continue;
+      }
+    }
+
+    // コードブロックの処理
+    if (line.startsWith('```')) {
+      flushList();
+      let codeContent = '';
+      i++; // 次の行に進む
+      while (i < lines.length && !lines[i].startsWith('```')) {
+        codeContent += lines[i] + '\n';
+        i++;
+      }
+      result.push({
+        type: 'code',
+        children: [{ text: codeContent.trim() }],
+      } as CustomElement);
+      continue;
+    }
+
+    // 水平線の処理（無視）
+    if (line.match(/^(-{3,}|={3,}|\*{3,})\s*$/)) {
+      flushList();
+      continue;
+    }
+
+    // 通常の段落
+    if (line.trim()) {
+      flushList();
+      result.push({
+        type: 'paragraph',
+        children: parseInlineText(line),
+      } as CustomElement);
+    }
+  }
+
+  // 最後のリストを処理
+  flushList();
+
+  return result.length > 0 ? result : [{ type: 'paragraph', children: [{ text: '' }] } as CustomElement];
 };
 
 // --- Slate用ユーティリティ ---
