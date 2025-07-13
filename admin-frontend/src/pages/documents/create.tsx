@@ -4,6 +4,7 @@ import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
+import { markdownStyles } from '@/styles/markdownContent';
 
 // ユーザー型定義を追加
 interface User {
@@ -136,7 +137,7 @@ export default function CreateDocumentPage(): JSX.Element {
       await apiClient.post(`${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE}`, {
         category_path: category,
         sidebar_label: label,
-        content,
+        content: markdownContent,
         is_public: publicOption === '公開する', // 公開設定を真偽値に変換
         slug,
         file_order: fileOrder,
@@ -167,6 +168,7 @@ export default function CreateDocumentPage(): JSX.Element {
 
   return (
     <AdminLayout title="ドキュメント作成">
+      <style>{markdownStyles}</style>
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-4">ドキュメント作成</h1>

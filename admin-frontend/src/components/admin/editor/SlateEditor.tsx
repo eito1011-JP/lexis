@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react';
+import './styles.css';
 import {
   createEditor,
   Descendant,
@@ -150,6 +151,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
   // Toolbarの各種コマンド
   const exec = (format: string, value?: any) => {
+    console.log('Executing format:', format);
     switch (format) {
       case 'bold':
       case 'italic':
@@ -189,22 +191,22 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
 
   // UI
   return (
-    <div className="w-full relative">
+    <div className="w-full relative slate-editor">
       <div className="flex mb-2 pb-5 pt-1 px-1 border-b gap-1 rounded-t">
         {/* 段落・見出し */}
-        <div className="relative h-8 mr-1">
+        <div className="relative h-8">
           <button
-            className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent ${showParagraphOptions ? 'border-[#B1B1B1]' : ''}`}
+            className={`h-8 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent ${showParagraphOptions ? 'border-[#B1B1B1]' : ''}`}
             title="段落スタイル"
             onClick={() => {
               setShowParagraphOptions(!showParagraphOptions);
               setShowFontSizeOptions(false);
             }}
           >
-            <span className="mr-3">
+            <div className="flex items-center gap-1">
               <ParagraphIcon width={15} height={15} />
-            </span>
-            <Toggle width={10} height={10} />
+              <Toggle width={9} height={9} />
+            </div>
           </button>
           <div
             className={`absolute ${showParagraphOptions ? 'block' : 'hidden'} bg-white border rounded shadow-lg z-10 w-32`}
@@ -247,21 +249,23 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             </button>
           </div>
         </div>
-        <div className="flex items-center h-8 mx-1">
+        <div className="flex items-center h-8 mx-0.5">
           <div className="h-5 border-l border-[#B1B1B1]"></div>
         </div>
         {/* フォントサイズ */}
-        <div className="relative h-8 mr-1">
+        <div className="relative h-8">
           <button
-            className={`px-2 py-1 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent ${showFontSizeOptions ? 'border-[#B1B1B1]' : ''}`}
+            className={`h-8 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent ${showFontSizeOptions ? 'border-[#B1B1B1]' : ''}`}
             title="フォントサイズ"
             onClick={() => {
               setShowFontSizeOptions(!showFontSizeOptions);
               setShowParagraphOptions(false);
             }}
           >
-            <TextFormat className="mr-3" width={22} height={22} />
-            <Toggle width={10} height={10} />
+            <div className="flex items-center gap-1">
+              <TextFormat width={22} height={22} />
+              <Toggle width={9} height={9} />
+            </div>
           </button>
           <div
             className={`absolute ${showFontSizeOptions ? 'block' : 'hidden'} bg-white border rounded shadow-lg z-10 w-32`}
@@ -304,7 +308,7 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             </button>
           </div>
         </div>
-        <div className="flex items-center h-8 mx-1">
+        <div className="flex items-center h-8 mx-0.5">
           <div className="h-5 border-l border-[#B1B1B1]"></div>
         </div>
         {/* マーク */}
@@ -454,6 +458,9 @@ const isMarkActive = (editor: Editor, format: string) => {
 const toggleBlock = (editor: Editor, format: string) => {
   const isActive = isBlockActive(editor, format);
   const isList = LIST_TYPES.includes(format as any);
+  const isHeading = ['heading-one', 'heading-two', 'heading-three'].includes(format);
+  
+  // リスト要素をアンラップ
   Transforms.unwrapNodes(editor, {
     match: n =>
       !Editor.isEditor(n) &&
@@ -461,18 +468,39 @@ const toggleBlock = (editor: Editor, format: string) => {
       LIST_TYPES.includes((n as CustomElement).type as any),
     split: true,
   });
-  let newType = isActive ? 'paragraph' : format;
-  Transforms.setNodes<CustomElement>(editor, { type: newType as CustomElement['type'] });
+  
+  // 見出し要素をアンラップ（新しい見出しに変換する場合を除く）
+  if (!isHeading) {
+    Transforms.unwrapNodes(editor, {
+      match: n =>
+        !Editor.isEditor(n) &&
+        SlateElement.isElement(n) &&
+        ['heading-one', 'heading-two', 'heading-three'].includes((n as CustomElement).type),
+      split: true,
+    });
+  }
+  
   if (!isActive && isList) {
+    // リストアイテムに変換
+    Transforms.setNodes<CustomElement>(editor, { type: 'list-item' });
+    // リストでラップ
     const block: CustomElement = { type: format as CustomElement['type'], children: [] };
     Transforms.wrapNodes(editor, block);
+  } else {
+    // 通常のブロック変換
+    let newType = isActive ? 'paragraph' : format;
+    Transforms.setNodes<CustomElement>(editor, { type: newType as CustomElement['type'] });
   }
 };
 
 const isBlockActive = (editor: Editor, format: string) => {
+  const { selection } = editor;
+  if (!selection) return false;
+  
   const [match] = Editor.nodes(editor, {
     match: n =>
       !Editor.isEditor(n) && SlateElement.isElement(n) && (n as CustomElement).type === format,
+    at: Editor.unhangRange(editor, selection),
   });
   return !!match;
 };

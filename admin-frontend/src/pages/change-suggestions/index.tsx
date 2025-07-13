@@ -288,14 +288,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                       <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-700 rounded-md shadow-lg z-50">
                         <ul className="py-1">
                           <li>
-                            <a
-                              href={`/change-suggestions/${proposal.id}`}
-                              className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer"
-                            >
-                              詳細を見る
-                            </a>
-                          </li>
-                          <li>
                             <button
                               className="block w-full text-left px-4 py-2 text-sm text-blue-400 hover:bg-gray-800 cursor-pointer"
                               onClick={() => {

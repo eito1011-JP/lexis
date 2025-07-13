@@ -10,6 +10,7 @@ import { markdownToHtml } from '@/utils/markdownToHtml';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Settings } from '@/components/icon/common/Settings';
 import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequest';
+import { markdownStyles } from '@/styles/markdownContent';
 
 // 差分データの型定義
 type DiffItem = {
@@ -61,17 +62,27 @@ const SmartDiffValue = ({
   isMarkdown?: boolean;
 }) => {
   const renderValue = (value: any) => {
-    if (value === null || value === undefined) return '-';
+    if (value === null || value === undefined) return '(なし)';
     if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
     if (typeof value === 'number') return value.toString();
     return value;
   };
 
   const renderContent = (content: string, isMarkdown: boolean) => {
-    if (isMarkdown) {
-      return <div dangerouslySetInnerHTML={{ __html: markdownToHtml(content) }} />;
+    if (!isMarkdown || !content) return content;
+
+    try {
+      const htmlContent = markdownToHtml(content);
+      return (
+        <div 
+          className="markdown-content prose prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: htmlContent }} 
+        />
+      );
+    } catch (error) {
+      console.error('マークダウン変換エラー:', error);
+      return content;
     }
-    return content;
   };
 
   return (
@@ -91,16 +102,15 @@ const SmartDiffValue = ({
       )}
 
       {fieldInfo.status === 'modified' && (
-        <>
-          <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200 mb-1">
+        <div className="space-y-1">
+          <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
             <span className="text-red-400 text-xs font-medium mr-2">-</span>
             {renderContent(renderValue(fieldInfo.original), isMarkdown)}
           </div>
           <div className="bg-green-900/30 border border-green-700 rounded-md p-3 text-sm text-green-200">
-            <span className="text-green-400 text-xs font-medium mr-2">+</span>
             {renderContent(renderValue(fieldInfo.current), isMarkdown)}
           </div>
-        </>
+        </div>
       )}
 
       {fieldInfo.status === 'unchanged' && (
@@ -476,6 +486,7 @@ export default function DiffPage(): JSX.Element {
 
   return (
     <AdminLayout title="差分確認">
+      <style>{markdownStyles}</style>
       <div className="flex flex-col h-full">
         {/* 成功メッセージ */}
         {submitSuccess && (

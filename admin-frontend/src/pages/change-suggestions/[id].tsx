@@ -18,6 +18,7 @@ import { Closed } from '@/components/icon/common/Closed';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
+import { markdownStyles } from '@/styles/markdownContent';
 
 // 差分データの型定義
 type DiffItem = {
@@ -71,11 +72,16 @@ const SmartDiffValue: React.FC<{
   };
 
   const renderContent = (content: string, isMarkdown: boolean) => {
-    if (!isMarkdown) return content;
+    if (!isMarkdown || !content) return content;
 
     try {
       const htmlContent = markdownToHtml(content);
-      return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
+      return (
+        <div 
+          className="markdown-content prose prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: htmlContent }} 
+        />
+      );
     } catch (error) {
       return content;
     }
@@ -607,6 +613,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   return (
     <AdminLayout title="作業内容の確認">
+      <style>{markdownStyles}</style>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-20 w-full rounded-lg relative">
         {/* ステータスバナー */}
