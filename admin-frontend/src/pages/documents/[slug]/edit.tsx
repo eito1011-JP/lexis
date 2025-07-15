@@ -82,11 +82,11 @@ export default function EditDocumentPage(): JSX.Element {
         setDocumentId(response.id);
         setDocumentSlug(response.slug || '');
         setLabel(response.sidebar_label || '');
-        
+
         // マークダウンコンテンツをそのままSlateEditorに渡す
         const markdownContentFromDb = response.content || '';
         setContent(markdownContentFromDb);
-        
+
         setPublicOption(response.is_public ? '公開する' : '公開しない');
         setFileOrder(response.file_order || '');
       } catch (error) {
@@ -150,8 +150,6 @@ export default function EditDocumentPage(): JSX.Element {
   const handleEditorChange = (html: string) => {
     setContent(html);
   };
-
-
 
   const handleSave = async () => {
     try {

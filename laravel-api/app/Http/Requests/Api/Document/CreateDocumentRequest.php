@@ -44,7 +44,7 @@ class CreateDocumentRequest extends FormRequest
             'content' => __('validation.document.content.required'),
             'slug' => __('validation.document.slug.required'),
             'file_order' => __('validation.document.file_order.integer'),
-                ];
+        ];
     }
 
     public function passedValidation()

@@ -156,22 +156,30 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
           case 'block-quote':
             return `> ${serializeToMarkdown(element.children)}\n\n`;
           case 'bulleted-list':
-            return element.children.map(child => {
-              const childElement = child as CustomElement;
-              if (childElement.type === 'list-item') {
-                return `- ${serializeToMarkdown(childElement.children)}`;
-              }
-              return '';
-            }).join('\n') + '\n\n';
+            return (
+              element.children
+                .map(child => {
+                  const childElement = child as CustomElement;
+                  if (childElement.type === 'list-item') {
+                    return `- ${serializeToMarkdown(childElement.children)}`;
+                  }
+                  return '';
+                })
+                .join('\n') + '\n\n'
+            );
           case 'numbered-list':
             let counter = 1;
-            return element.children.map(child => {
-              const childElement = child as CustomElement;
-              if (childElement.type === 'list-item') {
-                return `${counter++}. ${serializeToMarkdown(childElement.children)}`;
-              }
-              return '';
-            }).join('\n') + '\n\n';
+            return (
+              element.children
+                .map(child => {
+                  const childElement = child as CustomElement;
+                  if (childElement.type === 'list-item') {
+                    return `${counter++}. ${serializeToMarkdown(childElement.children)}`;
+                  }
+                  return '';
+                })
+                .join('\n') + '\n\n'
+            );
           case 'list-item':
             return `${serializeToMarkdown(element.children)}`;
           case 'code':
@@ -517,7 +525,7 @@ const parseMarkdownToSlate = (markdown: string): Descendant[] => {
   const parseInlineText = (text: string): CustomText[] => {
     const parts: CustomText[] = [];
     let current = text;
-    
+
     // 簡単なインライン要素の解析
     const patterns = [
       { regex: /\*\*([^*]+)\*\*/g, style: { bold: true } },
@@ -552,7 +560,7 @@ const parseMarkdownToSlate = (markdown: string): Descendant[] => {
           const content = match.replace(/\*\*/g, '');
           const beforeMatch = tempText.substring(0, tempText.indexOf(match));
           const afterMatch = tempText.substring(tempText.indexOf(match) + match.length);
-          
+
           if (beforeMatch) parts.push({ text: beforeMatch });
           parts.push({ text: content, bold: true });
           tempText = afterMatch;
@@ -567,7 +575,7 @@ const parseMarkdownToSlate = (markdown: string): Descendant[] => {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     // 空行の処理
     if (!line.trim()) {
       flushList();
@@ -583,7 +591,7 @@ const parseMarkdownToSlate = (markdown: string): Descendant[] => {
       } as CustomElement);
       continue;
     }
-    
+
     if (line.startsWith('## ')) {
       flushList();
       result.push({
@@ -592,7 +600,7 @@ const parseMarkdownToSlate = (markdown: string): Descendant[] => {
       } as CustomElement);
       continue;
     }
-    
+
     if (line.startsWith('### ')) {
       flushList();
       result.push({
@@ -702,7 +710,9 @@ const parseMarkdownToSlate = (markdown: string): Descendant[] => {
   // 最後のリストを処理
   flushList();
 
-  return result.length > 0 ? result : [{ type: 'paragraph', children: [{ text: '' }] } as CustomElement];
+  return result.length > 0
+    ? result
+    : [{ type: 'paragraph', children: [{ text: '' }] } as CustomElement];
 };
 
 // --- Slate用ユーティリティ ---
@@ -725,7 +735,7 @@ const toggleBlock = (editor: Editor, format: string) => {
   const isActive = isBlockActive(editor, format);
   const isList = LIST_TYPES.includes(format as any);
   const isHeading = ['heading-one', 'heading-two', 'heading-three'].includes(format);
-  
+
   // リスト要素をアンラップ
   Transforms.unwrapNodes(editor, {
     match: n =>
@@ -734,7 +744,7 @@ const toggleBlock = (editor: Editor, format: string) => {
       LIST_TYPES.includes((n as CustomElement).type as any),
     split: true,
   });
-  
+
   // 見出し要素をアンラップ（新しい見出しに変換する場合を除く）
   if (!isHeading) {
     Transforms.unwrapNodes(editor, {
@@ -745,7 +755,7 @@ const toggleBlock = (editor: Editor, format: string) => {
       split: true,
     });
   }
-  
+
   if (!isActive && isList) {
     // リストアイテムに変換
     Transforms.setNodes<CustomElement>(editor, { type: 'list-item' });
@@ -762,7 +772,7 @@ const toggleBlock = (editor: Editor, format: string) => {
 const isBlockActive = (editor: Editor, format: string) => {
   const { selection } = editor;
   if (!selection) return false;
-  
+
   const [match] = Editor.nodes(editor, {
     match: n =>
       !Editor.isEditor(n) && SlateElement.isElement(n) && (n as CustomElement).type === format,

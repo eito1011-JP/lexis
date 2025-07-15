@@ -126,7 +126,7 @@ export const markdownToHtml = (markdown: string): string => {
   const processedParagraphs = paragraphs.map(paragraph => {
     const trimmed = paragraph.trim();
     if (!trimmed) return '';
-    
+
     // ブロック要素は段落でラップしない
     if (
       trimmed.startsWith('<h') ||
@@ -143,7 +143,7 @@ export const markdownToHtml = (markdown: string): string => {
     ) {
       return trimmed;
     }
-    
+
     // 単一行の改行を<br>に変換
     const withBreaks = trimmed.replace(/\n/g, '<br>');
     return `<p>${withBreaks}</p>`;

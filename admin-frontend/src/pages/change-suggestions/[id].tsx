@@ -77,9 +77,9 @@ const SmartDiffValue: React.FC<{
     try {
       const htmlContent = markdownToHtml(content);
       return (
-        <div 
+        <div
           className="markdown-content prose prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: htmlContent }} 
+          dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
       );
     } catch (error) {
