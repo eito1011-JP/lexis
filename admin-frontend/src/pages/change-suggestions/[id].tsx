@@ -5,10 +5,8 @@ import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useParams } from 'react-router-dom';
 import { fetchPullRequestDetail, type PullRequestDetailResponse } from '@/api/pullRequest';
 import { Settings } from '@/components/icon/common/Settings';
-import { markdownToHtml } from '@/utils/markdownToHtml';
 import React from 'react';
-import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
-import { Folder } from '@/components/icon/common/Folder';
+
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Toast } from '@/components/admin/Toast';
@@ -18,6 +16,9 @@ import { Closed } from '@/components/icon/common/Closed';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
+import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
+import { Folder } from '@/components/icon/common/Folder';
+import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 
 // 差分データの型定義
@@ -132,7 +133,7 @@ const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
       <span>/</span>
       {parts.map((part, index) => (
         <span key={index}>
-          <span className="textwh-300">{part}</span>
+          <span className="text-gray-300">{part}</span>
           {index < parts.length - 1 && <span>/</span>}
         </span>
       ))}
@@ -140,13 +141,22 @@ const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
   );
 };
 
+// タブ定義
+type TabType = 'activity' | 'changes';
+
+const TABS = [
+  { id: 'activity' as TabType, label: 'アクティビティ', icon: '💬' },
+  { id: 'changes' as TabType, label: '変更内容', icon: '📝' },
+] as const;
+
 // ステータスバナーコンポーネント
 const StatusBanner: React.FC<{
   status: string;
   authorEmail: string;
   createdAt: string;
   conflict: boolean;
-}> = ({ status, authorEmail, createdAt, conflict }) => {
+  title: string;
+}> = ({ status, authorEmail, createdAt, conflict, title }) => {
   let button;
   switch (true) {
     case conflict:
@@ -202,6 +212,8 @@ const StatusBanner: React.FC<{
   }
   return (
     <div className={`mb-10 rounded-lg`}>
+      {/* タイトル表示 */}
+      <h1 className="text-3xl font-bold text-white mb-4">{title}</h1>
       <div className="flex items-center justify-start">
         {button}
         <span className="font-medium text-[#B1B1B1] ml-4">
@@ -237,6 +249,63 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   }>({ mergeable: null, mergeable_state: null });
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [comment, setComment] = useState('');
+  const [activeTab, setActiveTab] = useState<TabType>('activity');
+
+  // 差分データをIDでマップ化する関数
+  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
+    if (!pullRequestData?.diff_data) return null;
+    return (
+      pullRequestData.diff_data.find(
+        (diff: DiffDataInfo) => diff.id === id && diff.type === type
+      ) || null
+    );
+  };
+
+  // フィールド情報を取得する関数
+  const getFieldInfo = (
+    diffInfo: DiffDataInfo | null,
+    fieldName: string,
+    currentValue: any,
+    originalValue?: any
+  ): DiffFieldInfo => {
+    if (!diffInfo) {
+      return {
+        status: 'unchanged',
+        current: currentValue,
+        original: originalValue,
+      };
+    }
+
+    if (diffInfo.operation === 'deleted') {
+      return {
+        status: 'deleted',
+        current: null,
+        original: originalValue,
+      };
+    }
+
+    if (!diffInfo.changed_fields[fieldName]) {
+      return {
+        status: 'unchanged',
+        current: currentValue,
+        original: originalValue,
+      };
+    }
+    return diffInfo.changed_fields[fieldName];
+  };
+
+  // データをslugでマップ化する関数
+  const mapBySlug = (items: DiffItem[]) => {
+    return items.reduce(
+      (acc, item) => {
+        acc[item.slug] = item;
+        return acc;
+      },
+      {} as Record<string, DiffItem>
+    );
+  };
+
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
     if (!id || isCheckingConflict || conflictStatus.mergeable !== null) return;
@@ -413,60 +482,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     };
   }, [pullRequestData, checkConflictStatus]);
 
-  // 差分データをIDでマップ化する関数
-  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
-    if (!pullRequestData?.diff_data) return null;
-    return (
-      pullRequestData.diff_data.find(
-        (diff: DiffDataInfo) => diff.id === id && diff.type === type
-      ) || null
-    );
-  };
-
-  // フィールド情報を取得する関数
-  const getFieldInfo = (
-    diffInfo: DiffDataInfo | null,
-    fieldName: string,
-    currentValue: any,
-    originalValue?: any
-  ): DiffFieldInfo => {
-    if (!diffInfo) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-
-    if (diffInfo.operation === 'deleted') {
-      return {
-        status: 'deleted',
-        current: null,
-        original: originalValue,
-      };
-    }
-
-    if (!diffInfo.changed_fields[fieldName]) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-    return diffInfo.changed_fields[fieldName];
-  };
-
-  // データをslugでマップ化する関数
-  const mapBySlug = (items: DiffItem[]) => {
-    return items.reduce(
-      (acc, item) => {
-        acc[item.slug] = item;
-        return acc;
-      },
-      {} as Record<string, DiffItem>
-    );
-  };
-
   // レビュアー設定のハンドラー
   const handleSetReviewers = async () => {
     if (!id) return;
@@ -495,6 +510,33 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   // 戻るボタンのハンドラー
   const handleGoBack = () => {
     window.location.href = '/admin/change-suggestions';
+  };
+
+  // 変更内容詳細を開く
+  const handleViewChanges = () => {
+    window.open(`/admin/change-suggestions/${id}/diff`, '_blank');
+  };
+
+  // コメント投稿のハンドラー
+  const handleComment = async () => {
+    if (!comment.trim() || !id) return;
+
+    try {
+      // ここにコメント投稿のAPI呼び出しを追加
+      // await apiClient.post(`${API_CONFIG.ENDPOINTS.COMMENTS}`, {
+      //   pull_request_id: id,
+      //   comment: comment.trim()
+      // });
+
+      setToast({ message: 'コメントを投稿しました', type: 'success' });
+      setComment('');
+    } catch (error) {
+      console.error('コメント投稿エラー:', error);
+      setToast({
+        message: 'コメント投稿に失敗しました',
+        type: 'error',
+      });
+    }
   };
 
   // マージボタンのハンドラー
@@ -608,11 +650,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     );
   }
 
-  const originalDocs = mapBySlug(pullRequestData.original_document_versions || []);
-  const originalCats = mapBySlug(pullRequestData.original_document_categories || []);
-
   return (
-    <AdminLayout title="作業内容の確認">
+    <AdminLayout title={pullRequestData.title}>
       <style>{markdownStyles}</style>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-20 w-full rounded-lg relative">
@@ -626,275 +665,308 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
             authorEmail={pullRequestData.author_email}
             createdAt={pullRequestData.created_at}
             conflict={conflictStatus.mergeable === false}
+            title={pullRequestData.title}
           />
         )}
 
-        {/* メインコンテンツエリア */}
-        <div className="flex flex-1">
-          {/* 左側: タイトルと本文 */}
-          <div className="mb-6 relative w-full">
-            {/* タイトル */}
-            <div className="mb-6 max-w-3xl w-full">
-              <label className="block text-white text-base font-medium mb-3">タイトル</label>
-              <div className="w-full px-4 py-3 rounded-lg border border-gray-600 text-white">
-                {pullRequestData.title}
+        {/* タブナビゲーション */}
+        <div className="mb-8">
+          <nav className="flex">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  if (tab.id === 'changes') {
+                    window.open(`/admin/change-suggestions/${id}/diff`, '_blank');
+                  } else {
+                    setActiveTab(tab.id);
+                  }
+                }}
+                className={`py-2 px-4 font-medium text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'text-white border border-white border-b-0 rounded-t-lg'
+                    : 'text-white hover:text-gray-300 hover:bg-gray-800 border-b border-white'
+                }`}
+              >
+                <span className="mr-2">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* タブ下の長い水平線 */}
+          <div className="w-full h-px bg-white mt-0"></div>
+        </div>
+
+        {/* メインコンテンツ */}
+        <div className="flex gap-8">
+          {/* 左側: 変更概要 */}
+          <div className="flex-1">
+            {/* プロフィール画像と吹き出し */}
+            <div className="flex items-start gap-4 mb-8">
+              <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm">👤</span>
+              </div>
+              <div className="relative bg-gray-800 border border-gray-600 rounded-lg p-7 w-full max-w-none">
+                {/* 吹き出しの三角形 */}
+                <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
+                <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
+
+                {/* ユーザー情報ヘッダー */}
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="text-white font-semibold text-lg">
+                      {pullRequestData?.author_email}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="text-gray-400 hover:text-white">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-white text-base leading-relaxed">
+                  {pullRequestData?.description || 'この変更提案には説明がありません。'}
+                </div>
+              </div>
+            </div>
+            {/* 変更概要ボックス */}
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-10 h-10 bg-white rounded-md flex items-center justify-center text-black font-bold text-sm">
+                <Merged className="w-5 h-5" />
+              </div>
+              <div className="border border-gray-600 rounded-lg p-6 flex-1">
+                {/* 変更内容ヘッダー */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-medium">変更概要</span>
+                  </div>
+                  <Settings
+                    className="w-5 h-5 text-gray-400 cursor-pointer hover:text-white"
+                    onClick={handleViewChanges}
+                  />
+                </div>
+
+                {/* 変更統計 */}
+                <div className="text-white text-sm mb-4">
+                  {pullRequestData && (
+                    <>
+                      {pullRequestData.document_versions.length > 0 && (
+                        <div className="mb-2">
+                          📝 ドキュメント: {pullRequestData.document_versions.length}件の変更
+                        </div>
+                      )}
+                      {pullRequestData.document_categories.length > 0 && (
+                        <div className="mb-2">
+                          📁 カテゴリ: {pullRequestData.document_categories.length}件の変更
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* コンフリクト状態に応じたメッセージ */}
+                {isCheckingConflict ? (
+                  <div className="flex items-center gap-2 mb-4 text-blue-400">
+                    <svg className="w-5 h-5 animate-spin" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-sm">コンフリクトをチェック中...</span>
+                  </div>
+                ) : conflictStatus.mergeable === false ? (
+                  <div className="flex items-center gap-2 mb-4 text-red-400">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-sm">
+                      コンフリクトが検出されました。マージできません。
+                    </span>
+                  </div>
+                ) : conflictStatus.mergeable === true ? (
+                  <div className="flex items-center gap-2 mb-4 text-green-400">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-sm">他の変更との競合はありません</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 mb-4 text-orange-400">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path
+                        fillRule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <span className="text-sm">他の変更との競合がないか確認してください</span>
+                  </div>
+                )}
+
+                {/* 変更を反映するボタン */}
+                {pullRequestData &&
+                  ![PULL_REQUEST_STATUS.MERGED, PULL_REQUEST_STATUS.CLOSED].includes(
+                    pullRequestData.status as any
+                  ) && (
+                    <div className="flex justify-end mb-4">
+                      <button
+                        ref={mergeButtonRef}
+                        onClick={handleMerge}
+                        disabled={isMerging || conflictStatus.mergeable === false}
+                        className={`px-6 py-2 font-bold rounded-md transition-colors ${
+                          conflictStatus.mergeable === false
+                            ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
+                            : 'bg-blue-600 hover:bg-blue-700'
+                        } text-white disabled:bg-gray-500 disabled:cursor-not-allowed`}
+                      >
+                        {isMerging
+                          ? 'マージ中...'
+                          : isCheckingConflict
+                            ? 'コンフリクトチェック中...'
+                            : conflictStatus.mergeable === false
+                              ? 'コンフリクトのため反映できません'
+                              : '変更を反映する'}
+                      </button>
+                    </div>
+                  )}
               </div>
             </div>
 
-            {/* 右側: レビュアー */}
-            <div className="absolute right-0 top-0 flex flex-col items-start mr-20">
-              <div className="flex items-center gap-40 relative" ref={reviewerModalRef}>
-                <span className="text-white text-base font-bold">レビュアー</span>
-                <Settings
-                  className="w-5 h-5 text-gray-300 ml-2 cursor-pointer"
-                  onClick={() => setShowReviewerModal(v => !v)}
+            {/* コメントセクション */}
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm">👤</span>
+              </div>
+              <div className="border border-gray-600 rounded-lg p-6 flex-1">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-white font-medium">コメントを追加</span>
+                </div>
+
+                <textarea
+                  className="w-full bg-gray-800 border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 resize-none"
+                  rows={4}
+                  placeholder="コメントを追加してください..."
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
                 />
-                {showReviewerModal && (
-                  <div className="absolute left-0 top-full z-50 mt-2 w-full bg-[#181A1B] rounded-xl border border-gray-700 shadow-2xl">
-                    <div className="flex flex-col">
-                      <div className="px-5 pt-5 pb-2 border-b border-gray-700">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-white font-semibold text-base">
-                            最大15人までリクエストできます
-                          </span>
-                        </div>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 rounded bg-[#222426] border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                          placeholder="Type or choose a user"
-                          value={reviewerSearch}
-                          onChange={e => setReviewerSearch(e.target.value)}
-                          autoFocus
-                        />
+
+                <div className="flex justify-end gap-4 mt-4">
+                  <button
+                    onClick={handleClose}
+                    disabled={isMerging}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  >
+                    提案を取り下げる
+                  </button>
+                  <button
+                    onClick={handleComment}
+                    disabled={!comment.trim()}
+                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  >
+                    コメントする
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 右側: レビュアー */}
+          <div className="w-80">
+            <div className="flex items-center gap-2 mb-4 relative" ref={reviewerModalRef}>
+              <span className="text-white text-base font-bold">レビュアー</span>
+              <Settings
+                className="w-5 h-5 text-gray-300 cursor-pointer hover:text-white"
+                onClick={() => setShowReviewerModal(v => !v)}
+              />
+              {showReviewerModal && (
+                <div className="absolute left-0 top-full z-50 mt-2 w-full bg-[#181A1B] rounded-xl border border-gray-700 shadow-2xl">
+                  <div className="flex flex-col">
+                    <div className="px-5 pt-5 pb-2 border-b border-gray-700">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-white font-semibold text-base">
+                          最大15人までリクエストできます
+                        </span>
                       </div>
-                      {/* Suggestionsセクション */}
-                      <div className="px-5 pt-3">
-                        <div className="text-xs text-gray-400 font-semibold mb-2">Suggestions</div>
-                        {loadingUsers ? (
-                          <div className="text-gray-500 text-sm py-2">読み込み中...</div>
-                        ) : users.length === 0 ? (
-                          <div className="text-gray-500 text-sm py-2">ユーザーが見つかりません</div>
-                        ) : (
-                          users
-                            .filter(user =>
-                              user.email.toLowerCase().includes(reviewerSearch.toLowerCase())
-                            )
-                            .map(user => (
-                              <div
-                                key={user.id}
-                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
-                                onClick={() =>
-                                  setSelectedReviewers(
-                                    selectedReviewers.includes(user.id)
-                                      ? selectedReviewers.filter(id => id !== user.id)
-                                      : [...selectedReviewers, user.id]
-                                  )
-                                }
-                              >
-                                <span className="text-2xl">👤</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-white font-medium leading-tight">
-                                    {user.email}
-                                  </div>
-                                  <div className="text-xs text-gray-400 truncate">
-                                    {user.role || 'editor'}
-                                  </div>
+                      <input
+                        type="text"
+                        className="w-full px-3 py-2 rounded bg-[#222426] border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                        placeholder="Type or choose a user"
+                        value={reviewerSearch}
+                        onChange={e => setReviewerSearch(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    {/* Suggestionsセクション */}
+                    <div className="px-5 pt-3">
+                      <div className="text-xs text-gray-400 font-semibold mb-2">Suggestions</div>
+                      {loadingUsers ? (
+                        <div className="text-gray-500 text-sm py-2">読み込み中...</div>
+                      ) : users.length === 0 ? (
+                        <div className="text-gray-500 text-sm py-2">ユーザーが見つかりません</div>
+                      ) : (
+                        users
+                          .filter(user =>
+                            user.email.toLowerCase().includes(reviewerSearch.toLowerCase())
+                          )
+                          .map(user => (
+                            <div
+                              key={user.id}
+                              className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
+                              onClick={() =>
+                                setSelectedReviewers(
+                                  selectedReviewers.includes(user.id)
+                                    ? selectedReviewers.filter(id => id !== user.id)
+                                    : [...selectedReviewers, user.id]
+                                )
+                              }
+                            >
+                              <span className="text-2xl">👤</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-white font-medium leading-tight">
+                                  {user.email}
+                                </div>
+                                <div className="text-xs text-gray-400 truncate">
+                                  {user.role || 'editor'}
                                 </div>
                               </div>
-                            ))
-                        )}
-                      </div>
+                            </div>
+                          ))
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-              {selectedReviewers.length === 0 ? (
-                <p className="text-white text-base font-medium mt-5 text-sm">レビュアーなし</p>
-              ) : (
-                <div className="mt-5">
-                  <div className="space-y-1">
-                    {selectedReviewers.map(reviewerId => {
-                      const user = users.find(u => u.id === reviewerId);
-                      return user ? (
-                        <div key={reviewerId} className="flex items-center gap-2 text-sm">
-                          <span className="text-xl">👤</span>
-                          <span className="text-gray-300">{user.email}</span>
-                        </div>
-                      ) : null;
-                    })}
                   </div>
                 </div>
               )}
             </div>
-
-            {/* 本文 */}
-            <div className="mb-8 max-w-3xl w-full">
-              <label className="block text-white text-base font-medium mb-3">本文</label>
-              <div className="w-full px-4 py-3 rounded-lg border border-gray-600 text-white min-h-[120px]">
-                {pullRequestData.description || '説明なし'}
-              </div>
-            </div>
-
-            {/* カテゴリの変更 */}
-            {pullRequestData.document_categories.length > 0 && (
-              <div className="mb-10">
-                <h2 className="text-xl font-bold mb-4 flex items-center">
-                  <Folder className="w-5 h-5 mr-2" />
-                  カテゴリの変更 × {pullRequestData.document_categories.length}
-                </h2>
-                <div className="space-y-4">
-                  {pullRequestData.document_categories.map((category: DiffItem) => {
-                    const diffInfo = getDiffInfoById(category.id, 'category');
-                    const originalCategory = originalCats[category.slug];
-
-                    return (
-                      <div
-                        key={category.id}
-                        className="bg-gray-900 rounded-lg border border-gray-800 p-6"
-                      >
-                        <SmartDiffValue
-                          label="Slug"
-                          fieldInfo={getFieldInfo(
-                            diffInfo,
-                            'slug',
-                            category.slug,
-                            originalCategory?.slug
-                          )}
-                        />
-                        <SmartDiffValue
-                          label="カテゴリ名"
-                          fieldInfo={getFieldInfo(
-                            diffInfo,
-                            'sidebar_label',
-                            category.sidebar_label,
-                            originalCategory?.sidebar_label
-                          )}
-                        />
-                        <SmartDiffValue
-                          label="表示順"
-                          fieldInfo={getFieldInfo(
-                            diffInfo,
-                            'position',
-                            category.position,
-                            originalCategory?.position
-                          )}
-                        />
-                        <SmartDiffValue
-                          label="説明"
-                          fieldInfo={getFieldInfo(
-                            diffInfo,
-                            'description',
-                            category.description,
-                            originalCategory?.description
-                          )}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* ドキュメントの変更 */}
-            {pullRequestData.document_versions.length > 0 && (
-              <div>
-                <h2 className="text-xl font-bold mb-4 flex items-center">
-                  <DocumentDetailed className="w-6 h-6 mr-2" />
-                  ドキュメントの変更 × {pullRequestData.document_versions.length}
-                </h2>
-                <div className="mb-8 mr-20">
-                  <div className="space-y-6">
-                    {pullRequestData.document_versions.map((document: DiffItem) => {
-                      const diffInfo = getDiffInfoById(document.id, 'document');
-                      const originalDocument = originalDocs[document.slug];
-
-                      return (
-                        <div
-                          key={document.id}
-                          className="bg-gray-900 rounded-lg border border-gray-800 p-6"
-                        >
-                          <SlugBreadcrumb slug={document.slug} />
-                          <SmartDiffValue
-                            label="Slug"
-                            fieldInfo={getFieldInfo(
-                              diffInfo,
-                              'slug',
-                              document.slug,
-                              originalDocument?.slug
-                            )}
-                          />
-                          <SmartDiffValue
-                            label="タイトル"
-                            fieldInfo={getFieldInfo(
-                              diffInfo,
-                              'sidebar_label',
-                              document.sidebar_label,
-                              originalDocument?.sidebar_label
-                            )}
-                          />
-                          <SmartDiffValue
-                            label="公開設定"
-                            fieldInfo={getFieldInfo(
-                              diffInfo,
-                              'is_public',
-                              document.status === 'published' ? '公開する' : '公開しない',
-                              originalDocument?.status === 'published' ? '公開する' : '公開しない'
-                            )}
-                          />
-                          <SmartDiffValue
-                            label="本文"
-                            fieldInfo={getFieldInfo(
-                              diffInfo,
-                              'content',
-                              document.content,
-                              originalDocument?.content
-                            )}
-                            isMarkdown
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+            {selectedReviewers.length === 0 ? (
+              <p className="text-gray-400 text-sm">レビュアーなし</p>
+            ) : (
+              <div className="space-y-2">
+                {selectedReviewers.map(reviewerId => {
+                  const user = users.find(u => u.id === reviewerId);
+                  return user ? (
+                    <div key={reviewerId} className="flex items-center gap-2 text-sm">
+                      <span className="text-xl">👤</span>
+                      <span className="text-gray-300">{user.email}</span>
+                    </div>
+                  ) : null;
+                })}
               </div>
             )}
           </div>
-        </div>
-
-        {/* 下部のボタン */}
-        <div className="flex justify-end gap-4 mt-8 pb-6 mr-20">
-          {pullRequestData && pullRequestData.status === PULL_REQUEST_STATUS.OPENED && (
-            <button
-              onClick={handleClose}
-              disabled={isMerging}
-              className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-            >
-              {isMerging ? '取り下げ中...' : '提案を取り下げる'}
-            </button>
-          )}
-          {pullRequestData &&
-            ![PULL_REQUEST_STATUS.MERGED, PULL_REQUEST_STATUS.CLOSED].includes(
-              pullRequestData.status as any
-            ) && (
-              <button
-                ref={mergeButtonRef}
-                onClick={handleMerge}
-                disabled={isMerging || conflictStatus.mergeable === false}
-                className={`px-8 py-3 font-bold rounded-md transition-colors ${
-                  conflictStatus.mergeable === false
-                    ? 'bg-red-600 hover:bg-red-700 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700'
-                } text-white disabled:bg-gray-500 disabled:cursor-not-allowed`}
-              >
-                {isMerging
-                  ? 'マージ中...'
-                  : isCheckingConflict
-                    ? 'コンフリクトチェック中...'
-                    : conflictStatus.mergeable === false
-                      ? 'コンフリクトのため反映できません'
-                      : '変更を反映する'}
-              </button>
-            )}
         </div>
       </div>
     </AdminLayout>

@@ -7,6 +7,7 @@ import CreateDocumentPage from './pages/documents/create';
 import EditDocumentPage from './pages/documents/[slug]/edit';
 import ChangeSuggestionsPage from './pages/change-suggestions';
 import ChangeSuggestionDetailPage from './pages/change-suggestions/[id]';
+import ChangeSuggestionDiffPage from './pages/change-suggestions/diff';
 import { ROUTE_PATHS } from './routes';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -21,6 +22,10 @@ function App() {
         <Route
           path={ROUTE_PATHS['change-suggestion-detail']}
           element={<ChangeSuggestionDetailPage />}
+        />
+        <Route
+          path={ROUTE_PATHS['change-suggestion-diff']}
+          element={<ChangeSuggestionDiffPage />}
         />
         <Route path={ROUTE_PATHS.documents} element={<DocumentsPage />} />
         <Route path={ROUTE_PATHS['create-document']} element={<CreateDocumentPage />} />
