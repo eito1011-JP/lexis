@@ -789,13 +789,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   <span className="text-white text-sm">👤</span>
                 </div>
                 <div className="timeline-content timeline-content-with-line">
-                  <div className="relative border border-gray-600 rounded-lg p-7 w-full max-w-none">
+                  <div className="relative border border-gray-600 rounded-lg p-7 w-full max-w-none pt-1">
                     {/* 吹き出しの三角形 */}
                     <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
                     <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
 
                     {/* ユーザー情報ヘッダー */}
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center justify-between mb-2 ml-[-1rem]">
                       <div className="flex items-center gap-3">
                         <span className="text-white font-semibold text-lg">
                           {pullRequestData?.author_email}
@@ -810,13 +810,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                       </div>
                     </div>
 
-                    <div className="text-white text-base leading-relaxed">
+                    <div className="text-white text-base leading-relaxed ml-[-1rem]">
                       {pullRequestData?.description || 'この変更提案には説明がありません。'}
                     </div>
                   </div>
                 </div>
               </div>
-                          {/* コメントリスト */}
+              {/* コメントリスト */}
               {loadingComments ? (
                 <div className="timeline-item">
                   <div className="timeline-avatar">
@@ -834,14 +834,16 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                     <div className="timeline-avatar">
                       <span className="text-white text-sm">👤</span>
                     </div>
-                    <div className={`timeline-content ${index < comments.length - 1 ? 'timeline-content-with-line' : ''}`}>
-                      <div className="relative border border-gray-600 rounded-lg p-6 w-full max-w-none">
+                    <div
+                      className={`timeline-content ${index < comments.length - 1 ? 'timeline-content-with-line' : ''}`}
+                    >
+                      <div className="relative border border-gray-600 rounded-lg p-6 w-full max-w-none pt-1">
                         {/* 吹き出しの三角形 */}
                         <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
                         <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
 
                         {/* コメントヘッダー */}
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-2 ml-[-0.7rem]">
                           <div className="flex items-center gap-3">
                             <span className="text-white font-semibold">
                               {commentItem.author || '不明なユーザー'}
@@ -860,8 +862,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                           )}
                         </div>
 
+                        {/* 白い区切り線 */}
+                        <div className="w-full h-px bg-white mb-3 mx-[-24px]"></div>
                         {/* コメント内容 */}
-                        <div className="text-white text-base leading-relaxed whitespace-pre-wrap">
+                        <div className="text-white text-base leading-relaxed whitespace-pre-wrap ml-[-0.7rem]">
                           {commentItem.content}
                         </div>
                       </div>
@@ -871,42 +875,42 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
               )}
             </div>
 
-              {/* コメントセクション */}
-              <div className="flex items-start gap-4 mb-6 relative">
-                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 relative z-10">
-                  <span className="text-white text-sm">👤</span>
+            {/* コメントセクション */}
+            <div className="flex items-start gap-4 mb-6 relative">
+              <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 relative z-10">
+                <span className="text-white text-sm">👤</span>
+              </div>
+              <div className="border border-gray-600 rounded-lg p-6 flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-white font-medium">コメントを追加</span>
                 </div>
-                <div className="border border-gray-600 rounded-lg p-6 flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-white font-medium">コメントを追加</span>
-                  </div>
 
-                  <textarea
-                    className="w-full border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 resize-none"
-                    rows={4}
-                    placeholder="コメントを追加してください..."
-                    value={comment}
-                    onChange={e => setComment(e.target.value)}
-                  />
+                <textarea
+                  className="w-full border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 resize-none"
+                  rows={4}
+                  placeholder="コメントを追加してください..."
+                  value={comment}
+                  onChange={e => setComment(e.target.value)}
+                />
 
-                  <div className="flex justify-end gap-4 mt-4">
-                    <button
-                      onClick={handleClose}
-                      disabled={isMerging}
-                      className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-                    >
-                      提案を取り下げる
-                    </button>
-                    <button
-                      onClick={handleComment}
-                      disabled={!comment.trim()}
-                      className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-                    >
-                      コメントする
-                    </button>
-                  </div>
+                <div className="flex justify-end gap-4 mt-4">
+                  <button
+                    onClick={handleClose}
+                    disabled={isMerging}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  >
+                    提案を取り下げる
+                  </button>
+                  <button
+                    onClick={handleComment}
+                    disabled={!comment.trim()}
+                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  >
+                    コメントする
+                  </button>
                 </div>
               </div>
+            </div>
 
             {/* 変更概要ボックス */}
             <div className="flex items-start gap-4 mb-6">
