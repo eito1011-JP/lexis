@@ -689,6 +689,50 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   return (
     <AdminLayout title={pullRequestData.title}>
       <style>{markdownStyles}</style>
+      <style>{`
+        .timeline-container {
+          position: relative;
+          padding-left: 52px;
+        }
+        
+        .timeline-item {
+          position: relative;
+          display: flex;
+          margin-bottom: 24px;
+        }
+        
+        .timeline-avatar {
+          position: absolute;
+          left: -52px;
+          top: 0;
+          z-index: 3;
+          background-color: #374151;
+          border: 2px solid #4B5563;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        
+        .timeline-content {
+          position: relative;
+          z-index: 2;
+          flex: 1;
+        }
+        
+        .timeline-content-with-line::after {
+          content: "";
+          position: absolute;
+          left: 15px;
+          bottom: -24px;
+          width: 2px;
+          height: 24px;
+          background-color: #4B5563;
+          z-index: 1;
+        }
+      `}</style>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div className="mb-20 w-full rounded-lg relative">
         {/* ステータスバナー */}
@@ -738,43 +782,138 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         <div className="flex gap-8">
           {/* 左側: 変更概要 */}
           <div className="flex-1">
-            {/* プロフィール画像と吹き出し */}
-            <div className="flex items-start gap-4 mb-8">
-              <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm">👤</span>
-              </div>
-              <div className="relative bg-gray-800 border border-gray-600 rounded-lg p-7 w-full max-w-none">
-                {/* 吹き出しの三角形 */}
-                <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
-                <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
+            <div className="timeline-container">
+              {/* プロフィール画像と吹き出し（description） */}
+              <div className="timeline-item">
+                <div className="timeline-avatar">
+                  <span className="text-white text-sm">👤</span>
+                </div>
+                <div className="timeline-content timeline-content-with-line">
+                  <div className="relative border border-gray-600 rounded-lg p-7 w-full max-w-none">
+                    {/* 吹き出しの三角形 */}
+                    <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
+                    <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
 
-                {/* ユーザー情報ヘッダー */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <span className="text-white font-semibold text-lg">
-                      {pullRequestData?.author_email}
-                    </span>
+                    {/* ユーザー情報ヘッダー */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-white font-semibold text-lg">
+                          {pullRequestData?.author_email}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button className="text-gray-400 hover:text-white">
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-white text-base leading-relaxed">
+                      {pullRequestData?.description || 'この変更提案には説明がありません。'}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button className="text-gray-400 hover:text-white">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                      </svg>
+                </div>
+              </div>
+                          {/* コメントリスト */}
+              {loadingComments ? (
+                <div className="timeline-item">
+                  <div className="timeline-avatar">
+                    <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
+                  </div>
+                  <div className="timeline-content timeline-content-with-line">
+                    <div className="border border-gray-600 rounded-lg p-6 flex-1">
+                      <p className="text-gray-400">コメントを読み込み中...</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                comments.map((commentItem, index) => (
+                  <div key={commentItem.id} className="timeline-item">
+                    <div className="timeline-avatar">
+                      <span className="text-white text-sm">👤</span>
+                    </div>
+                    <div className={`timeline-content ${index < comments.length - 1 ? 'timeline-content-with-line' : ''}`}>
+                      <div className="relative border border-gray-600 rounded-lg p-6 w-full max-w-none">
+                        {/* 吹き出しの三角形 */}
+                        <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
+                        <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
+
+                        {/* コメントヘッダー */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-white font-semibold">
+                              {commentItem.author || '不明なユーザー'}
+                            </span>
+                            <span className="text-gray-400 text-sm">
+                              {formatDistanceToNow(new Date(commentItem.created_at), {
+                                addSuffix: true,
+                                locale: ja,
+                              })}
+                            </span>
+                          </div>
+                          {commentItem.is_resolved && (
+                            <span className="text-green-400 text-sm px-2 py-1 bg-green-900/30 border border-green-700 rounded">
+                              解決済み
+                            </span>
+                          )}
+                        </div>
+
+                        {/* コメント内容 */}
+                        <div className="text-white text-base leading-relaxed whitespace-pre-wrap">
+                          {commentItem.content}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+              {/* コメントセクション */}
+              <div className="flex items-start gap-4 mb-6 relative">
+                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0 relative z-10">
+                  <span className="text-white text-sm">👤</span>
+                </div>
+                <div className="border border-gray-600 rounded-lg p-6 flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-white font-medium">コメントを追加</span>
+                  </div>
+
+                  <textarea
+                    className="w-full border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 resize-none"
+                    rows={4}
+                    placeholder="コメントを追加してください..."
+                    value={comment}
+                    onChange={e => setComment(e.target.value)}
+                  />
+
+                  <div className="flex justify-end gap-4 mt-4">
+                    <button
+                      onClick={handleClose}
+                      disabled={isMerging}
+                      className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    >
+                      提案を取り下げる
+                    </button>
+                    <button
+                      onClick={handleComment}
+                      disabled={!comment.trim()}
+                      className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    >
+                      コメントする
                     </button>
                   </div>
                 </div>
-
-                <div className="text-white text-base leading-relaxed">
-                  {pullRequestData?.description || 'この変更提案には説明がありません。'}
-                </div>
               </div>
-            </div>
+
             {/* 変更概要ボックス */}
             <div className="flex items-start gap-4 mb-6">
               <div className="w-10 h-10 bg-white rounded-md flex items-center justify-center text-black font-bold text-sm">
                 <Merged className="w-5 h-5" />
               </div>
-              <div className="border border-gray-600 rounded-lg p-6 flex-1">
+              <div className="border border-gray-600 rounded-lg p-2 flex-1">
                 {/* 変更内容ヘッダー */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -881,93 +1020,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   )}
               </div>
             </div>
-
-            {/* コメントセクション */}
-            <div className="flex items-start gap-4 mb-6">
-              <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm">👤</span>
-              </div>
-              <div className="border border-gray-600 rounded-lg p-6 flex-1">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-white font-medium">コメントを追加</span>
-                </div>
-
-                <textarea
-                  className="w-full bg-gray-800 border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 resize-none"
-                  rows={4}
-                  placeholder="コメントを追加してください..."
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                />
-
-                <div className="flex justify-end gap-4 mt-4">
-                  <button
-                    onClick={handleClose}
-                    disabled={isMerging}
-                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-                  >
-                    提案を取り下げる
-                  </button>
-                  <button
-                    onClick={handleComment}
-                    disabled={!comment.trim()}
-                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
-                  >
-                    コメントする
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* コメントリスト */}
-            {loadingComments ? (
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
-                </div>
-                <div className="border border-gray-600 rounded-lg p-6 flex-1">
-                  <p className="text-gray-400">コメントを読み込み中...</p>
-                </div>
-              </div>
-            ) : (
-              comments.map(commentItem => (
-                <div key={commentItem.id} className="flex items-start gap-4 mb-6">
-                  <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-sm">👤</span>
-                  </div>
-                  <div className="relative bg-gray-800 border border-gray-600 rounded-lg p-6 w-full max-w-none">
-                    {/* 吹き出しの三角形 */}
-                    <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
-                    <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
-
-                    {/* コメントヘッダー */}
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <span className="text-white font-semibold">
-                          {commentItem.author || '不明なユーザー'}
-                        </span>
-                        <span className="text-gray-400 text-sm">
-                          {formatDistanceToNow(new Date(commentItem.created_at), {
-                            addSuffix: true,
-                            locale: ja,
-                          })}
-                        </span>
-                      </div>
-                      {commentItem.is_resolved && (
-                        <span className="text-green-400 text-sm px-2 py-1 bg-green-900/30 border border-green-700 rounded">
-                          解決済み
-                        </span>
-                      )}
-                    </div>
-
-                    {/* コメント内容 */}
-                    <div className="text-white text-base leading-relaxed whitespace-pre-wrap">
-                      {commentItem.content}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
           </div>
 
           {/* 右側: レビュアー */}
