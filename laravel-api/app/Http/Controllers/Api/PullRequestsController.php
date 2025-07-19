@@ -16,6 +16,7 @@ use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
 use App\Http\Requests\Api\PullRequest\FetchActivityLogRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\SendFixRequestRequest;
+use App\Http\Requests\Api\PullRequest\UpdatePullRequestTitleRequest;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
@@ -906,6 +907,62 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => 'アクティビティログの取得に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエストのタイトルを更新する
+     */
+    public function updateTitle(UpdatePullRequestTitleRequest $request, int $id): JsonResponse
+    {
+        DB::beginTransaction();
+
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. pull_requestsテーブルをpull_request_idにてfirstOrFail
+            $pullRequest = PullRequest::findOrFail($id);
+
+            // 3. 新しいタイトルを取得
+            $newTitle = $request->validated('title');
+
+            // 4. activity_log_on_pull_requestsテーブルにレコードを作成
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $pullRequest->id,
+                'action' => PullRequestActivityAction::PULL_REQUEST_TITLE_EDITED->value,
+                'old_pull_request_title' => $pullRequest->title,
+                'new_pull_request_title' => $newTitle,
+            ]);
+
+            // 5. プルリクエストレコードのtitleをrequest.titleにupdate
+            $pullRequest->update([
+                'title' => $newTitle,
+            ]);
+
+            DB::commit();
+
+            return response()->json();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('プルリクエストタイトル更新エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $id,
+                'user_id' => $user->id ?? null,
+            ]);
+
+            return response()->json([
+                'error' => 'プルリクエストタイトルの更新に失敗しました',
             ], 500);
         }
     }

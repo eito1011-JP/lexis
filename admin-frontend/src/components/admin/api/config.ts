@@ -48,6 +48,7 @@ export const API_CONFIG = {
       CONFLICT: '/api/admin/pull-requests',
       CLOSE: '/api/admin/pull-requests',
       APPROVE: '/api/admin/pull-requests',
+      UPDATE_TITLE: '/api/admin/pull-requests',
     },
     GIT: {
       CHECK_DIFF: '/api/admin/git/check-diff',

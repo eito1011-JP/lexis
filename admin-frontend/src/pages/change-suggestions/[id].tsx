@@ -255,25 +255,20 @@ const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }): JSX.Element =
     <div className="timeline-item">
       <div className="timeline-activity-icon">{getActionIcon(log.action)}</div>
       <div className="timeline-content timeline-content-with-line">
-        <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
-          {log.actor?.name || 'システム'}さんが{getActionDisplayName(log.action)}
-        </div>
-
-        {/* タイトル編集の場合の詳細表示 */}
+        {/* タイトル編集の場合は詳細な変更内容のみ表示 */}
         {log.action === 'pull_request_title_edited' &&
-          log.old_pull_request_title &&
-          log.new_pull_request_title && (
-            <div className="ml-[-0.7rem] mt-2">
-              <div className="text-xs text-gray-400 mb-1">変更前:</div>
-              <div className="text-sm text-red-200 mb-2 bg-red-900/30 border border-red-700 rounded p-2">
-                {log.old_pull_request_title}
-              </div>
-              <div className="text-xs text-gray-400 mb-1">変更後:</div>
-              <div className="text-sm text-green-200 bg-green-900/30 border border-green-700 rounded p-2">
-                {log.new_pull_request_title}
-              </div>
-            </div>
-          )}
+        log.old_pull_request_title &&
+        log.new_pull_request_title ? (
+          <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
+            {log.actor?.name || log.actor?.email || 'システム'} さんが 変更提案タイトルを「
+            {log.old_pull_request_title}」 から 「{log.new_pull_request_title}」に変更しました
+          </div>
+        ) : (
+          /* タイトル編集以外の場合は通常の表示 */
+          <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
+            {log.actor?.name || 'システム'}さんが{getActionDisplayName(log.action)}
+          </div>
+        )}
 
         {/* コメントの場合の詳細表示 */}
         {log.action === 'commented' && log.comment && (
@@ -293,7 +288,8 @@ const StatusBanner: React.FC<{
   createdAt: string;
   conflict: boolean;
   title: string;
-}> = ({ status, authorEmail, createdAt, conflict, title }) => {
+  onEditTitle: () => void;
+}> = ({ status, authorEmail, createdAt, conflict, title, onEditTitle }) => {
   let button;
   switch (true) {
     case conflict:
@@ -350,7 +346,15 @@ const StatusBanner: React.FC<{
   return (
     <div className={`mb-10 rounded-lg`}>
       {/* タイトル表示 */}
-      <h1 className="text-3xl font-bold text-white mb-4">{title}</h1>
+      <div className="flex items-center gap-150 mb-4">
+        <h1 className="text-3xl font-bold text-white">{title}</h1>
+        <button
+          onClick={onEditTitle}
+          className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+        >
+          編集
+        </button>
+      </div>
       <div className="flex items-center justify-start">
         {button}
         <span className="font-medium text-[#B1B1B1] ml-4">
@@ -392,6 +396,9 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [loadingComments, setLoadingComments] = useState(false);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loadingActivityLogs, setLoadingActivityLogs] = useState(false);
+  const [showTitleEditModal, setShowTitleEditModal] = useState(false);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
 
   // 差分データをIDでマップ化する関数
   const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
@@ -752,6 +759,48 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   };
 
+  // タイトル編集モーダルを開くハンドラー
+  const handleOpenTitleEditModal = () => {
+    setEditingTitle(pullRequestData?.title || '');
+    setShowTitleEditModal(true);
+  };
+
+  // タイトル更新のハンドラー
+  const handleUpdateTitle = async () => {
+    if (!id || !editingTitle.trim() || isUpdatingTitle) return;
+
+    setIsUpdatingTitle(true);
+    try {
+      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE_TITLE}/${id}/title`, {
+        title: editingTitle.trim(),
+      });
+
+      // プルリクエストデータを更新
+      if (pullRequestData) {
+        setPullRequestData({
+          ...pullRequestData,
+          title: editingTitle.trim(),
+        });
+      }
+
+      setToast({ message: 'タイトルを更新しました', type: 'success' });
+      setShowTitleEditModal(false);
+
+      // アクティビティログを再取得
+      fetchActivityLogs();
+    } catch (error) {
+      console.error('タイトル更新エラー:', error);
+      setToast({
+        message:
+          'タイトル更新に失敗しました: ' +
+          (error instanceof Error ? error.message : '不明なエラー'),
+        type: 'error',
+      });
+    } finally {
+      setIsUpdatingTitle(false);
+    }
+  };
+
   // クローズボタンのハンドラー
   const handleClose = async () => {
     if (!id || isMerging) return;
@@ -895,6 +944,50 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         }
       `}</style>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* タイトル編集モーダル */}
+      {showTitleEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-[#181A1B] border border-gray-700 rounded-lg p-6 w-full max-w-2xl mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white">タイトルを編集</h3>
+              <button
+                onClick={() => setShowTitleEditModal(false)}
+                className="text-gray-400 hover:text-white"
+              ></button>
+            </div>
+
+            <div className="mb-4">
+              <input
+                type="text"
+                value={editingTitle}
+                onChange={e => setEditingTitle(e.target.value)}
+                className="w-full px-3 py-2 bg-[#222426] border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                placeholder="タイトルを入力してください"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowTitleEditModal(false)}
+                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-md transition-colors"
+                disabled={isUpdatingTitle}
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleUpdateTitle}
+                disabled={!editingTitle.trim() || isUpdatingTitle}
+                className="px-4 py-2 bg-[#3832A5] hover:bg-blue-500 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+              >
+                {isUpdatingTitle ? '更新中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-20 w-full rounded-lg relative">
         {/* ステータスバナー */}
         {(pullRequestData.status === PULL_REQUEST_STATUS.MERGED ||
@@ -907,6 +1000,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
             createdAt={pullRequestData.created_at}
             conflict={conflictStatus.mergeable === false}
             title={pullRequestData.title}
+            onEditTitle={handleOpenTitleEditModal}
           />
         )}
 
