@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\ActionStatus;
+use App\Enums\PullRequestReviewerActionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -17,7 +17,7 @@ class PullRequestReviewer extends Model
     ];
 
     protected $casts = [
-        'action_status' => ActionStatus::class,
+        'action_status' => PullRequestReviewerActionStatus::class,
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

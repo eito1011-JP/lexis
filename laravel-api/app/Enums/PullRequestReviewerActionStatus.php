@@ -2,7 +2,7 @@
 
 namespace App\Enums;
 
-enum ActionStatus: string
+enum PullRequestReviewerActionStatus: string
 {
     case PENDING = 'pending';
     case FIX_REQUESTED = 'fix_requested';

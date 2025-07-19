@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Constants\DocumentCategoryConstants;
 use App\Consts\Flag;
-use App\Enums\ActionStatus;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\PullRequestActivityAction;
+use App\Enums\PullRequestReviewerActionStatus;
 use App\Enums\PullRequestStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\Api\PullRequest\ApprovePullRequestRequest;
@@ -628,12 +628,12 @@ class PullRequestsController extends ApiBaseController
                 $reviewer = PullRequestReviewer::create([
                     'pull_request_id' => $pullRequestId,
                     'user_id' => $user->id,
-                    'action_status' => ActionStatus::APPROVED,
+                    'action_status' => PullRequestReviewerActionStatus::APPROVED,
                 ]);
             } else {
                 // 既存のレビュアーレコードを更新
                 $reviewer->update([
-                    'action_status' => ActionStatus::APPROVED,
+                    'action_status' => PullRequestReviewerActionStatus::APPROVED,
                 ]);
             }
 

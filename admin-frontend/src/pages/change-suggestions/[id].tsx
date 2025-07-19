@@ -11,6 +11,14 @@ import {
   type ActivityLog,
 } from '@/api/pullRequest';
 import { Settings } from '@/components/icon/common/Settings';
+import { TitleEditedLog } from '@/components/icon/common/TitleEditedLog';
+import { MergedLog } from '@/components/icon/common/MergedLog';
+import { FixRequestSentLog } from '@/components/icon/common/FixRequestSentLog';
+import { ReviewerAssignedLog } from '@/components/icon/common/ReviewerAssignedLog';
+import { ReviewerApprovedLog } from '@/components/icon/common/ReviewerApprovedLog';
+import { PullRequestClosedLog } from '@/components/icon/common/PullRequestClosedLog';
+import { PullRequestReopenedLog } from '@/components/icon/common/PullRequestReopenedLog';
+import { PullRequestEditedLog } from '@/components/icon/common/PullRequestEditedLog';
 import React from 'react';
 
 import { apiClient } from '@/components/admin/api/client';
@@ -164,12 +172,12 @@ const TABS = [
 ] as const;
 
 // ActivityLogItemコンポーネント
-const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }) => {
+const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }): JSX.Element => {
   const getActionDisplayName = (action: string): string => {
     switch (action) {
       case 'fix_request_sent':
-        return '修正リクエストが送信されました';
-      case 'assigned_reviewer':
+        return '修正リクエストを送信しました';
+      case 'reviewer_assigned':
         return 'レビュワーが設定されました';
       case 'reviewer_approved':
         return '変更提案が承認されました';
@@ -190,26 +198,29 @@ const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }) => {
     }
   };
 
-  const getActionIcon = (action: string): string => {
+  const getActionIcon = (action: string): string | JSX.Element => {
     switch (action) {
       case 'fix_request_sent':
-        return '🔧';
-      case 'assigned_reviewer':
-        return '👥';
+        return <FixRequestSentLog className="w-6 h-6" />;
+      case 'reviewer_assigned':
+        return <ReviewerAssignedLog className="w-4 h-4" />;
       case 'reviewer_approved':
-        return '✅';
+        return <ReviewerApprovedLog className="w-4 h-4" />;
       case 'commented':
         return '💬';
-      case 'pull_request_merged':
-        return '🔀';
       case 'pull_request_closed':
-        return '❌';
+        return <PullRequestClosedLog className="w-4 h-4" />;
+
       case 'pull_request_reopened':
-        return '🔄';
+        return <PullRequestReopenedLog className="w-4 h-4" />;
+
       case 'pull_request_edited':
-        return '✏️';
+        return <PullRequestEditedLog className="w-4 h-4" />;
+
       case 'pull_request_title_edited':
-        return '📝';
+        return <TitleEditedLog className="w-4 h-4" />;
+      case 'pull_request_merged':
+        return <MergedLog className="w-4 h-4" />;
       default:
         return '📋';
     }
@@ -219,7 +230,7 @@ const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }) => {
     switch (action) {
       case 'fix_request_sent':
         return 'bg-red-600';
-      case 'assigned_reviewer':
+      case 'reviewer_assigned':
         return 'bg-blue-600';
       case 'reviewer_approved':
         return 'bg-green-600';
@@ -242,11 +253,9 @@ const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }) => {
 
   return (
     <div className="timeline-item">
-      <div className={`timeline-avatar ${getActionColor(log.action)}`}>
-        <span className="text-white text-sm">{getActionIcon(log.action)}</span>
-      </div>
+      <div className="timeline-activity-icon">{getActionIcon(log.action)}</div>
       <div className="timeline-content timeline-content-with-line">
-        <div className="text-red-300 text-sm mb-1 ml-[-0.7rem]">
+        <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
           {log.actor?.name || 'システム'}さんが{getActionDisplayName(log.action)}
         </div>
 
@@ -269,15 +278,9 @@ const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }) => {
         {/* コメントの場合の詳細表示 */}
         {log.action === 'commented' && log.comment && (
           <div className="ml-[-0.7rem] mt-2">
-            <div className="text-sm text-gray-300 bg-gray-800 border border-gray-600 rounded p-2">
-              {log.comment.content}
-            </div>
+            <div className="text-sm text-gray-300 rounded p-2">{log.comment.content}</div>
           </div>
         )}
-
-        <div className="text-xs text-gray-400 mt-2 ml-[-0.7rem]">
-          {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ja })}
-        </div>
       </div>
     </div>
   );
@@ -855,10 +858,20 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
           top: 0;
           z-index: 3;
           background-color: #374151;
-          border: 2px solid #4B5563;
           border-radius: 50%;
           width: 40px;
           height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .timeline-activity-icon {
+          position: absolute;
+          left: -52px;
+          z-index: 3;
+          border-radius: 50%;
+          width: 40px;
           display: flex;
           align-items: center;
           justify-content: center;
