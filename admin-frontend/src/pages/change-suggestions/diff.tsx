@@ -15,6 +15,7 @@ import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
 import { Merge } from '@/components/icon/common/Merge';
 import { Merged } from '@/components/icon/common/Merged';
 import { Closed } from '@/components/icon/common/Closed';
+import { ChevronDown } from '@/components/icon/common/ChevronDown';
 
 // 差分データの型定義
 type DiffItem = {
@@ -213,6 +214,80 @@ const StatusBanner: React.FC<{
   );
 };
 
+// 確認アクションの型定義
+type ConfirmationAction = 'create_correction_request' | 're_edit_proposal' | 'approve_changes';
+
+// ConfirmationActionDropdownコンポーネント
+const ConfirmationActionDropdown: React.FC<{
+  selectedAction: ConfirmationAction;
+  onActionChange: (action: ConfirmationAction) => void;
+  onConfirm: () => void;
+}> = ({ selectedAction, onActionChange, onConfirm }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const actions = [
+    {
+      value: 'create_correction_request' as ConfirmationAction,
+      label: '修正リクエストを作成',
+    },
+    {
+      value: 're_edit_proposal' as ConfirmationAction,
+      label: '変更提案を再編集する',
+    },
+    {
+      value: 'approve_changes' as ConfirmationAction,
+      label: '変更を承認する',
+    },
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-md text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <span>確認アクション</span>
+        <ChevronDown className="w-4 h-4 ml-2" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
+          <div className="p-4">
+            <div className="space-y-3">
+              {actions.map((action) => (
+                <label key={action.value} className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="confirmationAction"
+                    value={action.value}
+                    checked={selectedAction === action.value}
+                    onChange={() => onActionChange(action.value)}
+                    className="mr-3 text-blue-500 focus:ring-blue-500"
+                  />
+                  <span className="text-white text-sm">{action.label}</span>
+                </label>
+              ))}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  onConfirm();
+                  setIsOpen(false);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                確定する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function ChangeSuggestionDiffPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
   const { id } = useParams<{ id: string }>();
@@ -225,6 +300,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     mergeable: boolean | null;
     mergeable_state: string | null;
   }>({ mergeable: null, mergeable_state: null });
+  const [selectedConfirmationAction, setSelectedConfirmationAction] = useState<ConfirmationAction>('create_correction_request');
 
   // 差分データをIDでマップ化する関数
   const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
@@ -364,6 +440,24 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     );
   }
 
+  // 確認アクションの処理
+  const handleConfirmationAction = () => {
+    switch (selectedConfirmationAction) {
+      case 'create_correction_request':
+        console.log('修正リクエストを作成');
+        // TODO: 修正リクエスト作成のAPI呼び出し
+        break;
+      case 're_edit_proposal':
+        console.log('変更提案を再編集');
+        // TODO: 変更提案の再編集画面への遷移
+        break;
+      case 'approve_changes':
+        console.log('変更を承認');
+        // TODO: 変更承認のAPI呼び出し
+        break;
+    }
+  };
+
   return (
     <AdminLayout title="変更内容詳細">
       <style>{markdownStyles}</style>
@@ -381,6 +475,16 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
             title={pullRequestData.title}
           />
         )}
+        
+        {/* 確認アクションボタン */}
+        <div className="flex justify-end mb-6">
+          <ConfirmationActionDropdown
+            selectedAction={selectedConfirmationAction}
+            onActionChange={setSelectedConfirmationAction}
+            onConfirm={handleConfirmationAction}
+          />
+        </div>
+
         {/* タブナビゲーション */}
         <div className="mb-8">
           <nav className="flex">

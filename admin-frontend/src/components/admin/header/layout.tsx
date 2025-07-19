@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '../../../contexts/SessionContext';
+import { API_CONFIG } from '../api/config';
 
 const PATHS = {
-  HOME: '/',
   ADMIN_LOGIN: '/login',
 } as const;
 
@@ -20,7 +20,7 @@ const UserInfo: React.FC<{ email: string }> = ({ email }) => <span>{email}でロ
 
 const NavigationButtons: React.FC<{ isAuthenticated: boolean }> = ({ isAuthenticated }) => (
   <div className="flex gap-2 rounded-lg">
-    <Link to={PATHS.HOME} className={STYLES.button}>
+    <Link to={`${API_CONFIG.FRONTEND_URLS.USER_FRONTEND}/docs/category/tutorial---basics`} className={STYLES.button}>
       ユーザー画面へ
     </Link>
     {!isAuthenticated && (
