@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ActionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -12,9 +13,11 @@ class PullRequestReviewer extends Model
     protected $fillable = [
         'pull_request_id',
         'user_id',
+        'action_status',
     ];
 
     protected $casts = [
+        'action_status' => ActionStatus::class,
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

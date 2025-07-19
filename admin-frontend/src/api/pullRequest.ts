@@ -84,3 +84,30 @@ export const fetchPullRequestDetail = async (
     throw error;
   }
 };
+
+/**
+ * プルリクエストを承認する
+ */
+export const approvePullRequest = async (
+  id: string | number
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.APPROVE}/${id}/approve`);
+    return { success: true };
+  } catch (error: any) {
+    console.error('プルリクエスト承認エラー:', error);
+
+    // エラーレスポンスの処理
+    if (error.response?.data?.error) {
+      return {
+        success: false,
+        error: error.response.data.error,
+      };
+    }
+
+    return {
+      success: false,
+      error: 'プルリクエストの承認に失敗しました',
+    };
+  }
+};

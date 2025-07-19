@@ -52,6 +52,7 @@ Route::middleware('auth.session')->group(function () {
         Route::post('/create', [PullRequestsController::class, 'createPullRequest']);
         Route::put('/{id}', [PullRequestsController::class, 'merge']);
         Route::patch('/{id}/close', [PullRequestsController::class, 'close']);
+        Route::patch('/{id}/approve', [PullRequestsController::class, 'approve']);
     });
 
     // コメント関連

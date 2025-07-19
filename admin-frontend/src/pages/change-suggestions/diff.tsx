@@ -3,7 +3,11 @@ import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useParams } from 'react-router-dom';
-import { fetchPullRequestDetail, type PullRequestDetailResponse } from '@/api/pullRequest';
+import {
+  fetchPullRequestDetail,
+  approvePullRequest,
+  type PullRequestDetailResponse,
+} from '@/api/pullRequest';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import React from 'react';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
@@ -255,7 +259,7 @@ const ConfirmationActionDropdown: React.FC<{
         <div className="absolute right-0 mt-2 w-64 bg-gray-800 border border-gray-600 rounded-md shadow-lg z-10">
           <div className="p-4">
             <div className="space-y-3">
-              {actions.map((action) => (
+              {actions.map(action => (
                 <label key={action.value} className="flex items-center cursor-pointer">
                   <input
                     type="radio"
@@ -300,7 +304,9 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     mergeable: boolean | null;
     mergeable_state: string | null;
   }>({ mergeable: null, mergeable_state: null });
-  const [selectedConfirmationAction, setSelectedConfirmationAction] = useState<ConfirmationAction>('create_correction_request');
+  const [selectedConfirmationAction, setSelectedConfirmationAction] = useState<ConfirmationAction>(
+    'create_correction_request'
+  );
 
   // 差分データをIDでマップ化する関数
   const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
@@ -441,7 +447,9 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
   }
 
   // 確認アクションの処理
-  const handleConfirmationAction = () => {
+  const handleConfirmationAction = async () => {
+    if (!id) return;
+
     switch (selectedConfirmationAction) {
       case 'create_correction_request':
         console.log('修正リクエストを作成');
@@ -452,8 +460,18 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
         // TODO: 変更提案の再編集画面への遷移
         break;
       case 'approve_changes':
-        console.log('変更を承認');
-        // TODO: 変更承認のAPI呼び出し
+        try {
+          const result = await approvePullRequest(id);
+          if (result.success) {
+            // 承認成功時にアクティビティページに遷移
+            window.location.href = `/admin/change-suggestions/${id}`;
+          } else {
+            setError(result.error || '変更の承認に失敗しました');
+          }
+        } catch (err) {
+          console.error('承認エラー:', err);
+          setError('変更の承認に失敗しました');
+        }
         break;
     }
   };
@@ -475,7 +493,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
             title={pullRequestData.title}
           />
         )}
-        
+
         {/* 確認アクションボタン */}
         <div className="flex justify-end mb-6">
           <ConfirmationActionDropdown

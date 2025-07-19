@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Constants\DocumentCategoryConstants;
 use App\Consts\Flag;
+use App\Enums\ActionStatus;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\PullRequestStatus;
 use App\Enums\UserRole;
+use App\Http\Requests\Api\PullRequest\ApprovePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\ClosePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
@@ -571,6 +573,60 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => 'プルリクエストのクローズに失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエストを承認する
+     */
+    public function approve(ApprovePullRequestRequest $request): JsonResponse
+    {
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. バリデーション済みデータを取得
+            $validated = $request->validated();
+            $pullRequestId = $validated['pull_request_id'];
+
+            // 3. 該当のレビュアーレコードを取得または作成
+            $reviewer = PullRequestReviewer::where('pull_request_id', $pullRequestId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (! $reviewer) {
+                // レビュアーとして登録されていない場合は新規作成
+                $reviewer = PullRequestReviewer::create([
+                    'pull_request_id' => $pullRequestId,
+                    'user_id' => $user->id,
+                    'action_status' => ActionStatus::APPROVED,
+                ]);
+            } else {
+                // 既存のレビュアーレコードを更新
+                $reviewer->update([
+                    'action_status' => ActionStatus::APPROVED,
+                ]);
+            }
+
+            return response()->json();
+
+        } catch (\Exception $e) {
+            Log::error('プルリクエスト承認エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $request->pull_request_id ?? null,
+                'user_id' => $user->id ?? null,
+            ]);
+
+            return response()->json([
+                'error' => 'プルリクエストの承認に失敗しました',
             ], 500);
         }
     }
