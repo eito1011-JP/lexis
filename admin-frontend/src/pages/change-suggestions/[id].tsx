@@ -3,7 +3,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useParams } from 'react-router-dom';
-import { fetchPullRequestDetail, type PullRequestDetailResponse } from '@/api/pullRequest';
+import {
+  fetchPullRequestDetail,
+  type PullRequestDetailResponse,
+  type Reviewer,
+} from '@/api/pullRequest';
 import { Settings } from '@/components/icon/common/Settings';
 import React from 'react';
 
@@ -434,7 +438,9 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
             // 既存のレビュアーをselectedReviewersに設定
             const reviewerIds = allUsers
-              .filter((user: User) => data.reviewers.includes(user.email))
+              .filter((user: User) =>
+                data.reviewers.some((reviewer: Reviewer) => reviewer.email === user.email)
+              )
               .map((user: User) => user.id);
             setSelectedReviewers(reviewerIds);
             setInitialReviewers(reviewerIds);
@@ -1086,20 +1092,20 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 </div>
               )}
             </div>
-            {selectedReviewers.length === 0 ? (
-              <p className="text-gray-400 text-sm">レビュアーなし</p>
-            ) : (
+            {pullRequestData?.reviewers && pullRequestData.reviewers.length > 0 ? (
               <div className="space-y-2">
-                {selectedReviewers.map(reviewerId => {
-                  const user = users.find(u => u.id === reviewerId);
-                  return user ? (
-                    <div key={reviewerId} className="flex items-center gap-2 text-sm">
-                      <span className="text-xl">👤</span>
-                      <span className="text-gray-300">{user.email}</span>
-                    </div>
-                  ) : null;
-                })}
+                {pullRequestData.reviewers.map((reviewer, index) => (
+                  <div key={index} className="flex items-center gap-2 text-sm">
+                    <span className="text-xl">👤</span>
+                    <span className="text-gray-300">{reviewer.email}</span>
+                    {reviewer.action_status === 'approved' && (
+                      <span className="text-green-400">✅</span>
+                    )}
+                  </div>
+                ))}
               </div>
+            ) : (
+              <p className="text-gray-400 text-sm">レビュアーなし</p>
             )}
           </div>
         </div>

@@ -25,6 +25,12 @@ export interface CreatePullRequestResponse {
   error?: string;
 }
 
+// レビュアー情報の型定義
+export interface Reviewer {
+  email: string;
+  action_status: 'pending' | 'fix_requested' | 'approved';
+}
+
 // プルリクエスト詳細レスポンスの型定義
 export interface PullRequestDetailResponse {
   document_versions: any[];
@@ -37,7 +43,7 @@ export interface PullRequestDetailResponse {
   status: 'opened' | 'merged' | 'closed' | 'conflict';
   author_name: string;
   author_email: string;
-  reviewers: string[];
+  reviewers: Reviewer[];
   created_at: string;
 }
 
