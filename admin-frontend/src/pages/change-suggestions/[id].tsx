@@ -47,6 +47,16 @@ type User = {
   created_at?: string;
 };
 
+// コメントの型定義
+type Comment = {
+  id: number;
+  author: string | null;
+  content: string;
+  is_resolved: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
   current: any;
@@ -251,6 +261,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('activity');
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
 
   // 差分データをIDでマップ化する関数
   const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
@@ -305,6 +317,27 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       {} as Record<string, DiffItem>
     );
   };
+
+  // コメント取得API呼び出し関数
+  const fetchComments = useCallback(async () => {
+    if (!id) return;
+
+    setLoadingComments(true);
+    try {
+      const response = await apiClient.get(
+        `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET_DETAIL}/${id}/comments`
+      );
+      setComments(response || []);
+    } catch (error) {
+      console.error('コメント取得エラー:', error);
+      setToast({
+        message: 'コメントの取得に失敗しました',
+        type: 'error',
+      });
+    } finally {
+      setLoadingComments(false);
+    }
+  }, [id]);
 
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
@@ -421,6 +454,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     fetchData();
   }, [id]);
 
+  // アクティビティタブの時にコメントを取得
+  useEffect(() => {
+    if (activeTab === 'activity' && id) {
+      fetchComments();
+    }
+  }, [activeTab, id, fetchComments]);
+
   useEffect(() => {
     if (!showReviewerModal) return;
     const handleClickOutside = (event: MouseEvent) => {
@@ -519,11 +559,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     try {
       await apiClient.post('/api/comments', {
         pull_request_id: parseInt(id),
-        content: comment.trim()
+        content: comment.trim(),
       });
 
       setToast({ message: 'コメントを投稿しました', type: 'success' });
       setComment('');
+      // コメント投稿後にコメントリストを再取得
+      fetchComments();
     } catch (error) {
       console.error('コメント投稿エラー:', error);
       setToast({
@@ -876,6 +918,56 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 </div>
               </div>
             </div>
+
+            {/* コメントリスト */}
+            {loadingComments ? (
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
+                </div>
+                <div className="border border-gray-600 rounded-lg p-6 flex-1">
+                  <p className="text-gray-400">コメントを読み込み中...</p>
+                </div>
+              </div>
+            ) : (
+              comments.map(commentItem => (
+                <div key={commentItem.id} className="flex items-start gap-4 mb-6">
+                  <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm">👤</span>
+                  </div>
+                  <div className="relative bg-gray-800 border border-gray-600 rounded-lg p-6 w-full max-w-none">
+                    {/* 吹き出しの三角形 */}
+                    <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
+                    <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
+
+                    {/* コメントヘッダー */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-white font-semibold">
+                          {commentItem.author || '不明なユーザー'}
+                        </span>
+                        <span className="text-gray-400 text-sm">
+                          {formatDistanceToNow(new Date(commentItem.created_at), {
+                            addSuffix: true,
+                            locale: ja,
+                          })}
+                        </span>
+                      </div>
+                      {commentItem.is_resolved && (
+                        <span className="text-green-400 text-sm px-2 py-1 bg-green-900/30 border border-green-700 rounded">
+                          解決済み
+                        </span>
+                      )}
+                    </div>
+
+                    {/* コメント内容 */}
+                    <div className="text-white text-base leading-relaxed whitespace-pre-wrap">
+                      {commentItem.content}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           {/* 右側: レビュアー */}

@@ -48,6 +48,7 @@ Route::middleware('auth.session')->group(function () {
         Route::get('/', [PullRequestsController::class, 'fetchPullRequests']);
         Route::get('/{id}', [PullRequestsController::class, 'fetchPullRequestDetail']);
         Route::get('/{id}/conflict', [PullRequestsController::class, 'detectConflict']);
+        Route::get('/{id}/comments', [CommentController::class, 'index']);
         Route::post('/create', [PullRequestsController::class, 'createPullRequest']);
         Route::put('/{id}', [PullRequestsController::class, 'merge']);
         Route::patch('/{id}/close', [PullRequestsController::class, 'close']);

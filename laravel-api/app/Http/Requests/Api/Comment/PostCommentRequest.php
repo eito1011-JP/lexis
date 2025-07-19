@@ -37,4 +37,4 @@ class PostCommentRequest extends FormRequest
             'content' => 'コメント',
         ];
     }
-} 
+}

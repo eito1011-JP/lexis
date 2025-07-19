@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Comment extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'pull_request_id',
@@ -37,4 +39,4 @@ class Comment extends Model
     {
         return $this->belongsTo(User::class)->withTrashed();
     }
-} 
+}
