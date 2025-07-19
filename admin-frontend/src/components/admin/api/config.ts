@@ -43,6 +43,7 @@ export const API_CONFIG = {
       GET: '/api/admin/pull-requests',
       GET_DETAIL: '/api/admin/pull-requests',
       CREATE: '/api/admin/pull-requests/create',
+      FIX_REQUEST: '/api/admin/pull-requests',
       MERGE: '/api/admin/pull-requests',
       CONFLICT: '/api/admin/pull-requests',
       CLOSE: '/api/admin/pull-requests',

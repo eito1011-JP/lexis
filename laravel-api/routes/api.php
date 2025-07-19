@@ -50,6 +50,7 @@ Route::middleware('auth.session')->group(function () {
         Route::get('/{id}/conflict', [PullRequestsController::class, 'detectConflict']);
         Route::get('/{id}/comments', [CommentController::class, 'index']);
         Route::post('/create', [PullRequestsController::class, 'createPullRequest']);
+        Route::post('/{id}/fix-request', [PullRequestsController::class, 'sendFixRequest']);
         Route::put('/{id}', [PullRequestsController::class, 'merge']);
         Route::patch('/{id}/close', [PullRequestsController::class, 'close']);
         Route::patch('/{id}/approve', [PullRequestsController::class, 'approve']);

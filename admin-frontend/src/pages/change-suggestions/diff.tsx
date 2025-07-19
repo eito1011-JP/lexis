@@ -452,8 +452,8 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
 
     switch (selectedConfirmationAction) {
       case 'create_correction_request':
-        console.log('修正リクエストを作成');
-        // TODO: 修正リクエスト作成のAPI呼び出し
+        // 修正リクエスト作成画面に遷移
+        window.location.href = `/admin/change-suggestions/${id}/fix-request`;
         break;
       case 're_edit_proposal':
         console.log('変更提案を再編集');

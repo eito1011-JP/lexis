@@ -7,6 +7,7 @@ enum DocumentCategoryStatus: string
     case DRAFT = 'draft';
     case PUSHED = 'pushed';
     case MERGED = 'merged';
+    case FIX_REQUEST = 'fix-request';
 
     /**
      * 日本語での表示名を取得
@@ -17,6 +18,7 @@ enum DocumentCategoryStatus: string
             self::DRAFT => '下書き',
             self::PUSHED => 'プッシュ済み',
             self::MERGED => 'マージ済み',
+            self::FIX_REQUEST => '修正リクエスト',
         };
     }
 

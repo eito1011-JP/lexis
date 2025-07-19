@@ -9,6 +9,7 @@ export const ROUTES = {
   CHANGE_SUGGESTIONS: 'change-suggestions',
   CHANGE_SUGGESTION_DETAIL: 'change-suggestion-detail',
   CHANGE_SUGGESTION_DIFF: 'change-suggestion-diff',
+  CHANGE_SUGGESTION_FIX_REQUEST: 'change-suggestion-fix-request',
 } as const;
 
 export const ROUTE_PATHS = {
@@ -22,6 +23,7 @@ export const ROUTE_PATHS = {
   [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
   [ROUTES.CHANGE_SUGGESTION_DETAIL]: '/change-suggestions/:id',
   [ROUTES.CHANGE_SUGGESTION_DIFF]: '/change-suggestions/:id/diff',
+  [ROUTES.CHANGE_SUGGESTION_FIX_REQUEST]: '/change-suggestions/:id/fix-request',
 } as const;
 
 export const generatePath = (

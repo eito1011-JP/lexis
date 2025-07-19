@@ -2,12 +2,9 @@
 
 namespace App\Enums;
 
-enum DocumentStatus: string
+enum PullRequestActivityAction: string
 {
-    case DRAFT = 'draft';
-    case PUSHED = 'pushed';
-    case MERGED = 'merged';
-    case FIX_REQUEST = 'fix-request';
+    case FIX_REQUEST_SENT = 'fix_request_sent';
 
     /**
      * 日本語での表示名を取得
@@ -15,10 +12,7 @@ enum DocumentStatus: string
     public function getDisplayName(): string
     {
         return match ($this) {
-            self::DRAFT => '編集中',
-            self::PUSHED => 'レビュー中',
-            self::MERGED => '完了',
-            self::FIX_REQUEST => '修正リクエスト',
+            self::FIX_REQUEST_SENT => '修正リクエスト送信',
         };
     }
 

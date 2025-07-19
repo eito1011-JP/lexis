@@ -7,17 +7,21 @@ use App\Consts\Flag;
 use App\Enums\ActionStatus;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
+use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestStatus;
 use App\Enums\UserRole;
 use App\Http\Requests\Api\PullRequest\ApprovePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\ClosePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
+use App\Http\Requests\Api\PullRequest\SendFixRequestRequest;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
+use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\FixRequest;
 use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
@@ -630,6 +634,185 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => 'プルリクエストの承認に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * 修正リクエストを送信する
+     */
+    public function sendFixRequest(SendFixRequestRequest $request, int $id): JsonResponse
+    {
+        DB::beginTransaction();
+
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. プルリクエストを取得
+            $pullRequest = PullRequest::findOrFail($id);
+
+            // 3. バリデーション済みデータを取得
+            $validated = $request->validated();
+
+            // 4. document_versionsとdocument_categoriesの一括取得
+            $documentVersionIds = [];
+            $documentCategoryIds = [];
+
+            if (isset($validated['document_versions']) && is_array($validated['document_versions'])) {
+                $documentVersionIds = array_column($validated['document_versions'], 'id');
+            }
+
+            if (isset($validated['document_categories']) && is_array($validated['document_categories'])) {
+                $documentCategoryIds = array_column($validated['document_categories'], 'id');
+            }
+
+            // 一括でDocumentVersionsを取得
+            $existingDocumentVersions = collect();
+            if (! empty($documentVersionIds)) {
+                $existingDocumentVersions = DocumentVersion::whereIn('id', $documentVersionIds)->get()->keyBy('id');
+            }
+
+            // 一括でDocumentCategoriesを取得
+            $existingDocumentCategories = collect();
+            if (! empty($documentCategoryIds)) {
+                $existingDocumentCategories = DocumentCategory::whereIn('id', $documentCategoryIds)->get()->keyBy('id');
+            }
+
+            // 5. document_versionsをstatus='fix-request'でbulk insert
+            $fixRequestsData = [];
+            $newDocumentVersionsData = [];
+
+            if (isset($validated['document_versions']) && is_array($validated['document_versions'])) {
+                foreach ($validated['document_versions'] as $docVersion) {
+                    $existingDocVersion = $existingDocumentVersions->get($docVersion['id']);
+
+                    if (! $existingDocVersion) {
+                        throw new \Exception('Document version not found: '.$docVersion['id']);
+                    }
+
+                    // 新しいドキュメントバージョンのデータを準備
+                    $newDocumentVersionsData[] = [
+                        'user_id' => $user->id,
+                        'user_branch_id' => $existingDocVersion->user_branch_id,
+                        'file_path' => $existingDocVersion->file_path,
+                        'status' => DocumentStatus::FIX_REQUEST->value,
+                        'content' => $docVersion['content'] ?? $existingDocVersion->content,
+                        'slug' => $docVersion['slug'] ?? $existingDocVersion->slug,
+                        'category_id' => $existingDocVersion->category_id,
+                        'sidebar_label' => $docVersion['sidebar_label'] ?? $existingDocVersion->sidebar_label,
+                        'file_order' => $existingDocVersion->file_order,
+                        'is_public' => $existingDocVersion->is_public,
+                    ];
+                }
+            }
+
+            // 6. document_categoriesをstatus='fix-request'でbulk insert
+            $newDocumentCategoriesData = [];
+            if (isset($validated['document_categories']) && is_array($validated['document_categories'])) {
+                foreach ($validated['document_categories'] as $docCategory) {
+                    $existingDocCategory = $existingDocumentCategories->get($docCategory['id']);
+
+                    if (! $existingDocCategory) {
+                        throw new \Exception('Document category not found: '.$docCategory['id']);
+                    }
+
+                    // 新しいドキュメントカテゴリのデータを準備
+                    $newDocumentCategoriesData[] = [
+                        'slug' => $docCategory['slug'] ?? $existingDocCategory->slug,
+                        'sidebar_label' => $docCategory['sidebar_label'] ?? $existingDocCategory->sidebar_label,
+                        'position' => $existingDocCategory->position,
+                        'description' => $docCategory['description'] ?? $existingDocCategory->description,
+                        'status' => DocumentCategoryStatus::FIX_REQUEST->value,
+                        'parent_id' => $existingDocCategory->parent_id,
+                        'user_branch_id' => $existingDocCategory->user_branch_id,
+                    ];
+                }
+            }
+
+            // 7. 一括でDocumentVersionsを挿入
+            $newDocumentVersionIds = collect();
+            if (! empty($newDocumentVersionsData)) {
+                // 挿入前の最大IDを取得
+                $maxDocumentVersionId = DocumentVersion::max('id') ?? 0;
+
+                DocumentVersion::insert($newDocumentVersionsData);
+
+                // 挿入されたレコードのIDを取得（最大IDより大きいIDを取得）
+                $newDocumentVersionIds = DocumentVersion::where('id', '>', $maxDocumentVersionId)
+                    ->where('user_id', $user->id)
+                    ->where('status', DocumentStatus::FIX_REQUEST->value)
+                    ->orderBy('id', 'asc')
+                    ->pluck('id');
+            }
+
+            // 8. 一括でDocumentCategoriesを挿入
+            $newDocumentCategoryIds = collect();
+            if (! empty($newDocumentCategoriesData)) {
+                // 挿入前の最大IDを取得
+                $maxDocumentCategoryId = DocumentCategory::max('id') ?? 0;
+
+                DocumentCategory::insert($newDocumentCategoriesData);
+
+                // 挿入されたレコードのIDを取得（最大IDより大きいIDを取得）
+                $newDocumentCategoryIds = DocumentCategory::where('id', '>', $maxDocumentCategoryId)
+                    ->where('status', DocumentCategoryStatus::FIX_REQUEST->value)
+                    ->orderBy('id', 'asc')
+                    ->pluck('id');
+            }
+
+            // 9. fix_requestsテーブル用のデータを準備
+            foreach ($newDocumentVersionIds as $newDocVersionId) {
+                $fixRequestsData[] = [
+                    'document_version_id' => $newDocVersionId,
+                    'document_category_id' => null,
+                    'user_id' => $user->id,
+                    'pull_request_id' => $pullRequest->id,
+                ];
+            }
+
+            foreach ($newDocumentCategoryIds as $newDocCategoryId) {
+                $fixRequestsData[] = [
+                    'document_version_id' => null,
+                    'document_category_id' => $newDocCategoryId,
+                    'user_id' => $user->id,
+                    'pull_request_id' => $pullRequest->id,
+                ];
+            }
+
+            // 6. fix_requestsテーブルにbulk insert
+            if (! empty($fixRequestsData)) {
+                FixRequest::insert($fixRequestsData);
+            }
+
+            // 7. activity_log_on_pull_requestsにアクティビティログを記録
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $pullRequest->id,
+                'action' => PullRequestActivityAction::FIX_REQUEST_SENT->value,
+            ]);
+
+            DB::commit();
+
+            return response()->json();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('修正リクエスト送信エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $id,
+                'user_id' => $user->id ?? null,
+            ]);
+
+            return response()->json([
+                'error' => '修正リクエストの送信に失敗しました',
             ], 500);
         }
     }
