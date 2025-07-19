@@ -13,6 +13,7 @@ use App\Enums\UserRole;
 use App\Http\Requests\Api\PullRequest\ApprovePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\ClosePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
+use App\Http\Requests\Api\PullRequest\FetchActivityLogRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\SendFixRequestRequest;
 use App\Http\Requests\CreatePullRequestRequest;
@@ -475,6 +476,13 @@ class PullRequestsController extends ApiBaseController
                 'status' => PullRequestStatus::MERGED->value,
             ]);
 
+            // 7. ActivityLogを作成
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $pullRequest->id,
+                'action' => PullRequestActivityAction::PULL_REQUEST_MERGED->value,
+            ]);
+
             DB::commit();
 
             return response()->json();
@@ -566,6 +574,13 @@ class PullRequestsController extends ApiBaseController
                 'status' => PullRequestStatus::CLOSED->value,
             ]);
 
+            // 5. ActivityLogを作成
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $pullRequest->id,
+                'action' => PullRequestActivityAction::PULL_REQUEST_CLOSED->value,
+            ]);
+
             DB::commit();
 
             return response()->json();
@@ -621,6 +636,13 @@ class PullRequestsController extends ApiBaseController
                     'action_status' => ActionStatus::APPROVED,
                 ]);
             }
+
+            // ActivityLogを作成
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $pullRequestId,
+                'action' => PullRequestActivityAction::REVIEWER_APPROVED->value,
+            ]);
 
             return response()->json();
 
@@ -813,6 +835,77 @@ class PullRequestsController extends ApiBaseController
 
             return response()->json([
                 'error' => '修正リクエストの送信に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * プルリクエストのアクティビティログを取得
+     */
+    public function fetchActivityLog(FetchActivityLogRequest $request, int $id): JsonResponse
+    {
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. バリデーション済みのプルリクエストIDを取得
+            $pullRequestId = $request->validated('id');
+
+            // 3. activity_log_on_pull_requestsから該当するログを取得
+            $activityLogs = ActivityLogOnPullRequest::with([
+                'user:id,name,email',
+                'comment:id,content,created_at',
+                'fixRequest:id,created_at',
+                'reviewer:id,name,email',
+            ])
+                ->where('pull_request_id', $pullRequestId)
+                ->orderBy('created_at', 'asc')
+                ->get();
+
+            // 4. レスポンス形式に変換
+            $response = $activityLogs->map(function ($log) {
+                return [
+                    'id' => $log->id,
+                    'pull_request_id' => $log->pull_request_id,
+                    'action' => $log->action,
+                    'actor' => $log->user ? [
+                        'id' => $log->user->id,
+                        'name' => $log->user->name ?? $log->user->email,
+                        'email' => $log->user->email,
+                    ] : null,
+                    'comment' => $log->comment ? [
+                        'id' => $log->comment->id,
+                        'content' => $log->comment->content,
+                        'created_at' => $log->comment->created_at->toISOString(),
+                    ] : null,
+                    'fix_request' => $log->fixRequest ? [
+                        'id' => $log->fixRequest->id,
+                        'created_at' => $log->fixRequest->created_at->toISOString(),
+                    ] : null,
+                    'old_pull_request_title' => $log->old_pull_request_title,
+                    'new_pull_request_title' => $log->new_pull_request_title,
+                    'created_at' => $log->created_at->toISOString(),
+                ];
+            });
+
+            return response()->json($response);
+
+        } catch (\Exception $e) {
+            Log::error('アクティビティログ取得エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $id,
+                'user_id' => $user->id ?? null,
+            ]);
+
+            return response()->json([
+                'error' => 'アクティビティログの取得に失敗しました',
             ], 500);
         }
     }

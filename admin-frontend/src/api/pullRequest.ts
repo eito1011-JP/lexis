@@ -31,6 +31,39 @@ export interface Reviewer {
   action_status: 'pending' | 'fix_requested' | 'approved';
 }
 
+// アクティビティログのアクター情報の型定義
+export interface ActivityLogActor {
+  id: number;
+  name: string;
+  email: string;
+}
+
+// アクティビティログのコメント情報の型定義
+export interface ActivityLogComment {
+  id: number;
+  content: string;
+  created_at: string;
+}
+
+// アクティビティログの修正リクエスト情報の型定義
+export interface ActivityLogFixRequest {
+  id: number;
+  created_at: string;
+}
+
+// アクティビティログの型定義
+export interface ActivityLog {
+  id: number;
+  pull_request_id: number;
+  action: string;
+  actor: ActivityLogActor | null;
+  comment: ActivityLogComment | null;
+  fix_request: ActivityLogFixRequest | null;
+  old_pull_request_title: string | null;
+  new_pull_request_title: string | null;
+  created_at: string;
+}
+
 // プルリクエスト詳細レスポンスの型定義
 export interface PullRequestDetailResponse {
   document_versions: any[];
@@ -115,5 +148,20 @@ export const approvePullRequest = async (
       success: false,
       error: 'プルリクエストの承認に失敗しました',
     };
+  }
+};
+
+/**
+ * プルリクエストのアクティビティログを取得する
+ */
+export const fetchActivityLog = async (pullRequestId: string): Promise<ActivityLog[]> => {
+  try {
+    const response = await apiClient.get(
+      `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET_DETAIL}/${pullRequestId}/activity-log-on-pull-request`
+    );
+    return response || [];
+  } catch (error: any) {
+    console.error('アクティビティログ取得エラー:', error);
+    throw new Error('アクティビティログの取得に失敗しました');
   }
 };

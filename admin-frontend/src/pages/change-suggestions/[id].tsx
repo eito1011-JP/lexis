@@ -5,8 +5,10 @@ import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useParams } from 'react-router-dom';
 import {
   fetchPullRequestDetail,
+  fetchActivityLog,
   type PullRequestDetailResponse,
   type Reviewer,
+  type ActivityLog,
 } from '@/api/pullRequest';
 import { Settings } from '@/components/icon/common/Settings';
 import React from 'react';
@@ -20,8 +22,6 @@ import { Closed } from '@/components/icon/common/Closed';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
-import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
-import { Folder } from '@/components/icon/common/Folder';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 
@@ -163,6 +163,126 @@ const TABS = [
   { id: 'changes' as TabType, label: '変更内容', icon: '📝' },
 ] as const;
 
+// ActivityLogItemコンポーネント
+const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }) => {
+  const getActionDisplayName = (action: string): string => {
+    switch (action) {
+      case 'fix_request_sent':
+        return '修正リクエストが送信されました';
+      case 'assigned_reviewer':
+        return 'レビュワーが設定されました';
+      case 'reviewer_approved':
+        return '変更提案が承認されました';
+      case 'commented':
+        return 'コメントが投稿されました';
+      case 'pull_request_merged':
+        return 'プルリクエストがマージされました';
+      case 'pull_request_closed':
+        return 'プルリクエストがクローズされました';
+      case 'pull_request_reopened':
+        return 'プルリクエストが再オープンされました';
+      case 'pull_request_edited':
+        return 'プルリクエストが編集されました';
+      case 'pull_request_title_edited':
+        return 'タイトルが編集されました';
+      default:
+        return 'アクション';
+    }
+  };
+
+  const getActionIcon = (action: string): string => {
+    switch (action) {
+      case 'fix_request_sent':
+        return '🔧';
+      case 'assigned_reviewer':
+        return '👥';
+      case 'reviewer_approved':
+        return '✅';
+      case 'commented':
+        return '💬';
+      case 'pull_request_merged':
+        return '🔀';
+      case 'pull_request_closed':
+        return '❌';
+      case 'pull_request_reopened':
+        return '🔄';
+      case 'pull_request_edited':
+        return '✏️';
+      case 'pull_request_title_edited':
+        return '📝';
+      default:
+        return '📋';
+    }
+  };
+
+  const getActionColor = (action: string): string => {
+    switch (action) {
+      case 'fix_request_sent':
+        return 'bg-red-600';
+      case 'assigned_reviewer':
+        return 'bg-blue-600';
+      case 'reviewer_approved':
+        return 'bg-green-600';
+      case 'commented':
+        return 'bg-purple-600';
+      case 'pull_request_merged':
+        return 'bg-purple-600';
+      case 'pull_request_closed':
+        return 'bg-red-600';
+      case 'pull_request_reopened':
+        return 'bg-orange-600';
+      case 'pull_request_edited':
+        return 'bg-yellow-600';
+      case 'pull_request_title_edited':
+        return 'bg-yellow-600';
+      default:
+        return 'bg-gray-600';
+    }
+  };
+
+  return (
+    <div className="timeline-item">
+      <div className={`timeline-avatar ${getActionColor(log.action)}`}>
+        <span className="text-white text-sm">{getActionIcon(log.action)}</span>
+      </div>
+      <div className="timeline-content timeline-content-with-line">
+        <div className="text-red-300 text-sm mb-1 ml-[-0.7rem]">
+          {log.actor?.name || 'システム'}さんが{getActionDisplayName(log.action)}
+        </div>
+
+        {/* タイトル編集の場合の詳細表示 */}
+        {log.action === 'pull_request_title_edited' &&
+          log.old_pull_request_title &&
+          log.new_pull_request_title && (
+            <div className="ml-[-0.7rem] mt-2">
+              <div className="text-xs text-gray-400 mb-1">変更前:</div>
+              <div className="text-sm text-red-200 mb-2 bg-red-900/30 border border-red-700 rounded p-2">
+                {log.old_pull_request_title}
+              </div>
+              <div className="text-xs text-gray-400 mb-1">変更後:</div>
+              <div className="text-sm text-green-200 bg-green-900/30 border border-green-700 rounded p-2">
+                {log.new_pull_request_title}
+              </div>
+            </div>
+          )}
+
+        {/* コメントの場合の詳細表示 */}
+        {log.action === 'commented' && log.comment && (
+          <div className="ml-[-0.7rem] mt-2">
+            <div className="text-sm text-gray-300 bg-gray-800 border border-gray-600 rounded p-2">
+              {log.comment.content}
+            </div>
+          </div>
+        )}
+
+        <div className="text-xs text-gray-400 mt-2 ml-[-0.7rem]">
+          {formatDistanceToNow(new Date(log.created_at), { addSuffix: true, locale: ja })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ステータスバナーコンポーネント
 const StatusBanner: React.FC<{
   status: string;
@@ -267,6 +387,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [activeTab, setActiveTab] = useState<TabType>('activity');
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [loadingActivityLogs, setLoadingActivityLogs] = useState(false);
 
   // 差分データをIDでマップ化する関数
   const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
@@ -340,6 +462,25 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       });
     } finally {
       setLoadingComments(false);
+    }
+  }, [id]);
+
+  // ActivityLog取得API呼び出し関数
+  const fetchActivityLogs = useCallback(async () => {
+    if (!id) return;
+
+    setLoadingActivityLogs(true);
+    try {
+      const logs = await fetchActivityLog(id);
+      setActivityLogs(logs);
+    } catch (error) {
+      console.error('アクティビティログ取得エラー:', error);
+      setToast({
+        message: 'アクティビティログの取得に失敗しました',
+        type: 'error',
+      });
+    } finally {
+      setLoadingActivityLogs(false);
     }
   }, [id]);
 
@@ -460,12 +601,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     fetchData();
   }, [id]);
 
-  // アクティビティタブの時にコメントを取得
+  // アクティビティタブの時にコメントとActivityLogを取得
   useEffect(() => {
     if (activeTab === 'activity' && id) {
       fetchComments();
+      fetchActivityLogs();
     }
-  }, [activeTab, id, fetchComments]);
+  }, [activeTab, id, fetchComments, fetchActivityLogs]);
 
   useEffect(() => {
     if (!showReviewerModal) return;
@@ -815,6 +957,24 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   </div>
                 </div>
               </div>
+              {/* アクティビティログリスト（コメント以外） */}
+              {loadingActivityLogs ? (
+                <div className="timeline-item">
+                  <div className="timeline-avatar">
+                    <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
+                  </div>
+                  <div className="timeline-content timeline-content-with-line">
+                    <div className="border border-gray-600 rounded-lg p-6 flex-1">
+                      <p className="text-gray-400">アクティビティログを読み込み中...</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                activityLogs
+                  .filter(log => log.action !== 'commented') // コメント以外のActivityLogのみ表示
+                  .map((log, index) => <ActivityLogItem key={log.id} log={log} />)
+              )}
+
               {/* コメントリスト */}
               {loadingComments ? (
                 <div className="timeline-item">
@@ -903,7 +1063,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   <button
                     onClick={handleComment}
                     disabled={!comment.trim()}
-                    className="px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    className="px-6 py-2 bg-[#1B6E2A] hover:bg-gray-700 text-white rounded-md transition-colors"
                   >
                     コメントする
                   </button>

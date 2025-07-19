@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\PullRequestActivityAction;
 use App\Http\Requests\Api\Comment\FetchCommentsRequest;
 use App\Http\Requests\Api\Comment\PostCommentRequest;
+use App\Models\ActivityLogOnPullRequest;
 use App\Models\Comment;
 use App\Models\PullRequest;
 use Illuminate\Http\JsonResponse;
@@ -83,11 +85,19 @@ class CommentController extends ApiBaseController
             $pullRequest = PullRequest::findOrFail($request->pull_request_id);
 
             // コメントを作成
-            Comment::create([
+            $comment = Comment::create([
                 'pull_request_id' => $pullRequest->id,
                 'user_id' => $user->id ?? null,
                 'content' => $request->content,
                 'is_resolved' => false,
+            ]);
+
+            // ActivityLogを作成
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $pullRequest->id,
+                'comment_id' => $comment->id,
+                'action' => PullRequestActivityAction::COMMENTED->value,
             ]);
 
             return response()->json([]);

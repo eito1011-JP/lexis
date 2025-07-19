@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\PullRequestActivityAction;
 use App\Http\Requests\FetchPullRequestReviewersRequest;
 use App\Http\Requests\SetPullRequestReviewersRequest;
+use App\Models\ActivityLogOnPullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -95,6 +97,13 @@ class PullRequestReviewerController extends ApiBaseController
             if (! empty($reviewerData)) {
                 PullRequestReviewer::insert($reviewerData);
             }
+
+            // ActivityLogを作成
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $pullRequestId,
+                'action' => PullRequestActivityAction::ASSIGNED_REVIEWER->value,
+            ]);
 
             return response()->json();
         } catch (\Exception $e) {

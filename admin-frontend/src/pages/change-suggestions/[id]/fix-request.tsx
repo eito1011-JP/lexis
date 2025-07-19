@@ -13,6 +13,7 @@ import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
 import { Merge } from '@/components/icon/common/Merge';
 import { Merged } from '@/components/icon/common/Merged';
 import { Closed } from '@/components/icon/common/Closed';
+import { Toast } from '@/components/admin/Toast';
 
 // 差分データの型定義
 type DiffItem = {
@@ -117,6 +118,7 @@ export default function FixRequestPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // フォームデータの状態
   const [title, setTitle] = useState('');
@@ -174,22 +176,20 @@ export default function FixRequestPage(): JSX.Element {
 
     setIsSubmitting(true);
     try {
-      const response = await apiClient.post(
-        `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.FIX_REQUEST}/${id}/fix-request`,
-        {
-          title,
-          description,
-          document_versions: documentVersions,
-          document_categories: documentCategories,
-        }
-      );
+      await apiClient.post(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.FIX_REQUEST}/${id}/fix-request`, {
+        title,
+        description,
+        document_versions: documentVersions,
+        document_categories: documentCategories,
+      });
 
-      if (response.success) {
-        // 成功時にアクティビティページに遷移
+      // 成功時にトースト通知を表示
+      setToast({ message: '修正リクエストを送信しました', type: 'success' });
+
+      // 少し待ってからアクティビティページに遷移
+      setTimeout(() => {
         window.location.href = `/admin/change-suggestions/${id}`;
-      } else {
-        setError(response.message || '修正リクエストの送信に失敗しました');
-      }
+      }, 1500);
     } catch (err) {
       console.error('修正リクエスト送信エラー:', err);
       setError('修正リクエストの送信に失敗しました');
@@ -251,6 +251,9 @@ export default function FixRequestPage(): JSX.Element {
 
   return (
     <AdminLayout title="修正リクエスト作成">
+      {/* トースト通知 */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       <div className="max-w-6xl mx-auto p-6">
         {/* ステータスバナー */}
         {pullRequestData && (
