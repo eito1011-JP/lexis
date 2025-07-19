@@ -1,0 +1,40 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Comment extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'pull_request_id',
+        'user_id',
+        'content',
+        'is_resolved',
+    ];
+
+    protected $casts = [
+        'is_resolved' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    /**
+     * プルリクエストとのリレーション
+     */
+    public function pullRequest()
+    {
+        return $this->belongsTo(PullRequest::class);
+    }
+
+    /**
+     * ユーザーとのリレーション
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class)->withTrashed();
+    }
+} 

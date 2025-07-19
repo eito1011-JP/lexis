@@ -94,4 +94,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(PullRequestReviewer::class);
     }
+
+    /**
+     * コメントとのリレーション
+     */
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
 }

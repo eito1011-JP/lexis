@@ -46,4 +46,12 @@ class PullRequest extends Model
     {
         return $this->belongsToMany(User::class, 'pull_request_reviewers');
     }
+
+    /**
+     * コメントとのリレーション
+     */
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
 }

@@ -389,7 +389,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                 key={tab.id}
                 onClick={() => {
                   if (tab.id === 'activity') {
-                    window.open(`/admin/change-suggestions/${id}`, '_blank');
+                    window.location.href = `/admin/change-suggestions/${id}`;
                   } else {
                     setActiveTab(tab.id);
                   }

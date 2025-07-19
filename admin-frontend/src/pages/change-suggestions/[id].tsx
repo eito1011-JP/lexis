@@ -507,11 +507,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   };
 
-  // 戻るボタンのハンドラー
-  const handleGoBack = () => {
-    window.location.href = '/admin/change-suggestions';
-  };
-
   // 変更内容詳細を開く
   const handleViewChanges = () => {
     window.open(`/admin/change-suggestions/${id}/diff`, '_blank');
@@ -522,11 +517,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     if (!comment.trim() || !id) return;
 
     try {
-      // ここにコメント投稿のAPI呼び出しを追加
-      // await apiClient.post(`${API_CONFIG.ENDPOINTS.COMMENTS}`, {
-      //   pull_request_id: id,
-      //   comment: comment.trim()
-      // });
+      await apiClient.post('/api/comments', {
+        pull_request_id: parseInt(id),
+        content: comment.trim()
+      });
 
       setToast({ message: 'コメントを投稿しました', type: 'success' });
       setComment('');
@@ -677,7 +671,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 key={tab.id}
                 onClick={() => {
                   if (tab.id === 'changes') {
-                    window.open(`/admin/change-suggestions/${id}/diff`, '_blank');
+                    window.location.href = `/admin/change-suggestions/${id}/diff`;
                   } else {
                     setActiveTab(tab.id);
                   }

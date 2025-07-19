@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
@@ -50,6 +51,11 @@ Route::middleware('auth.session')->group(function () {
         Route::post('/create', [PullRequestsController::class, 'createPullRequest']);
         Route::put('/{id}', [PullRequestsController::class, 'merge']);
         Route::patch('/{id}/close', [PullRequestsController::class, 'close']);
+    });
+
+    // コメント関連
+    Route::prefix('comments')->group(function () {
+        Route::post('/', [CommentController::class, 'store']);
     });
 
     // ドキュメント関連

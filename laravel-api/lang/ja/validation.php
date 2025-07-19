@@ -138,5 +138,17 @@ return [
         'reviewers' => 'レビュアー',
         'reviewers.*' => 'レビュアーのメールアドレス',
     ],
+    'comment' => [
+        'content' => [
+            'required' => 'コメントは必須です',
+            'string' => 'コメントは文字列で入力してください',
+            'max' => 'コメントは65535文字以内で入力してください',
+        ],
+        'pull_request_id' => [
+            'required' => 'プルリクエストIDは必須です',
+            'integer' => 'プルリクエストIDは数値で入力してください',
+            'exists' => '指定されたプルリクエストが見つかりません',
+        ],
+    ],
     'unique_slug_in_same_parent' => ':slugは既に同じカテゴリ内で使われています',
 ];
