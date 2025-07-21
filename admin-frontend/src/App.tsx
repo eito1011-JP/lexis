@@ -9,6 +9,7 @@ import ChangeSuggestionsPage from './pages/change-suggestions';
 import ChangeSuggestionDetailPage from './pages/change-suggestions/[id]';
 import ChangeSuggestionDiffPage from './pages/change-suggestions/diff';
 import FixRequestDetailPage from './pages/change-suggestions/[id]/fix-request';
+import FixRequestDetailPageWithToken from './pages/change-suggestions/[id]/fix-request-detail';
 import { ROUTE_PATHS } from './routes';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -31,6 +32,10 @@ function App() {
         <Route
           path={ROUTE_PATHS['change-suggestion-fix-request']}
           element={<FixRequestDetailPage />}
+        />
+        <Route
+          path="/change-suggestions/:id/fix-request-detail"
+          element={<FixRequestDetailPageWithToken />}
         />
         <Route path={ROUTE_PATHS.documents} element={<DocumentsPage />} />
         <Route path={ROUTE_PATHS['create-document']} element={<CreateDocumentPage />} />

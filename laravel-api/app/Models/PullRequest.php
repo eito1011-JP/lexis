@@ -54,4 +54,12 @@ class PullRequest extends Model
     {
         return $this->hasMany(Comment::class);
     }
+
+    /**
+     * 修正リクエスト（FixRequest）とのリレーション
+     */
+    public function fixRequests()
+    {
+        return $this->hasMany(FixRequest::class);
+    }
 }

@@ -271,7 +271,7 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
           <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
             {log.actor?.name || 'システム'}さんが
             <a
-              href={`/admin/change-suggestions/${pullRequestId}/fix-request/token=${log.fix_request_token}`}
+              href={`/admin/change-suggestions/${pullRequestId}/fix-request-detail?token=${log.fix_request_token}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mx-1 text-blue-400 hover:text-blue-300 underline cursor-pointer"

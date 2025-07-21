@@ -35,13 +35,15 @@ class GetFixRequestDiffRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'token' => 'トークン',
-            'pull_request_id' => 'プルリクエストID',
+            'token' => __('attributes.token'),
+            'pull_request_id' => __('attributes.pull_request_id'),
         ];
     }
 
     /**
      * Prepare the data for validation.
+     *
+     * @return void
      */
     protected function prepareForValidation(): void
     {
@@ -50,4 +52,4 @@ class GetFixRequestDiffRequest extends FormRequest
             'pull_request_id' => $this->query('pull_request_id'),
         ]);
     }
-}
+} 
