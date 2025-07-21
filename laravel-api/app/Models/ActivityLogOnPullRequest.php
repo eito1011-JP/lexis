@@ -18,6 +18,7 @@ class ActivityLogOnPullRequest extends Model
         'action',
         'old_pull_request_title',
         'new_pull_request_title',
+        'fix_request_token',
     ];
 
     protected $casts = [

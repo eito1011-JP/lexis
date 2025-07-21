@@ -56,7 +56,6 @@ export interface ActivityLogFixRequest {
 export interface ActivityLog {
   id: number;
   pull_request_id: number;
-  token: string;
   action: string;
   actor: ActivityLogActor | null;
   comment: ActivityLogComment | null;
@@ -64,6 +63,7 @@ export interface ActivityLog {
   old_pull_request_title: string | null;
   new_pull_request_title: string | null;
   created_at: string;
+  fix_request_token: string | null;
 }
 
 // プルリクエスト詳細レスポンスの型定義

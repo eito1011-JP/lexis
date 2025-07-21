@@ -824,6 +824,7 @@ class PullRequestsController extends ApiBaseController
                 'user_id' => $user->id,
                 'pull_request_id' => $pullRequest->id,
                 'action' => PullRequestActivityAction::FIX_REQUEST_SENT->value,
+                'fix_request_token' => $fixRequestToken,
             ]);
 
             DB::commit();
@@ -897,6 +898,7 @@ class PullRequestsController extends ApiBaseController
                     ] : null,
                     'old_pull_request_title' => $log->old_pull_request_title,
                     'new_pull_request_title' => $log->new_pull_request_title,
+                    'fix_request_token' => $log->fix_request_token,
                     'created_at' => $log->created_at->toISOString(),
                 ];
             });
