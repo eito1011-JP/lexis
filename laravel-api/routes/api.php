@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\FixRequestController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
 use App\Http\Controllers\Api\PullRequestsController;
 use App\Http\Controllers\Api\UserBranchController;
@@ -87,6 +88,11 @@ Route::middleware('auth.session')->group(function () {
     Route::prefix('admin/user-branches')->group(function () {
         Route::get('/has-changes', [UserBranchController::class, 'hasUserChanges']);
         Route::get('/diff', [UserBranchController::class, 'fetchDiff']);
+    });
+
+    // 修正リクエスト関連
+    Route::prefix('admin/fix-requests')->group(function () {
+        Route::get('/{token}', [FixRequestController::class, 'getFixRequestDiff']);
     });
 });
 

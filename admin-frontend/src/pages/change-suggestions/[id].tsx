@@ -172,7 +172,11 @@ const TABS = [
 ] as const;
 
 // ActivityLogItemコンポーネント
-const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }): JSX.Element => {
+const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = ({
+  log,
+  pullRequestId,
+}): JSX.Element => {
+  console.log(log);
   const getActionDisplayName = (action: string): string => {
     switch (action) {
       case 'fix_request_sent':
@@ -263,8 +267,22 @@ const ActivityLogItem: React.FC<{ log: ActivityLog }> = ({ log }): JSX.Element =
             {log.actor?.name || log.actor?.email || 'システム'} さんが 変更提案タイトルを「
             {log.old_pull_request_title}」 から 「{log.new_pull_request_title}」に変更しました
           </div>
+        ) : log.action === 'fix_request_sent' && log.fix_request?.token ? (
+          /* 修正リクエスト送信の場合はクリック可能なリンクを表示 */
+          <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
+            {log.actor?.name || 'システム'}さんが
+            <a
+              href={`/admin/change-suggestions/${pullRequestId}/fix-request?token=${log.fix_request.token}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mx-1 text-blue-400 hover:text-blue-300 underline cursor-pointer"
+            >
+              修正リクエスト
+            </a>
+            を送信しました
+          </div>
         ) : (
-          /* タイトル編集以外の場合は通常の表示 */
+          /* その他の場合は通常の表示 */
           <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
             {log.actor?.name || 'システム'}さんが{getActionDisplayName(log.action)}
           </div>
@@ -483,6 +501,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     try {
       const logs = await fetchActivityLog(id);
       setActivityLogs(logs);
+      console.log('logs', logs);
     } catch (error) {
       console.error('アクティビティログ取得エラー:', error);
       setToast({
@@ -1079,7 +1098,9 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
               ) : (
                 activityLogs
                   .filter(log => log.action !== 'commented') // コメント以外のActivityLogのみ表示
-                  .map((log, index) => <ActivityLogItem key={log.id} log={log} />)
+                  .map((log, index) => (
+                    <ActivityLogItem key={log.id} log={log} pullRequestId={id || ''} />
+                  ))
               )}
 
               {/* コメントリスト */}

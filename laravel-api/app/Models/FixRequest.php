@@ -10,6 +10,7 @@ class FixRequest extends Model
     use HasFactory;
 
     protected $fillable = [
+        'token',
         'document_version_id',
         'document_category_id',
         'user_id',

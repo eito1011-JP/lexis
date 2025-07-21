@@ -790,9 +790,13 @@ class PullRequestsController extends ApiBaseController
                     ->pluck('id');
             }
 
-            // 9. fix_requestsテーブル用のデータを準備
+            // 9. 修正リクエスト用のトークンを生成
+            $fixRequestToken = \Illuminate\Support\Str::random(32);
+
+            // 10. fix_requestsテーブル用のデータを準備
             foreach ($newDocumentVersionIds as $newDocVersionId) {
                 $fixRequestsData[] = [
+                    'token' => $fixRequestToken,
                     'document_version_id' => $newDocVersionId,
                     'document_category_id' => null,
                     'user_id' => $user->id,
@@ -802,6 +806,7 @@ class PullRequestsController extends ApiBaseController
 
             foreach ($newDocumentCategoryIds as $newDocCategoryId) {
                 $fixRequestsData[] = [
+                    'token' => $fixRequestToken,
                     'document_version_id' => null,
                     'document_category_id' => $newDocCategoryId,
                     'user_id' => $user->id,
@@ -809,7 +814,7 @@ class PullRequestsController extends ApiBaseController
                 ];
             }
 
-            // 6. fix_requestsテーブルにbulk insert
+            // 11. fix_requestsテーブルにbulk insert
             if (! empty($fixRequestsData)) {
                 FixRequest::insert($fixRequestsData);
             }
@@ -862,7 +867,7 @@ class PullRequestsController extends ApiBaseController
             $activityLogs = ActivityLogOnPullRequest::with([
                 'user:id,name,email',
                 'comment:id,content,created_at',
-                'fixRequest:id,created_at',
+                'fixRequest:id,token,created_at',
                 'reviewer:id,name,email',
             ])
                 ->where('pull_request_id', $pullRequestId)
@@ -887,6 +892,7 @@ class PullRequestsController extends ApiBaseController
                     ] : null,
                     'fix_request' => $log->fixRequest ? [
                         'id' => $log->fixRequest->id,
+                        'token' => $log->fixRequest->token,
                         'created_at' => $log->fixRequest->created_at->toISOString(),
                     ] : null,
                     'old_pull_request_title' => $log->old_pull_request_title,

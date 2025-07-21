@@ -48,6 +48,7 @@ export interface ActivityLogComment {
 // アクティビティログの修正リクエスト情報の型定義
 export interface ActivityLogFixRequest {
   id: number;
+  token: string;
   created_at: string;
 }
 
@@ -55,6 +56,7 @@ export interface ActivityLogFixRequest {
 export interface ActivityLog {
   id: number;
   pull_request_id: number;
+  token: string;
   action: string;
   actor: ActivityLogActor | null;
   comment: ActivityLogComment | null;

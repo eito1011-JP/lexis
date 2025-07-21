@@ -8,7 +8,7 @@ import EditDocumentPage from './pages/documents/[slug]/edit';
 import ChangeSuggestionsPage from './pages/change-suggestions';
 import ChangeSuggestionDetailPage from './pages/change-suggestions/[id]';
 import ChangeSuggestionDiffPage from './pages/change-suggestions/diff';
-import FixRequestPage from './pages/change-suggestions/[id]/fix-request';
+import FixRequestDetailPage from './pages/change-suggestions/[id]/fix-request';
 import { ROUTE_PATHS } from './routes';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -28,7 +28,10 @@ function App() {
           path={ROUTE_PATHS['change-suggestion-diff']}
           element={<ChangeSuggestionDiffPage />}
         />
-        <Route path={ROUTE_PATHS['change-suggestion-fix-request']} element={<FixRequestPage />} />
+        <Route
+          path={ROUTE_PATHS['change-suggestion-fix-request']}
+          element={<FixRequestDetailPage />}
+        />
         <Route path={ROUTE_PATHS.documents} element={<DocumentsPage />} />
         <Route path={ROUTE_PATHS['create-document']} element={<CreateDocumentPage />} />
         <Route path={ROUTE_PATHS['edit-document']} element={<EditDocumentPage />} />
