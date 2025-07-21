@@ -346,11 +346,11 @@ const StatusBanner: React.FC<{
   return (
     <div className={`mb-10 rounded-lg`}>
       {/* タイトル表示 */}
-      <div className="flex items-center gap-150 mb-4">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-3xl font-bold text-white">{title}</h1>
         <button
           onClick={onEditTitle}
-          className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors"
+          className="flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors mr-88"
         >
           編集
         </button>
