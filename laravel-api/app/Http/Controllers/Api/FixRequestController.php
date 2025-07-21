@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\Api\FixRequest\GetFixRequestDiffRequest;
 use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\FixRequest;
 use App\Models\PullRequest;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
-use PgSql\Lob;
 
 class FixRequestController extends ApiBaseController
 {
@@ -38,7 +37,7 @@ class FixRequestController extends ApiBaseController
         \Illuminate\Support\Facades\Log::info('pullRequestId', ['pullRequestId' => $pullRequestId]);
         try {
             // 現在のプルリクエストの変更差分を取得
-            $currentPr = PullRequest::with(['userBranch.editStartVersions.originalDocumentVersion', 'userBranch.editStartVersions.currentDocumentVersion'])
+            $currentPr = PullRequest::with(['userBranch'])
                 ->findOrFail($pullRequestId);
 
             // tokenで修正リクエストのレコードを取得（複数レコードあり得る）
@@ -82,11 +81,20 @@ class FixRequestController extends ApiBaseController
                 $fixRequestCategories = DocumentCategory::whereIn('id', $fixRequestCategoryIds)->get();
             }
 
+            // 最新のedit_start_versionsからdocumentとcategoryを取得
+            $editStartVersions = $currentPr->userBranch ? $currentPr->userBranch->editStartVersions : collect();
+            $currentDocuments = $editStartVersions->where('target_type', EditStartVersionTargetType::DOCUMENT->value)->map(function ($esv) {
+                return $esv->currentDocumentVersion;
+            })->filter();
+            $currentCategories = $editStartVersions->where('target_type', EditStartVersionTargetType::CATEGORY->value)->map(function ($esv) {
+                return $esv->currentCategory;
+            })->filter();
+
             // レスポンスデータを構築
             $response = [
                 'current_pr' => [
-                    'documents' => $currentPr->documentVersions,
-                    'categories' => $currentPr->documentCategories,
+                    'documents' => $currentDocuments->values(),
+                    'categories' => $currentCategories->values(),
                 ],
                 'fix_request' => [
                     'documents' => $fixRequestDocuments,

@@ -218,8 +218,8 @@ export default function FixRequestDetailPage(): JSX.Element {
   }
 
   // データをslugでマップ化する関数
-  const mapBySlug = (items: DiffItem[]) => {
-    return items.reduce(
+  const mapBySlug = (items: DiffItem[] | null | undefined) => {
+    return (items ?? []).reduce(
       (acc, item) => {
         acc[item.slug] = item;
         return acc;

@@ -15,7 +15,6 @@ import { TitleEditedLog } from '@/components/icon/common/TitleEditedLog';
 import { MergedLog } from '@/components/icon/common/MergedLog';
 import { FixRequestSentLog } from '@/components/icon/common/FixRequestSentLog';
 import { ReviewerAssignedLog } from '@/components/icon/common/ReviewerAssignedLog';
-import { ReviewerApprovedLog } from '@/components/icon/common/ReviewerApprovedLog';
 import { PullRequestClosedLog } from '@/components/icon/common/PullRequestClosedLog';
 import { PullRequestReopenedLog } from '@/components/icon/common/PullRequestReopenedLog';
 import { PullRequestEditedLog } from '@/components/icon/common/PullRequestEditedLog';
