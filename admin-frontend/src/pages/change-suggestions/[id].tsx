@@ -32,6 +32,7 @@ import ja from 'date-fns/locale/ja';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
+import { CheckMark } from '@/components/icon/common/CheckMark';
 
 // 差分データの型定義
 type DiffItem = {
@@ -201,31 +202,68 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
     }
   };
 
-  const getActionIcon = (action: string): string | JSX.Element => {
+  const getActionIcon = (action: string): JSX.Element => {
     switch (action) {
       case 'fix_request_sent':
-        return <FixRequestSentLog className="w-6 h-6" />;
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-red-600">
+            <FixRequestSentLog className="w-4 h-4 text-white" />
+          </div>
+        );
       case 'reviewer_assigned':
-        return <ReviewerAssignedLog className="w-4 h-4" />;
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-blue-600">
+            <ReviewerAssignedLog className="w-4 h-4 text-white" />
+          </div>
+        );
       case 'reviewer_approved':
-        return <ReviewerApprovedLog className="w-4 h-4" />;
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-green-600">
+            <CheckMark className="w-4 h-4 text-white" />
+          </div>
+        );
       case 'commented':
-        return '💬';
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-purple-600">
+            <span className="text-white text-lg">💬</span>
+          </div>
+        );
       case 'pull_request_closed':
-        return <PullRequestClosedLog className="w-4 h-4" />;
-
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-red-600">
+            <PullRequestClosedLog className="w-4 h-4 text-white" />
+          </div>
+        );
       case 'pull_request_reopened':
-        return <PullRequestReopenedLog className="w-4 h-4" />;
-
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-orange-600">
+            <PullRequestReopenedLog className="w-4 h-4 text-white" />
+          </div>
+        );
       case 'pull_request_edited':
-        return <PullRequestEditedLog className="w-4 h-4" />;
-
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-yellow-600">
+            <PullRequestEditedLog className="w-4 h-4 text-white" />
+          </div>
+        );
       case 'pull_request_title_edited':
-        return <TitleEditedLog className="w-4 h-4" />;
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-[#9198A1]">
+            <TitleEditedLog className="w-4 h-4 text-white" />
+          </div>
+        );
       case 'pull_request_merged':
-        return <MergedLog className="w-4 h-4" />;
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-purple-600">
+            <MergedLog className="w-4 h-4 text-white" />
+          </div>
+        );
       default:
-        return '📋';
+        return (
+          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-gray-600">
+            <span className="text-white text-lg">📋</span>
+          </div>
+        );
     }
   };
 
@@ -256,7 +294,9 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
 
   return (
     <div className="timeline-item">
-      <div className="timeline-activity-icon">{getActionIcon(log.action)}</div>
+      <div className="timeline-activity-icon flex items-center justify-center bg-gray-700 rounded-full w-10 h-10">
+        {getActionIcon(log.action)}
+      </div>
       <div className="timeline-content timeline-content-with-line">
         {/* タイトル編集の場合は詳細な変更内容のみ表示 */}
         {log.action === 'pull_request_title_edited' &&
@@ -910,7 +950,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       <style>{`
         .timeline-container {
           position: relative;
-          padding-left: 52px;
+          padding-left: 44px;
         }
         
         .timeline-item {
@@ -921,13 +961,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         
         .timeline-avatar {
           position: absolute;
-          left: -52px;
+          left: -44px;
           top: 0;
           z-index: 3;
           background-color: #374151;
           border-radius: 50%;
-          width: 40px;
-          height: 40px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -935,10 +975,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
         .timeline-activity-icon {
           position: absolute;
-          left: -52px;
+          left: -3rem;
           z-index: 3;
           border-radius: 50%;
-          width: 40px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -953,7 +994,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         .timeline-content-with-line::after {
           content: "";
           position: absolute;
-          left: 15px;
+          left: 11px;
           bottom: -24px;
           width: 2px;
           height: 24px;
