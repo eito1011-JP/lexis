@@ -645,14 +645,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
             const allUsers = response.users || [];
             setUsers(allUsers);
 
-            // 既存のレビュアーをselectedReviewersに設定
-            const reviewerIds = allUsers
-              .filter((user: User) =>
-                data.reviewers.some((reviewer: Reviewer) => reviewer.email === user.email)
-              )
-              .map((user: User) => user.id);
-            setSelectedReviewers(reviewerIds);
-            setInitialReviewers(reviewerIds);
+            // selectedReviewersの初期化は行わない（純粋に現在のレビュアー状態のみで判定）
             setReviewersInitialized(true);
           } catch (userError) {
             console.error('初期ユーザー取得エラー:', userError);
@@ -703,8 +696,17 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         handleSetReviewers();
         setInitialReviewers(selectedReviewers);
       }
+      
+      // モーダルが閉じられた時に最新のプルリクエストデータを再取得
+      if (id) {
+        fetchPullRequestDetail(id).then(data => {
+          setPullRequestData(data);
+        }).catch(error => {
+          console.error('プルリクエスト詳細再取得エラー:', error);
+        });
+      }
     }
-  }, [showReviewerModal, reviewersInitialized, initialReviewers, selectedReviewers]);
+  }, [showReviewerModal, reviewersInitialized, initialReviewers, selectedReviewers, id]);
 
   // ボタンの表示を監視してコンフリクトチェックを実行
   useEffect(() => {
@@ -750,6 +752,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         })
         .filter(Boolean);
 
+      console.log('selectedEmails', selectedEmails);
       const endpoint = API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
       await apiClient.post(endpoint, {
         pull_request_id: parseInt(id),
@@ -1419,29 +1422,75 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                           .filter(user =>
                             user.email.toLowerCase().includes(reviewerSearch.toLowerCase())
                           )
-                          .map(user => (
-                            <div
-                              key={user.id}
-                              className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
-                              onClick={() =>
-                                setSelectedReviewers(
-                                  selectedReviewers.includes(user.id)
-                                    ? selectedReviewers.filter(id => id !== user.id)
-                                    : [...selectedReviewers, user.id]
-                                )
-                              }
-                            >
-                              <span className="text-2xl">👤</span>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-white font-medium leading-tight">
-                                  {user.email}
-                                </div>
-                                <div className="text-xs text-gray-400 truncate">
-                                  {user.role || 'editor'}
+                          .map(user => {
+                            // 現在のレビュアー情報を基に選択状態を判定
+                            const isCurrentReviewer = pullRequestData?.reviewers?.some(
+                              reviewer => reviewer.email === user.email
+                            );
+                            
+                            return (
+                              <div
+                                key={user.id}
+                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${
+                                  isCurrentReviewer ? 'bg-[#23272d]' : ''
+                                }`}
+                                onClick={async () => {
+                                  // 現在のレビュアーかどうかで処理を分岐
+                                  if (isCurrentReviewer) {
+                                    // 既にレビュアーの場合は削除
+                                    const currentReviewerEmails = pullRequestData?.reviewers
+                                      ?.filter(reviewer => reviewer.email !== user.email)
+                                      ?.map(reviewer => reviewer.email) || [];
+                                    
+                                    if (id) {
+                                      try {
+                                        await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET, {
+                                          pull_request_id: parseInt(id),
+                                          emails: currentReviewerEmails,
+                                        });
+                                        
+                                        // API実行後に最新のプルリクエストデータを再取得
+                                        const updatedData = await fetchPullRequestDetail(id);
+                                        setPullRequestData(updatedData);
+                                      } catch (error) {
+                                        console.error('レビュアー設定エラー:', error);
+                                      }
+                                    }
+                                  } else {
+                                    // 新しくレビュアーに追加
+                                    const currentReviewerEmails = pullRequestData?.reviewers
+                                      ?.map(reviewer => reviewer.email) || [];
+                                    const newReviewerEmails = [...currentReviewerEmails, user.email];
+                                    
+                                    if (id) {
+                                      try {
+                                        await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET, {
+                                          pull_request_id: parseInt(id),
+                                          emails: newReviewerEmails,
+                                        });
+                                        
+                                        // API実行後に最新のプルリクエストデータを再取得
+                                        const updatedData = await fetchPullRequestDetail(id);
+                                        setPullRequestData(updatedData);
+                                      } catch (error) {
+                                        console.error('レビュアー設定エラー:', error);
+                                      }
+                                    }
+                                  }
+                                }}
+                              >
+                                <span className="text-2xl">👤</span>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-white font-medium leading-tight">
+                                    {user.email}
+                                  </div>
+                                  <div className="text-xs text-gray-400 truncate">
+                                    {user.role || 'editor'}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))
+                            );
+                          })
                       )}
                     </div>
                   </div>
