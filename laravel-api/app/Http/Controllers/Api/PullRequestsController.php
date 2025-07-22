@@ -392,6 +392,7 @@ class PullRequestsController extends ApiBaseController
             // 4. レビュアー情報を取得
             $reviewers = $pullRequest->reviewers->map(function ($reviewer) {
                 return [
+                    'user_id' => $reviewer->user->id,
                     'email' => $reviewer->user->email,
                     'action_status' => $reviewer->action_status,
                 ];

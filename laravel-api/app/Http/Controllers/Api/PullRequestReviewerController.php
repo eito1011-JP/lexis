@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\PullRequestActivityAction;
+use App\Enums\PullRequestReviewerActionStatus;
 use App\Http\Requests\FetchPullRequestReviewersRequest;
+use App\Http\Requests\SendReviewRequestRequest;
 use App\Http\Requests\SetPullRequestReviewersRequest;
 use App\Models\ActivityLogOnPullRequest;
+use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
+use App\Notifications\ReviewRequestNotification;
 use Illuminate\Http\JsonResponse;
 
 class PullRequestReviewerController extends ApiBaseController
@@ -109,6 +113,76 @@ class PullRequestReviewerController extends ApiBaseController
         } catch (\Exception $e) {
             return response()->json([
                 'error' => 'レビュアーの設定に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * レビュー依頼を再送信
+     */
+    public function sendReviewRequestAgain(SendReviewRequestRequest $request): JsonResponse
+    {
+        try {
+            // 認証ユーザーか確認
+            $requester = $this->getUserFromSession();
+
+            if (! $requester) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // バリデーション済みデータを取得
+            $validated = $request->validated();
+            $pullRequestId = $validated['pull_request_id'];
+            $reviewerUserId = $validated['user_id'];
+
+            // プルリクエストを取得
+            $pullRequest = PullRequest::findOrFail($pullRequestId);
+
+            // レビュアーユーザーを取得
+            $reviewerUser = User::findOrFail($reviewerUserId);
+
+            // レビュアーレコードを取得または作成
+            $reviewer = PullRequestReviewer::where('pull_request_id', $pullRequestId)
+                ->where('user_id', $reviewerUserId)
+                ->first();
+
+            if (! $reviewer) {
+                // レビュアーとして登録されていない場合は新規作成
+                $reviewer = PullRequestReviewer::create([
+                    'pull_request_id' => $pullRequestId,
+                    'user_id' => $reviewerUserId,
+                    'action_status' => PullRequestReviewerActionStatus::PENDING,
+                ]);
+            } else {
+                // 既存のレビュアーレコードをpendingに更新
+                $reviewer->update([
+                    'action_status' => PullRequestReviewerActionStatus::PENDING,
+                ]);
+            }
+
+            // レビュー依頼メールを送信
+            $reviewerUser->notify(new ReviewRequestNotification($pullRequest, $requester));
+
+            // ActivityLogを作成
+            ActivityLogOnPullRequest::create([
+                'user_id' => $requester->id,
+                'pull_request_id' => $pullRequestId,
+                'action' => PullRequestActivityAction::ASSIGNED_REVIEWER->value,
+                'reviewer_id' => $reviewerUserId,
+            ]);
+
+            return response()->json();
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'error' => 'バリデーションエラー',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'レビュー依頼の送信に失敗しました',
             ], 500);
         }
     }

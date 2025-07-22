@@ -42,8 +42,6 @@ class GetFixRequestDiffRequest extends FormRequest
 
     /**
      * Prepare the data for validation.
-     *
-     * @return void
      */
     protected function prepareForValidation(): void
     {
@@ -52,4 +50,4 @@ class GetFixRequestDiffRequest extends FormRequest
             'pull_request_id' => $this->query('pull_request_id'),
         ]);
     }
-} 
+}

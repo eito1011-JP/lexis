@@ -72,28 +72,32 @@ const SmartDiffValue: React.FC<{
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-      
+
       <div className="grid grid-cols-2 gap-4">
         {/* 現在の変更提案 */}
         <div>
           <div className="text-xs text-gray-400 mb-1">現在の変更提案</div>
-          <div className={`border rounded-md p-3 text-sm ${
-            hasChange 
-              ? 'bg-red-900/30 border-red-700 text-red-200' 
-              : 'bg-gray-800 border-gray-600 text-gray-300'
-          }`}>
+          <div
+            className={`border rounded-md p-3 text-sm ${
+              hasChange
+                ? 'bg-red-900/30 border-red-700 text-red-200'
+                : 'bg-gray-800 border-gray-600 text-gray-300'
+            }`}
+          >
             {renderContent(renderValue(currentValue), isMarkdown)}
           </div>
         </div>
-        
+
         {/* 修正リクエスト */}
         <div>
           <div className="text-xs text-gray-400 mb-1">修正リクエスト</div>
-          <div className={`border rounded-md p-3 text-sm ${
-            hasChange 
-              ? 'bg-green-900/30 border-green-700 text-green-200' 
-              : 'bg-gray-800 border-gray-600 text-gray-300'
-          }`}>
+          <div
+            className={`border rounded-md p-3 text-sm ${
+              hasChange
+                ? 'bg-green-900/30 border-green-700 text-green-200'
+                : 'bg-gray-800 border-gray-600 text-gray-300'
+            }`}
+          >
             {renderContent(renderValue(fixRequestValue), isMarkdown)}
           </div>
         </div>
@@ -150,10 +154,9 @@ export default function FixRequestDetailPage(): JSX.Element {
       console.log('token', token);
       console.log('id', id);
       // apiClientのgetを利用し、tokenをクエリパラメータとして渡す
-      const response = await apiClient.get(
-        `/api/admin/fix-requests/${token}`,
-        { params: { pull_request_id: id } }
-      );
+      const response = await apiClient.get(`/api/admin/fix-requests/${token}`, {
+        params: { pull_request_id: id },
+      });
       setDiffData(response);
     } catch (err) {
       console.error('修正リクエスト差分取得エラー:', err);
@@ -252,9 +255,7 @@ export default function FixRequestDetailPage(): JSX.Element {
         {/* ヘッダー */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-4">修正リクエスト詳細</h1>
-          <div className="text-gray-400">
-            変更提案 #{id} に対する修正リクエストの内容確認
-          </div>
+          <div className="text-gray-400">変更提案 #{id} に対する修正リクエストの内容確認</div>
         </div>
 
         {/* カテゴリの変更 */}
@@ -266,23 +267,26 @@ export default function FixRequestDetailPage(): JSX.Element {
             {Array.from(allCategorySlugs).map(slug => {
               const currentCategory = currentCategories[slug];
               const fixRequestCategory = fixRequestCategories[slug];
-              
+
               return (
-                <div key={slug} className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6">
+                <div
+                  key={slug}
+                  className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
+                >
                   <SlugBreadcrumb slug={slug} />
-                  
+
                   <SmartDiffValue
                     label="カテゴリ名"
                     currentValue={currentCategory?.sidebar_label}
                     fixRequestValue={fixRequestCategory?.sidebar_label}
                   />
-                  
+
                   <SmartDiffValue
                     label="表示順"
                     currentValue={currentCategory?.position}
                     fixRequestValue={fixRequestCategory?.position}
                   />
-                  
+
                   <SmartDiffValue
                     label="説明"
                     currentValue={currentCategory?.description}
@@ -303,23 +307,30 @@ export default function FixRequestDetailPage(): JSX.Element {
             {Array.from(allDocumentSlugs).map(slug => {
               const currentDocument = currentDocuments[slug];
               const fixRequestDocument = fixRequestDocuments[slug];
-              
+
               return (
-                <div key={slug} className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6">
+                <div
+                  key={slug}
+                  className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
+                >
                   <SlugBreadcrumb slug={slug} />
-                  
+
                   <SmartDiffValue
                     label="タイトル"
                     currentValue={currentDocument?.sidebar_label}
                     fixRequestValue={fixRequestDocument?.sidebar_label}
                   />
-                  
+
                   <SmartDiffValue
                     label="公開設定"
-                    currentValue={currentDocument?.status === 'published' ? '公開する' : '公開しない'}
-                    fixRequestValue={fixRequestDocument?.status === 'published' ? '公開する' : '公開しない'}
+                    currentValue={
+                      currentDocument?.status === 'published' ? '公開する' : '公開しない'
+                    }
+                    fixRequestValue={
+                      fixRequestDocument?.status === 'published' ? '公開する' : '公開しない'
+                    }
                   />
-                  
+
                   <SmartDiffValue
                     label="本文"
                     currentValue={currentDocument?.content}
@@ -335,12 +346,10 @@ export default function FixRequestDetailPage(): JSX.Element {
         {/* データが空の場合 */}
         {allCategorySlugs.size === 0 && allDocumentSlugs.size === 0 && (
           <div className="text-center py-12">
-            <div className="text-gray-400 text-lg">
-              修正リクエストのデータがありません
-            </div>
+            <div className="text-gray-400 text-lg">修正リクエストのデータがありません</div>
           </div>
         )}
       </div>
     </AdminLayout>
   );
-} 
+}

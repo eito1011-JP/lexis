@@ -32,6 +32,7 @@ import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { CheckMark } from '@/components/icon/common/CheckMark';
+import SendReview from '@/components/icon/common/SendReview';
 
 // 差分データの型定義
 type DiffItem = {
@@ -882,6 +883,34 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   };
 
+  // レビュー依頼再送のハンドラー
+  const handleSendReviewRequestAgain = async (reviewerUserId: number) => {
+    if (!id) return;
+
+    try {
+      console.log('reviewerUserId', reviewerUserId);
+      await apiClient.patch(
+        `${API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.SEND_REVIEW_REQUEST_AGAIN(reviewerUserId)}`,
+        {
+          action: 'pending',
+          pull_request_id: parseInt(id),
+          user_id: reviewerUserId,
+        }
+      );
+
+      setToast({ message: 'レビュー依頼を送信しました', type: 'success' });
+
+      // アクティビティログを再取得
+      fetchActivityLogs();
+    } catch (error) {
+      console.error('レビュー依頼送信エラー:', error);
+      setToast({
+        message: 'レビュー依頼の送信に失敗しました',
+        type: 'error',
+      });
+    }
+  };
+
   // セッション確認中はローディング表示
   if (isLoading) {
     return (
@@ -1421,15 +1450,25 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
             </div>
             {pullRequestData?.reviewers && pullRequestData.reviewers.length > 0 ? (
               <div className="space-y-2">
-                {pullRequestData.reviewers.map((reviewer, index) => (
-                  <div key={index} className="flex items-center gap-2 text-sm">
-                    <span className="text-xl">👤</span>
-                    <span className="text-gray-300">{reviewer.email}</span>
-                    {reviewer.action_status === 'approved' && (
-                      <span className="text-green-400">✅</span>
-                    )}
-                  </div>
-                ))}
+                {pullRequestData.reviewers.map((reviewer, index) => {
+                  const reviewerUserId = reviewer.user_id;
+
+                  return (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <span className="text-xl">👤</span>
+                      <span className="text-gray-300">{reviewer.email}</span>
+                      {reviewer.action_status !== 'pending' && (
+                        <SendReview
+                          className="w-4 h-4 text-gray-400 hover:text-white cursor-pointer"
+                          onClick={() => handleSendReviewRequestAgain(reviewerUserId)}
+                        />
+                      )}
+                      {reviewer.action_status === 'approved' && (
+                        <span className="text-green-400">✅</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-gray-400 text-sm">レビュアーなし</p>

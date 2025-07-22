@@ -27,6 +27,7 @@ export interface CreatePullRequestResponse {
 
 // レビュアー情報の型定義
 export interface Reviewer {
+  user_id: number;
   email: string;
   action_status: 'pending' | 'fix_requested' | 'approved';
 }

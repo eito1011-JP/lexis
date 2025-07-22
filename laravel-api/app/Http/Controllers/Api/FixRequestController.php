@@ -35,6 +35,7 @@ class FixRequestController extends ApiBaseController
 
         \Illuminate\Support\Facades\Log::info('token', ['token' => $token]);
         \Illuminate\Support\Facades\Log::info('pullRequestId', ['pullRequestId' => $pullRequestId]);
+
         try {
             // 現在のプルリクエストの変更差分を取得
             $currentPr = PullRequest::with(['userBranch'])

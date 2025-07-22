@@ -38,6 +38,8 @@ export const API_CONFIG = {
     },
     PULL_REQUEST_REVIEWERS: {
       GET: '/api/admin/pull-request-reviewers',
+      SEND_REVIEW_REQUEST_AGAIN: (reviewerId: number) =>
+        `/api/admin/pull-request-reviewers/${reviewerId}/resend`,
     },
     PULL_REQUESTS: {
       GET: '/api/admin/pull-requests',

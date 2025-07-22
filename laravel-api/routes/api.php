@@ -42,6 +42,7 @@ Route::middleware('auth.session')->group(function () {
     Route::prefix('admin/pull-request-reviewers')->group(function () {
         Route::get('/', [PullRequestReviewerController::class, 'index']);
         Route::post('/', [PullRequestReviewerController::class, 'store']);
+        Route::patch('/{reviewer_id}/resend', [PullRequestReviewerController::class, 'sendReviewRequestAgain']);
     });
 
     // プルリクエスト関連
