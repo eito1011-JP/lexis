@@ -138,6 +138,7 @@ export default function FixRequestPage(): JSX.Element {
       try {
         setLoading(true);
         const data = await fetchPullRequestDetail(id);
+        console.log('data', data);
         setPullRequestData(data);
 
         // フォームに既存のデータをセット

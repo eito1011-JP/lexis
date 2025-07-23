@@ -359,7 +359,7 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエスト詳細を取得
      */
-    public function fetchPullRequestDetail(FetchPullRequestDetailRequest $request, int $id): JsonResponse
+    public function fetchPullRequestDetail(FetchPullRequestDetailRequest $request): JsonResponse
     {
         try {
             // 1. 認証ユーザーか確認
@@ -383,7 +383,7 @@ class PullRequestController extends ApiBaseController
                 'userBranch.editStartVersions.currentCategory',
                 'reviewers.user',
             ])
-                ->where('id', $id)
+                ->where('id', $request->validated('id'))
                 ->firstOrFail();
 
             // 3. 差分データを生成
@@ -417,7 +417,7 @@ class PullRequestController extends ApiBaseController
             Log::error('プルリクエスト詳細取得エラー: '.$e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),
-                'pull_request_id' => $id,
+                'pull_request_id' => $request->validated('id'),
             ]);
 
             return response()->json([
