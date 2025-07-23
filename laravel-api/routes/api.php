@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\FixRequestController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
-use App\Http\Controllers\Api\PullRequestsController;
+use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\UserBranchController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
@@ -47,17 +47,17 @@ Route::middleware('auth.session')->group(function () {
 
     // プルリクエスト関連
     Route::prefix('admin/pull-requests')->group(function () {
-        Route::get('/', [PullRequestsController::class, 'fetchPullRequests']);
-        Route::get('/{id}', [PullRequestsController::class, 'fetchPullRequestDetail']);
-        Route::get('/{id}/conflict', [PullRequestsController::class, 'detectConflict']);
+        Route::get('/', [PullRequestController::class, 'fetchPullRequests']);
+        Route::get('/{id}', [PullRequestController::class, 'fetchPullRequestDetail']);
+        Route::get('/{id}/conflict', [PullRequestController::class, 'detectConflict']);
         Route::get('/{id}/comments', [CommentController::class, 'index']);
-        Route::get('/{id}/activity-log-on-pull-request', [PullRequestsController::class, 'fetchActivityLog']);
-        Route::post('/create', [PullRequestsController::class, 'createPullRequest']);
-        Route::post('/{id}/fix-request', [PullRequestsController::class, 'sendFixRequest']);
-        Route::put('/{id}', [PullRequestsController::class, 'merge']);
-        Route::patch('/{id}/close', [PullRequestsController::class, 'close']);
-        Route::patch('/{id}/approve', [PullRequestsController::class, 'approve']);
-        Route::patch('/{id}/title', [PullRequestsController::class, 'updateTitle']);
+        Route::get('/{id}/activity-log-on-pull-request', [PullRequestController::class, 'fetchActivityLog']);
+        Route::post('/create', [PullRequestController::class, 'createPullRequest']);
+        Route::post('/{id}/fix-request', [FixRequestController::class, 'sendFixRequest']);
+        Route::put('/{id}', [PullRequestController::class, 'merge']);
+        Route::patch('/{id}/close', [PullRequestController::class, 'close']);
+        Route::patch('/{id}/approve', [PullRequestController::class, 'approve']);
+        Route::patch('/{id}/title', [PullRequestController::class, 'updateTitle']);
     });
 
     // コメント関連
