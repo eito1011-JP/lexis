@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\Api\FixRequest\GetFixRequestDiffRequest;
-use App\Models\Document;
 use App\Models\DocumentCategory;
+use App\Models\DocumentVersion;
 use App\Models\FixRequest;
 use App\Models\PullRequest;
 use Illuminate\Http\JsonResponse;
@@ -26,8 +26,6 @@ class FixRequestController extends ApiBaseController
             ], 401);
         }
 
-        \Illuminate\Support\Facades\Log::info('user', ['user' => $user]);
-        \Illuminate\Support\Facades\Log::info('request', ['request' => $request]);
         \Illuminate\Support\Facades\Log::info('token', ['token' => $request->validated('token')]);
         \Illuminate\Support\Facades\Log::info('pull_request_id', ['pull_request_id' => $request->validated('pull_request_id')]);
         $token = $request->validated('token');
@@ -75,7 +73,7 @@ class FixRequestController extends ApiBaseController
             \Illuminate\Support\Facades\Log::info('fixRequestDocumentIds', ['fixRequestDocumentIds' => $fixRequestDocumentIds]);
             \Illuminate\Support\Facades\Log::info('fixRequestCategoryIds', ['fixRequestCategoryIds' => $fixRequestCategoryIds]);
             if (! empty($fixRequestDocumentIds)) {
-                $fixRequestDocuments = Document::whereIn('id', $fixRequestDocumentIds)->get();
+                $fixRequestDocuments = DocumentVersion::whereIn('id', $fixRequestDocumentIds)->get();
             }
 
             if (! empty($fixRequestCategoryIds)) {
@@ -83,13 +81,13 @@ class FixRequestController extends ApiBaseController
             }
 
             // 最新のedit_start_versionsからdocumentとcategoryを取得
-            $editStartVersions = $currentPr->userBranch ? $currentPr->userBranch->editStartVersions : collect();
+            $editStartVersions = $currentPr->userBranch->editStartVersions;
             $currentDocuments = $editStartVersions->where('target_type', EditStartVersionTargetType::DOCUMENT->value)->map(function ($esv) {
                 return $esv->currentDocumentVersion;
-            })->filter();
+            });
             $currentCategories = $editStartVersions->where('target_type', EditStartVersionTargetType::CATEGORY->value)->map(function ($esv) {
                 return $esv->currentCategory;
-            })->filter();
+            });
 
             // レスポンスデータを構築
             $response = [

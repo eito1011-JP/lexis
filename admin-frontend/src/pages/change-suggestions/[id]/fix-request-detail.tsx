@@ -5,8 +5,8 @@ import { useParams, useLocation } from 'react-router-dom';
 import { Toast } from '@/components/admin/Toast';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
-import { API_CONFIG } from '@/components/admin/api/config';
 import { apiClient } from '@/components/admin/api/client';
+import { API_CONFIG } from '@/components/admin/api/config';
 
 // 差分データの型定義
 type DiffItem = {
@@ -74,9 +74,7 @@ const SmartDiffValue: React.FC<{
       <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* 現在の変更提案 */}
         <div>
-          <div className="text-xs text-gray-400 mb-1">現在の変更提案</div>
           <div
             className={`border rounded-md p-3 text-sm ${
               hasChange
@@ -90,7 +88,6 @@ const SmartDiffValue: React.FC<{
 
         {/* 修正リクエスト */}
         <div>
-          <div className="text-xs text-gray-400 mb-1">修正リクエスト</div>
           <div
             className={`border rounded-md p-3 text-sm ${
               hasChange
@@ -154,9 +151,13 @@ export default function FixRequestDetailPage(): JSX.Element {
       console.log('token', token);
       console.log('id', id);
       // apiClientのgetを利用し、tokenをクエリパラメータとして渡す
-      const response = await apiClient.get(`/api/admin/fix-requests/${token}`, {
-        params: { pull_request_id: id },
-      });
+      const response = await apiClient.get(
+        `${API_CONFIG.ENDPOINTS.FIX_REQUESTS.GET_DIFF.replace(':token', token)}`,
+        {
+          params: { pull_request_id: id },
+        }
+      );
+      console.log('response', response);
       setDiffData(response);
     } catch (err) {
       console.error('修正リクエスト差分取得エラー:', err);
@@ -169,6 +170,27 @@ export default function FixRequestDetailPage(): JSX.Element {
   useEffect(() => {
     fetchFixRequestDiff();
   }, [id, token]);
+
+  // 修正リクエスト適用処理
+  const handleApplyFixRequest = async () => {
+    if (!id || !token) {
+      setToast({ message: '必要なパラメータが不足しています', type: 'error' });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await apiClient.post(`/api/admin/fix-requests/${token}/apply`, {
+        pull_request_id: id,
+      });
+      setToast({ message: '修正リクエストが正常に適用されました', type: 'success' });
+    } catch (err) {
+      console.error('修正リクエスト適用エラー:', err);
+      setToast({ message: '修正リクエストの適用に失敗しました', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // データ読み込み中
   if (loading) {
@@ -255,7 +277,9 @@ export default function FixRequestDetailPage(): JSX.Element {
         {/* ヘッダー */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-4">修正リクエスト詳細</h1>
-          <div className="text-gray-400">変更提案 #{id} に対する修正リクエストの内容確認</div>
+          <div className="text-gray-400">
+            変更提案 #{id} に対する修正リクエストの内容確認 (現在の変更提案 / 修正リクエスト)
+          </div>
         </div>
 
         {/* カテゴリの変更 */}
@@ -313,7 +337,11 @@ export default function FixRequestDetailPage(): JSX.Element {
                   key={slug}
                   className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
                 >
-                  <SlugBreadcrumb slug={slug} />
+                  <SmartDiffValue
+                    label="Slug"
+                    currentValue={currentDocument?.slug}
+                    fixRequestValue={fixRequestDocument?.slug}
+                  />
 
                   <SmartDiffValue
                     label="タイトル"
@@ -349,6 +377,26 @@ export default function FixRequestDetailPage(): JSX.Element {
             <div className="text-gray-400 text-lg">修正リクエストのデータがありません</div>
           </div>
         )}
+
+        {/* 修正リクエスト適用ボタン */}
+        <div className="flex justify-center mt-8 mb-20">
+          <button
+            onClick={handleApplyFixRequest}
+            disabled={loading}
+            className="bg-[#3832A5] hover:bg-[#3832A5] disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-200 flex items-center space-x-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin disabled:opacity-50 rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                <span>修正リクエストを適用</span>
+              </>
+            ) : (
+              <>
+                <span>修正リクエストを適用</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </AdminLayout>
   );

@@ -56,5 +56,8 @@ export const API_CONFIG = {
       CHECK_DIFF: '/api/admin/git/check-diff',
       GET_DIFF: '/api/admin/git/diff',
     },
+    FIX_REQUESTS: {
+      GET_DIFF: '/api/admin/fix-requests/:token',
+    },
   },
 };

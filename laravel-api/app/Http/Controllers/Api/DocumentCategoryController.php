@@ -10,8 +10,8 @@ use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
 use App\Http\Requests\GetDocumentCategoryRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
-use App\Models\Document;
 use App\Models\DocumentCategory;
+use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
@@ -278,7 +278,7 @@ class DocumentCategoryController extends ApiBaseController
             $categories = DocumentCategory::whereIn('id', $categoryIdArray)->get();
 
             // 削除対象のドキュメントを取得
-            $documents = Document::whereIn('category_id', $categoryIdArray)
+            $documents = DocumentVersion::whereIn('category_id', $categoryIdArray)
                 ->where(function ($query) use ($userBranchId) {
                     $query->where('status', DocumentStatus::MERGED->value)
                         ->orWhere(function ($subQuery) use ($userBranchId) {
@@ -310,7 +310,7 @@ class DocumentCategoryController extends ApiBaseController
 
             // ドキュメントを論理削除
             if ($documents->isNotEmpty()) {
-                Document::whereIn('id', $documents->pluck('id'))
+                DocumentVersion::whereIn('id', $documents->pluck('id'))
                     ->update([
                         'is_deleted' => Flag::TRUE,
                         'deleted_at' => $now,
@@ -376,7 +376,7 @@ class DocumentCategoryController extends ApiBaseController
                 }
 
                 // バルクインサートを実行
-                Document::insert($newDocumentData);
+                DocumentVersion::insert($newDocumentData);
             }
 
             // edit_start_versionsの更新・作成
@@ -457,7 +457,7 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             // ドキュメントとサブカテゴリを取得
-            $documents = Document::where('category_id', $category->id)
+            $documents = DocumentVersion::where('category_id', $category->id)
                 ->select('id', 'sidebar_label as name', 'slug', 'is_public')
                 ->get()
                 ->map(function ($doc) {

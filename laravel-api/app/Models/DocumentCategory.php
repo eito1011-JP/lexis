@@ -81,14 +81,6 @@ class DocumentCategory extends Model
     }
 
     /**
-     * ドキュメントとのリレーション
-     */
-    public function documents()
-    {
-        return $this->hasMany(Document::class, 'category_id');
-    }
-
-    /**
      * ドキュメントバージョンとのリレーション
      */
     public function documentVersions()

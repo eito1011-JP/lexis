@@ -22,18 +22,16 @@ class SendFixRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'document_versions' => 'nullable|array',
+            'document_versions' => 'required|array',
             'document_versions.*.id' => 'required|integer|exists:document_versions,id',
-            'document_versions.*.content' => 'nullable|string',
-            'document_versions.*.sidebar_label' => 'nullable|string|max:255',
-            'document_versions.*.slug' => 'nullable|string',
-            'document_categories' => 'nullable|array',
+            'document_versions.*.content' => 'required|string',
+            'document_versions.*.sidebar_label' => 'required|string|max:255',
+            'document_versions.*.slug' => 'required|string',
+            'document_categories' => 'required|array',
             'document_categories.*.id' => 'required|integer|exists:document_categories,id',
-            'document_categories.*.sidebar_label' => 'nullable|string|max:255',
-            'document_categories.*.description' => 'nullable|string',
-            'document_categories.*.slug' => 'nullable|string',
+            'document_categories.*.sidebar_label' => 'required|string|max:255',
+            'document_categories.*.description' => 'required|string',
+            'document_categories.*.slug' => 'required|string',
         ];
     }
 

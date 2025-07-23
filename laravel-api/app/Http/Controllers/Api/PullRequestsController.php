@@ -722,15 +722,17 @@ class PullRequestsController extends ApiBaseController
                     }
 
                     // 新しいドキュメントバージョンのデータを準備
+                    $categoryParentPath = $existingDocVersion->category ? $existingDocVersion->category->parent_path : null;
+                    $filePath = $this->mdFileService->generateFilePath($docVersion['slug'], $categoryParentPath);
                     $newDocumentVersionsData[] = [
                         'user_id' => $user->id,
                         'user_branch_id' => $existingDocVersion->user_branch_id,
-                        'file_path' => $existingDocVersion->file_path,
+                        'file_path' => $filePath,
                         'status' => DocumentStatus::FIX_REQUEST->value,
-                        'content' => $docVersion['content'] ?? $existingDocVersion->content,
-                        'slug' => $docVersion['slug'] ?? $existingDocVersion->slug,
+                        'content' => $docVersion['content'],
+                        'slug' => $docVersion['slug'],
                         'category_id' => $existingDocVersion->category_id,
-                        'sidebar_label' => $docVersion['sidebar_label'] ?? $existingDocVersion->sidebar_label,
+                        'sidebar_label' => $docVersion['sidebar_label'],
                         'file_order' => $existingDocVersion->file_order,
                         'is_public' => $existingDocVersion->is_public,
                     ];
@@ -749,10 +751,10 @@ class PullRequestsController extends ApiBaseController
 
                     // 新しいドキュメントカテゴリのデータを準備
                     $newDocumentCategoriesData[] = [
-                        'slug' => $docCategory['slug'] ?? $existingDocCategory->slug,
-                        'sidebar_label' => $docCategory['sidebar_label'] ?? $existingDocCategory->sidebar_label,
+                        'slug' => $docCategory['slug'],
+                        'sidebar_label' => $docCategory['sidebar_label'],
                         'position' => $existingDocCategory->position,
-                        'description' => $docCategory['description'] ?? $existingDocCategory->description,
+                        'description' => $docCategory['description'],
                         'status' => DocumentCategoryStatus::FIX_REQUEST->value,
                         'parent_id' => $existingDocCategory->parent_id,
                         'user_branch_id' => $existingDocCategory->user_branch_id,

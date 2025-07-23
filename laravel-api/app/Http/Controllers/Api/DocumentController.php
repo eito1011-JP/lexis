@@ -11,7 +11,6 @@ use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\GetDocumentDetailRequest;
 use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
-use App\Models\Document;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -171,7 +170,7 @@ class DocumentController extends ApiBaseController
             // ファイルパスの生成
             $filePath = $this->generateDocumentFilePath($request->category, $request->slug);
 
-            $document = Document::create([
+            $document = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
                 'category_id' => $categoryId,
@@ -520,7 +519,7 @@ class DocumentController extends ApiBaseController
             }
 
             // ドキュメントとサブカテゴリを取得
-            $documents = Document::where('category_id', $category->id)
+            $documents = DocumentVersion::where('category_id', $category->id)
                 ->select('id', 'sidebar_label as name', 'slug', 'is_public')
                 ->get()
                 ->map(function ($doc) {

@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Document;
 use App\Models\DocumentCategory;
+use App\Models\DocumentVersion;
 
 class DocumentCategoryService
 {
@@ -55,7 +55,7 @@ class DocumentCategoryService
 
         // カテゴリに属するドキュメントを取得
         $categoryIds = collect($categories)->pluck('id')->toArray();
-        $documents = Document::whereIn('category_id', $categoryIds)->get();
+        $documents = DocumentVersion::whereIn('category_id', $categoryIds)->get();
 
         return [
             'categories' => $categories,

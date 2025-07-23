@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Constants\DocumentCategoryConstants;
-use App\Models\Document;
+use App\Models\DocumentVersion;
 
 class DocumentService
 {
@@ -20,7 +20,7 @@ class DocumentService
 
         if ($requestedFileOrder) {
             // file_order重複時、既存のfile_order >= 入力値を+1してずらす
-            Document::where('category_id', $targetCategoryId)
+            DocumentVersion::where('category_id', $targetCategoryId)
                 ->where('status', 'merged')
                 ->where('file_order', '>=', $requestedFileOrder)
                 ->where('is_deleted', 0)
@@ -29,7 +29,7 @@ class DocumentService
             return $requestedFileOrder;
         } else {
             // file_order未入力時、カテゴリ内最大値+1をセット
-            $maxOrder = Document::where('category_id', $targetCategoryId)
+            $maxOrder = DocumentVersion::where('category_id', $targetCategoryId)
                 ->max('file_order') ?? 0;
 
             return $maxOrder + 1;

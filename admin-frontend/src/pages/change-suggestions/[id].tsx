@@ -182,7 +182,9 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
       case 'fix_request_sent':
         return '修正リクエストを送信しました';
       case 'reviewer_assigned':
-        return 'レビュワーが設定されました';
+        return 'レビュアーが設定されました';
+      case 'reviewer_resend':
+        return 'レビュアーに再度レビュー依頼を送信しました';
       case 'reviewer_approved':
         return '変更提案が承認されました';
       case 'commented':
@@ -197,6 +199,8 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
         return 'プルリクエストが編集されました';
       case 'pull_request_title_edited':
         return 'タイトルが編集されました';
+      case 'fix_request_applied':
+        return '修正リクエストが適用されました';
       default:
         return 'アクション';
     }
@@ -696,14 +700,16 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         handleSetReviewers();
         setInitialReviewers(selectedReviewers);
       }
-      
+
       // モーダルが閉じられた時に最新のプルリクエストデータを再取得
       if (id) {
-        fetchPullRequestDetail(id).then(data => {
-          setPullRequestData(data);
-        }).catch(error => {
-          console.error('プルリクエスト詳細再取得エラー:', error);
-        });
+        fetchPullRequestDetail(id)
+          .then(data => {
+            setPullRequestData(data);
+          })
+          .catch(error => {
+            console.error('プルリクエスト詳細再取得エラー:', error);
+          });
       }
     }
   }, [showReviewerModal, reviewersInitialized, initialReviewers, selectedReviewers, id]);
@@ -1427,7 +1433,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                             const isCurrentReviewer = pullRequestData?.reviewers?.some(
                               reviewer => reviewer.email === user.email
                             );
-                            
+
                             return (
                               <div
                                 key={user.id}
@@ -1438,17 +1444,21 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                                   // 現在のレビュアーかどうかで処理を分岐
                                   if (isCurrentReviewer) {
                                     // 既にレビュアーの場合は削除
-                                    const currentReviewerEmails = pullRequestData?.reviewers
-                                      ?.filter(reviewer => reviewer.email !== user.email)
-                                      ?.map(reviewer => reviewer.email) || [];
-                                    
+                                    const currentReviewerEmails =
+                                      pullRequestData?.reviewers
+                                        ?.filter(reviewer => reviewer.email !== user.email)
+                                        ?.map(reviewer => reviewer.email) || [];
+
                                     if (id) {
                                       try {
-                                        await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET, {
-                                          pull_request_id: parseInt(id),
-                                          emails: currentReviewerEmails,
-                                        });
-                                        
+                                        await apiClient.post(
+                                          API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET,
+                                          {
+                                            pull_request_id: parseInt(id),
+                                            emails: currentReviewerEmails,
+                                          }
+                                        );
+
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);
                                         setPullRequestData(updatedData);
@@ -1458,17 +1468,24 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                                     }
                                   } else {
                                     // 新しくレビュアーに追加
-                                    const currentReviewerEmails = pullRequestData?.reviewers
-                                      ?.map(reviewer => reviewer.email) || [];
-                                    const newReviewerEmails = [...currentReviewerEmails, user.email];
-                                    
+                                    const currentReviewerEmails =
+                                      pullRequestData?.reviewers?.map(reviewer => reviewer.email) ||
+                                      [];
+                                    const newReviewerEmails = [
+                                      ...currentReviewerEmails,
+                                      user.email,
+                                    ];
+
                                     if (id) {
                                       try {
-                                        await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET, {
-                                          pull_request_id: parseInt(id),
-                                          emails: newReviewerEmails,
-                                        });
-                                        
+                                        await apiClient.post(
+                                          API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET,
+                                          {
+                                            pull_request_id: parseInt(id),
+                                            emails: newReviewerEmails,
+                                          }
+                                        );
+
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);
                                         setPullRequestData(updatedData);
