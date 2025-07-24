@@ -22,6 +22,8 @@ type DiffItem = {
   category_id?: number;
   status: string;
   user_branch_id: number;
+  base_document_version_id?: number;
+  base_category_version_id?: number;
   created_at: string;
   updated_at: string;
 };
@@ -157,7 +159,6 @@ export default function FixRequestDetailPage(): JSX.Element {
           params: { pull_request_id: id },
         }
       );
-      console.log('response', response);
       setDiffData(response);
     } catch (err) {
       console.error('修正リクエスト差分取得エラー:', err);
@@ -242,31 +243,39 @@ export default function FixRequestDetailPage(): JSX.Element {
     );
   }
 
-  // データをslugでマップ化する関数
-  const mapBySlug = (items: DiffItem[] | null | undefined) => {
-    return (items ?? []).reduce(
-      (acc, item) => {
-        acc[item.slug] = item;
-        return acc;
-      },
-      {} as Record<string, DiffItem>
+  // base_document_version_id を使って現在の文書と修正リクエストの文書をペアリング
+  const documentPairs: Array<{
+    current: DiffItem | null;
+    fixRequest: DiffItem;
+  }> = [];
+  
+  // fix_request の文書を基準にペアを作成
+  diffData.fix_request.documents.forEach(fixRequestDoc => {
+    const currentDoc = diffData.current_pr.documents.find(
+      doc => doc.id === fixRequestDoc.base_document_version_id
     );
-  };
+    documentPairs.push({
+      current: currentDoc || null,
+      fixRequest: fixRequestDoc,
+    });
+  });
 
-  const currentCategories = mapBySlug(diffData.current_pr.categories);
-  const fixRequestCategories = mapBySlug(diffData.fix_request.categories);
-  const currentDocuments = mapBySlug(diffData.current_pr.documents);
-  const fixRequestDocuments = mapBySlug(diffData.fix_request.documents);
-
-  // 全てのslugを取得（現在とリクエストの両方から）
-  const allCategorySlugs = new Set([
-    ...Object.keys(currentCategories),
-    ...Object.keys(fixRequestCategories),
-  ]);
-  const allDocumentSlugs = new Set([
-    ...Object.keys(currentDocuments),
-    ...Object.keys(fixRequestDocuments),
-  ]);
+  // base_category_version_id を使って現在のカテゴリと修正リクエストのカテゴリをペアリング
+  const categoryPairs: Array<{
+    current: DiffItem | null;
+    fixRequest: DiffItem;
+  }> = [];
+  
+  // fix_request のカテゴリを基準にペアを作成
+  diffData.fix_request.categories.forEach(fixRequestCat => {
+    const currentCat = diffData.current_pr.categories.find(
+      cat => cat.id === fixRequestCat.base_category_version_id
+    );
+    categoryPairs.push({
+      current: currentCat || null,
+      fixRequest: fixRequestCat,
+    });
+  });
 
   return (
     <AdminLayout title="修正リクエスト詳細">
@@ -283,38 +292,35 @@ export default function FixRequestDetailPage(): JSX.Element {
         </div>
 
         {/* カテゴリの変更 */}
-        {allCategorySlugs.size > 0 && (
+        {categoryPairs.length > 0 && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-white mb-6">
-              📁 カテゴリの変更 × {allCategorySlugs.size}
+              📁 カテゴリの変更 × {categoryPairs.length}
             </h2>
-            {Array.from(allCategorySlugs).map(slug => {
-              const currentCategory = currentCategories[slug];
-              const fixRequestCategory = fixRequestCategories[slug];
-
+            {categoryPairs.map((pair, index) => {
               return (
                 <div
-                  key={slug}
+                  key={`category-${pair.fixRequest.id}-${index}`}
                   className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
                 >
-                  <SlugBreadcrumb slug={slug} />
+                  <SlugBreadcrumb slug={pair.fixRequest.slug} />
 
                   <SmartDiffValue
                     label="カテゴリ名"
-                    currentValue={currentCategory?.sidebar_label}
-                    fixRequestValue={fixRequestCategory?.sidebar_label}
+                    currentValue={pair.current?.sidebar_label}
+                    fixRequestValue={pair.fixRequest.sidebar_label}
                   />
 
                   <SmartDiffValue
                     label="表示順"
-                    currentValue={currentCategory?.position}
-                    fixRequestValue={fixRequestCategory?.position}
+                    currentValue={pair.current?.position}
+                    fixRequestValue={pair.fixRequest.position}
                   />
 
                   <SmartDiffValue
                     label="説明"
-                    currentValue={currentCategory?.description}
-                    fixRequestValue={fixRequestCategory?.description}
+                    currentValue={pair.current?.description}
+                    fixRequestValue={pair.fixRequest.description}
                   />
                 </div>
               );
@@ -323,46 +329,43 @@ export default function FixRequestDetailPage(): JSX.Element {
         )}
 
         {/* ドキュメントの変更 */}
-        {allDocumentSlugs.size > 0 && (
+        {documentPairs.length > 0 && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-white mb-6">
-              📝 ドキュメントの変更 × {allDocumentSlugs.size}
+              📝 ドキュメントの変更 × {documentPairs.length}
             </h2>
-            {Array.from(allDocumentSlugs).map(slug => {
-              const currentDocument = currentDocuments[slug];
-              const fixRequestDocument = fixRequestDocuments[slug];
-
+            {documentPairs.map((pair, index) => {
               return (
                 <div
-                  key={slug}
+                  key={`document-${pair.fixRequest.id}-${index}`}
                   className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
                 >
                   <SmartDiffValue
                     label="Slug"
-                    currentValue={currentDocument?.slug}
-                    fixRequestValue={fixRequestDocument?.slug}
+                    currentValue={pair.current?.slug}
+                    fixRequestValue={pair.fixRequest.slug}
                   />
 
                   <SmartDiffValue
                     label="タイトル"
-                    currentValue={currentDocument?.sidebar_label}
-                    fixRequestValue={fixRequestDocument?.sidebar_label}
+                    currentValue={pair.current?.sidebar_label}
+                    fixRequestValue={pair.fixRequest.sidebar_label}
                   />
 
                   <SmartDiffValue
                     label="公開設定"
                     currentValue={
-                      currentDocument?.status === 'published' ? '公開する' : '公開しない'
+                      pair.current?.status === 'published' ? '公開する' : '公開しない'
                     }
                     fixRequestValue={
-                      fixRequestDocument?.status === 'published' ? '公開する' : '公開しない'
+                      pair.fixRequest.status === 'published' ? '公開する' : '公開しない'
                     }
                   />
 
                   <SmartDiffValue
                     label="本文"
-                    currentValue={currentDocument?.content}
-                    fixRequestValue={fixRequestDocument?.content}
+                    currentValue={pair.current?.content}
+                    fixRequestValue={pair.fixRequest.content}
                     isMarkdown={true}
                   />
                 </div>
@@ -372,7 +375,7 @@ export default function FixRequestDetailPage(): JSX.Element {
         )}
 
         {/* データが空の場合 */}
-        {allCategorySlugs.size === 0 && allDocumentSlugs.size === 0 && (
+        {categoryPairs.length === 0 && documentPairs.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-400 text-lg">修正リクエストのデータがありません</div>
           </div>

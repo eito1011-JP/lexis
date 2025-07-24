@@ -42,8 +42,10 @@ class FixRequestController extends ApiBaseController
             $currentPr = PullRequest::with(['userBranch'])
                 ->findOrFail($pullRequestId);
 
-            // tokenで修正リクエストのレコードを取得（複数レコードあり得る）
-            $fixRequests = FixRequest::where('token', $token)->get();
+            // tokenで修正リクエストのレコードをリレーション込みで取得（複数レコードあり得る）
+            $fixRequests = FixRequest::with(['documentVersion', 'documentCategory', 'baseDocumentVersion', 'baseCategory'])
+                ->where('token', $token)
+                ->get();
 
             if ($fixRequests->isEmpty()) {
                 return response()->json([
@@ -51,34 +53,30 @@ class FixRequestController extends ApiBaseController
                 ], 404);
             }
 
-            // 修正リクエストの差分とするdocumentやcategoryのidを配列として格納
-            $fixRequestDocumentIds = [];
-            $fixRequestCategoryIds = [];
-
-            foreach ($fixRequests as $fixRequest) {
-                if ($fixRequest->document_version_id) {
-                    $fixRequestDocumentIds[] = $fixRequest->document_version_id;
+            // fix_requestのドキュメントとカテゴリを分離
+            $fixRequestDocuments = $fixRequests->filter(function ($fixRequest) {
+                return $fixRequest->document_version_id !== null;
+            })->map(function ($fixRequest) {
+                $document = $fixRequest->documentVersion;
+                if ($document) {
+                    $documentArray = $document->toArray();
+                    $documentArray['base_document_version_id'] = $fixRequest->base_document_version_id;
+                    return $documentArray;
                 }
-                if ($fixRequest->document_category_id) {
-                    $fixRequestCategoryIds[] = $fixRequest->document_category_id;
+                return null;
+            })->filter();
+
+            $fixRequestCategories = $fixRequests->filter(function ($fixRequest) {
+                return $fixRequest->document_category_id !== null;
+            })->map(function ($fixRequest) {
+                $category = $fixRequest->documentCategory;
+                if ($category) {
+                    $categoryArray = $category->toArray();
+                    $categoryArray['base_category_version_id'] = $fixRequest->base_category_version_id;
+                    return $categoryArray;
                 }
-            }
-
-            // 重複を除去
-            $fixRequestDocumentIds = array_unique($fixRequestDocumentIds);
-            $fixRequestCategoryIds = array_unique($fixRequestCategoryIds);
-
-            // documentsとcategoriesをwhereInで一気に取得
-            $fixRequestDocuments = collect();
-            $fixRequestCategories = collect();
-
-            if (! empty($fixRequestDocumentIds)) {
-                $fixRequestDocuments = DocumentVersion::whereIn('id', $fixRequestDocumentIds)->get();
-            }
-
-            if (! empty($fixRequestCategoryIds)) {
-                $fixRequestCategories = DocumentCategory::whereIn('id', $fixRequestCategoryIds)->get();
-            }
+                return null;
+            })->filter();
 
             // 最新のedit_start_versionsからdocumentとcategoryを取得
             $editStartVersions = $currentPr->userBranch->editStartVersions;
@@ -92,8 +90,8 @@ class FixRequestController extends ApiBaseController
             // レスポンスデータを構築
             $response = [
                 'current_pr' => [
-                    'documents' => $currentDocuments->values(),
-                    'categories' => $currentCategories->values(),
+                    'documents' => $currentDocuments,
+                    'categories' => $currentCategories,
                 ],
                 'fix_request' => [
                     'documents' => $fixRequestDocuments,
