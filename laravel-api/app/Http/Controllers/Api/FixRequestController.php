@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DocumentCategoryStatus;
+use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
+use App\Enums\PullRequestActivityAction;
 use App\Http\Requests\Api\FixRequest\GetFixRequestDiffRequest;
+use App\Http\Requests\Api\PullRequest\SendFixRequest;
+use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\FixRequest;
 use App\Models\PullRequest;
+use App\Services\MdFileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -107,7 +113,7 @@ class FixRequestController extends ApiBaseController
     /**
      * 修正リクエストを送信する
      */
-    public function sendFixRequest(\App\Http\Requests\Api\PullRequest\SendFixRequestRequest $request, int $id): \Illuminate\Http\JsonResponse
+    public function sendFixRequest(SendFixRequest $request, int $id): JsonResponse
     {
         DB::beginTransaction();
 
@@ -122,7 +128,7 @@ class FixRequestController extends ApiBaseController
             }
 
             // 2. プルリクエストを取得
-            $pullRequest = \App\Models\PullRequest::findOrFail($id);
+            $pullRequest = PullRequest::findOrFail($id);
 
             // 3. バリデーション済みデータを取得
             $validated = $request->validated();
@@ -142,13 +148,13 @@ class FixRequestController extends ApiBaseController
             // 一括でDocumentVersionsを取得
             $existingDocumentVersions = collect();
             if (! empty($documentVersionIds)) {
-                $existingDocumentVersions = \App\Models\DocumentVersion::whereIn('id', $documentVersionIds)->get()->keyBy('id');
+                $existingDocumentVersions = DocumentVersion::whereIn('id', $documentVersionIds)->get()->keyBy('id');
             }
 
             // 一括でDocumentCategoriesを取得
             $existingDocumentCategories = collect();
             if (! empty($documentCategoryIds)) {
-                $existingDocumentCategories = \App\Models\DocumentCategory::whereIn('id', $documentCategoryIds)->get()->keyBy('id');
+                $existingDocumentCategories = DocumentCategory::whereIn('id', $documentCategoryIds)->get()->keyBy('id');
             }
 
             // 5. document_versionsをstatus='fix-request'でbulk insert
@@ -165,12 +171,12 @@ class FixRequestController extends ApiBaseController
 
                     // 新しいドキュメントバージョンのデータを準備
                     $categoryParentPath = $existingDocVersion->category ? $existingDocVersion->category->parent_path : null;
-                    $filePath = app(\App\Services\MdFileService::class)->generateFilePath($docVersion['slug'], $categoryParentPath);
+                    $filePath = app(MdFileService::class)->generateFilePath($docVersion['slug'], $categoryParentPath);
                     $newDocumentVersionsData[] = [
                         'user_id' => $user->id,
                         'user_branch_id' => $existingDocVersion->user_branch_id,
                         'file_path' => $filePath,
-                        'status' => \App\Enums\DocumentStatus::FIX_REQUEST->value,
+                        'status' => DocumentStatus::FIX_REQUEST->value,
                         'content' => $docVersion['content'],
                         'slug' => $docVersion['slug'],
                         'category_id' => $existingDocVersion->category_id,
@@ -197,7 +203,7 @@ class FixRequestController extends ApiBaseController
                         'sidebar_label' => $docCategory['sidebar_label'],
                         'position' => $existingDocCategory->position,
                         'description' => $docCategory['description'],
-                        'status' => \App\Enums\DocumentCategoryStatus::FIX_REQUEST->value,
+                        'status' => DocumentCategoryStatus::FIX_REQUEST->value,
                         'parent_id' => $existingDocCategory->parent_id,
                         'user_branch_id' => $existingDocCategory->user_branch_id,
                     ];
@@ -208,14 +214,14 @@ class FixRequestController extends ApiBaseController
             $newDocumentVersionIds = collect();
             if (! empty($newDocumentVersionsData)) {
                 // 挿入前の最大IDを取得
-                $maxDocumentVersionId = \App\Models\DocumentVersion::max('id') ?? 0;
+                $maxDocumentVersionId = DocumentVersion::max('id') ?? 0;
 
-                \App\Models\DocumentVersion::insert($newDocumentVersionsData);
+                DocumentVersion::insert($newDocumentVersionsData);
 
                 // 挿入されたレコードのIDを取得（最大IDより大きいIDを取得）
-                $newDocumentVersionIds = \App\Models\DocumentVersion::where('id', '>', $maxDocumentVersionId)
+                $newDocumentVersionIds = DocumentVersion::where('id', '>', $maxDocumentVersionId)
                     ->where('user_id', $user->id)
-                    ->where('status', \App\Enums\DocumentStatus::FIX_REQUEST->value)
+                    ->where('status', DocumentStatus::FIX_REQUEST->value)
                     ->orderBy('id', 'asc')
                     ->pluck('id');
             }
@@ -224,13 +230,13 @@ class FixRequestController extends ApiBaseController
             $newDocumentCategoryIds = collect();
             if (! empty($newDocumentCategoriesData)) {
                 // 挿入前の最大IDを取得
-                $maxDocumentCategoryId = \App\Models\DocumentCategory::max('id') ?? 0;
+                $maxDocumentCategoryId = DocumentCategory::max('id') ?? 0;
 
-                \App\Models\DocumentCategory::insert($newDocumentCategoriesData);
+                DocumentCategory::insert($newDocumentCategoriesData);
 
                 // 挿入されたレコードのIDを取得（最大IDより大きいIDを取得）
-                $newDocumentCategoryIds = \App\Models\DocumentCategory::where('id', '>', $maxDocumentCategoryId)
-                    ->where('status', \App\Enums\DocumentCategoryStatus::FIX_REQUEST->value)
+                $newDocumentCategoryIds = DocumentCategory::where('id', '>', $maxDocumentCategoryId)
+                    ->where('status', DocumentCategoryStatus::FIX_REQUEST->value)
                     ->orderBy('id', 'asc')
                     ->pluck('id');
             }
@@ -239,21 +245,29 @@ class FixRequestController extends ApiBaseController
             $fixRequestToken = \Illuminate\Support\Str::random(32);
 
             // 10. fix_requestsテーブル用のデータを準備
-            foreach ($newDocumentVersionIds as $newDocVersionId) {
+            // document_versions: base_document_version_idをセット
+            foreach ($newDocumentVersionIds as $index => $newDocVersionId) {
+                $baseDocVersionId = $documentVersionIds[$index] ?? null; // 送信元のid
                 $fixRequestsData[] = [
                     'token' => $fixRequestToken,
                     'document_version_id' => $newDocVersionId,
                     'document_category_id' => null,
+                    'base_document_version_id' => $baseDocVersionId,
+                    'base_category_version_id' => null,
                     'user_id' => $user->id,
                     'pull_request_id' => $pullRequest->id,
                 ];
             }
 
-            foreach ($newDocumentCategoryIds as $newDocCategoryId) {
+            // document_categories: base_category_version_idをセット
+            foreach ($newDocumentCategoryIds as $index => $newDocCategoryId) {
+                $baseCategoryId = $documentCategoryIds[$index] ?? null; // 送信元のid
                 $fixRequestsData[] = [
                     'token' => $fixRequestToken,
                     'document_version_id' => null,
                     'document_category_id' => $newDocCategoryId,
+                    'base_document_version_id' => null,
+                    'base_category_version_id' => $baseCategoryId,
                     'user_id' => $user->id,
                     'pull_request_id' => $pullRequest->id,
                 ];
@@ -261,14 +275,14 @@ class FixRequestController extends ApiBaseController
 
             // 11. fix_requestsテーブルにbulk insert
             if (! empty($fixRequestsData)) {
-                \App\Models\FixRequest::insert($fixRequestsData);
+                FixRequest::insert($fixRequestsData);
             }
 
             // 7. activity_log_on_pull_requestsにアクティビティログを記録
-            \App\Models\ActivityLogOnPullRequest::create([
+            ActivityLogOnPullRequest::create([
                 'user_id' => $user->id,
                 'pull_request_id' => $pullRequest->id,
-                'action' => \App\Enums\PullRequestActivityAction::FIX_REQUEST_SENT->value,
+                'action' => PullRequestActivityAction::FIX_REQUEST_SENT->value,
                 'fix_request_token' => $fixRequestToken,
             ]);
 

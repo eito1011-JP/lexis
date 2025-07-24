@@ -4,7 +4,7 @@ namespace App\Http\Requests\Api\PullRequest;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class SendFixRequestRequest extends FormRequest
+class SendFixRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,12 +22,12 @@ class SendFixRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_versions' => 'required|array',
+            'document_versions' => 'nullable|array',
             'document_versions.*.id' => 'required|integer|exists:document_versions,id',
             'document_versions.*.content' => 'required|string',
             'document_versions.*.sidebar_label' => 'required|string|max:255',
             'document_versions.*.slug' => 'required|string',
-            'document_categories' => 'required|array',
+            'document_categories' => 'nullable|array',
             'document_categories.*.id' => 'required|integer|exists:document_categories,id',
             'document_categories.*.sidebar_label' => 'required|string|max:255',
             'document_categories.*.description' => 'required|string',
