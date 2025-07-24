@@ -116,7 +116,7 @@ const SmartDiffValue: React.FC<{
       <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
 
       {fieldInfo.status === 'added' && (
-        <div className="bg-green-900/30 border border-green-700 rounded-md p-3 text-sm text-green-200">
+        <div className="bg-green-900/30 border rounded-md p-3 text-sm text-green-200">
           {renderContent(renderValue(fieldInfo.current), isMarkdown)}
         </div>
       )}
@@ -132,7 +132,7 @@ const SmartDiffValue: React.FC<{
           <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
             {renderContent(renderValue(fieldInfo.original), isMarkdown)}
           </div>
-          <div className="bg-green-900/30 border border-green-700 rounded-md p-3 text-sm text-green-200">
+          <div className="bg-green-900/30 border rounded-md p-3 text-sm text-green-200">
             {renderContent(renderValue(fieldInfo.current), isMarkdown)}
           </div>
         </div>
@@ -1220,7 +1220,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                             </span>
                           </div>
                           {commentItem.is_resolved && (
-                            <span className="text-green-400 text-sm px-2 py-1 bg-green-900/30 border border-green-700 rounded">
+                            <span className="text-green-400 text-sm px-2 py-1 bg-green-900/30 border rounded">
                               解決済み
                             </span>
                           )}

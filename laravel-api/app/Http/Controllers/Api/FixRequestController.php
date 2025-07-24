@@ -31,7 +31,6 @@ class FixRequestController extends ApiBaseController
         $token = $request->validated('token');
         $pullRequestId = $request->validated('pull_request_id');
 
-
         try {
             // 現在のプルリクエストの変更差分を取得
             $currentPr = PullRequest::with(['userBranch'])
