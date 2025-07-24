@@ -61,8 +61,10 @@ class FixRequestController extends ApiBaseController
                 if ($document) {
                     $documentArray = $document->toArray();
                     $documentArray['base_document_version_id'] = $fixRequest->base_document_version_id;
+
                     return $documentArray;
                 }
+
                 return null;
             })->filter();
 
@@ -73,8 +75,10 @@ class FixRequestController extends ApiBaseController
                 if ($category) {
                     $categoryArray = $category->toArray();
                     $categoryArray['base_category_version_id'] = $fixRequest->base_category_version_id;
+
                     return $categoryArray;
                 }
+
                 return null;
             })->filter();
 

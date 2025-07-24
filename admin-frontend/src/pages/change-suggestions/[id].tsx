@@ -7,7 +7,6 @@ import {
   fetchPullRequestDetail,
   fetchActivityLog,
   type PullRequestDetailResponse,
-  type Reviewer,
   type ActivityLog,
 } from '@/api/pullRequest';
 import { Settings } from '@/components/icon/common/Settings';

@@ -5,8 +5,11 @@ import { useParams, useLocation } from 'react-router-dom';
 import { Toast } from '@/components/admin/Toast';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
+import { diffStyles } from '@/styles/diffStyles';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
+import { makeDiff, cleanupSemantic } from '@sanity/diff-match-patch';
+import { replaceDiffMarkersInHtml } from '@/utils/diffUtils';
 
 // 差分データの型定義
 type DiffItem = {
@@ -53,7 +56,114 @@ const SmartDiffValue: React.FC<{
     return String(value);
   };
 
-  const renderContent = (content: string, isMarkdown: boolean) => {
+  // 差分ハイライト用の関数
+  const generateSplitDiffContent = (
+    originalText: string,
+    currentText: string,
+    isMarkdown: boolean
+  ) => {
+    const originalStr = renderValue(originalText);
+    const currentStr = renderValue(currentText);
+
+    if (originalStr === currentStr) {
+      // 変更がない場合は通常表示
+      return {
+        leftContent: isMarkdown ? renderMarkdownContent(originalStr) : originalStr,
+        rightContent: isMarkdown ? renderMarkdownContent(currentStr) : currentStr,
+        hasChanges: false,
+      };
+    }
+
+    // マークダウンの場合の処理
+    if (isMarkdown) {
+      try {
+        // 差分を計算
+        const diffs = makeDiff(originalStr, currentStr);
+        const cleanedDiffs = cleanupSemantic(diffs);
+
+        // 左側用と右側用のマークダウンテキストを生成
+        let leftMarkedText = '';
+        let rightMarkedText = '';
+
+        for (const [operation, text] of cleanedDiffs) {
+          switch (operation) {
+            case -1: // 削除（左側でハイライト）
+              leftMarkedText += `<DIFF_DELETE>${text}</DIFF_DELETE>`;
+              // 右側には追加しない
+              break;
+            case 1: // 追加（右側でハイライト）
+              rightMarkedText += `<DIFF_ADD>${text}</DIFF_ADD>`;
+              // 左側には追加しない
+              break;
+            case 0: // 変更なし（両側に追加）
+              leftMarkedText += text;
+              rightMarkedText += text;
+              break;
+          }
+        }
+
+        const leftHtmlWithMarkers = markdownToHtml(leftMarkedText);
+        const rightHtmlWithMarkers = markdownToHtml(rightMarkedText);
+
+        return {
+          leftContent: (
+            <div
+              className="markdown-content prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: replaceDiffMarkersInHtml(leftHtmlWithMarkers) }}
+            />
+          ),
+          rightContent: (
+            <div
+              className="markdown-content prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: replaceDiffMarkersInHtml(rightHtmlWithMarkers) }}
+            />
+          ),
+          hasChanges: true,
+        };
+      } catch (error) {
+        console.warn('マークダウン差分表示エラー:', error);
+        // エラーの場合はプレーンテキストで処理
+      }
+    }
+
+    // プレーンテキストの差分処理
+    const diffs = makeDiff(originalStr, currentStr);
+    const cleanedDiffs = cleanupSemantic(diffs);
+
+    let leftHtml = '';
+    let rightHtml = '';
+
+    for (const [operation, text] of cleanedDiffs) {
+      const escapedText = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>');
+
+      switch (operation) {
+        case -1: // 削除（左側に表示）
+          leftHtml += `<span class="diff-deleted-content">${escapedText}</span>`;
+          rightHtml += ''; // 右側には表示しない
+          break;
+        case 1: // 追加（右側に表示）
+          leftHtml += ''; // 左側には表示しない
+          rightHtml += `<span class="diff-added-content">${escapedText}</span>`;
+          break;
+        case 0: // 変更なし（両側に表示）
+          leftHtml += escapedText;
+          rightHtml += escapedText;
+          break;
+      }
+    }
+
+    return {
+      leftContent: <span dangerouslySetInnerHTML={{ __html: leftHtml }} />,
+      rightContent: <span dangerouslySetInnerHTML={{ __html: rightHtml }} />,
+      hasChanges: true,
+    };
+  };
+
+  const renderMarkdownContent = (content: string) => {
     if (!isMarkdown || !content) return content;
 
     try {
@@ -69,35 +179,31 @@ const SmartDiffValue: React.FC<{
     }
   };
 
-  const hasChange = renderValue(currentValue) !== renderValue(fixRequestValue);
+  const { leftContent, rightContent } = generateSplitDiffContent(
+    currentValue,
+    fixRequestValue,
+    isMarkdown
+  );
 
   return (
     <div className="mb-4">
       <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
 
       <div className="grid grid-cols-2 gap-4">
+        {/* 現在の変更提案 */}
         <div>
           <div
-            className={`border rounded-md p-3 text-sm ${
-              hasChange
-                ? 'bg-red-900/30 border-red-700 text-red-200'
-                : 'bg-gray-800 border-gray-600 text-gray-300'
+            className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800
             }`}
           >
-            {renderContent(renderValue(currentValue), isMarkdown)}
+            {typeof leftContent === 'string' ? leftContent : leftContent}
           </div>
         </div>
 
         {/* 修正リクエスト */}
         <div>
-          <div
-            className={`border rounded-md p-3 text-sm ${
-              hasChange
-                ? 'bg-green-900/30 border-green-700 text-green-200'
-                : 'bg-gray-800 border-gray-600 text-gray-300'
-            }`}
-          >
-            {renderContent(renderValue(fixRequestValue), isMarkdown)}
+          <div className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800`}>
+            {typeof rightContent === 'string' ? rightContent : rightContent}
           </div>
         </div>
       </div>
@@ -128,7 +234,6 @@ export default function FixRequestDetailPage(): JSX.Element {
   // クエリパラメータからtokenを取得
   const searchParams = new URLSearchParams(location.search);
   const token = searchParams.get('token');
-  console.log('token', token);
   const [diffData, setDiffData] = useState<FixRequestDiffResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,8 +255,6 @@ export default function FixRequestDetailPage(): JSX.Element {
 
     try {
       setLoading(true);
-      console.log('token', token);
-      console.log('id', id);
       // apiClientのgetを利用し、tokenをクエリパラメータとして渡す
       const response = await apiClient.get(
         `${API_CONFIG.ENDPOINTS.FIX_REQUESTS.GET_DIFF.replace(':token', token)}`,
@@ -248,7 +351,7 @@ export default function FixRequestDetailPage(): JSX.Element {
     current: DiffItem | null;
     fixRequest: DiffItem;
   }> = [];
-  
+
   // fix_request の文書を基準にペアを作成
   diffData.fix_request.documents.forEach(fixRequestDoc => {
     const currentDoc = diffData.current_pr.documents.find(
@@ -265,7 +368,7 @@ export default function FixRequestDetailPage(): JSX.Element {
     current: DiffItem | null;
     fixRequest: DiffItem;
   }> = [];
-  
+
   // fix_request のカテゴリを基準にペアを作成
   diffData.fix_request.categories.forEach(fixRequestCat => {
     const currentCat = diffData.current_pr.categories.find(
@@ -280,6 +383,7 @@ export default function FixRequestDetailPage(): JSX.Element {
   return (
     <AdminLayout title="修正リクエスト詳細">
       <style>{markdownStyles}</style>
+      <style>{diffStyles}</style>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="mb-20 w-full rounded-lg relative">
@@ -354,9 +458,7 @@ export default function FixRequestDetailPage(): JSX.Element {
 
                   <SmartDiffValue
                     label="公開設定"
-                    currentValue={
-                      pair.current?.status === 'published' ? '公開する' : '公開しない'
-                    }
+                    currentValue={pair.current?.status === 'published' ? '公開する' : '公開しない'}
                     fixRequestValue={
                       pair.fixRequest.status === 'published' ? '公開する' : '公開しない'
                     }
