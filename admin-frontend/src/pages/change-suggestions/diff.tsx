@@ -20,6 +20,7 @@ import { Merge } from '@/components/icon/common/Merge';
 import { Merged } from '@/components/icon/common/Merged';
 import { Closed } from '@/components/icon/common/Closed';
 import { ChevronDown } from '@/components/icon/common/ChevronDown';
+import { makeDiff, cleanupSemantic, makePatches, stringifyPatches } from '@sanity/diff-match-patch';
 
 // 差分データの型定義
 type DiffItem = {
@@ -59,6 +60,263 @@ const TABS = [
   { id: 'activity' as TabType, label: 'アクティビティ', icon: '💬' },
   { id: 'changes' as TabType, label: '変更内容', icon: '📝' },
 ] as const;
+
+// 差分計算とHTML生成の関数
+const generateDiffHtml = (originalText: string, currentText: string): string => {
+  // makeDiffを使って差分のタプル配列を作成
+  const diffs = makeDiff(originalText || '', currentText || '');
+  
+  // より読みやすい差分にするため、意味的なクリーンアップを実行
+  const cleanedDiffs = cleanupSemantic(diffs);
+  
+  // カスタムHTMLレンダリング
+  let html = '';
+  for (const [operation, text] of cleanedDiffs) {
+    const escapedText = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br/>');
+    
+    switch (operation) {
+      case -1: // 削除
+        html += `<span class="diff-deleted-content">${escapedText}</span>`;
+        break;
+      case 1: // 追加
+        html += `<span class="diff-added-content">${escapedText}</span>`;
+        break;
+      case 0: // 変更なし
+        html += escapedText;
+        break;
+    }
+  }
+  
+  return html;
+};
+
+// パッチ情報を生成する関数（デバッグや詳細表示用）
+const generatePatchInfo = (originalText: string, currentText: string): string => {
+  try {
+    // makePatches でパッチ配列を作成
+    const patches = makePatches(originalText || '', currentText || '');
+    
+    // stringifyPatches で unidiff形式の文字列に変換
+    const patchString = stringifyPatches(patches);
+    
+    return patchString;
+  } catch (error) {
+    console.error('パッチ生成エラー:', error);
+    return '';
+  }
+};
+
+// マークダウンテキストに差分マーカーを挿入する関数
+const insertDiffMarkersInText = (originalText: string, currentText: string): string => {
+  const diffs = makeDiff(originalText || '', currentText || '');
+  const cleanedDiffs = cleanupSemantic(diffs);
+  
+  let markedText = '';
+  cleanedDiffs.forEach(([operation, text]) => {
+    if (operation === -1) {
+      // 削除された部分にマーカーを追加
+      markedText += `<DIFF_DELETE>${text}</DIFF_DELETE>`;
+    } else if (operation === 1) {
+      // 追加された部分にマーカーを追加
+      markedText += `<DIFF_ADD>${text}</DIFF_ADD>`;
+    } else {
+      // 変更なし
+      markedText += text;
+    }
+  });
+  
+  // デバッグ用：差分マーカーの確認
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Original:', originalText);
+    console.log('Current:', currentText);
+    console.log('Marked Text:', markedText);
+  }
+  
+  return markedText;
+};
+
+// HTMLに変換後、差分マーカーを適切なspanタグに置換する関数
+const replaceDiffMarkersInHtml = (html: string): string => {
+  // デバッグ用：処理前のHTMLを確認
+  if (process.env.NODE_ENV === 'development') {
+    console.log('HTML before processing:', html);
+  }
+  
+  let processedHtml = html;
+  
+  // 複数要素にまたがる差分マーカーを検出して処理
+  // 実際のパターン: <li>要素2<DIFF_DELETE></li>\n<li>要素3</DIFF_DELETE></li>
+  // 注意: 要素2は差分対象ではなく、改行+要素3のみが削除対象
+  processedHtml = processedHtml.replace(
+    /(<li[^>]*>)([^<]*)<DIFF_DELETE><\/li>\s*(<li[^>]*>)([^<]*)<\/DIFF_DELETE>/g,
+    (match: string, li1Tag: string, content1: string, li2Tag: string, content2: string) => {
+      // 2番目のli要素のみにクラスを追加（削除対象は要素3のみ）
+      const li2WithClass = li2Tag.includes('class=')
+        ? li2Tag.replace(/class="([^"]*)"/, 'class="$1 diff-deleted-item"')
+        : li2Tag.replace('>', ' class="diff-deleted-item">');
+      
+      // 1番目の要素は通常表示、2番目の要素のみ差分表示
+      return `${li1Tag}${content1}</li>\n${li2WithClass}<span class="diff-deleted-content">${content2}</span></li>`;
+    }
+  );
+  
+  processedHtml = processedHtml.replace(
+    /(<li[^>]*>)([^<]*)<DIFF_ADD><\/li>\s*(<li[^>]*>)([^<]*)<\/DIFF_ADD>/g,
+    (match: string, li1Tag: string, content1: string, li2Tag: string, content2: string) => {
+      // 2番目のli要素のみにクラスを追加（追加対象は要素3のみ）
+      const li2WithClass = li2Tag.includes('class=')
+        ? li2Tag.replace(/class="([^"]*)"/, 'class="$1 diff-added-item"')
+        : li2Tag.replace('>', ' class="diff-added-item">');
+      
+      // 1番目の要素は通常表示、2番目の要素のみ差分表示
+      return `${li1Tag}${content1}</li>\n${li2WithClass}<span class="diff-added-content">${content2}</span></li>`;
+    }
+  );
+  
+  // より複雑なケース：複数のli要素にまたがる場合
+  processedHtml = processedHtml.replace(
+    /<DIFF_DELETE>([\s\S]*?)<\/DIFF_DELETE>/g,
+    (match: string, content: string) => {
+      // 内部にli要素が含まれている場合の処理
+      if (content.includes('<li>') || content.includes('</li>')) {
+        // li要素ごとに分割して処理
+        return content.replace(
+          /(<li)([^>]*>)(.*?)(<\/li>)/g,
+          (liMatch: string, openTagStart: string, attributes: string, liContent: string, closeTag: string) => {
+            // li要素全体に差分クラスを適用（マーカーも含めて色を変更）
+            const existingClass = attributes.match(/class="([^"]*)"/) || ['', ''];
+            const newClass = existingClass[1] ? `${existingClass[1]} diff-deleted-item` : 'diff-deleted-item';
+            const newAttributes = attributes.replace(/class="[^"]*"/, '').trim();
+            
+            return `${openTagStart} class="${newClass}"${newAttributes ? ' ' + newAttributes : ''}><span class="diff-deleted-content">${liContent}</span>${closeTag}`;
+          }
+        );
+      } else {
+        return `<span class="diff-deleted-content">${content}</span>`;
+      }
+    }
+  );
+  
+  processedHtml = processedHtml.replace(
+    /<DIFF_ADD>([\s\S]*?)<\/DIFF_ADD>/g,
+    (match: string, content: string) => {
+      // 内部にli要素が含まれている場合の処理
+      if (content.includes('<li>') || content.includes('</li>')) {
+        // li要素ごとに分割して処理
+        return content.replace(
+          /(<li)([^>]*>)(.*?)(<\/li>)/g,
+          (liMatch: string, openTagStart: string, attributes: string, liContent: string, closeTag: string) => {
+            // li要素全体に差分クラスを適用（マーカーも含めて色を変更）
+            const existingClass = attributes.match(/class="([^"]*)"/) || ['', ''];
+            const newClass = existingClass[1] ? `${existingClass[1]} diff-added-item` : 'diff-added-item';
+            const newAttributes = attributes.replace(/class="[^"]*"/, '').trim();
+            
+            return `${openTagStart} class="${newClass}"${newAttributes ? ' ' + newAttributes : ''}><span class="diff-added-content">${liContent}</span>${closeTag}`;
+          }
+        );
+      } else {
+        return `<span class="diff-added-content">${content}</span>`;
+      }
+    }
+  );
+  
+  // 単一要素内の通常の差分マーカーを置換
+  processedHtml = processedHtml
+    .replace(/<DIFF_DELETE>(.*?)<\/DIFF_DELETE>/gs, '<span class="diff-deleted-content">$1</span>')
+    .replace(/<DIFF_ADD>(.*?)<\/DIFF_ADD>/gs, '<span class="diff-added-content">$1</span>');
+  
+  // デバッグ用：処理後のHTMLを確認
+  if (process.env.NODE_ENV === 'development') {
+    console.log('HTML after processing:', processedHtml);
+  }
+  
+  return processedHtml;
+};
+
+// GitHub風差分表示コンポーネント（マークダウンをリッチテキストで差分表示）
+const DiffDisplay: React.FC<{
+  originalText: string;
+  currentText: string;
+  isMarkdown?: boolean;
+  showPatchInfo?: boolean;
+}> = ({ originalText, currentText, isMarkdown = false, showPatchInfo = false }) => {
+  const [showPatch, setShowPatch] = useState(false);
+  const patchInfo = showPatchInfo ? generatePatchInfo(originalText, currentText) : '';
+  
+  const DiffContent = () => {
+    if (isMarkdown) {
+      try {
+        // テキストレベルで差分を計算し、カスタムマーカーを挿入
+        const markedText = insertDiffMarkersInText(originalText || '', currentText || '');
+        
+        // マーカー付きテキストをHTMLに変換
+        const htmlWithMarkers = markdownToHtml(markedText);
+        
+        // HTMLでマーカーを適切なspanタグに置換
+        const finalHtml = replaceDiffMarkersInHtml(htmlWithMarkers);
+        
+        return (
+          <div className="p-3 bg-gray-800 border border-gray-600 rounded-md text-sm">
+            <div 
+              className="markdown-content prose prose-invert max-w-none text-gray-300 prose-headings:text-white prose-p:text-gray-300 prose-strong:text-white prose-code:text-green-400 prose-pre:bg-gray-900 prose-blockquote:border-gray-600 prose-blockquote:text-gray-400"
+              dangerouslySetInnerHTML={{ __html: finalHtml }}
+            />
+          </div>
+        );
+      } catch (error) {
+        console.warn('マークダウン差分表示エラー:', error);
+        // エラーの場合はフォールバック表示
+        return (
+          <div className="p-3 bg-gray-800 border border-gray-600 rounded-md text-sm">
+            <div className="text-red-400 mb-2">マークダウン表示エラー - テキストモードで表示</div>
+            <div 
+              className="text-gray-300 whitespace-pre-wrap"
+              dangerouslySetInnerHTML={{ __html: generateDiffHtml(originalText, currentText) }}
+            />
+          </div>
+        );
+      }
+    }
+    
+    // プレーンテキストの場合は、従来通りの差分表示
+    const diffHtml = generateDiffHtml(originalText, currentText);
+    return (
+      <div 
+        className="p-3 bg-gray-800 border border-gray-600 rounded-md text-sm text-gray-300 whitespace-pre-wrap"
+        dangerouslySetInnerHTML={{ __html: diffHtml }}
+      />
+    );
+  };
+
+  return (
+    <div>
+      <DiffContent />
+      
+      {/* パッチ情報表示機能 */}
+      {showPatchInfo && patchInfo && (
+        <div className="mt-2">
+          <button
+            onClick={() => setShowPatch(!showPatch)}
+            className="text-xs text-blue-400 hover:text-blue-300 underline"
+          >
+            {showPatch ? 'パッチ情報を隠す' : 'パッチ情報を表示'}
+          </button>
+          
+          {showPatch && (
+            <div className="mt-2 p-2 bg-gray-900 border border-gray-700 rounded text-xs font-mono text-gray-400 overflow-x-auto">
+              <div className="mb-1 text-gray-500">Unidiff形式のパッチ:</div>
+              <pre className="whitespace-pre-wrap">{patchInfo}</pre>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // SmartDiffValueコンポーネント
 const SmartDiffValue: React.FC<{
@@ -105,14 +363,12 @@ const SmartDiffValue: React.FC<{
       )}
 
       {fieldInfo.status === 'modified' && (
-        <div className="space-y-1">
-          <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
-            {renderContent(renderValue(fieldInfo.original), isMarkdown)}
-          </div>
-          <div className="bg-green-900/30 border border-green-700 rounded-md p-3 text-sm text-green-200">
-            {renderContent(renderValue(fieldInfo.current), isMarkdown)}
-          </div>
-        </div>
+        <DiffDisplay 
+          originalText={renderValue(fieldInfo.original)}
+          currentText={renderValue(fieldInfo.current)}
+          isMarkdown={isMarkdown}
+          showPatchInfo={isMarkdown || label === 'Slug' || label === 'タイトル'} // マークダウンやキーフィールドでパッチ情報を表示
+        />
       )}
 
       {fieldInfo.status === 'unchanged' && (
@@ -296,6 +552,136 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
   const { id } = useParams<{ id: string }>();
 
+  // GitHub風の差分表示用CSSスタイル（改良版）
+  const diffStyles = `
+    /* コンテンツラッパー方式のスタイル */
+    /* li要素全体に背景色を適用するため、spanの背景色は透明に */
+    .diff-deleted-item .diff-deleted-content {
+      background-color: transparent !important;
+      padding: 0;
+      display: inline;
+      /* 文字色は通常色を維持してコントラストを保つ */
+    }
+    
+    .diff-added-item .diff-added-content {
+      background-color: transparent !important;
+      padding: 0;
+      display: inline;
+      /* 文字色は通常色を維持してコントラストを保つ */
+    }
+    
+    /* 通常の差分コンテンツ（li要素以外での使用） */
+    .diff-deleted-content {
+      background-color: rgba(248, 81, 73, 0.15) !important;
+      border-radius: 3px;
+      padding: 2px 6px;
+      display: inline;
+    }
+    
+    .diff-added-content {
+      background-color: rgba(63, 185, 80, 0.15) !important;
+      border-radius: 3px;
+      padding: 2px 6px;
+      display: inline;
+    }
+    
+    /* Flexboxを使ったカスタムリストスタイル */
+    ol {
+      list-style: none !important;
+      counter-reset: item;
+      padding-left: 0 !important;
+    }
+    
+    ol li {
+      display: flex !important;
+      align-items: flex-start;
+      counter-increment: item;
+      margin: 4px 0;
+      line-height: 1.6;
+    }
+    
+    ol li::before {
+      content: counter(item) "." !important;
+      min-width: 32px;
+      text-align: right;
+      padding-right: 8px;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    /* 削除差分要素のスタイル */
+    .diff-deleted-item {
+      margin: 2px 0;
+      background-color: rgba(248, 81, 73, 0.15) !important;
+      border-radius: 4px;
+    }
+    
+    .diff-deleted-item::before {
+      /* 番号部分の背景色は削除し、li要素全体の背景色のみ使用 */
+      color: inherit;
+      margin-right: 8px !important;
+    }
+    
+    /* 追加差分要素のスタイル */
+    .diff-added-item {
+      margin: 2px 0;
+      background-color: rgba(63, 185, 80, 0.15) !important;
+      border-radius: 4px;
+      padding: 4px 0;
+    }
+    
+    .diff-added-item::before {
+      /* 番号部分の背景色は削除し、li要素全体の背景色のみ使用 */
+      color: inherit;
+      margin-right: 8px !important;
+    }
+    
+    /* 通常のリスト要素 */
+    ol li:not(.diff-deleted-item):not(.diff-added-item)::before {
+      color: inherit;
+      background-color: transparent;
+    }
+    
+    /* 従来のスタイルも保持（フォールバック用） */
+    .diff-deleted {
+      background-color: rgba(248, 81, 73, 0.25) !important;
+      color: #ff9492 !important;
+      border-radius: 3px;
+      padding: 2px 4px;
+      margin: 2px 0;
+      display: inline;
+    }
+    
+    .diff-added {
+      background-color: rgba(63, 185, 80, 0.25) !important;
+      color: #7ee787 !important;
+      border-radius: 3px;
+      padding: 2px 4px;
+      margin: 2px 0;
+      display: inline;
+    }
+    
+    /* リスト要素の基本スタイル */
+    ol, ul {
+      margin: 16px 0;
+      padding-left: 24px;
+    }
+    
+    li {
+      margin: 2px 0;
+      line-height: 1.6;
+    }
+    
+    /* 差分要素内のリストマーカーも適切に色付け */
+    .diff-deleted-content li::marker {
+      color: #ff9492;
+    }
+    
+    .diff-added-content li::marker {
+      color: #7ee787;
+    }
+  `;
+
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -373,6 +759,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
       try {
         setLoading(true);
         const data = await fetchPullRequestDetail(id);
+        console.log('data', data);
         setPullRequestData(data);
       } catch (err) {
         console.error('プルリクエスト詳細取得エラー:', err);
@@ -479,6 +866,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
   return (
     <AdminLayout title="変更内容詳細">
       <style>{markdownStyles}</style>
+      <style>{diffStyles}</style>
       <div className="mb-20 w-full rounded-lg relative">
         {/* ステータスバナー */}
         {(pullRequestData.status === PULL_REQUEST_STATUS.MERGED ||
