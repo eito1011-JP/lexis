@@ -56,6 +56,30 @@ const SmartDiffValue: React.FC<{
     return String(value);
   };
 
+  // ブロック要素を検出する関数
+  const isBlockElement = (html: string): boolean => {
+    const blockElementPattern = /^<(h[1-6]|p|div|section|article|blockquote|pre|ul|ol|li)(\s|>)/i;
+    return blockElementPattern.test(html.trim());
+  };
+
+  // HTMLテキストを適切なクラスでラップする関数
+  const wrapWithDiffClass = (html: string, operation: number): string => {
+    if (operation === 0) return html; // 変更なしの場合はそのまま
+
+    const isBlock = isBlockElement(html);
+    const className =
+      operation === 1
+        ? isBlock
+          ? 'diff-block-added'
+          : 'diff-added-content'
+        : isBlock
+          ? 'diff-block-deleted'
+          : 'diff-deleted-content';
+
+    const wrapper = isBlock ? 'div' : 'span';
+    return `<${wrapper} class="${className}">${html}</${wrapper}>`;
+  };
+
   // 差分ハイライト用の関数
   const generateSplitDiffContent = (
     originalText: string,
@@ -77,45 +101,46 @@ const SmartDiffValue: React.FC<{
     // マークダウンの場合の処理
     if (isMarkdown) {
       try {
-        // 差分を計算
-        const diffs = makeDiff(originalStr, currentStr);
+        // まず両方のマークダウンをHTMLに変換
+        const originalHtml = markdownToHtml(originalStr);
+        const currentHtml = markdownToHtml(currentStr);
+
+        // HTMLベースで差分を計算
+        const diffs = makeDiff(originalHtml, currentHtml);
         const cleanedDiffs = cleanupSemantic(diffs);
 
-        // 左側用と右側用のマークダウンテキストを生成
-        let leftMarkedText = '';
-        let rightMarkedText = '';
+        // 左側用と右側用のHTMLを生成
+        let leftHtml = '';
+        let rightHtml = '';
 
         for (const [operation, text] of cleanedDiffs) {
           switch (operation) {
             case -1: // 削除（左側でハイライト）
-              leftMarkedText += `<DIFF_DELETE>${text}</DIFF_DELETE>`;
+              leftHtml += wrapWithDiffClass(text, -1);
               // 右側には追加しない
               break;
             case 1: // 追加（右側でハイライト）
-              rightMarkedText += `<DIFF_ADD>${text}</DIFF_ADD>`;
+              rightHtml += wrapWithDiffClass(text, 1);
               // 左側には追加しない
               break;
             case 0: // 変更なし（両側に追加）
-              leftMarkedText += text;
-              rightMarkedText += text;
+              leftHtml += text;
+              rightHtml += text;
               break;
           }
         }
-
-        const leftHtmlWithMarkers = markdownToHtml(leftMarkedText);
-        const rightHtmlWithMarkers = markdownToHtml(rightMarkedText);
 
         return {
           leftContent: (
             <div
               className="markdown-content prose prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: replaceDiffMarkersInHtml(leftHtmlWithMarkers) }}
+              dangerouslySetInnerHTML={{ __html: leftHtml }}
             />
           ),
           rightContent: (
             <div
               className="markdown-content prose prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: replaceDiffMarkersInHtml(rightHtmlWithMarkers) }}
+              dangerouslySetInnerHTML={{ __html: rightHtml }}
             />
           ),
           hasChanges: true,
@@ -262,6 +287,7 @@ export default function FixRequestDetailPage(): JSX.Element {
           params: { pull_request_id: id },
         }
       );
+      console.log('response', response);
       setDiffData(response);
     } catch (err) {
       console.error('修正リクエスト差分取得エラー:', err);

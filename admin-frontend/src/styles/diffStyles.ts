@@ -159,4 +159,58 @@ export const diffStyles = `
   .diff-deleted-container li::marker {
     color: #ff6b6b !important;
   }
+
+  /* ブロック要素専用の差分スタイル */
+  .diff-block-added {
+    background-color: rgba(63, 185, 80, 0.3) !important;
+    width: fit-content;
+    border-radius: 4px;
+    padding: 8px 12px !important;
+    margin: 4px 0 !important;
+    display: block !important;
+    color: #ffffff !important;
+  }
+
+  .diff-block-deleted {
+    background-color: rgba(248, 81, 73, 0.25) !important;
+    width: fit-content;
+    border-radius: 4px;
+    padding: 8px 12px !important;
+    margin: 4px 0 !important;
+    display: block !important;
+  }
+
+  /* ブロック要素内のテキストスタイル */
+  .diff-block-added h1,
+  .diff-block-added h2,
+  .diff-block-added h3,
+  .diff-block-added h4,
+  .diff-block-added h5,
+  .diff-block-added h6 {
+    color: #ffffff !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+  }
+
+  .diff-block-deleted h1,
+  .diff-block-deleted h2,
+  .diff-block-deleted h3,
+  .diff-block-deleted h4,
+  .diff-block-deleted h5,
+  .diff-block-deleted h6 {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-bottom: none !important;
+  }
+
+  /* ブロック要素内の段落スタイル */
+  .diff-block-added p {
+    color: #ffffff !important;
+    margin: 0 !important;
+  }
+
+  .diff-block-deleted p {
+    margin: 0 !important;
+  }
 `;
