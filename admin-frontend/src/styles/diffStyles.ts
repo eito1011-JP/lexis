@@ -148,24 +148,14 @@ export const diffStyles = `
   .diff-deleted-container h4,
   .diff-deleted-container h5,
   .diff-deleted-container h6 {
-    color: #ff6b6b !important;
     border-bottom-color: rgba(255, 107, 107, 0.3) !important;
   }
   
-  .diff-added-container li::marker {
-    color: #ffffff !important;
-  }
-  
-  .diff-deleted-container li::marker {
-    color: #ff6b6b !important;
-  }
-
   /* ブロック要素専用の差分スタイル */
   .diff-block-added {
     background-color: rgba(63, 185, 80, 0.3) !important;
     width: fit-content;
     border-radius: 4px;
-    padding: 8px 12px !important;
     margin: 4px 0 !important;
     display: block !important;
     color: #ffffff !important;
@@ -175,7 +165,6 @@ export const diffStyles = `
     background-color: rgba(248, 81, 73, 0.25) !important;
     width: fit-content;
     border-radius: 4px;
-    padding: 8px 12px !important;
     margin: 4px 0 !important;
     display: block !important;
   }

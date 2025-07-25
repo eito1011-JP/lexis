@@ -62,7 +62,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
   ): DiffFieldInfo => {
     if (!diffInfo) {
       return {
-        status: 'unchanged',
+        status: 'unchanged' as const,
         current: currentValue,
         original: originalValue,
       };
@@ -70,7 +70,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
 
     if (diffInfo.operation === 'deleted') {
       return {
-        status: 'deleted',
+        status: 'deleted' as const,
         current: null,
         original: originalValue,
       };
@@ -78,11 +78,12 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
 
     if (!diffInfo.changed_fields[fieldName]) {
       return {
-        status: 'unchanged',
+        status: 'unchanged' as const,
         current: currentValue,
         original: originalValue,
       };
     }
+
     return diffInfo.changed_fields[fieldName];
   };
 
@@ -282,7 +283,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                           return (
                             <div
                               key={category.id}
-                              className="bg-gray-900 rounded-lg border border-gray-800 p-6"
+                              className="rounded-lg border border-gray-800 p-6"
                             >
                               <SmartDiffValue
                                 label="Slug"
@@ -342,7 +343,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                           return (
                             <div
                               key={document.id}
-                              className="bg-gray-900 rounded-lg border border-gray-800 p-6"
+                              className="rounded-lg border border-gray-800 p-6"
                             >
                               <SlugBreadcrumb slug={document.slug} />
                               <SmartDiffValue
