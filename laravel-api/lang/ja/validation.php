@@ -134,6 +134,11 @@ return [
         'string' => 'アクション値は文字列である必要があります',
         'in' => 'アクション値にはpendingを指定してください',
     ],
+    'token' => [
+        'required' => 'トークンは必須です',
+        'string' => 'トークンは文字列である必要があります',
+        'max' => 'トークンは255文字以内で入力してください',
+    ],
     'attributes' => [
         'name' => 'カテゴリ名',
         'slug' => 'スラッグ',
@@ -149,6 +154,8 @@ return [
         'diff_items.*.type' => 'アイテムタイプ',
         'reviewers' => 'レビュアー',
         'reviewers.*' => 'レビュアーのメールアドレス',
+        'token' => 'トークン',
+        'pull_request_id' => 'プルリクエストID',
     ],
     'comment' => [
         'content' => [

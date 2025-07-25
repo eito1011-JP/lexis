@@ -1,7 +1,7 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Toast } from '@/components/admin/Toast';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
@@ -9,7 +9,6 @@ import { diffStyles } from '@/styles/diffStyles';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { makeDiff, cleanupSemantic } from '@sanity/diff-match-patch';
-import { replaceDiffMarkersInHtml } from '@/utils/diffUtils';
 
 // 差分データの型定義
 type DiffItem = {
@@ -256,11 +255,13 @@ const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
 export default function FixRequestDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
   // クエリパラメータからtokenを取得
   const searchParams = new URLSearchParams(location.search);
   const token = searchParams.get('token');
   const [diffData, setDiffData] = useState<FixRequestDiffResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -309,16 +310,18 @@ export default function FixRequestDetailPage(): JSX.Element {
     }
 
     try {
-      setLoading(true);
-      await apiClient.post(`/api/admin/fix-requests/${token}/apply`, {
-        pull_request_id: id,
+      setApplying(true);
+      await apiClient.post(`/api/admin/fix-requests/apply`, {
+        token: token,
       });
       setToast({ message: '修正リクエストが正常に適用されました', type: 'success' });
-    } catch (err) {
+
+      navigate(`/change-suggestions/${id}`);
+    } catch (err: any) {
       console.error('修正リクエスト適用エラー:', err);
       setToast({ message: '修正リクエストの適用に失敗しました', type: 'error' });
     } finally {
-      setLoading(false);
+      setApplying(false);
     }
   };
 
@@ -513,18 +516,16 @@ export default function FixRequestDetailPage(): JSX.Element {
         <div className="flex justify-center mt-8 mb-20">
           <button
             onClick={handleApplyFixRequest}
-            disabled={loading}
+            disabled={loading || applying}
             className="bg-[#3832A5] hover:bg-[#3832A5] disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-200 flex items-center space-x-2"
           >
-            {loading ? (
+            {applying ? (
               <>
                 <div className="animate-spin disabled:opacity-50 rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                <span>修正リクエストを適用</span>
+                <span>適用中...</span>
               </>
             ) : (
-              <>
-                <span>修正リクエストを適用</span>
-              </>
+              <span>修正リクエストを適用</span>
             )}
           </button>
         </div>

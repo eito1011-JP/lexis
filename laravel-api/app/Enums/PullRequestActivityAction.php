@@ -5,6 +5,7 @@ namespace App\Enums;
 enum PullRequestActivityAction: string
 {
     case FIX_REQUEST_SENT = 'fix_request_sent';
+    case FIX_REQUEST_APPLIED = 'fix_request_applied';
     case ASSIGNED_REVIEWER = 'assigned_reviewer';
     case REVIEWER_APPROVED = 'reviewer_approved';
     case COMMENTED = 'commented';
@@ -21,6 +22,7 @@ enum PullRequestActivityAction: string
     {
         return match ($this) {
             self::FIX_REQUEST_SENT => '修正リクエストが送信されました',
+            self::FIX_REQUEST_APPLIED => '修正リクエストが適用されました',
             self::ASSIGNED_REVIEWER => 'レビュワーが設定されました',
             self::REVIEWER_APPROVED => '変更提案が承認されました',
             self::COMMENTED => 'コメントが投稿されました',

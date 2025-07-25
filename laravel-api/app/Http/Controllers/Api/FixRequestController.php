@@ -6,11 +6,13 @@ use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestActivityAction;
+use App\Http\Requests\Api\FixRequest\ApplyFixRequestRequest;
 use App\Http\Requests\Api\FixRequest\GetFixRequestDiffRequest;
 use App\Http\Requests\Api\PullRequest\SendFixRequest;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Models\FixRequest;
 use App\Models\PullRequest;
 use App\Services\MdFileService;
@@ -303,6 +305,139 @@ class FixRequestController extends ApiBaseController
 
             return response()->json([
                 'error' => '修正リクエストの送信に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * 修正リクエストを適用する
+     */
+    public function applyFixRequest(ApplyFixRequestRequest $request): JsonResponse
+    {
+        DB::beginTransaction();
+
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. バリデーション済みデータを取得
+            $validated = $request->validated();
+            $token = $validated['token'];
+
+            // 3. fix_requestテーブルからtokenをwhereで絞り込みをかけてfirstOrFail
+            $fixRequests = FixRequest::with(['documentVersion', 'documentCategory'])
+                ->where('token', $token)
+                ->get();
+
+            if ($fixRequests->isEmpty()) {
+                return response()->json([
+                    'error' => '指定されたトークンの修正リクエストが見つかりません',
+                ], 404);
+            }
+
+            // 4. fix_requestsのdocument_version_idとdocument_category_idに紐づくレコードを取得
+            $documentVersionIds = $fixRequests->filter(function ($fixRequest) {
+                return $fixRequest->document_version_id !== null;
+            })->pluck('document_version_id')->toArray();
+
+            $documentCategoryIds = $fixRequests->filter(function ($fixRequest) {
+                return $fixRequest->document_category_id !== null;
+            })->pluck('document_category_id')->toArray();
+
+            $documentVersions = collect();
+            if (! empty($documentVersionIds)) {
+                $documentVersions = DocumentVersion::whereIn('id', $documentVersionIds)->get();
+            }
+
+            $documentCategories = collect();
+            if (! empty($documentCategoryIds)) {
+                $documentCategories = DocumentCategory::whereIn('id', $documentCategoryIds)->get();
+            }
+
+            // 5. edit_start_versionsにbulk insertするための変数を作成
+            $editStartVersionsData = [];
+
+            // ドキュメント版のedit_start_versions作成
+            foreach ($documentVersions as $docVersion) {
+                $fixRequest = $fixRequests->firstWhere('document_version_id', $docVersion->id);
+                $editStartVersionsData[] = [
+                    'user_branch_id' => $docVersion->user_branch_id,
+                    'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+                    'original_version_id' => $fixRequest->base_document_version_id,
+                    'current_version_id' => $docVersion->id,
+                ];
+            }
+
+            // カテゴリ版のedit_start_versions作成
+            foreach ($documentCategories as $docCategory) {
+                $fixRequest = $fixRequests->firstWhere('document_category_id', $docCategory->id);
+                $editStartVersionsData[] = [
+                    'user_branch_id' => $docCategory->user_branch_id,
+                    'target_type' => EditStartVersionTargetType::CATEGORY->value,
+                    'original_version_id' => $fixRequest->base_category_version_id,
+                    'current_version_id' => $docCategory->id,
+                ];
+            }
+
+            // 6. edit_start_versionsにbulk insert
+            if (! empty($editStartVersionsData)) {
+                EditStartVersion::insert($editStartVersionsData);
+            }
+
+            // 7. base_document_version_idとbase_category_version_idに紐づくedit_start_versionsを論理削除
+            $baseDocumentVersionIds = $fixRequests->filter(function ($fixRequest) {
+                return $fixRequest->base_document_version_id !== null;
+            })->pluck('base_document_version_id')->unique()->toArray();
+
+            $baseCategoryVersionIds = $fixRequests->filter(function ($fixRequest) {
+                return $fixRequest->base_category_version_id !== null;
+            })->pluck('base_category_version_id')->unique()->toArray();
+
+            // 元のedit_start_versionsを論理削除
+            if (! empty($baseDocumentVersionIds)) {
+                EditStartVersion::where('target_type', EditStartVersionTargetType::DOCUMENT->value)
+                    ->whereIn('current_version_id', $baseDocumentVersionIds)
+                    ->delete();
+            }
+
+            if (! empty($baseCategoryVersionIds)) {
+                EditStartVersion::where('target_type', EditStartVersionTargetType::CATEGORY->value)
+                    ->whereIn('current_version_id', $baseCategoryVersionIds)
+                    ->delete();
+            }
+
+            ActivityLogOnPullRequest::create([
+                'user_id' => $user->id,
+                'pull_request_id' => $fixRequests->first()->pull_request_id,
+                'comment_id' => null,
+                'reviewer_id' => null,
+                'action' => PullRequestActivityAction::FIX_REQUEST_APPLIED->value,
+                'old_pull_request_title' => null,
+                'new_pull_request_title' => null,
+                'fix_request_token' => $fixRequests->first()->token,
+            ]);
+
+            DB::commit();
+
+            return response()->json();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('修正リクエスト適用エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'token' => $token ?? null,
+                'user_id' => $user->id ?? null,
+            ]);
+
+            return response()->json([
+                'error' => '修正リクエストの適用に失敗しました',
             ], 500);
         }
     }
