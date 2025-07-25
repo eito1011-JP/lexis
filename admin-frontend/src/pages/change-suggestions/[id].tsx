@@ -199,7 +199,7 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
       case 'pull_request_title_edited':
         return 'タイトルが編集されました';
       case 'fix_request_applied':
-        return '修正リクエストが適用されました';
+        return '修正リクエストを適用しました';
       default:
         return 'アクション';
     }

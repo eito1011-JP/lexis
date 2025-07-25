@@ -32,6 +32,7 @@ type DiffItem = {
 
 // API レスポンスの型定義
 type FixRequestDiffResponse = {
+  status: string;
   current_pr: {
     documents: DiffItem[];
     categories: DiffItem[];
@@ -383,8 +384,13 @@ export default function FixRequestDetailPage(): JSX.Element {
 
   // fix_request の文書を基準にペアを作成
   diffData.fix_request.documents.forEach(fixRequestDoc => {
-    const currentDoc = diffData.current_pr.documents.find(
-      doc => doc.id === fixRequestDoc.base_document_version_id
+    // current_pr.documentsがEloquentコレクションの場合、配列に変換
+    const currentDocuments = Array.isArray(diffData.current_pr.documents)
+      ? diffData.current_pr.documents
+      : (Object.values(diffData.current_pr.documents || {}) as DiffItem[]);
+
+    const currentDoc = currentDocuments.find(
+      (doc: DiffItem) => doc.id === fixRequestDoc.base_document_version_id
     );
     documentPairs.push({
       current: currentDoc || null,
@@ -400,8 +406,13 @@ export default function FixRequestDetailPage(): JSX.Element {
 
   // fix_request のカテゴリを基準にペアを作成
   diffData.fix_request.categories.forEach(fixRequestCat => {
-    const currentCat = diffData.current_pr.categories.find(
-      cat => cat.id === fixRequestCat.base_category_version_id
+    // current_pr.categoriesがEloquentコレクションの場合、配列に変換
+    const currentCategories = Array.isArray(diffData.current_pr.categories)
+      ? diffData.current_pr.categories
+      : (Object.values(diffData.current_pr.categories || {}) as DiffItem[]);
+
+    const currentCat = currentCategories.find(
+      (cat: DiffItem) => cat.id === fixRequestCat.base_category_version_id
     );
     categoryPairs.push({
       current: currentCat || null,
@@ -418,7 +429,14 @@ export default function FixRequestDetailPage(): JSX.Element {
       <div className="mb-20 w-full rounded-lg relative">
         {/* ヘッダー */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-4">修正リクエスト詳細</h1>
+          <div className="flex items-center gap-4 mb-4">
+            <h1 className="text-3xl font-bold text-white">修正リクエスト詳細</h1>
+            {diffData.status === 'applied' && (
+              <span className="bg-green-600 text-white px-3 py-1 rounded-md text-sm font-medium">
+                適用済み
+              </span>
+            )}
+          </div>
           <div className="text-gray-400">
             変更提案 #{id} に対する修正リクエストの内容確認 (現在の変更提案 / 修正リクエスト)
           </div>
@@ -513,22 +531,24 @@ export default function FixRequestDetailPage(): JSX.Element {
         )}
 
         {/* 修正リクエスト適用ボタン */}
-        <div className="flex justify-center mt-8 mb-20">
-          <button
-            onClick={handleApplyFixRequest}
-            disabled={loading || applying}
-            className="bg-[#3832A5] hover:bg-[#3832A5] disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-200 flex items-center space-x-2"
-          >
-            {applying ? (
-              <>
-                <div className="animate-spin disabled:opacity-50 rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                <span>適用中...</span>
-              </>
-            ) : (
-              <span>修正リクエストを適用</span>
-            )}
-          </button>
-        </div>
+        {diffData.status !== 'applied' && (
+          <div className="flex justify-center mt-8 mb-20">
+            <button
+              onClick={handleApplyFixRequest}
+              disabled={loading || applying}
+              className="bg-[#3832A5] hover:bg-[#3832A5] disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-8 rounded-lg shadow-lg transition-all duration-200 flex items-center space-x-2"
+            >
+              {applying ? (
+                <>
+                  <div className="animate-spin disabled:opacity-50 rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                  <span>適用中...</span>
+                </>
+              ) : (
+                <span>修正リクエストを適用</span>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

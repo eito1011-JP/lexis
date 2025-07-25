@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
+use App\Enums\FixRequestStatus;
 use App\Enums\PullRequestActivityAction;
 use App\Http\Requests\Api\FixRequest\ApplyFixRequestRequest;
 use App\Http\Requests\Api\FixRequest\GetFixRequestDiffRequest;
@@ -55,46 +56,61 @@ class FixRequestController extends ApiBaseController
                 ], 404);
             }
 
-            // fix_requestのドキュメントとカテゴリを分離
+            // fix_requestのstatusを取得（全て同じstatusと仮定）
+            $status = FixRequestStatus::from($fixRequests->first()->status);
+
+            // fix_requestのデータ（statusに関わらず同じ）
             $fixRequestDocuments = $fixRequests->filter(function ($fixRequest) {
                 return $fixRequest->document_version_id !== null;
             })->map(function ($fixRequest) {
                 $document = $fixRequest->documentVersion;
-                if ($document) {
-                    $documentArray = $document->toArray();
-                    $documentArray['base_document_version_id'] = $fixRequest->base_document_version_id;
+                $document->base_document_version_id = $fixRequest->base_document_version_id;
 
-                    return $documentArray;
-                }
-
-                return null;
-            })->filter();
+                return $document;
+            })->values();
 
             $fixRequestCategories = $fixRequests->filter(function ($fixRequest) {
                 return $fixRequest->document_category_id !== null;
             })->map(function ($fixRequest) {
                 $category = $fixRequest->documentCategory;
-                if ($category) {
-                    $categoryArray = $category->toArray();
-                    $categoryArray['base_category_version_id'] = $fixRequest->base_category_version_id;
+                $category->base_category_version_id = $fixRequest->base_category_version_id;
 
-                    return $categoryArray;
+                return $category;
+            })->values();
+
+            // current_prのデータ（statusによって切り替え）
+            $currentDocuments = collect();
+            $currentCategories = collect();
+
+            if ($status === FixRequestStatus::PENDING) {
+                // 通常通りedit_start_versionsから
+                $editStartVersions = $currentPr->userBranch->editStartVersions;
+                $currentDocuments = $editStartVersions->where('target_type', EditStartVersionTargetType::DOCUMENT->value)->map(function ($esv) {
+                    return $esv->currentDocumentVersion;
+                })->filter();
+                $currentCategories = $editStartVersions->where('target_type', EditStartVersionTargetType::CATEGORY->value)->map(function ($esv) {
+                    return $esv->currentCategory;
+                })->filter();
+            } elseif ($status === FixRequestStatus::APPLIED) {
+                // fix_requestのbase_document_version_id/base_category_version_idから取得
+                $baseDocumentVersionIds = $fixRequests->filter(function ($fixRequest) {
+                    return $fixRequest->base_document_version_id !== null;
+                })->pluck('base_document_version_id')->toArray();
+                $baseCategoryVersionIds = $fixRequests->filter(function ($fixRequest) {
+                    return $fixRequest->base_category_version_id !== null;
+                })->pluck('base_category_version_id')->toArray();
+
+                if (! empty($baseDocumentVersionIds)) {
+                    $currentDocuments = DocumentVersion::whereIn('id', $baseDocumentVersionIds)->withTrashed()->get();
                 }
-
-                return null;
-            })->filter();
-
-            // 最新のedit_start_versionsからdocumentとcategoryを取得
-            $editStartVersions = $currentPr->userBranch->editStartVersions;
-            $currentDocuments = $editStartVersions->where('target_type', EditStartVersionTargetType::DOCUMENT->value)->map(function ($esv) {
-                return $esv->currentDocumentVersion;
-            });
-            $currentCategories = $editStartVersions->where('target_type', EditStartVersionTargetType::CATEGORY->value)->map(function ($esv) {
-                return $esv->currentCategory;
-            });
+                if (! empty($baseCategoryVersionIds)) {
+                    $currentCategories = DocumentCategory::whereIn('id', $baseCategoryVersionIds)->withTrashed()->get();
+                }
+            }
 
             // レスポンスデータを構築
             $response = [
+                'status' => $status->value,
                 'current_pr' => [
                     'documents' => $currentDocuments,
                     'categories' => $currentCategories,
@@ -330,7 +346,7 @@ class FixRequestController extends ApiBaseController
             $validated = $request->validated();
             $token = $validated['token'];
 
-            // 3. fix_requestテーブルからtokenをwhereで絞り込みをかけてfirstOrFail
+            // 3. fix_requestテーブルからtokenをwhereで絞り込みをかけてget
             $fixRequests = FixRequest::with(['documentVersion', 'documentCategory'])
                 ->where('token', $token)
                 ->get();
@@ -364,6 +380,7 @@ class FixRequestController extends ApiBaseController
             $editStartVersionsData = [];
 
             // ドキュメント版のedit_start_versions作成
+            $now = now();
             foreach ($documentVersions as $docVersion) {
                 $fixRequest = $fixRequests->firstWhere('document_version_id', $docVersion->id);
                 $editStartVersionsData[] = [
@@ -371,6 +388,8 @@ class FixRequestController extends ApiBaseController
                     'target_type' => EditStartVersionTargetType::DOCUMENT->value,
                     'original_version_id' => $fixRequest->base_document_version_id,
                     'current_version_id' => $docVersion->id,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
             }
 
@@ -382,6 +401,8 @@ class FixRequestController extends ApiBaseController
                     'target_type' => EditStartVersionTargetType::CATEGORY->value,
                     'original_version_id' => $fixRequest->base_category_version_id,
                     'current_version_id' => $docCategory->id,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
             }
 
@@ -390,7 +411,13 @@ class FixRequestController extends ApiBaseController
                 EditStartVersion::insert($editStartVersionsData);
             }
 
-            // 7. base_document_version_idとbase_category_version_idに紐づくedit_start_versionsを論理削除
+            // 6.5. fix_requestsのstatusをappliedに一括更新
+            $fixRequestIds = $fixRequests->pluck('id')->toArray();
+            if (! empty($fixRequestIds)) {
+                FixRequest::whereIn('id', $fixRequestIds)->update(['status' => 'applied']);
+            }
+
+            // 7. base_document_version_idとbase_category_version_idに紐づくdocument_versionsとdocument_categoriesを取得
             $baseDocumentVersionIds = $fixRequests->filter(function ($fixRequest) {
                 return $fixRequest->base_document_version_id !== null;
             })->pluck('base_document_version_id')->unique()->toArray();
@@ -412,6 +439,7 @@ class FixRequestController extends ApiBaseController
                     ->delete();
             }
 
+            // 8. activity_log_on_pull_requestsにアクティビティログを記録（fix_request_idをセット）
             ActivityLogOnPullRequest::create([
                 'user_id' => $user->id,
                 'pull_request_id' => $fixRequests->first()->pull_request_id,
@@ -421,6 +449,7 @@ class FixRequestController extends ApiBaseController
                 'old_pull_request_title' => null,
                 'new_pull_request_title' => null,
                 'fix_request_token' => $fixRequests->first()->token,
+                'fix_request_id' => $fixRequests->first()->id,
             ]);
 
             DB::commit();

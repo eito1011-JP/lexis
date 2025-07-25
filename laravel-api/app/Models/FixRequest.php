@@ -17,6 +17,7 @@ class FixRequest extends Model
         'base_category_version_id',
         'user_id',
         'pull_request_id',
+        'status',
     ];
 
     protected $casts = [
