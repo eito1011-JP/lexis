@@ -26,7 +26,7 @@ class FixRequestController extends ApiBaseController
     /**
      * 修正リクエストの差分データを取得
      */
-    public function getFixRequestDiff(GetFixRequestDiffRequest $request): JsonResponse
+    public function fetchFixRequestDiff(GetFixRequestDiffRequest $request): JsonResponse
     {
         // 認証ユーザーかチェック
         $user = $this->getUserFromSession();
@@ -91,7 +91,7 @@ class FixRequestController extends ApiBaseController
                 $currentCategories = $editStartVersions->where('target_type', EditStartVersionTargetType::CATEGORY->value)->map(function ($esv) {
                     return $esv->currentCategory;
                 })->filter();
-            } elseif ($status === FixRequestStatus::APPLIED) {
+            } elseif ($status === FixRequestStatus::APPLIED || $status === FixRequestStatus::ARCHIVED) {
                 // fix_requestのbase_document_version_id/base_category_version_idから取得
                 $baseDocumentVersionIds = $fixRequests->filter(function ($fixRequest) {
                     return $fixRequest->base_document_version_id !== null;
@@ -266,6 +266,7 @@ class FixRequestController extends ApiBaseController
 
             // 10. fix_requestsテーブル用のデータを準備
             // document_versions: base_document_version_idをセット
+            $now = now();
             foreach ($newDocumentVersionIds as $index => $newDocVersionId) {
                 $baseDocVersionId = $documentVersionIds[$index] ?? null; // 送信元のid
                 $fixRequestsData[] = [
@@ -276,6 +277,8 @@ class FixRequestController extends ApiBaseController
                     'base_category_version_id' => null,
                     'user_id' => $user->id,
                     'pull_request_id' => $pullRequest->id,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
             }
 
@@ -290,6 +293,8 @@ class FixRequestController extends ApiBaseController
                     'base_category_version_id' => $baseCategoryId,
                     'user_id' => $user->id,
                     'pull_request_id' => $pullRequest->id,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
             }
 
@@ -414,8 +419,10 @@ class FixRequestController extends ApiBaseController
             // 6.5. fix_requestsのstatusをappliedに一括更新
             $fixRequestIds = $fixRequests->pluck('id')->toArray();
             if (! empty($fixRequestIds)) {
-                FixRequest::whereIn('id', $fixRequestIds)->update(['status' => 'applied']);
+                FixRequest::whereIn('id', $fixRequestIds)->update(['status' => FixRequestStatus::APPLIED->value]);
             }
+
+            FixRequest::where('pull_request_id', $fixRequests->first()->pull_request_id)->where('created_at', '<', $fixRequests->first()->created_at)->update(['status' => FixRequestStatus::ARCHIVED->value, 'updated_at' => now()]);
 
             // 7. base_document_version_idとbase_category_version_idに紐づくdocument_versionsとdocument_categoriesを取得
             $baseDocumentVersionIds = $fixRequests->filter(function ($fixRequest) {

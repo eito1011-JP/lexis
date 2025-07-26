@@ -51,7 +51,7 @@ const SmartDiffValue: React.FC<{
   isMarkdown?: boolean;
 }> = ({ label, currentValue, fixRequestValue, isMarkdown = false }) => {
   const renderValue = (value: any) => {
-    if (value === null || value === undefined) return '(なし)';
+    if (value === null || value === undefined) return '';
     if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
     return String(value);
   };
@@ -216,9 +216,9 @@ const SmartDiffValue: React.FC<{
 
       <div className="grid grid-cols-2 gap-4">
         {/* 現在の変更提案 */}
-        <div>
+        <div className="flex">
           <div
-            className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800
+            className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800 w-full min-h-[2.75rem] flex items-start
             }`}
           >
             {typeof leftContent === 'string' ? leftContent : leftContent}
@@ -226,8 +226,10 @@ const SmartDiffValue: React.FC<{
         </div>
 
         {/* 修正リクエスト */}
-        <div>
-          <div className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800`}>
+        <div className="flex">
+          <div
+            className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800 w-full min-h-[2.75rem] flex items-start`}
+          >
             {typeof rightContent === 'string' ? rightContent : rightContent}
           </div>
         </div>
@@ -436,6 +438,11 @@ export default function FixRequestDetailPage(): JSX.Element {
                 適用済み
               </span>
             )}
+            {diffData.status === 'archived' && (
+              <span className="bg-gray-600 text-white px-3 py-1 rounded-md text-sm font-medium">
+                アーカイブ済み
+              </span>
+            )}
           </div>
           <div className="text-gray-400">
             変更提案 #{id} に対する修正リクエストの内容確認 (現在の変更提案 / 修正リクエスト)
@@ -531,7 +538,7 @@ export default function FixRequestDetailPage(): JSX.Element {
         )}
 
         {/* 修正リクエスト適用ボタン */}
-        {diffData.status !== 'applied' && (
+        {diffData.status !== 'applied' && diffData.status !== 'archived' && (
           <div className="flex justify-center mt-8 mb-20">
             <button
               onClick={handleApplyFixRequest}

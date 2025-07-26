@@ -15,7 +15,7 @@ export const SmartDiffValue: React.FC<SmartDiffValueProps> = ({
   isMarkdown = false,
 }) => {
   const renderValue = (value: any) => {
-    if (value === null || value === undefined) return '(なし)';
+    if (value === null || value === undefined) return '';
     if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
     return String(value);
   };

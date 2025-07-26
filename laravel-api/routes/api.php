@@ -93,7 +93,7 @@ Route::middleware('auth.session')->group(function () {
 
     // 修正リクエスト関連
     Route::prefix('admin/fix-requests')->group(function () {
-        Route::get('/{token}', [FixRequestController::class, 'getFixRequestDiff']);
+        Route::get('/{token}', [FixRequestController::class, 'fetchFixRequestDiff']);
         Route::post('/apply', [FixRequestController::class, 'applyFixRequest']);
     });
 });
