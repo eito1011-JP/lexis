@@ -23,6 +23,7 @@ class DeleteDocumentCategoryRequest extends FormRequest
     {
         return [
             'category_path_with_slug' => 'nullable|string|max:255',
+            'edit_pull_request_id' => 'nullable|integer',
         ];
     }
 

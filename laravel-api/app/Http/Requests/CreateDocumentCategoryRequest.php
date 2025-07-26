@@ -32,6 +32,7 @@ class CreateDocumentCategoryRequest extends FormRequest
             'position' => 'nullable|numeric',
             'description' => 'nullable|string',
             'category_path' => 'nullable|string',
+            'edit_pull_request_id' => 'nullable|integer',
         ];
     }
 }

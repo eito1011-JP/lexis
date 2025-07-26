@@ -132,23 +132,34 @@ export default function CreateDocumentPage(): JSX.Element {
 
       const queryParams = new URLSearchParams(window.location.search);
       const category = queryParams.get('category');
+      const editPullRequestId = queryParams.get('edit_pull_request_id');
 
       // HTMLコンテンツをそのまま使用（サーバーサイドで変換される）
       const finalMarkdownContent = content;
 
-      // ドキュメント作成APIを呼び出す（パスパラメータでcategory_pathを渡す）
-      await apiClient.post(`${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE}`, {
+      // APIリクエストのペイロードを構築
+      const payload: any = {
         category_path: category,
         sidebar_label: label,
         content: finalMarkdownContent,
         is_public: publicOption === '公開する', // 公開設定を真偽値に変換
         slug,
         file_order: fileOrder,
-      });
+      };
+      if (editPullRequestId) {
+        payload.edit_pull_request_id = editPullRequestId;
+      }
+
+      // ドキュメント作成APIを呼び出す
+      await apiClient.post(`${API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE}`, payload);
 
       alert('ドキュメントが作成されました');
       // 成功したら一覧ページに戻る
-      window.location.href = `/admin/documents/${category ?? ''}`;
+      let redirectUrl = `/admin/documents/${category ?? ''}`;
+      if (editPullRequestId) {
+        redirectUrl += `?edit_pull_request_id=${editPullRequestId}`;
+      }
+      window.location.href = redirectUrl;
     } catch (error: unknown) {
       console.error('ドキュメント作成エラー:', error);
       const apiError = error as ApiError;

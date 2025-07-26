@@ -166,8 +166,12 @@ export default function EditDocumentPage(): JSX.Element {
       // HTMLコンテンツをそのまま使用（サーバーサイドで変換される）
       const finalMarkdownContent = content;
 
-      // ドキュメント編集APIを呼び出す
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}`, {
+      // URLからedit_pull_request_idを取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const editPullRequestId = urlParams.get('edit_pull_request_id');
+
+      // APIリクエストのペイロードを構築
+      const payload: any = {
         category_path_with_slug: category ? `${category}/${documentSlug}` : documentSlug,
         current_document_id: documentId,
         sidebar_label: label,
@@ -175,7 +179,15 @@ export default function EditDocumentPage(): JSX.Element {
         is_public: publicOption === '公開する',
         slug: documentSlug,
         file_order: fileOrder === '' ? null : Number(fileOrder),
-      });
+      };
+
+      // edit_pull_request_idが存在する場合のみ追加
+      if (editPullRequestId) {
+        payload.edit_pull_request_id = editPullRequestId;
+      }
+
+      // ドキュメント編集APIを呼び出す
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}`, payload);
 
       // 成功メッセージを表示
       setToastMessage('編集が完了しました');
@@ -184,7 +196,11 @@ export default function EditDocumentPage(): JSX.Element {
 
       // トースト表示後にリダイレクト
       setTimeout(() => {
-        window.location.href = category ? `/admin/documents/${category}` : '/admin/documents';
+        let redirectUrl = category ? `/admin/documents/${category}` : '/admin/documents';
+        if (editPullRequestId) {
+          redirectUrl += `?edit_pull_request_id=${editPullRequestId}`;
+        }
+        window.location.href = redirectUrl;
       }, 1500);
     } catch (error) {
       console.error('ドキュメント編集エラー:', error);

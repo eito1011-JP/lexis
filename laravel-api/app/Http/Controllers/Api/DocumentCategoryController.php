@@ -81,7 +81,7 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
             // カテゴリパスの取得と処理
             $categoryPath = array_filter(explode('/', $request->category_path));
@@ -145,7 +145,7 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
             $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
@@ -223,7 +223,7 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             // ユーザーのアクティブブランチ確認
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
             // カテゴリパスの取得と処理
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));

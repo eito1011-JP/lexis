@@ -30,6 +30,7 @@ class CreateDocumentRequest extends FormRequest
             'is_public' => 'boolean',
             'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path, null, null)],
             'file_order' => 'nullable|integer',
+            'edit_pull_request_id' => 'nullable|integer',
         ];
     }
 
@@ -44,6 +45,7 @@ class CreateDocumentRequest extends FormRequest
             'content' => __('validation.document.content.required'),
             'slug' => __('validation.document.slug.required'),
             'file_order' => __('validation.document.file_order.integer'),
+            'edit_pull_request_id' => __('validation.document.edit_pull_request_id.integer'),
         ];
     }
 

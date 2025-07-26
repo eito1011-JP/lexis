@@ -33,6 +33,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
             'sidebar_label' => 'required|string|max:255',
             'position' => 'required|integer',
             'description' => 'nullable|string',
+            'edit_pull_request_id' => 'nullable|integer',
         ];
     }
 }

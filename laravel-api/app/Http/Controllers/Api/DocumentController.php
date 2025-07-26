@@ -162,8 +162,9 @@ class DocumentController extends ApiBaseController
                     'error' => '認証が必要です',
                 ], 401);
             }
+            Log::info('request', $request->all());
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
             $categoryId = DocumentCategory::getIdFromPath($categoryPath);
@@ -288,7 +289,7 @@ class DocumentController extends ApiBaseController
             }
 
             // アクティブブランチを取得
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
             // file_orderの処理
             $categoryId = $existingDocument->category_id;
@@ -438,7 +439,7 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
+            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));
             $slug = array_pop($pathParts);
@@ -456,9 +457,6 @@ class DocumentController extends ApiBaseController
                     'error' => '削除対象のドキュメントが見つかりません',
                 ], 404);
             }
-
-            // 4. ユーザーのアクティブブランチ確認
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user);
 
             // 5. 既存ドキュメントを論理削除（is_deleted = 1に更新）
             $existingDocument->delete();

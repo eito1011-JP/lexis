@@ -204,13 +204,25 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      const response = await apiClient.post(`${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`, {
+      // URLからedit_pull_request_idを取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const editPullRequestId = urlParams.get('edit_pull_request_id');
+
+      // APIリクエストのペイロードを構築
+      const payload: any = {
         slug,
         sidebar_label: label,
         position: positionNum,
         description,
         category_path: null, // index.tsxはカテゴリ階層の一番上なので、category_pathはnull
-      });
+      };
+
+      // edit_pull_request_idが存在する場合のみ追加
+      if (editPullRequestId) {
+        payload.edit_pull_request_id = editPullRequestId;
+      }
+
+      const response = await apiClient.post(`${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`, payload);
 
       // 新しいカテゴリをリストに追加
       if (response.slug) {
@@ -264,14 +276,26 @@ export default function DocumentsPage(): JSX.Element {
       // positionを数値に変換
       const positionNum = position ? parseInt(position, 10) : undefined;
 
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`, {
+      // URLからedit_pull_request_idを取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const editPullRequestId = urlParams.get('edit_pull_request_id');
+
+      // APIリクエストのペイロードを構築
+      const payload: any = {
         current_category_id: editingCategory.id,
         category_path: null,
         slug,
         sidebar_label: label,
         position: positionNum,
         description,
-      });
+      };
+
+      // edit_pull_request_idが存在する場合のみ追加
+      if (editPullRequestId) {
+        payload.edit_pull_request_id = editPullRequestId;
+      }
+
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`, payload);
 
       setToastMessage('カテゴリが更新されました');
       setToastType('success');
@@ -302,9 +326,17 @@ export default function DocumentsPage(): JSX.Element {
     setDeleteError(null);
 
     try {
-      await apiClient.delete(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}`
-      );
+      // URLからedit_pull_request_idを取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const editPullRequestId = urlParams.get('edit_pull_request_id');
+
+      // APIリクエストのURLを構築
+      let deleteUrl = `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}`;
+      if (editPullRequestId) {
+        deleteUrl += `&edit_pull_request_id=${editPullRequestId}`;
+      }
+
+      await apiClient.delete(deleteUrl);
 
       // 即座にページをリロード
       window.location.reload();
@@ -343,9 +375,17 @@ export default function DocumentsPage(): JSX.Element {
     setCategoryDeleteError(null);
 
     try {
-      await apiClient.delete(
-        `${API_CONFIG.ENDPOINTS.CATEGORIES.DELETE}?category_path_with_slug=${categoryToDelete.slug}`
-      );
+      // URLからedit_pull_request_idを取得
+      const urlParams = new URLSearchParams(window.location.search);
+      const editPullRequestId = urlParams.get('edit_pull_request_id');
+
+      // APIリクエストのURLを構築
+      let deleteUrl = `${API_CONFIG.ENDPOINTS.CATEGORIES.DELETE}?category_path_with_slug=${categoryToDelete.slug}`;
+      if (editPullRequestId) {
+        deleteUrl += `&edit_pull_request_id=${editPullRequestId}`;
+      }
+
+      await apiClient.delete(deleteUrl);
 
       // トーストメッセージを表示
       setToastMessage('カテゴリが削除されました');
@@ -569,7 +609,7 @@ export default function DocumentsPage(): JSX.Element {
                             <ul className="py-1">
                               <li>
                                 <a
-                                  href={`/admin/documents/${document.slug}/edit`}
+                                  href={`/admin/documents/${document.slug}/edit${searchParams.get('edit_pull_request_id') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}` : ''}`}
                                   className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer text-left"
                                   style={{ textAlign: 'left' }}
                                 >
@@ -719,7 +759,9 @@ export default function DocumentsPage(): JSX.Element {
 
               <button
                 className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-                onClick={() => (window.location.href = '/admin/documents/create')}
+                onClick={() =>
+                  (window.location.href = `/admin/documents/create${searchParams.get('edit_pull_request_id') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}` : ''}`)
+                }
               >
                 <svg
                   className="w-5 h-5 mr-2"
