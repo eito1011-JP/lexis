@@ -2,6 +2,7 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
@@ -33,6 +34,7 @@ type DocumentItem = {
  */
 export default function DocumentsPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
+  const [searchParams] = useSearchParams();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -95,7 +97,20 @@ export default function DocumentsPage(): JSX.Element {
   useEffect(() => {
     const getDocuments = async () => {
       try {
-        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}`);
+        // URLのクエリパラメータからedit_pull_request_idを取得
+        const editPullRequestId = searchParams.get('edit_pull_request_id');
+
+        // クエリパラメータを構築
+        const queryParams = new URLSearchParams();
+        if (editPullRequestId) {
+          queryParams.append('edit_pull_request_id', editPullRequestId);
+        }
+
+        const url = editPullRequestId
+          ? `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}?${queryParams.toString()}`
+          : `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}`;
+
+        const response = await apiClient.get(url);
 
         if (response) {
           setCategories(response.categories);

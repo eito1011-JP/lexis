@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Constants\DocumentCategoryConstants;
+use App\Enums\FixRequestStatus;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -75,6 +76,19 @@ class DocumentCategory extends Model
                         $subQ->where('user_branch_id', $userBranchId)
                             ->where('status', 'draft');
                     });
+            })
+            ->when($userBranchId, function ($query, $userBranchId) {
+                $appliedFixRequestCategoryIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
+                    ->whereNotNull('document_category_id')
+                    ->whereHas('documentCategory', function ($q) use ($userBranchId) {
+                        $q->where('user_branch_id', $userBranchId);
+                    })
+                    ->pluck('document_category_id')
+                    ->toArray();
+
+                if (! empty($appliedFixRequestCategoryIds)) {
+                    $query->orWhereIn('id', $appliedFixRequestCategoryIds);
+                }
             });
 
         return $query->orderBy('position', 'asc')->get();

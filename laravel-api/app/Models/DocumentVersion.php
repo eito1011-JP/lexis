@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DocumentStatus;
+use App\Enums\FixRequestStatus;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -50,6 +51,20 @@ class DocumentVersion extends Model
                         $subQ->where('user_branch_id', $userBranchId)
                             ->where('status', DocumentStatus::DRAFT->value);
                     });
+            })
+            ->when($userBranchId, function ($query, $userBranchId) use ($categoryId) {
+                $appliedFixRequestDocumentIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
+                    ->whereNotNull('document_version_id')
+                    ->whereHas('documentVersion', function ($q) use ($userBranchId, $categoryId) {
+                        $q->where('user_branch_id', $userBranchId)
+                            ->where('category_id', $categoryId);
+                    })
+                    ->pluck('document_version_id')
+                    ->toArray();
+
+                if (! empty($appliedFixRequestDocumentIds)) {
+                    $query->orWhereIn('id', $appliedFixRequestDocumentIds);
+                }
             });
 
         return $query->get();

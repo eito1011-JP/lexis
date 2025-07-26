@@ -14,6 +14,7 @@ use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
+use App\Models\PullRequest;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
@@ -75,6 +76,12 @@ class DocumentController extends ApiBaseController
             $parentId = DocumentCategory::getIdFromPath($categoryPath);
 
             $userBranchId = $user->userBranches()->active()->orderBy('id', 'desc')->first()->id ?? null;
+
+            // edit_pull_request_idが存在する場合、プルリクエストからuser_branch_idを取得
+            if ($request->edit_pull_request_id) {
+                $pullRequest = PullRequest::find($request->edit_pull_request_id);
+                $userBranchId = $pullRequest?->user_branch_id ?? null;
+            }
 
             // サブカテゴリを取得
             $subCategories = DocumentCategory::getSubCategories($parentId, $userBranchId);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
@@ -46,7 +47,14 @@ class FixRequestController extends ApiBaseController
                 ->findOrFail($pullRequestId);
 
             // tokenで修正リクエストのレコードをリレーション込みで取得（複数レコードあり得る）
-            $fixRequests = FixRequest::with(['documentVersion', 'documentCategory', 'baseDocumentVersion', 'baseCategory'])
+            $fixRequests = FixRequest::with([
+                'documentVersion' => function ($query) {
+                    $query->withTrashed();
+                },
+                'documentCategory' => function ($query) {
+                    $query->withTrashed();
+                },
+            ])
                 ->where('token', $token)
                 ->get();
 
@@ -352,7 +360,14 @@ class FixRequestController extends ApiBaseController
             $token = $validated['token'];
 
             // 3. fix_requestテーブルからtokenをwhereで絞り込みをかけてget
-            $fixRequests = FixRequest::with(['documentVersion', 'documentCategory'])
+            $fixRequests = FixRequest::with([
+                'documentVersion' => function ($query) {
+                    $query->withTrashed();
+                },
+                'documentCategory' => function ($query) {
+                    $query->withTrashed();
+                },
+            ])
                 ->where('token', $token)
                 ->get();
 
@@ -424,6 +439,26 @@ class FixRequestController extends ApiBaseController
 
             FixRequest::where('pull_request_id', $fixRequests->first()->pull_request_id)->where('created_at', '<', $fixRequests->first()->created_at)->update(['status' => FixRequestStatus::ARCHIVED->value, 'updated_at' => now()]);
 
+            // 8. 古いFixRequestに紐づくDocumentVersion（status = FIX_REQUEST）をis_deleted=1, updated_at=now()でbulk update
+            $archivedFixRequests = FixRequest::where('pull_request_id', $fixRequests->first()->pull_request_id)
+                ->where('created_at', '<', $fixRequests->first()->created_at)
+                ->get();
+
+            $archivedDocumentVersionIds = $archivedFixRequests->pluck('document_version_id')->filter()->unique()->toArray();
+            if (! empty($archivedDocumentVersionIds)) {
+                DocumentVersion::whereIn('id', $archivedDocumentVersionIds)
+                    ->where('status', DocumentStatus::FIX_REQUEST->value)
+                    ->update(['is_deleted' => Flag::TRUE, 'updated_at' => $now, 'deleted_at' => $now]);
+            }
+
+            // 9. 古いFixRequestに紐づくDocumentCategory（status = FIX_REQUEST）をis_deleted=1, updated_at=now()でbulk update
+            $archivedDocumentCategoryIds = $archivedFixRequests->pluck('document_category_id')->filter()->unique()->toArray();
+            if (! empty($archivedDocumentCategoryIds)) {
+                DocumentCategory::whereIn('id', $archivedDocumentCategoryIds)
+                    ->where('status', DocumentCategoryStatus::FIX_REQUEST->value)
+                    ->update(['is_deleted' => Flag::TRUE, 'updated_at' => $now, 'deleted_at' => $now]);
+            }
+
             // 7. base_document_version_idとbase_category_version_idに紐づくdocument_versionsとdocument_categoriesを取得
             $baseDocumentVersionIds = $fixRequests->filter(function ($fixRequest) {
                 return $fixRequest->base_document_version_id !== null;
@@ -435,12 +470,16 @@ class FixRequestController extends ApiBaseController
 
             // 元のedit_start_versionsを論理削除
             if (! empty($baseDocumentVersionIds)) {
+                DocumentVersion::whereIn('id', $baseDocumentVersionIds)->update(['is_deleted' => Flag::TRUE, 'updated_at' => $now, 'deleted_at' => $now]);
+
                 EditStartVersion::where('target_type', EditStartVersionTargetType::DOCUMENT->value)
                     ->whereIn('current_version_id', $baseDocumentVersionIds)
                     ->delete();
             }
 
             if (! empty($baseCategoryVersionIds)) {
+                DocumentCategory::whereIn('id', $baseCategoryVersionIds)->update(['is_deleted' => Flag::TRUE, 'updated_at' => $now, 'deleted_at' => $now]);
+
                 EditStartVersion::where('target_type', EditStartVersionTargetType::CATEGORY->value)
                     ->whereIn('current_version_id', $baseCategoryVersionIds)
                     ->delete();

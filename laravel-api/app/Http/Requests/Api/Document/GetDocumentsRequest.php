@@ -23,6 +23,7 @@ class GetDocumentsRequest extends FormRequest
     {
         return [
             'category_path' => 'nullable|string|max:1000',
+            'edit_pull_request_id' => 'nullable|integer',
         ];
     }
 }

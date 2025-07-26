@@ -2,7 +2,7 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   fetchPullRequestDetail,
   approvePullRequest,
@@ -30,6 +30,7 @@ import { TABS } from '@/types/diff';
 export default function ChangeSuggestionDiffPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -182,8 +183,8 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
         window.location.href = `/admin/change-suggestions/${id}/fix-request`;
         break;
       case 're_edit_proposal':
-        console.log('変更提案を再編集');
-        // TODO: 変更提案の再編集画面への遷移
+        // 変更提案の再編集画面に遷移
+        navigate(`/documents?edit_pull_request_id=${id}`);
         break;
       case 'approve_changes':
         try {
