@@ -59,5 +59,8 @@ export const API_CONFIG = {
     FIX_REQUESTS: {
       GET_DIFF: '/api/admin/fix-requests/:token',
     },
+    ACTIVITY_LOGS: {
+      CREATE: '/api/admin/activity-logs',
+    },
   },
 };

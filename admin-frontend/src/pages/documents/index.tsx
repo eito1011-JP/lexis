@@ -10,6 +10,7 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
+import { createActivityLogOnPullRequest } from '@/api/pullRequest';
 // カテゴリの型定義
 type Category = {
   id: number;
@@ -736,10 +737,21 @@ export default function DocumentsPage(): JSX.Element {
               {searchParams.get('edit_pull_request_id') ? (
                 <button
                   className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-                  onClick={() => {
+                  onClick={async () => {
                     const editPullRequestId = searchParams.get('edit_pull_request_id');
                     if (editPullRequestId) {
-                      window.location.href = `/admin/change-suggestions/${editPullRequestId}/diff`;
+                      try {
+                        // 編集終了を記録
+                        await createActivityLogOnPullRequest(editPullRequestId);
+                        
+                        // 差分確認画面に遷移
+                        window.location.href = `/admin/change-suggestions/${editPullRequestId}/diff`;
+                      } catch (error) {
+                        console.error('編集終了記録エラー:', error);
+                        setToastMessage('編集終了の記録に失敗しました');
+                        setToastType('error');
+                        setShowToast(true);
+                      }
                     }
                   }}
                 >

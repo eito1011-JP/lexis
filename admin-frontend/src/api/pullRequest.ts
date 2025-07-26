@@ -168,3 +168,18 @@ export const fetchActivityLog = async (pullRequestId: string): Promise<ActivityL
     throw new Error('アクティビティログの取得に失敗しました');
   }
 };
+
+/**
+ * 編集終了を記録する
+ */
+export const createActivityLogOnPullRequest = async (pullRequestId: string): Promise<void> => {
+  try {
+    await apiClient.post(`${API_CONFIG.ENDPOINTS.ACTIVITY_LOGS.CREATE}`, {
+      pull_request_id: pullRequestId,
+      action: 'pull_request_edited',
+    });
+  } catch (error: any) {
+    console.error('編集終了記録エラー:', error);
+    throw new Error('編集終了の記録に失敗しました');
+  }
+};

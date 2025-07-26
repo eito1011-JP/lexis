@@ -189,15 +189,15 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
       case 'commented':
         return 'コメントが投稿されました';
       case 'pull_request_merged':
-        return 'プルリクエストがマージされました';
+        return '変更提案を反映しました';
       case 'pull_request_closed':
-        return 'プルリクエストがクローズされました';
+        return '変更提案を取り下げました';
       case 'pull_request_reopened':
-        return 'プルリクエストが再オープンされました';
+        return '変更提案を再オープンしました';
       case 'pull_request_edited':
-        return 'プルリクエストが編集されました';
+        return '変更提案を編集しました';
       case 'pull_request_title_edited':
-        return 'タイトルが編集されました';
+        return '変更提案のタイトルを編集しました';
       case 'fix_request_applied':
         return '修正リクエストを適用しました';
       default:
@@ -245,9 +245,7 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
         );
       case 'pull_request_edited':
         return (
-          <div className="flex items-center justify-center rounded-full w-8 h-8 bg-yellow-600">
             <PullRequestEditedLog className="w-4 h-4 text-white" />
-          </div>
         );
       case 'pull_request_title_edited':
         return (

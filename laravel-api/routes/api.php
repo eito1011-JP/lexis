@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ActivityLogOnPullRequestController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
@@ -58,6 +59,11 @@ Route::middleware('auth.session')->group(function () {
         Route::patch('/{id}/close', [PullRequestController::class, 'close']);
         Route::patch('/{id}/approve', [PullRequestController::class, 'approve']);
         Route::patch('/{id}/title', [PullRequestController::class, 'updateTitle']);
+    });
+
+    // アクティビティログ関連
+    Route::prefix('admin/activity-logs')->group(function () {
+        Route::post('/', [ActivityLogOnPullRequestController::class, 'create']);
     });
 
     // コメント関連
