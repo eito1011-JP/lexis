@@ -64,6 +64,7 @@ Route::middleware('auth.session')->group(function () {
 
     // プルリクエスト編集セッション関連
     Route::prefix('admin/pull-request-edit-sessions')->group(function () {
+        Route::get('/', [PullRequestEditSessionController::class, 'fetchEditDiff']);
         Route::post('/', [PullRequestEditSessionController::class, 'startEditingPullRequest']);
         Route::patch('/', [PullRequestEditSessionController::class, 'finishEditingPullRequest']);
     });

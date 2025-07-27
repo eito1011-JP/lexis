@@ -145,6 +145,22 @@ class DocumentCategory extends Model
     }
 
     /**
+     * 編集開始バージョンとのリレーション（オリジナルバージョンとして）
+     */
+    public function originalEditStartVersions()
+    {
+        return $this->hasMany(EditStartVersion::class, 'original_version_id');
+    }
+
+    /**
+     * 編集開始バージョンとのリレーション（現在のバージョンとして）
+     */
+    public function currentEditStartVersions()
+    {
+        return $this->hasMany(EditStartVersion::class, 'current_version_id');
+    }
+
+    /**
      * 親カテゴリのパスを取得
      */
     public function getParentPathAttribute(): ?string

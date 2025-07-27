@@ -305,6 +305,20 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
             {log.actor?.name || log.actor?.email || 'システム'} さんが 変更提案タイトルを「
             {log.old_pull_request_title}」 から 「{log.new_pull_request_title}」に変更しました
           </div>
+        ) : log.action === 'pull_request_edited' && log.pull_request_edit_session?.token ? (
+          /* 変更提案編集の場合はクリック可能なリンクを表示 */
+          <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
+            {log.actor?.name || 'システム'}さんが
+            <a
+              href={`/admin/change-suggestions/${pullRequestId}/pull_request_edit_sessions/${log.pull_request_edit_session.token}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mx-1 text-blue-400 hover:text-blue-300 underline cursor-pointer"
+            >
+              変更提案
+            </a>
+            を編集しました
+          </div>
         ) : log.action === 'fix_request_sent' && log.fix_request_token ? (
           /* 修正リクエスト送信の場合はクリック可能なリンクを表示 */
           <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">

@@ -16,7 +16,7 @@ export const SmartDiffValue: React.FC<SmartDiffValueProps> = ({
 }) => {
   const renderValue = (value: any) => {
     if (value === null || value === undefined) return '';
-    if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
+    if (typeof value === 'boolean') return value ? '非公開' : '公開する';
     return String(value);
   };
 

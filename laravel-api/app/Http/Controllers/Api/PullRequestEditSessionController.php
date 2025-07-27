@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\Flag;
 use App\Enums\PullRequestActivityAction;
+use App\Http\Requests\Api\PullRequestEditSession\FetchEditDiffRequest;
 use App\Http\Requests\Api\PullRequestEditSession\FinishEditingRequest;
 use App\Http\Requests\Api\PullRequestEditSession\StartEditingRequest;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
+use App\Services\DocumentDiffService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +18,78 @@ use Illuminate\Support\Str;
 
 class PullRequestEditSessionController extends ApiBaseController
 {
+    protected $documentDiffService;
+
+    public function __construct(DocumentDiffService $documentDiffService)
+    {
+        $this->documentDiffService = $documentDiffService;
+    }
+
+    /**
+     * プルリクエスト編集差分を取得する
+     */
+    public function fetchEditDiff(FetchEditDiffRequest $request): JsonResponse
+    {
+        try {
+            // 1. 認証ユーザーか確認
+            $user = $this->getUserFromSession();
+
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証されていません',
+                ], 401);
+            }
+
+            // 2. query stringのpull_request_edit_sessions.tokenをform requestでvalidation（FetchEditDiffRequestで済み）
+            $token = $request->validated('token');
+
+            // 3. pull_request_edit_sessionsに対してwhere token = request.tokenでfirstOrFail
+            $editSession = PullRequestEditSession::where('token', $token)
+                ->with([
+                    'pullRequest.userBranch.editStartVersions',
+                    'pullRequest.userBranch.editStartVersions.originalDocumentVersion',
+                    'pullRequest.userBranch.editStartVersions.currentDocumentVersion',
+                    'pullRequest.userBranch.editStartVersions.originalCategory',
+                    'pullRequest.userBranch.editStartVersions.currentCategory',
+                    'documentVersions',
+                    'documentCategories',
+                ])
+                ->firstOrFail();
+
+            // 4. pull_request_edit_sessionsに紐づくdocument_versionsとdocument_categoriesとそれら各々に紐づくedit_start_versionsも取得
+            // PullRequest経由でUserBranchのEditStartVersionsを取得
+            $editStartVersions = $editSession->pullRequest->userBranch->editStartVersions;
+
+            // 5. $this->documentDiffService->generateDiffData(d.edit_start_versions)
+            $diffData = $this->documentDiffService->generateDiffData($editStartVersions);
+
+            // 6. return response()->json([d])
+            return response()->json($diffData);
+
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::warning('プルリクエスト編集セッションが見つかりません', [
+                'token' => $request->validated('token'),
+                'user_id' => $user->id ?? null,
+            ]);
+
+            return response()->json([
+                'error' => '編集セッションが見つかりません',
+            ], 404);
+
+        } catch (\Exception $e) {
+            Log::error('プルリクエスト編集差分取得エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'token' => $request->validated('token'),
+                'user_id' => $user->id ?? null,
+            ]);
+
+            return response()->json([
+                'error' => 'プルリクエスト編集差分の取得に失敗しました',
+            ], 500);
+        }
+    }
+
     /**
      * プルリクエストの編集を開始する
      */
@@ -121,6 +195,7 @@ class PullRequestEditSessionController extends ApiBaseController
             ActivityLogOnPullRequest::create([
                 'user_id' => $user->id,
                 'pull_request_id' => $pullRequestId,
+                'pull_request_edit_session_id' => $editSession->id,
                 'action' => PullRequestActivityAction::PULL_REQUEST_EDITED->value,
             ]);
 

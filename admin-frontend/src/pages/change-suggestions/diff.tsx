@@ -371,6 +371,15 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                                 )}
                               />
                               <SmartDiffValue
+                                label="表示順序"
+                                fieldInfo={getFieldInfo(
+                                  diffInfo,
+                                  'file_order',
+                                  document.file_order,
+                                  originalDocument?.file_order
+                                )}
+                              />
+                              <SmartDiffValue
                                 label="タイトル"
                                 fieldInfo={getFieldInfo(
                                   diffInfo,

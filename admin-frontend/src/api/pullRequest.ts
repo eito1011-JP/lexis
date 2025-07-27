@@ -53,6 +53,13 @@ export interface ActivityLogFixRequest {
   created_at: string;
 }
 
+// アクティビティログのプルリクエスト編集セッション情報の型定義
+export interface ActivityLogPullRequestEditSession {
+  id: number;
+  token: string;
+  created_at: string;
+}
+
 // アクティビティログの型定義
 export interface ActivityLog {
   id: number;
@@ -61,6 +68,7 @@ export interface ActivityLog {
   actor: ActivityLogActor | null;
   comment: ActivityLogComment | null;
   fix_request: ActivityLogFixRequest | null;
+  pull_request_edit_session: ActivityLogPullRequestEditSession | null;
   old_pull_request_title: string | null;
   new_pull_request_title: string | null;
   created_at: string;

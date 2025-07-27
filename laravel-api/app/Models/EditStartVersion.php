@@ -40,7 +40,7 @@ class EditStartVersion extends Model
      */
     public function originalDocumentVersion()
     {
-        return $this->belongsTo(DocumentVersion::class, 'original_version_id');
+        return $this->belongsTo(DocumentVersion::class, 'original_version_id')->withTrashed();
     }
 
     /**
@@ -48,7 +48,7 @@ class EditStartVersion extends Model
      */
     public function currentDocumentVersion()
     {
-        return $this->belongsTo(DocumentVersion::class, 'current_version_id');
+        return $this->belongsTo(DocumentVersion::class, 'current_version_id')->withTrashed();
     }
 
     /**
@@ -56,7 +56,7 @@ class EditStartVersion extends Model
      */
     public function originalCategory()
     {
-        return $this->belongsTo(DocumentCategory::class, 'original_version_id');
+        return $this->belongsTo(DocumentCategory::class, 'original_version_id')->withTrashed();
     }
 
     /**
@@ -64,7 +64,7 @@ class EditStartVersion extends Model
      */
     public function currentCategory()
     {
-        return $this->belongsTo(DocumentCategory::class, 'current_version_id');
+        return $this->belongsTo(DocumentCategory::class, 'current_version_id')->withTrashed();
     }
 
     /**

@@ -63,6 +63,7 @@ export const API_CONFIG = {
       CREATE: '/api/admin/activity-logs',
     },
     PULL_REQUEST_EDIT_SESSIONS: {
+      GET: '/api/admin/pull-request-edit-sessions',
       START: '/api/admin/pull-request-edit-sessions',
       FINISH: '/api/admin/pull-request-edit-sessions',
     },

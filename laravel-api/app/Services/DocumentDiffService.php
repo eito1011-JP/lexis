@@ -55,12 +55,6 @@ class DocumentDiffService
             $diffData->push($diffInfo);
         }
 
-        Log::info('documentVersions: '.json_encode($documentVersions->values()->toArray()));
-        Log::info('documentCategories: '.json_encode($documentCategories->values()->toArray()));
-        Log::info('originalDocumentVersions: '.json_encode($originalDocumentVersions->values()->toArray()));
-        Log::info('originalDocumentCategories: '.json_encode($originalDocumentCategories->values()->toArray()));
-        Log::info('diffData: '.json_encode($diffData->toArray()));
-
         return [
             'document_versions' => $documentVersions->values()->toArray(),
             'document_categories' => $documentCategories->values()->toArray(),
