@@ -183,3 +183,44 @@ export const createActivityLogOnPullRequest = async (pullRequestId: string): Pro
     throw new Error('編集終了の記録に失敗しました');
   }
 };
+
+// プルリクエスト編集セッション関連の型定義
+export interface StartEditSessionResponse {
+  token: string;
+  session_id: number;
+}
+
+/**
+ * プルリクエスト編集セッションを開始する
+ */
+export const startPullRequestEditSession = async (
+  pullRequestId: string | number
+): Promise<StartEditSessionResponse> => {
+  try {
+    const response = await apiClient.post('/api/admin/pull-request-edit-sessions', {
+      pull_request_id: pullRequestId,
+    });
+    return response;
+  } catch (error: any) {
+    console.error('プルリクエスト編集セッション開始エラー:', error);
+    throw new Error('プルリクエスト編集セッションの開始に失敗しました');
+  }
+};
+
+/**
+ * プルリクエスト編集セッションを終了する
+ */
+export const finishPullRequestEditSession = async (
+  pullRequestId: string | number,
+  token: string
+): Promise<void> => {
+  try {
+    await apiClient.patch('/api/admin/pull-request-edit-sessions', {
+      pull_request_id: pullRequestId,
+      token: token,
+    });
+  } catch (error: any) {
+    console.error('プルリクエスト編集セッション終了エラー:', error);
+    throw new Error('プルリクエスト編集セッションの終了に失敗しました');
+  }
+};

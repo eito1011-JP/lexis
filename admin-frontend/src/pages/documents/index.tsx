@@ -10,7 +10,7 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
-import { createActivityLogOnPullRequest } from '@/api/pullRequest';
+import { finishPullRequestEditSession } from '@/api/pullRequest';
 // カテゴリの型定義
 type Category = {
   id: number;
@@ -72,6 +72,7 @@ export default function DocumentsPage(): JSX.Element {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [showEditFinishModal, setShowEditFinishModal] = useState(false);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -737,22 +738,8 @@ export default function DocumentsPage(): JSX.Element {
               {searchParams.get('edit_pull_request_id') ? (
                 <button
                   className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-                  onClick={async () => {
-                    const editPullRequestId = searchParams.get('edit_pull_request_id');
-                    if (editPullRequestId) {
-                      try {
-                        // 編集終了を記録
-                        await createActivityLogOnPullRequest(editPullRequestId);
-                        
-                        // 差分確認画面に遷移
-                        window.location.href = `/admin/change-suggestions/${editPullRequestId}/diff`;
-                      } catch (error) {
-                        console.error('編集終了記録エラー:', error);
-                        setToastMessage('編集終了の記録に失敗しました');
-                        setToastType('error');
-                        setShowToast(true);
-                      }
-                    }
+                  onClick={() => {
+                    setShowEditFinishModal(true);
                   }}
                 >
                   <svg
@@ -1120,6 +1107,58 @@ export default function DocumentsPage(): JSX.Element {
                 ) : (
                   <span>はい</span>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 編集終了確認モーダル */}
+      {showEditFinishModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-white mb-4">編集を終了しますか？</h3>
+            <p className="text-gray-300 mb-6">
+              編集を終了すると、変更提案の詳細画面に戻ります。
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowEditFinishModal(false)}
+                className="px-4 py-2 text-gray-300 border border-gray-600 rounded hover:bg-gray-700"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={async () => {
+                  const editPullRequestId = searchParams.get('edit_pull_request_id');
+                  if (editPullRequestId) {
+                    try {
+                      // ローカルストレージからトークンを取得
+                      const token = localStorage.getItem('pullRequestEditToken');
+                      
+                      if (token) {
+                        // プルリクエスト編集セッションを終了
+                        await finishPullRequestEditSession(editPullRequestId, token);
+                        
+                        // ローカルストレージをクリア
+                        localStorage.removeItem('pullRequestEditToken');
+                        localStorage.removeItem('pullRequestEditSessionId');
+                      }
+                      
+                      // 変更提案詳細画面に遷移
+                      window.location.href = `/admin/change-suggestions/${editPullRequestId}`;
+                    } catch (error) {
+                      console.error('編集終了エラー:', error);
+                      setToastMessage('編集終了に失敗しました');
+                      setToastType('error');
+                      setShowToast(true);
+                      setShowEditFinishModal(false);
+                    }
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                はい
               </button>
             </div>
           </div>

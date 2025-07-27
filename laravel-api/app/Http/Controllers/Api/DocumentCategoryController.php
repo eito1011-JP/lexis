@@ -13,6 +13,7 @@ use App\Http\Requests\UpdateDocumentCategoryRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
+use App\Models\PullRequestEditSession;
 use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
@@ -82,6 +83,9 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
+            
+            // 編集セッションIDを取得
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
             // カテゴリパスの取得と処理
             $categoryPath = array_filter(explode('/', $request->category_path));
@@ -100,6 +104,7 @@ class DocumentCategoryController extends ApiBaseController
                 'position' => $position,
                 'description' => $request->description,
                 'user_branch_id' => $userBranchId,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'parent_id' => $currentParentCategoryId,
             ]);
 
@@ -146,6 +151,9 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
+            
+            // 編集セッションIDを取得
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
             $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
@@ -177,6 +185,7 @@ class DocumentCategoryController extends ApiBaseController
                 'position' => $position,
                 'description' => $request->description,
                 'user_branch_id' => $userBranchId,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'parent_id' => $existingCategory->parent_id,
             ]);
 
@@ -492,5 +501,24 @@ class DocumentCategoryController extends ApiBaseController
                 'error' => 'カテゴリコンテンツの取得に失敗しました',
             ], 500);
         }
+    }
+
+    /**
+     * プルリクエスト編集セッションIDを取得する
+     */
+    private function getPullRequestEditSessionId($user, ?int $editPullRequestId): ?int
+    {
+        if (!$editPullRequestId) {
+            return null;
+        }
+
+        // 指定されたプルリクエストで現在進行中の編集セッションを取得
+        $editSession = PullRequestEditSession::where('pull_request_id', $editPullRequestId)
+            ->where('user_id', $user->id)
+            ->whereNull('finished_at')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        return $editSession?->id;
     }
 }

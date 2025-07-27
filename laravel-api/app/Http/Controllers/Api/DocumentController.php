@@ -15,6 +15,7 @@ use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequest;
+use App\Models\PullRequestEditSession;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
@@ -165,6 +166,9 @@ class DocumentController extends ApiBaseController
             Log::info('request', $request->all());
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
+            
+            // 編集セッションIDを取得
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
             $categoryId = DocumentCategory::getIdFromPath($categoryPath);
@@ -181,6 +185,7 @@ class DocumentController extends ApiBaseController
             $document = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'category_id' => $categoryId,
                 'sidebar_label' => $request->sidebar_label,
                 'slug' => $request->slug,
@@ -290,6 +295,9 @@ class DocumentController extends ApiBaseController
 
             // アクティブブランチを取得
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
+            
+            // 編集セッションIDを取得
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
             // file_orderの処理
             $categoryId = $existingDocument->category_id;
@@ -308,6 +316,7 @@ class DocumentController extends ApiBaseController
             $newDocumentVersion = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'file_path' => $existingDocument->file_path,
                 'status' => DocumentStatus::DRAFT->value,
                 'content' => $request->content,
@@ -564,5 +573,24 @@ class DocumentController extends ApiBaseController
                 'error' => 'カテゴリコンテンツの取得に失敗しました',
             ], 500);
         }
+    }
+
+    /**
+     * プルリクエスト編集セッションIDを取得する
+     */
+    private function getPullRequestEditSessionId($user, ?int $editPullRequestId): ?int
+    {
+        if (!$editPullRequestId) {
+            return null;
+        }
+
+        // 指定されたプルリクエストで現在進行中の編集セッションを取得
+        $editSession = PullRequestEditSession::where('pull_request_id', $editPullRequestId)
+            ->where('user_id', $user->id)
+            ->whereNull('finished_at')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        return $editSession?->id;
     }
 }

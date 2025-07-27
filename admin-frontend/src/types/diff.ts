@@ -50,10 +50,10 @@ export const CONFIRMATION_ACTIONS = [
   },
   {
     value: 're_edit_proposal' as ConfirmationAction,
-    label: '変更提案を再編集する',
+    label: '再編集する',
   },
   {
     value: 'approve_changes' as ConfirmationAction,
-    label: '変更を承認する',
+    label: '承認する',
   },
 ];

@@ -23,7 +23,7 @@ export const ConfirmationActionDropdown: React.FC<ConfirmationActionDropdownProp
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-md text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
-        <span>確認アクション</span>
+        <span>アクション</span>
         <ChevronDown className="w-4 h-4 ml-2" />
       </button>
 

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\FixRequestController;
 use App\Http\Controllers\Api\PullRequestController;
+use App\Http\Controllers\Api\PullRequestEditSessionController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
 use App\Http\Controllers\Api\UserBranchController;
 use App\Http\Controllers\Api\UserController;
@@ -59,6 +60,12 @@ Route::middleware('auth.session')->group(function () {
         Route::patch('/{id}/close', [PullRequestController::class, 'close']);
         Route::patch('/{id}/approve', [PullRequestController::class, 'approve']);
         Route::patch('/{id}/title', [PullRequestController::class, 'updateTitle']);
+    });
+
+    // プルリクエスト編集セッション関連
+    Route::prefix('admin/pull-request-edit-sessions')->group(function () {
+        Route::post('/', [PullRequestEditSessionController::class, 'startEditingPullRequest']);
+        Route::patch('/', [PullRequestEditSessionController::class, 'finishEditingPullRequest']);
     });
 
     // アクティビティログ関連

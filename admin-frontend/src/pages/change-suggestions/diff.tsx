@@ -6,6 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   fetchPullRequestDetail,
   approvePullRequest,
+  startPullRequestEditSession,
   type PullRequestDetailResponse,
 } from '@/api/pullRequest';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
@@ -183,8 +184,20 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
         window.location.href = `/admin/change-suggestions/${id}/fix-request`;
         break;
       case 're_edit_proposal':
-        // 変更提案の再編集画面に遷移
-        navigate(`/documents?edit_pull_request_id=${id}`);
+        try {
+          // プルリクエスト編集セッションを開始
+          const sessionResponse = await startPullRequestEditSession(id);
+          
+          // セッション情報をローカルストレージに保存
+          localStorage.setItem('pullRequestEditToken', sessionResponse.token);
+          localStorage.setItem('pullRequestEditSessionId', sessionResponse.session_id.toString());
+          
+          // 変更提案の再編集画面に遷移
+          navigate(`/documents?edit_pull_request_id=${id}`);
+        } catch (error) {
+          console.error('編集セッション開始エラー:', error);
+          setError('編集セッションの開始に失敗しました');
+        }
         break;
       case 'approve_changes':
         try {

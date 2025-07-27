@@ -21,6 +21,7 @@ class DocumentCategory extends Model
         'status',
         'parent_id',
         'user_branch_id',
+        'pull_request_edit_session_id',
         'is_deleted',
         'created_at',
         'updated_at',
@@ -124,6 +125,14 @@ class DocumentCategory extends Model
     public function userBranch()
     {
         return $this->belongsTo(UserBranch::class, 'user_branch_id');
+    }
+
+    /**
+     * プルリクエスト編集セッションとのリレーション
+     */
+    public function pullRequestEditSession()
+    {
+        return $this->belongsTo(PullRequestEditSession::class, 'pull_request_edit_session_id');
     }
 
     /**
