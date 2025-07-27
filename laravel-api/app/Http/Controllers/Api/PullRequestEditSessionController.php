@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Consts\Flag;
 use App\Enums\PullRequestActivityAction;
 use App\Http\Requests\Api\PullRequestEditSession\FinishEditingRequest;
 use App\Http\Requests\Api\PullRequestEditSession\StartEditingRequest;
 use App\Models\ActivityLogOnPullRequest;
+use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -34,10 +36,18 @@ class PullRequestEditSessionController extends ApiBaseController
             // 2. pull_request_idをform requestでvalidation（StartEditingRequestで済み）
             $pullRequestId = $request->validated('pull_request_id');
 
-            // 3. tokenを\Illuminate\Support\Str::random(32);で作成
+            // 3. pull_request_idでfirstOrFailしてuser_branch_idを取得
+            $pullRequest = PullRequest::findOrFail($pullRequestId);
+
+            // 4. user_branch_idでuser_branchesのレコードのis_activeをFlag::TRUEに更新
+            $pullRequest->userBranch()->update([
+                'is_active' => Flag::TRUE,
+            ]);
+
+            // 5. tokenを\Illuminate\Support\Str::random(32);で作成
             $token = Str::random(32);
 
-            // 4. pull_request_edit_sessionsテーブルにレコードを作成
+            // 6. pull_request_edit_sessionsテーブルにレコードを作成
             $editSession = PullRequestEditSession::create([
                 'pull_request_id' => $pullRequestId,
                 'user_id' => $user->id,
@@ -88,6 +98,14 @@ class PullRequestEditSessionController extends ApiBaseController
             $pullRequestId = $request->validated('pull_request_id');
             $token = $request->validated('token');
 
+            // 3. pull_request_idでfirstOrFailしてuser_branch_idを取得
+            $pullRequest = PullRequest::findOrFail($pullRequestId);
+
+            // 4. user_branch_idでuser_branchesのレコードのis_activeをFlag::FALSEに更新
+            $pullRequest->userBranch()->update([
+                'is_active' => Flag::FALSE,
+            ]);
+
             // 3. pull_request_edit_sessionsテーブルをwhere token = request.tokenでfirstOrFail
             $editSession = PullRequestEditSession::where('token', $token)
                 ->where('pull_request_id', $pullRequestId)
@@ -137,4 +155,4 @@ class PullRequestEditSessionController extends ApiBaseController
             ], 500);
         }
     }
-} 
+}

@@ -83,7 +83,7 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-            
+
             // 編集セッションIDを取得
             $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
@@ -151,7 +151,7 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-            
+
             // 編集セッションIDを取得
             $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
@@ -508,7 +508,7 @@ class DocumentCategoryController extends ApiBaseController
      */
     private function getPullRequestEditSessionId($user, ?int $editPullRequestId): ?int
     {
-        if (!$editPullRequestId) {
+        if (! $editPullRequestId) {
             return null;
         }
 

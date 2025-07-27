@@ -6,7 +6,6 @@ import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Toast } from '@/components/admin/Toast';
-import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 
 // ユーザー型定義を追加
@@ -169,6 +168,7 @@ export default function EditDocumentPage(): JSX.Element {
       // URLからedit_pull_request_idを取得
       const urlParams = new URLSearchParams(window.location.search);
       const editPullRequestId = urlParams.get('edit_pull_request_id');
+      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
 
       // APIリクエストのペイロードを構築
       const payload: any = {
@@ -182,8 +182,9 @@ export default function EditDocumentPage(): JSX.Element {
       };
 
       // edit_pull_request_idが存在する場合のみ追加
-      if (editPullRequestId) {
+      if (editPullRequestId && pullRequestEditToken) {
         payload.edit_pull_request_id = editPullRequestId;
+        payload.pull_request_edit_token = pullRequestEditToken;
       }
 
       // ドキュメント編集APIを呼び出す
@@ -197,8 +198,8 @@ export default function EditDocumentPage(): JSX.Element {
       // トースト表示後にリダイレクト
       setTimeout(() => {
         let redirectUrl = category ? `/admin/documents/${category}` : '/admin/documents';
-        if (editPullRequestId) {
-          redirectUrl += `?edit_pull_request_id=${editPullRequestId}`;
+        if (editPullRequestId && pullRequestEditToken) {
+          redirectUrl += `?edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
         }
         window.location.href = redirectUrl;
       }, 1500);

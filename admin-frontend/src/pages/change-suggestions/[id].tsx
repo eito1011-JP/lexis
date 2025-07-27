@@ -244,9 +244,7 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
           </div>
         );
       case 'pull_request_edited':
-        return (
-            <PullRequestEditedLog className="w-4 h-4 text-white" />
-        );
+        return <PullRequestEditedLog className="w-4 h-4 text-white" />;
       case 'pull_request_title_edited':
         return (
           <div className="flex items-center justify-center rounded-full w-8 h-8 bg-[#9198A1]">

@@ -146,8 +146,10 @@ export default function CreateDocumentPage(): JSX.Element {
         slug,
         file_order: fileOrder,
       };
-      if (editPullRequestId) {
+      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
+      if (editPullRequestId && pullRequestEditToken) {
         payload.edit_pull_request_id = editPullRequestId;
+        payload.pull_request_edit_token = pullRequestEditToken;
       }
 
       // ドキュメント作成APIを呼び出す
@@ -156,8 +158,8 @@ export default function CreateDocumentPage(): JSX.Element {
       alert('ドキュメントが作成されました');
       // 成功したら一覧ページに戻る
       let redirectUrl = `/admin/documents/${category ?? ''}`;
-      if (editPullRequestId) {
-        redirectUrl += `?edit_pull_request_id=${editPullRequestId}`;
+      if (editPullRequestId && pullRequestEditToken) {
+        redirectUrl += `?edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
       }
       window.location.href = redirectUrl;
     } catch (error: unknown) {

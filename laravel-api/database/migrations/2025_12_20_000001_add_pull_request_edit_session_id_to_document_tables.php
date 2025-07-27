@@ -41,4 +41,4 @@ return new class extends Migration
             $table->dropColumn('pull_request_edit_session_id');
         });
     }
-}; 
+};

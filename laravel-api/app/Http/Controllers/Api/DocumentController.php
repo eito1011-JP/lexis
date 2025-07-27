@@ -85,10 +85,10 @@ class DocumentController extends ApiBaseController
             }
 
             // サブカテゴリを取得
-            $subCategories = DocumentCategory::getSubCategories($parentId, $userBranchId);
+            $subCategories = DocumentCategory::getSubCategories($parentId, $userBranchId, $request->edit_pull_request_id);
 
             // ドキュメントを取得
-            $documents = DocumentVersion::getDocumentsByCategoryId($parentId, $userBranchId);
+            $documents = DocumentVersion::getDocumentsByCategoryId($parentId, $userBranchId, $request->edit_pull_request_id);
 
             // ソート処理
             $sortedDocuments = $documents
@@ -166,9 +166,9 @@ class DocumentController extends ApiBaseController
             Log::info('request', $request->all());
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-            
+
             // 編集セッションIDを取得
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
             $categoryId = DocumentCategory::getIdFromPath($categoryPath);
@@ -191,7 +191,7 @@ class DocumentController extends ApiBaseController
                 'slug' => $request->slug,
                 'content' => $request->content,
                 'is_public' => $request->is_public,
-                'status' => DocumentStatus::DRAFT->value,
+                'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
                 'last_edited_by' => $user->email,
                 'file_order' => $correctedFileOrder,
                 'file_path' => $filePath,
@@ -295,9 +295,9 @@ class DocumentController extends ApiBaseController
 
             // アクティブブランチを取得
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-            
+
             // 編集セッションIDを取得
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
 
             // file_orderの処理
             $categoryId = $existingDocument->category_id;
@@ -318,7 +318,7 @@ class DocumentController extends ApiBaseController
                 'user_branch_id' => $userBranchId,
                 'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'file_path' => $existingDocument->file_path,
-                'status' => DocumentStatus::DRAFT->value,
+                'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
                 'content' => $request->content,
                 'slug' => $request->slug,
                 'sidebar_label' => $request->sidebar_label,
@@ -578,9 +578,9 @@ class DocumentController extends ApiBaseController
     /**
      * プルリクエスト編集セッションIDを取得する
      */
-    private function getPullRequestEditSessionId($user, ?int $editPullRequestId): ?int
+    private function getPullRequestEditSessionId($user, ?int $editPullRequestId, ?string $pullRequestEditToken): ?int
     {
-        if (!$editPullRequestId) {
+        if (! $editPullRequestId) {
             return null;
         }
 
@@ -588,7 +588,7 @@ class DocumentController extends ApiBaseController
         $editSession = PullRequestEditSession::where('pull_request_id', $editPullRequestId)
             ->where('user_id', $user->id)
             ->whereNull('finished_at')
-            ->orderBy('created_at', 'desc')
+            ->where('token', $pullRequestEditToken)
             ->first();
 
         return $editSession?->id;

@@ -219,9 +219,15 @@ export default function DocumentsPage(): JSX.Element {
         category_path: null, // index.tsxはカテゴリ階層の一番上なので、category_pathはnull
       };
 
-      // edit_pull_request_idが存在する場合のみ追加
-      if (editPullRequestId) {
+      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
+      if (pullRequestEditToken) {
+        payload.pull_request_edit_token = pullRequestEditToken;
+      }
+
+      // edit_pull_request_idとpull_request_edit_tokenが存在する場合のみ追加
+      if (editPullRequestId && pullRequestEditToken) {
         payload.edit_pull_request_id = editPullRequestId;
+        payload.pull_request_edit_token = pullRequestEditToken;
       }
 
       const response = await apiClient.post(`${API_CONFIG.ENDPOINTS.CATEGORIES.CREATE}`, payload);
@@ -292,9 +298,12 @@ export default function DocumentsPage(): JSX.Element {
         description,
       };
 
-      // edit_pull_request_idが存在する場合のみ追加
-      if (editPullRequestId) {
+      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
+
+      // edit_pull_request_idとpull_request_edit_tokenが存在する場合のみ追加
+      if (editPullRequestId && pullRequestEditToken) {
         payload.edit_pull_request_id = editPullRequestId;
+        payload.pull_request_edit_token = pullRequestEditToken;
       }
 
       await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}`, payload);
@@ -332,10 +341,12 @@ export default function DocumentsPage(): JSX.Element {
       const urlParams = new URLSearchParams(window.location.search);
       const editPullRequestId = urlParams.get('edit_pull_request_id');
 
-      // APIリクエストのURLを構築
-      let deleteUrl = `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}`;
-      if (editPullRequestId) {
-        deleteUrl += `&edit_pull_request_id=${editPullRequestId}`;
+      let deleteUrl = '';
+      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
+      if (pullRequestEditToken && editPullRequestId) {
+        deleteUrl = `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
+      } else {
+        deleteUrl = `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}`;
       }
 
       await apiClient.delete(deleteUrl);
@@ -611,7 +622,7 @@ export default function DocumentsPage(): JSX.Element {
                             <ul className="py-1">
                               <li>
                                 <a
-                                  href={`/admin/documents/${document.slug}/edit${searchParams.get('edit_pull_request_id') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}` : ''}`}
+                                  href={`/admin/documents/${document.slug}/edit${searchParams.get('edit_pull_request_id') && localStorage.getItem('pullRequestEditToken') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}&pull_request_edit_token=${localStorage.getItem('pullRequestEditToken')}` : ''}`}
                                   className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer text-left"
                                   style={{ textAlign: 'left' }}
                                 >
@@ -1118,9 +1129,7 @@ export default function DocumentsPage(): JSX.Element {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-white mb-4">編集を終了しますか？</h3>
-            <p className="text-gray-300 mb-6">
-              編集を終了すると、変更提案の詳細画面に戻ります。
-            </p>
+            <p className="text-gray-300 mb-6">編集を終了すると、変更提案の詳細画面に戻ります。</p>
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowEditFinishModal(false)}
@@ -1135,16 +1144,15 @@ export default function DocumentsPage(): JSX.Element {
                     try {
                       // ローカルストレージからトークンを取得
                       const token = localStorage.getItem('pullRequestEditToken');
-                      
+
                       if (token) {
                         // プルリクエスト編集セッションを終了
-                        await finishPullRequestEditSession(editPullRequestId, token);
-                        
+                        await finishPullRequestEditSession(token, editPullRequestId);
+
                         // ローカルストレージをクリア
                         localStorage.removeItem('pullRequestEditToken');
-                        localStorage.removeItem('pullRequestEditSessionId');
                       }
-                      
+
                       // 変更提案詳細画面に遷移
                       window.location.href = `/admin/change-suggestions/${editPullRequestId}`;
                     } catch (error) {

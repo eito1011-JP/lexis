@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Constants\DocumentCategoryConstants;
+use App\Enums\DocumentCategoryStatus;
 use App\Enums\FixRequestStatus;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -67,7 +68,7 @@ class DocumentCategory extends Model
     /**
      * サブカテゴリを取得（ブランチ別）
      */
-    public static function getSubCategories(int $parentId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
+    public static function getSubCategories(int $parentId, ?int $userBranchId = null, ?int $editPullRequestId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('slug', 'sidebar_label', 'position')
             ->where('parent_id', $parentId)
@@ -75,8 +76,16 @@ class DocumentCategory extends Model
                 $q->where('status', 'merged')
                     ->orWhere(function ($subQ) use ($userBranchId) {
                         $subQ->where('user_branch_id', $userBranchId)
-                            ->where('status', 'draft');
+                            ->where('status', DocumentCategoryStatus::DRAFT->value);
                     });
+            })
+            ->when($editPullRequestId, function ($query, $editPullRequestId) {
+                return $query->orWhere(function ($subQ) use ($editPullRequestId) {
+                    $subQ->whereHas('userBranch.pullRequests', function ($prQ) use ($editPullRequestId) {
+                        $prQ->where('id', $editPullRequestId);
+                    })
+                        ->where('status', DocumentCategoryStatus::PUSHED->value);
+                });
             })
             ->when($userBranchId, function ($query, $userBranchId) {
                 $appliedFixRequestCategoryIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)

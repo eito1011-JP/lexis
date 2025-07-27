@@ -22,7 +22,7 @@ class CreateActivityLogRequest extends FormRequest
     {
         return [
             'pull_request_id' => 'required|integer|exists:pull_requests,id',
-            'action' => 'required|string|in:' . implode(',', PullRequestActivityAction::values()),
+            'action' => 'required|string|in:'.implode(',', PullRequestActivityAction::values()),
         ];
     }
 
@@ -40,4 +40,4 @@ class CreateActivityLogRequest extends FormRequest
             'action.enum' => trans('validation.activity_log.action.enum'),
         ];
     }
-} 
+}

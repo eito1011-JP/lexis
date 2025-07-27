@@ -39,4 +39,4 @@ class StartEditingRequest extends FormRequest
             'pull_request_id.exists' => __('validation.pull_request.pull_request_id.exists'),
         ];
     }
-} 
+}

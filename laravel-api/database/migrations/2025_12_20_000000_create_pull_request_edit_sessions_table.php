@@ -35,4 +35,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('pull_request_edit_sessions');
     }
-}; 
+};

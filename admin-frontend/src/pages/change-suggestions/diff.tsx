@@ -187,13 +187,14 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
         try {
           // プルリクエスト編集セッションを開始
           const sessionResponse = await startPullRequestEditSession(id);
-          
+
           // セッション情報をローカルストレージに保存
           localStorage.setItem('pullRequestEditToken', sessionResponse.token);
-          localStorage.setItem('pullRequestEditSessionId', sessionResponse.session_id.toString());
-          
+
           // 変更提案の再編集画面に遷移
-          navigate(`/documents?edit_pull_request_id=${id}`);
+          navigate(
+            `/documents?edit_pull_request_id=${id}&pull_request_edit_token=${sessionResponse.token}`
+          );
         } catch (error) {
           console.error('編集セッション開始エラー:', error);
           setError('編集セッションの開始に失敗しました');

@@ -42,7 +42,7 @@ class DocumentVersion extends Model
     /**
      * カテゴリのドキュメントを取得（ブランチ別）
      */
-    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null): \Illuminate\Database\Eloquent\Collection
+    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null, ?int $editPullRequestId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
             ->where('category_id', $categoryId)
@@ -52,6 +52,14 @@ class DocumentVersion extends Model
                         $subQ->where('user_branch_id', $userBranchId)
                             ->where('status', DocumentStatus::DRAFT->value);
                     });
+            })
+            ->when($editPullRequestId, function ($query, $editPullRequestId) {
+                $query->orWhere(function ($subQ) use ($editPullRequestId) {
+                    $subQ->whereHas('userBranch.pullRequests', function ($prQ) use ($editPullRequestId) {
+                        $prQ->where('id', $editPullRequestId);
+                    })
+                        ->where('status', DocumentStatus::PUSHED->value);
+                });
             })
             ->when($userBranchId, function ($query, $userBranchId) use ($categoryId) {
                 $appliedFixRequestDocumentIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)

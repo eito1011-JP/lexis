@@ -32,6 +32,7 @@ class UpdateDocumentRequest extends FormRequest
             'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path, null, $this->current_document_id)],
             'file_order' => 'nullable|integer|min:1',
             'edit_pull_request_id' => 'nullable|integer',
+            'pull_request_edit_token' => 'nullable|string',
         ];
     }
 
@@ -47,6 +48,7 @@ class UpdateDocumentRequest extends FormRequest
             'slug' => __('attributes.document.slug'),
             'file_order' => __('attributes.document.fileOrder'),
             'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
+            'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
     }
 

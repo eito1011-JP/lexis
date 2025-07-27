@@ -55,4 +55,4 @@ class PullRequestEditSession extends Model
     {
         return $this->hasMany(DocumentCategory::class, 'pull_request_edit_session_id');
     }
-} 
+}

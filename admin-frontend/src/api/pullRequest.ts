@@ -197,7 +197,7 @@ export const startPullRequestEditSession = async (
   pullRequestId: string | number
 ): Promise<StartEditSessionResponse> => {
   try {
-    const response = await apiClient.post('/api/admin/pull-request-edit-sessions', {
+    const response = await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUEST_EDIT_SESSIONS.START, {
       pull_request_id: pullRequestId,
     });
     return response;
@@ -211,13 +211,13 @@ export const startPullRequestEditSession = async (
  * プルリクエスト編集セッションを終了する
  */
 export const finishPullRequestEditSession = async (
-  pullRequestId: string | number,
-  token: string
+  token: string,
+  pullRequestId: string | number
 ): Promise<void> => {
   try {
-    await apiClient.patch('/api/admin/pull-request-edit-sessions', {
-      pull_request_id: pullRequestId,
+    await apiClient.patch(API_CONFIG.ENDPOINTS.PULL_REQUEST_EDIT_SESSIONS.FINISH, {
       token: token,
+      pull_request_id: pullRequestId,
     });
   } catch (error: any) {
     console.error('プルリクエスト編集セッション終了エラー:', error);

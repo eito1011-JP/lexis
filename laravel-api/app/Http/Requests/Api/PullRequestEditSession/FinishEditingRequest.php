@@ -43,4 +43,4 @@ class FinishEditingRequest extends FormRequest
             'token.size' => __('validation.token.size'),
         ];
     }
-} 
+}

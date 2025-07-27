@@ -50,4 +50,4 @@ class ActivityLogOnPullRequestController extends ApiBaseController
             ], 500);
         }
     }
-} 
+}

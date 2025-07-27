@@ -31,6 +31,7 @@ class CreateDocumentRequest extends FormRequest
             'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path, null, null)],
             'file_order' => 'nullable|integer',
             'edit_pull_request_id' => 'nullable|integer',
+            'pull_request_edit_token' => 'nullable|string',
         ];
     }
 
@@ -46,6 +47,7 @@ class CreateDocumentRequest extends FormRequest
             'slug' => __('validation.document.slug.required'),
             'file_order' => __('validation.document.file_order.integer'),
             'edit_pull_request_id' => __('validation.document.edit_pull_request_id.integer'),
+            'pull_request_edit_token' => __('validation.document.pull_request_edit_token.string'),
         ];
     }
 
