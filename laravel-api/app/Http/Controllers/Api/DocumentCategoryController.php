@@ -234,6 +234,7 @@ class DocumentCategoryController extends ApiBaseController
             // ユーザーのアクティブブランチ確認
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
             // カテゴリパスの取得と処理
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));
             $slug = array_pop($pathParts);

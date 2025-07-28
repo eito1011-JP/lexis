@@ -5,11 +5,10 @@ import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Toast } from '@/components/admin/Toast';
-import { SmartDiffValue } from '@/components/diff/SmartDiffValue';
-import { SlugBreadcrumb } from '@/components/diff/SlugBreadcrumb';
+import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { diffStyles } from '@/styles/diffStyles';
-import type { DiffFieldInfo, DiffDataInfo } from '@/types/diff';
+import { makeDiff, cleanupSemantic } from '@sanity/diff-match-patch';
 
 // 差分データの型定義
 type DiffItem = {
@@ -28,65 +27,241 @@ type DiffItem = {
   user_branch_id: number;
   created_at: string;
   updated_at: string;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
 };
 
+type EditSessionResponse = {
+  originalDocumentVersions: DiffItem[];
+  originalCategoryVersions: DiffItem[];
+  currentDocumentVersions: DiffItem[];
+  currentCategoryVersions: DiffItem[];
+};
 
+// SmartDiffValueコンポーネント
+const SmartDiffValue: React.FC<{
+  label: string;
+  originalValue: any;
+  currentValue: any;
+  isMarkdown?: boolean;
+}> = ({ label, originalValue, currentValue, isMarkdown = false }) => {
+  const renderValue = (value: any) => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'boolean') return value ? '公開' : '非公開';
+    return String(value);
+  };
+
+  // ブロック要素を検出する関数
+  const isBlockElement = (html: string): boolean => {
+    const blockElementPattern = /^<(h[1-6]|p|div|section|article|blockquote|pre|ul|ol|li)(\s|>)/i;
+    return blockElementPattern.test(html.trim());
+  };
+
+  // HTMLテキストを適切なクラスでラップする関数
+  const wrapWithDiffClass = (html: string, operation: number): string => {
+    if (operation === 0) return html; // 変更なしの場合はそのまま
+
+    const isBlock = isBlockElement(html);
+    const className =
+      operation === 1
+        ? isBlock
+          ? 'diff-block-added'
+          : 'diff-added-content'
+        : isBlock
+          ? 'diff-block-deleted'
+          : 'diff-deleted-content';
+
+    const wrapper = isBlock ? 'div' : 'span';
+    return `<${wrapper} class="${className}">${html}</${wrapper}>`;
+  };
+
+  // 差分ハイライト用の関数
+  const generateSplitDiffContent = (
+    originalText: string,
+    currentText: string,
+    isMarkdown: boolean
+  ) => {
+    const originalStr = renderValue(originalText);
+    const currentStr = renderValue(currentText);
+
+    if (originalStr === currentStr) {
+      // 変更がない場合は通常表示
+      return {
+        leftContent: isMarkdown ? renderMarkdownContent(originalStr) : originalStr,
+        rightContent: isMarkdown ? renderMarkdownContent(currentStr) : currentStr,
+        hasChanges: false,
+      };
+    }
+
+    // マークダウンの場合の処理
+    if (isMarkdown) {
+      try {
+        // まず両方のマークダウンをHTMLに変換
+        const originalHtml = markdownToHtml(originalStr);
+        const currentHtml = markdownToHtml(currentStr);
+
+        // HTMLベースで差分を計算
+        const diffs = makeDiff(originalHtml, currentHtml);
+        const cleanedDiffs = cleanupSemantic(diffs);
+
+        // 左側用と右側用のHTMLを生成
+        let leftHtml = '';
+        let rightHtml = '';
+
+        for (const [operation, text] of cleanedDiffs) {
+          switch (operation) {
+            case -1: // 削除（左側でハイライト）
+              leftHtml += wrapWithDiffClass(text, -1);
+              // 右側には追加しない
+              break;
+            case 1: // 追加（右側でハイライト）
+              rightHtml += wrapWithDiffClass(text, 1);
+              // 左側には追加しない
+              break;
+            case 0: // 変更なし（両側に追加）
+              leftHtml += text;
+              rightHtml += text;
+              break;
+          }
+        }
+
+        return {
+          leftContent: (
+            <div
+              className="markdown-content prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: leftHtml }}
+            />
+          ),
+          rightContent: (
+            <div
+              className="markdown-content prose prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: rightHtml }}
+            />
+          ),
+          hasChanges: true,
+        };
+      } catch (error) {
+        console.warn('マークダウン差分表示エラー:', error);
+        // エラーの場合はプレーンテキストで処理
+      }
+    }
+
+    // プレーンテキストの差分処理
+    const diffs = makeDiff(originalStr, currentStr);
+    const cleanedDiffs = cleanupSemantic(diffs);
+
+    let leftHtml = '';
+    let rightHtml = '';
+
+    for (const [operation, text] of cleanedDiffs) {
+      const escapedText = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br/>');
+
+      switch (operation) {
+        case -1: // 削除（左側に表示）
+          leftHtml += `<span class="diff-deleted-content">${escapedText}</span>`;
+          rightHtml += ''; // 右側には表示しない
+          break;
+        case 1: // 追加（右側に表示）
+          leftHtml += ''; // 左側には表示しない
+          rightHtml += `<span class="diff-added-content">${escapedText}</span>`;
+          break;
+        case 0: // 変更なし（両側に表示）
+          leftHtml += escapedText;
+          rightHtml += escapedText;
+          break;
+      }
+    }
+
+    return {
+      leftContent: <span dangerouslySetInnerHTML={{ __html: leftHtml }} />,
+      rightContent: <span dangerouslySetInnerHTML={{ __html: rightHtml }} />,
+      hasChanges: true,
+    };
+  };
+
+  const renderMarkdownContent = (content: string) => {
+    if (!isMarkdown || !content) return content;
+
+    try {
+      const htmlContent = markdownToHtml(content);
+      return (
+        <div
+          className="markdown-content prose prose-invert max-w-none"
+          dangerouslySetInnerHTML={{ __html: htmlContent }}
+        />
+      );
+    } catch (error) {
+      return content;
+    }
+  };
+
+  const { leftContent, rightContent } = generateSplitDiffContent(
+    originalValue,
+    currentValue,
+    isMarkdown
+  );
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* 変更前 */}
+        <div className="flex">
+          <div
+            className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800 w-full min-h-[2.75rem] flex items-start
+            }`}
+          >
+            <div className="flex-1">
+              {typeof leftContent === 'string' ? leftContent : leftContent}
+            </div>
+          </div>
+        </div>
+
+        {/* 変更後 */}
+        <div className="flex">
+          <div
+            className={`border border-gray-800 rounded-md p-3 text-sm bg-gray-800 w-full min-h-[2.75rem] flex items-start`}
+          >
+            <div className="flex-1">
+              {typeof rightContent === 'string' ? rightContent : rightContent}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// SlugBreadcrumbコンポーネント
+const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
+  const parts = slug.split('/').filter(Boolean);
+
+  return (
+    <div className="mb-4 text-sm text-gray-400">
+      <span>/</span>
+      {parts.map((part, index) => (
+        <span key={index}>
+          <span className="text-gray-300">{part}</span>
+          {index < parts.length - 1 && <span>/</span>}
+        </span>
+      ))}
+    </div>
+  );
+};
 
 export default function PullRequestEditSessionDetailPage(): JSX.Element {
   const { isLoading } = useSessionCheck('/login', false);
   const { token } = useParams<{ token: string }>();
 
-  const [diffData, setDiffData] = useState<{
-    document_versions: DiffItem[];
-    document_categories: DiffItem[];
-    original_document_versions: DiffItem[];
-    original_document_categories: DiffItem[];
-    diff_data: DiffDataInfo[];
-  } | null>(null);
+  const [diffData, setDiffData] = useState<EditSessionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  // 差分データをIDでマップ化する関数
-  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
-    if (!diffData?.diff_data) return null;
-    return (
-      diffData.diff_data.find((diff: DiffDataInfo) => diff.id === id && diff.type === type) || null
-    );
-  };
-
-  // フィールド情報を取得する関数
-  const getFieldInfo = (
-    diffInfo: DiffDataInfo | null,
-    fieldName: string,
-    currentValue: any,
-    originalValue?: any
-  ): DiffFieldInfo => {
-    if (!diffInfo) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-
-    if (diffInfo.operation === 'deleted') {
-      return {
-        status: 'deleted',
-        current: null,
-        original: originalValue,
-      };
-    }
-
-    if (!diffInfo.changed_fields[fieldName]) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-    return diffInfo.changed_fields[fieldName];
-  };
 
   // データをslugでマップ化する関数
   const mapBySlug = (items: DiffItem[]) => {
@@ -191,10 +366,8 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
   }
 
   // ドキュメントとカテゴリのマップを作成
-  const currentDocumentsMap = mapBySlug(diffData.document_versions);
-  const currentCategoriesMap = mapBySlug(diffData.document_categories);
-  const originalDocumentsMap = mapBySlug(diffData.original_document_versions);
-  const originalCategoriesMap = mapBySlug(diffData.original_document_categories);
+  const originalDocumentsMap = mapBySlug(diffData.originalDocumentVersions);
+  const originalCategoriesMap = mapBySlug(diffData.originalCategoryVersions);
 
   return (
     <AdminLayout title="変更提案編集詳細">
@@ -203,143 +376,115 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="mb-20 w-full rounded-lg relative">
-        <div className="mb-10">
+        {/* ヘッダー */}
+        <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-4">変更提案編集詳細</h1>
-          <p className="text-gray-400">この変更提案の編集内容を確認できます。</p>
+          <div className="text-gray-400">
+            この変更提案の編集内容を確認できます。(変更前 / 変更後)
+          </div>
         </div>
 
-        {/* ドキュメントの変更 */}
-        {diffData.document_versions.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-semibold text-white mb-4">📝 ドキュメントの変更</h2>
-            <div className="space-y-6">
-              {diffData.document_versions.map((doc, index) => {
-                const diffInfo = getDiffInfoById(doc.id, 'document');
-                const originalDoc = originalDocumentsMap[doc.slug];
-
-                return (
-                  <div key={index} className="border border-gray-600 rounded-lg p-6">
-                    <SlugBreadcrumb slug={doc.slug} />
-
-                    <SmartDiffValue
-                      label="Slug"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'slug',
-                        doc.slug,
-                        originalDoc?.slug
-                      )}
-                    />
-
-                    <SmartDiffValue
-                      label="表示順序"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'file_order',
-                        doc.file_order,
-                        originalDoc?.file_order
-                      )}
-                    />
-
-                    <SmartDiffValue
-                      label="タイトル"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'sidebar_label',
-                        doc.sidebar_label,
-                        originalDoc?.sidebar_label
-                      )}
-                    />
-
-                    <SmartDiffValue
-                      label="公開設定"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'is_public',
-                        doc.is_public,
-                        originalDoc?.is_public
-                      )}
-                    />
-
-                    <SmartDiffValue
-                      label="本文"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'content',
-                        doc.content,
-                        originalDoc?.content
-                      )}
-                      isMarkdown
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
         {/* カテゴリの変更 */}
-        {diffData.document_categories.length > 0 && (
+        {diffData.currentCategoryVersions.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-white mb-4">📁 カテゴリの変更</h2>
-            <div className="space-y-6">
-              {diffData.document_categories.map((category, index) => {
-                const diffInfo = getDiffInfoById(category.id, 'category');
-                const originalCategory = originalCategoriesMap[category.slug];
+            <h2 className="text-xl font-bold text-white mb-6">
+              📁 カテゴリの変更 × {diffData.currentCategoryVersions.length}
+            </h2>
+            {diffData.currentCategoryVersions.map((currentCategory, index) => {
+              const originalCategory = originalCategoriesMap[currentCategory.slug];
 
-                return (
-                  <div key={index} className="border border-gray-600 rounded-lg p-6">
-                    <SlugBreadcrumb slug={category.slug} />
+              return (
+                <div
+                  key={`category-${currentCategory.id}-${index}`}
+                  className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
+                >
+                  <SlugBreadcrumb slug={currentCategory.slug} />
 
-                    <SmartDiffValue
-                      label="Slug"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'slug',
-                        category.slug,
-                        originalCategory?.slug
-                      )}
-                    />
+                  <SmartDiffValue
+                    label="Slug"
+                    originalValue={originalCategory?.slug}
+                    currentValue={currentCategory.slug}
+                  />
 
-                    <SmartDiffValue
-                      label="タイトル"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'sidebar_label',
-                        category.sidebar_label,
-                        originalCategory?.sidebar_label
-                      )}
-                    />  
+                  <SmartDiffValue
+                    label="カテゴリ名"
+                    originalValue={originalCategory?.sidebar_label}
+                    currentValue={currentCategory.sidebar_label}
+                  />
 
-                    <SmartDiffValue
-                      label="表示順序"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'position',
-                        category.position,
-                        originalCategory?.position
-                      )}
-                    />
+                  <SmartDiffValue
+                    label="表示順"
+                    originalValue={originalCategory?.position}
+                    currentValue={currentCategory.position}
+                  />
 
-                    <SmartDiffValue
-                      label="説明"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'description',
-                        category.description,
-                        originalCategory?.description
-                      )}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+                  <SmartDiffValue
+                    label="説明"
+                    originalValue={originalCategory?.description}
+                    currentValue={currentCategory.description}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {diffData.document_versions.length === 0 && diffData.document_categories.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-400">変更内容がありません。</p>
+        {/* ドキュメントの変更 */}
+        {diffData.currentDocumentVersions.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-xl font-bold text-white mb-6">
+              📝 ドキュメントの変更 × {diffData.currentDocumentVersions.length}
+            </h2>
+            {diffData.currentDocumentVersions.map((currentDoc, index) => {
+              const originalDoc = originalDocumentsMap[currentDoc.slug];
+
+              return (
+                <div
+                  key={`document-${currentDoc.id}-${index}`}
+                  className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
+                >
+                  <SlugBreadcrumb slug={currentDoc.slug} />
+
+                  <SmartDiffValue
+                    label="Slug"
+                    originalValue={originalDoc?.slug}
+                    currentValue={currentDoc.slug}
+                  />
+
+                  <SmartDiffValue
+                    label="タイトル"
+                    originalValue={originalDoc?.sidebar_label}
+                    currentValue={currentDoc.sidebar_label}
+                  />
+
+                  <SmartDiffValue
+                    label="表示順序"
+                    originalValue={originalDoc?.file_order}
+                    currentValue={currentDoc.file_order}
+                  />
+
+                  <SmartDiffValue
+                    label="公開設定"
+                    originalValue={originalDoc?.is_public}
+                    currentValue={currentDoc.is_public}
+                  />
+
+                  <SmartDiffValue
+                    label="本文"
+                    originalValue={originalDoc?.content}
+                    currentValue={currentDoc.content}
+                    isMarkdown={true}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* データが空の場合 */}
+        {diffData.currentCategoryVersions.length === 0 && diffData.currentDocumentVersions.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-lg">変更内容がありません</div>
           </div>
         )}
       </div>

@@ -8,6 +8,9 @@ use App\Http\Requests\Api\PullRequestEditSession\FetchEditDiffRequest;
 use App\Http\Requests\Api\PullRequestEditSession\FinishEditingRequest;
 use App\Http\Requests\Api\PullRequestEditSession\StartEditingRequest;
 use App\Models\ActivityLogOnPullRequest;
+use App\Models\DocumentCategory;
+use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
 use App\Services\DocumentDiffService;
@@ -44,27 +47,66 @@ class PullRequestEditSessionController extends ApiBaseController
             $token = $request->validated('token');
 
             // 3. pull_request_edit_sessionsに対してwhere token = request.tokenでfirstOrFail
+            // pull_request_edit_sessionsに紐づくdocument_versionsとdocument_categoriesをそれぞれに紐づくedit_start_versionsを取得
             $editSession = PullRequestEditSession::where('token', $token)
                 ->with([
-                    'pullRequest.userBranch.editStartVersions',
-                    'pullRequest.userBranch.editStartVersions.originalDocumentVersion',
-                    'pullRequest.userBranch.editStartVersions.currentDocumentVersion',
-                    'pullRequest.userBranch.editStartVersions.originalCategory',
-                    'pullRequest.userBranch.editStartVersions.currentCategory',
-                    'documentVersions',
-                    'documentCategories',
+                    'pullRequest.userBranch',
+                    'documentVersions.currentEditStartVersions',
+                    'documentCategories.currentEditStartVersions',
                 ])
                 ->firstOrFail();
 
-            // 4. pull_request_edit_sessionsに紐づくdocument_versionsとdocument_categoriesとそれら各々に紐づくedit_start_versionsも取得
-            // PullRequest経由でUserBranchのEditStartVersionsを取得
-            $editStartVersions = $editSession->pullRequest->userBranch->editStartVersions;
+            // current_document & current_categoriesとして扱う
+            $currentEditStartVersions = collect();
+            
+            // document_versionsのcurrentEditStartVersionsを追加
+            foreach ($editSession->documentVersions as $documentVersion) {
+                $currentEditStartVersions = $currentEditStartVersions->merge($documentVersion->currentEditStartVersions);
+            }
+            
+            // document_categoriesのcurrentEditStartVersionsを追加
+            foreach ($editSession->documentCategories as $documentCategory) {
+                $currentEditStartVersions = $currentEditStartVersions->merge($documentCategory->currentEditStartVersions);
+            }
 
-            // 5. $this->documentDiffService->generateDiffData(d.edit_start_versions)
-            $diffData = $this->documentDiffService->generateDiffData($editStartVersions);
+            // 4. edit_start_versionsのtarget_type = documentとcategoryでそれぞれforeachして、original_version_idをpluck
+            $originalDocumentVersionIds = array();
+            $originalCategoryVersionIds = array();
+            
+            foreach ($currentEditStartVersions as $editStartVersion) {
+                if ($editStartVersion->target_type === 'document') {
+                    $originalDocumentVersionIds[] = $editStartVersion->original_version_id;
+                } else {
+                    $originalCategoryVersionIds[] = $editStartVersion->original_version_id;
+                }
+            }
 
-            // 6. return response()->json([d])
-            return response()->json($diffData);
+            // 5. edit_start_versionsモデルに対してwhere not user_branch_id ≠ b.user_branch_id AND where id In d.pluckした値→get();
+            $originalDocumentVersions = DocumentVersion::whereNot('pull_request_edit_session_id', $editSession->id)
+                ->whereIn('id', $originalDocumentVersionIds)
+                ->withTrashed()
+                ->get();
+
+            $originalCategoryVersions = DocumentCategory::whereNot('pull_request_edit_session_id', $editSession->id)
+                ->whereIn('id', $originalCategoryVersionIds)
+                ->withTrashed()
+                ->get();
+
+            Log::info('originalDocumentVersions', [
+                'originalDocumentVersions' => $originalDocumentVersions->toArray(),
+                'originalDocumentVersionIds' => $originalDocumentVersionIds,
+            ]);
+            Log::info('originalCategoryVersions', [
+                'originalCategoryVersions' => $originalCategoryVersions->toArray(),
+                'originalCategoryVersionIds' => $originalCategoryVersionIds,
+            ]);
+
+            return response()->json([
+                'originalDocumentVersions' => $originalDocumentVersions->toArray(),
+                'originalCategoryVersions' => $originalCategoryVersions->toArray(),
+                'currentDocumentVersions' => $editSession->documentVersions->toArray(),
+                'currentCategoryVersions' => $editSession->documentCategories->toArray(),
+            ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             Log::warning('プルリクエスト編集セッションが見つかりません', [

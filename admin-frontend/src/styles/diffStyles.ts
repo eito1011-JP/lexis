@@ -20,7 +20,6 @@ export const diffStyles = `
   .diff-deleted-content {
     background-color: rgba(248, 81, 73, 0.25) !important;
     border-radius: 3px;
-    padding: 2px 6px;
     display: inline;
   }
   
@@ -28,7 +27,6 @@ export const diffStyles = `
     background-color: rgba(63, 185, 80, 0.3) !important;
     color: #ffffff !important;
     border-radius: 3px;
-    padding: 2px 6px;
     display: inline;
   }
   
