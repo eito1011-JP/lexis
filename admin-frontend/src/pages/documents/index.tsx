@@ -344,7 +344,7 @@ export default function DocumentsPage(): JSX.Element {
       let deleteUrl = '';
       const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
       if (pullRequestEditToken && editPullRequestId) {
-        deleteUrl = `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
+        deleteUrl = `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}&edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
       } else {
         deleteUrl = `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}`;
       }

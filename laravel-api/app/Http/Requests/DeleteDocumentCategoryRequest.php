@@ -24,6 +24,7 @@ class DeleteDocumentCategoryRequest extends FormRequest
         return [
             'category_path_with_slug' => 'nullable|string|max:255',
             'edit_pull_request_id' => 'nullable|integer',
+            'pull_request_edit_token' => 'nullable|string|max:255',
         ];
     }
 
@@ -34,6 +35,8 @@ class DeleteDocumentCategoryRequest extends FormRequest
     {
         return [
             'category_path_with_slug' => __('attributes.document.category_path_with_slug'),
+            'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
+            'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
     }
 }

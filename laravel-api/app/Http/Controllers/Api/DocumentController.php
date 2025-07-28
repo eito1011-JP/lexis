@@ -450,6 +450,8 @@ class DocumentController extends ApiBaseController
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
+            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
+
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));
             $slug = array_pop($pathParts);
             $categoryPath = $pathParts;
@@ -476,6 +478,7 @@ class DocumentController extends ApiBaseController
                 'user_branch_id' => $userBranchId,
                 'file_path' => $existingDocument->file_path,
                 'status' => DocumentStatus::DRAFT->value,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'content' => $existingDocument->content,
                 'slug' => $existingDocument->slug,
                 'sidebar_label' => $existingDocument->sidebar_label,
@@ -483,6 +486,7 @@ class DocumentController extends ApiBaseController
                 'last_edited_by' => $user->email,
                 'is_public' => $existingDocument->is_public,
                 'category_id' => $existingDocument->category_id,
+                'deleted_at' => now(),
                 'is_deleted' => Flag::TRUE,
             ]);
 
