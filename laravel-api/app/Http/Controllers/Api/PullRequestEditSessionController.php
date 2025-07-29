@@ -10,7 +10,6 @@ use App\Http\Requests\Api\PullRequestEditSession\StartEditingRequest;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
-use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
 use App\Services\DocumentDiffService;
@@ -51,50 +50,76 @@ class PullRequestEditSessionController extends ApiBaseController
             $editSession = PullRequestEditSession::where('token', $token)
                 ->with([
                     'pullRequest.userBranch',
-                    'documentVersions.currentEditStartVersions',
-                    'documentCategories.currentEditStartVersions',
+                    'documentVersions' => function ($query) {
+                        $query->withTrashed()->with('originalEditStartVersions');
+                    },
+                    'documentCategories' => function ($query) {
+                        $query->withTrashed()->with('originalEditStartVersions');
+                    },
                 ])
                 ->firstOrFail();
 
             // current_document & current_categoriesとして扱う
             $currentEditStartVersions = collect();
-            
+
+            Log::info('editSession', [
+                'editSession' => $editSession->toArray(),
+            ]);
             // document_versionsのcurrentEditStartVersionsを追加
             foreach ($editSession->documentVersions as $documentVersion) {
+                Log::info('documentVersion', [
+                    'documentVersion' => $documentVersion->toArray(),
+                ]);
                 $currentEditStartVersions = $currentEditStartVersions->merge($documentVersion->currentEditStartVersions);
             }
-            
+
             // document_categoriesのcurrentEditStartVersionsを追加
             foreach ($editSession->documentCategories as $documentCategory) {
+                Log::info('documentCategory', [
+                    'documentCategory' => $documentCategory->toArray(),
+                ]);
                 $currentEditStartVersions = $currentEditStartVersions->merge($documentCategory->currentEditStartVersions);
             }
 
             // 4. edit_start_versionsのtarget_type = documentとcategoryでそれぞれforeachして、original_version_idをpluck
-            $originalDocumentVersionIds = array();
-            $originalCategoryVersionIds = array();
-            
+            $originalDocumentVersionIds = [];
+            $originalCategoryVersionIds = [];
+            $currentDocumentVersionIds = [];
+            $currentCategoryVersionIds = [];
+
             foreach ($currentEditStartVersions as $editStartVersion) {
                 if ($editStartVersion->target_type === 'document') {
                     $originalDocumentVersionIds[] = $editStartVersion->original_version_id;
+                    $currentDocumentVersionIds[] = $editStartVersion->current_version_id;
                 } else {
                     $originalCategoryVersionIds[] = $editStartVersion->original_version_id;
+                    $currentCategoryVersionIds[] = $editStartVersion->current_version_id;
                 }
             }
 
             // 5. edit_start_versionsモデルに対してwhere not user_branch_id ≠ b.user_branch_id AND where id In d.pluckした値→get();
-            $originalDocumentVersions = DocumentVersion::whereNot('pull_request_edit_session_id', $editSession->id)
+            $originalDocumentVersions = DocumentVersion::where(function ($query) use ($editSession) {
+                $query->where('pull_request_edit_session_id', '!=', $editSession->id)
+                    ->orWhereNull('pull_request_edit_session_id');
+            })
                 ->whereIn('id', $originalDocumentVersionIds)
+                ->whereNotIn('id', $currentDocumentVersionIds)
                 ->withTrashed()
                 ->get();
 
-            $originalCategoryVersions = DocumentCategory::whereNot('pull_request_edit_session_id', $editSession->id)
+            $originalCategoryVersions = DocumentCategory::where(function ($query) use ($editSession) {
+                $query->where('pull_request_edit_session_id', '!=', $editSession->id)
+                    ->orWhereNull('pull_request_edit_session_id');
+            })
                 ->whereIn('id', $originalCategoryVersionIds)
+                ->whereNotIn('id', $currentCategoryVersionIds)
                 ->withTrashed()
                 ->get();
 
             Log::info('originalDocumentVersions', [
                 'originalDocumentVersions' => $originalDocumentVersions->toArray(),
                 'originalDocumentVersionIds' => $originalDocumentVersionIds,
+                'editSessionId' => $editSession->id,
             ]);
             Log::info('originalCategoryVersions', [
                 'originalCategoryVersions' => $originalCategoryVersions->toArray(),

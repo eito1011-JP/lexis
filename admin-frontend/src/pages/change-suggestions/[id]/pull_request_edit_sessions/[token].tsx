@@ -29,6 +29,19 @@ type DiffItem = {
   updated_at: string;
   is_deleted?: boolean;
   deleted_at?: string | null;
+  originalEditStartVersions?: EditStartVersion[];
+};
+
+type EditStartVersion = {
+  id: number;
+  user_branch_id: number;
+  target_type: string;
+  original_version_id: number | null;
+  current_version_id: number;
+  is_deleted: number;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type EditSessionResponse = {
@@ -44,7 +57,8 @@ const SmartDiffValue: React.FC<{
   originalValue: any;
   currentValue: any;
   isMarkdown?: boolean;
-}> = ({ label, originalValue, currentValue, isMarkdown = false }) => {
+  isDeleted?: boolean;
+}> = ({ label, originalValue, currentValue, isMarkdown = false, isDeleted = false }) => {
   const renderValue = (value: any) => {
     if (value === null || value === undefined) return '';
     if (typeof value === 'boolean') return value ? '公開' : '非公開';
@@ -79,10 +93,20 @@ const SmartDiffValue: React.FC<{
   const generateSplitDiffContent = (
     originalText: string,
     currentText: string,
-    isMarkdown: boolean
+    isMarkdown: boolean,
+    isDeleted: boolean = false
   ) => {
     const originalStr = renderValue(originalText);
     const currentStr = renderValue(currentText);
+
+    // 削除された場合は右側を空白にする
+    if (isDeleted) {
+      return {
+        leftContent: isMarkdown ? renderMarkdownContent(originalStr) : originalStr,
+        rightContent: '',
+        hasChanges: true,
+      };
+    }
 
     if (originalStr === currentStr) {
       // 変更がない場合は通常表示
@@ -202,7 +226,8 @@ const SmartDiffValue: React.FC<{
   const { leftContent, rightContent } = generateSplitDiffContent(
     originalValue,
     currentValue,
-    isMarkdown
+    isMarkdown,
+    isDeleted
   );
 
   return (
@@ -272,6 +297,38 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
       },
       {} as Record<string, DiffItem>
     );
+  };
+
+  // 削除されたドキュメントでも作成の事実を表示するための処理
+  const processDeletedDocuments = () => {
+    if (!diffData) return [];
+
+    const deletedDocuments: DiffItem[] = [];
+
+    // currentDocumentVersionsから削除されたドキュメントを抽出
+    diffData.currentDocumentVersions.forEach(currentDoc => {
+      if (currentDoc.is_deleted === true) {
+        // originalEditStartVersionsからis_deleted = 0のレコードを探す
+        const hasActiveOriginalEditStartVersion = currentDoc.originalEditStartVersions?.some(
+          (editVersion: EditStartVersion) => editVersion.is_deleted === 0
+        );
+
+        if (hasActiveOriginalEditStartVersion) {
+          // 削除されたが作成の事実がある場合は表示用のデータを作成
+          deletedDocuments.push({
+            ...currentDoc,
+            // 削除されたドキュメントの場合は、originalValueを空にして作成を示す
+            content: currentDoc.content || '',
+            sidebar_label: currentDoc.sidebar_label || '',
+            slug: currentDoc.slug || '',
+            file_order: currentDoc.file_order || 0,
+            is_public: currentDoc.is_public || false,
+          });
+        }
+      }
+    });
+
+    return deletedDocuments;
   };
 
   useEffect(() => {
@@ -404,24 +461,28 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
                     label="Slug"
                     originalValue={originalCategory?.slug}
                     currentValue={currentCategory.slug}
+                    isDeleted={currentCategory.is_deleted === true}
                   />
 
                   <SmartDiffValue
                     label="カテゴリ名"
                     originalValue={originalCategory?.sidebar_label}
                     currentValue={currentCategory.sidebar_label}
+                    isDeleted={currentCategory.is_deleted === true}
                   />
 
                   <SmartDiffValue
                     label="表示順"
                     originalValue={originalCategory?.position}
                     currentValue={currentCategory.position}
+                    isDeleted={currentCategory.is_deleted === true}
                   />
 
                   <SmartDiffValue
                     label="説明"
                     originalValue={originalCategory?.description}
                     currentValue={currentCategory.description}
+                    isDeleted={currentCategory.is_deleted === true}
                   />
                 </div>
               );
@@ -449,24 +510,28 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
                     label="Slug"
                     originalValue={originalDoc?.slug}
                     currentValue={currentDoc.slug}
+                    isDeleted={currentDoc.is_deleted === true}
                   />
 
                   <SmartDiffValue
                     label="タイトル"
                     originalValue={originalDoc?.sidebar_label}
                     currentValue={currentDoc.sidebar_label}
+                    isDeleted={currentDoc.is_deleted === true}
                   />
 
                   <SmartDiffValue
                     label="表示順序"
                     originalValue={originalDoc?.file_order}
                     currentValue={currentDoc.file_order}
+                    isDeleted={currentDoc.is_deleted === true}
                   />
 
                   <SmartDiffValue
                     label="公開設定"
                     originalValue={originalDoc?.is_public}
                     currentValue={currentDoc.is_public}
+                    isDeleted={currentDoc.is_deleted === true}
                   />
 
                   <SmartDiffValue
@@ -474,6 +539,7 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
                     originalValue={originalDoc?.content}
                     currentValue={currentDoc.content}
                     isMarkdown={true}
+                    isDeleted={currentDoc.is_deleted === true}
                   />
                 </div>
               );
@@ -481,12 +547,70 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
           </div>
         )}
 
+        {/* 削除されたドキュメント（作成の事実を表示） */}
+        {(() => {
+          const deletedDocuments = processDeletedDocuments();
+          return deletedDocuments.length > 0 ? (
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-white mb-6">
+                🗑️ 削除されたドキュメント（作成履歴あり） × {deletedDocuments.length}
+              </h2>
+              {deletedDocuments.map((deletedDoc, index) => (
+                <div
+                  key={`deleted-document-${deletedDoc.id}-${index}`}
+                  className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
+                >
+                  <SlugBreadcrumb slug={deletedDoc.slug} />
+
+                  <SmartDiffValue
+                    label="Slug"
+                    originalValue=""
+                    currentValue={deletedDoc.slug}
+                    isDeleted={true}
+                  />
+
+                  <SmartDiffValue
+                    label="タイトル"
+                    originalValue=""
+                    currentValue={deletedDoc.sidebar_label}
+                    isDeleted={true}
+                  />
+
+                  <SmartDiffValue
+                    label="表示順序"
+                    originalValue=""
+                    currentValue={deletedDoc.file_order}
+                    isDeleted={true}
+                  />
+
+                  <SmartDiffValue
+                    label="公開設定"
+                    originalValue=""
+                    currentValue={deletedDoc.is_public}
+                    isDeleted={true}
+                  />
+
+                  <SmartDiffValue
+                    label="本文"
+                    originalValue=""
+                    currentValue={deletedDoc.content}
+                    isMarkdown={true}
+                    isDeleted={true}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null;
+        })()}
+
         {/* データが空の場合 */}
-        {diffData.currentCategoryVersions.length === 0 && diffData.currentDocumentVersions.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-lg">変更内容がありません</div>
-          </div>
-        )}
+        {diffData.currentCategoryVersions.length === 0 &&
+          diffData.currentDocumentVersions.length === 0 &&
+          processDeletedDocuments().length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-gray-400 text-lg">変更内容がありません</div>
+            </div>
+          )}
       </div>
     </AdminLayout>
   );

@@ -30,6 +30,7 @@ class DocumentVersion extends Model
         'last_edited_by',
         'last_reviewed_by',
         'is_deleted',
+        'deleted_at',
         'is_public',
     ];
 

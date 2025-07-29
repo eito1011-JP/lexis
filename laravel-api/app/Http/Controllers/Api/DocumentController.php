@@ -470,6 +470,7 @@ class DocumentController extends ApiBaseController
             }
 
             // 5. 既存ドキュメントを論理削除（is_deleted = 1に更新）
+            $existingDocument->currentEditStartVersions->first()->delete();
             $existingDocument->delete();
 
             // 6. 削除されたドキュメントのレコードを新規挿入（ブランチ管理用）
