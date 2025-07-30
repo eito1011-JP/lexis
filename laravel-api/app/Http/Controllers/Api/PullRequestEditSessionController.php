@@ -10,6 +10,7 @@ use App\Http\Requests\Api\PullRequestEditSession\StartEditingRequest;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
 use App\Services\DocumentDiffService;
@@ -45,92 +46,66 @@ class PullRequestEditSessionController extends ApiBaseController
             // 2. query stringのpull_request_edit_sessions.tokenをform requestでvalidation（FetchEditDiffRequestで済み）
             $token = $request->validated('token');
 
-            // 3. pull_request_edit_sessionsに対してwhere token = request.tokenでfirstOrFail
-            // pull_request_edit_sessionsに紐づくdocument_versionsとdocument_categoriesをそれぞれに紐づくedit_start_versionsを取得
-            $editSession = PullRequestEditSession::where('token', $token)
-                ->with([
-                    'pullRequest.userBranch',
-                    'documentVersions' => function ($query) {
-                        $query->withTrashed()->with('originalEditStartVersions');
-                    },
-                    'documentCategories' => function ($query) {
-                        $query->withTrashed()->with('originalEditStartVersions');
-                    },
-                ])
-                ->firstOrFail();
-
-            // current_document & current_categoriesとして扱う
-            $currentEditStartVersions = collect();
+            $editSession = PullRequestEditSession::where('token', $token)->firstOrFail();
 
             Log::info('editSession', [
-                'editSession' => $editSession->toArray(),
-            ]);
-            // document_versionsのcurrentEditStartVersionsを追加
-            foreach ($editSession->documentVersions as $documentVersion) {
-                Log::info('documentVersion', [
-                    'documentVersion' => $documentVersion->toArray(),
-                ]);
-                $currentEditStartVersions = $currentEditStartVersions->merge($documentVersion->currentEditStartVersions);
-            }
-
-            // document_categoriesのcurrentEditStartVersionsを追加
-            foreach ($editSession->documentCategories as $documentCategory) {
-                Log::info('documentCategory', [
-                    'documentCategory' => $documentCategory->toArray(),
-                ]);
-                $currentEditStartVersions = $currentEditStartVersions->merge($documentCategory->currentEditStartVersions);
-            }
-
-            // 4. edit_start_versionsのtarget_type = documentとcategoryでそれぞれforeachして、original_version_idをpluck
-            $originalDocumentVersionIds = [];
-            $originalCategoryVersionIds = [];
-            $currentDocumentVersionIds = [];
-            $currentCategoryVersionIds = [];
-
-            foreach ($currentEditStartVersions as $editStartVersion) {
-                if ($editStartVersion->target_type === 'document') {
-                    $originalDocumentVersionIds[] = $editStartVersion->original_version_id;
-                    $currentDocumentVersionIds[] = $editStartVersion->current_version_id;
-                } else {
-                    $originalCategoryVersionIds[] = $editStartVersion->original_version_id;
-                    $currentCategoryVersionIds[] = $editStartVersion->current_version_id;
-                }
-            }
-
-            // 5. edit_start_versionsモデルに対してwhere not user_branch_id ≠ b.user_branch_id AND where id In d.pluckした値→get();
-            $originalDocumentVersions = DocumentVersion::where(function ($query) use ($editSession) {
-                $query->where('pull_request_edit_session_id', '!=', $editSession->id)
-                    ->orWhereNull('pull_request_edit_session_id');
-            })
-                ->whereIn('id', $originalDocumentVersionIds)
-                ->whereNotIn('id', $currentDocumentVersionIds)
-                ->withTrashed()
-                ->get();
-
-            $originalCategoryVersions = DocumentCategory::where(function ($query) use ($editSession) {
-                $query->where('pull_request_edit_session_id', '!=', $editSession->id)
-                    ->orWhereNull('pull_request_edit_session_id');
-            })
-                ->whereIn('id', $originalCategoryVersionIds)
-                ->whereNotIn('id', $currentCategoryVersionIds)
-                ->withTrashed()
-                ->get();
-
-            Log::info('originalDocumentVersions', [
-                'originalDocumentVersions' => $originalDocumentVersions->toArray(),
-                'originalDocumentVersionIds' => $originalDocumentVersionIds,
                 'editSessionId' => $editSession->id,
             ]);
+            // 
+            $editSession->load([
+                'documentVersions' => function ($query) {
+                    $query->withTrashed()->with(['originalEditStartVersions' => function ($query) {
+                        $query->withTrashed()->with(['originalDocumentVersion', 'currentDocumentVersion']);
+                    }]);
+                },
+                'documentCategories' => function ($query) {
+                    $query->withTrashed()->with(['originalEditStartVersions' => function ($query) {
+                        $query->withTrashed()->with(['originalCategory', 'currentCategory']);
+                    }]);
+                },
+            ]);
+
+            $originalDocumentVersionIds = collect();
+            $originalCategoryVersionIds = collect();
+            foreach ($editSession->documentVersions as $documentVersion) {
+                Log::info('documentVersionです', [
+                    'documentVersionId' => $documentVersion->id,
+                    'originalEditStartVersions' => $documentVersion->originalEditStartVersions->pluck('id'),
+                ]);
+                $originalDocumentVersionIds = $originalDocumentVersionIds->merge($documentVersion->originalEditStartVersions->pluck('current_version_id'));
+            }
+            
+            foreach ($editSession->documentCategories as $documentCategory) {
+                Log::info('documentCategoryです', [
+                    'documentCategoryId' => $documentCategory->id,
+                    'originalEditStartVersions' => $documentCategory->originalEditStartVersions->pluck('id'),
+                ]);
+                $originalCategoryVersionIds = $originalCategoryVersionIds->merge($documentCategory->originalEditStartVersions->pluck('current_version_id'));
+            }
+
+            $currentDocumentVersions = EditStartVersion::where('target_type', 'document')
+                ->whereIn('original_version_id', $originalDocumentVersionIds)
+                ->with(['originalDocumentVersion', 'currentDocumentVersion'])
+                ->get();
+
+            $currentCategoryVersions = EditStartVersion::where('target_type', 'category')
+                ->whereIn('original_version_id', $originalCategoryVersionIds)
+                ->with(['originalCategory', 'currentCategory'])
+                ->get();
+
+
+            Log::info('originalDocumentVersions', [
+                'originalDocumentVersionId' => $currentDocumentVersions->pluck('id'),
+            ]);
             Log::info('originalCategoryVersions', [
-                'originalCategoryVersions' => $originalCategoryVersions->toArray(),
-                'originalCategoryVersionIds' => $originalCategoryVersionIds,
+                'originalCategoryVersionId' => $currentCategoryVersions->pluck('id'),
             ]);
 
             return response()->json([
-                'originalDocumentVersions' => $originalDocumentVersions->toArray(),
-                'originalCategoryVersions' => $originalCategoryVersions->toArray(),
-                'currentDocumentVersions' => $editSession->documentVersions->toArray(),
-                'currentCategoryVersions' => $editSession->documentCategories->toArray(),
+                'currentEditVersions' => [
+                    'document' => $currentDocumentVersions,
+                    'category' => $currentCategoryVersions,
+                ],
             ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
