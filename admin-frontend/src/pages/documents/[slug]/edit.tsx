@@ -186,6 +186,7 @@ export default function EditDocumentPage(): JSX.Element {
         payload.edit_pull_request_id = editPullRequestId;
         payload.pull_request_edit_token = pullRequestEditToken;
         console.log('payload', payload);
+        console.log('API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE', API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE);
       }
 
       // ドキュメント編集APIを呼び出す

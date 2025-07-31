@@ -291,23 +291,20 @@ class DocumentController extends ApiBaseController
                     'error' => '認証が必要です',
                 ], 401);
             }
-            // パスからslugとcategoryPathを取得
-            $pathParts = explode('/', $request->category_path_with_slug);
-            $slug = array_pop($pathParts);
-
-            $categoryPath = $pathParts;
-
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
-
-            $existingDocument = DocumentVersion::where('category_id', $categoryId)
-                ->where('slug', $slug)
-                ->first();
+            // 編集前のdocumentのIdからexistingDocumentを取得
+            $existingDocument = DocumentVersion::find($request->current_document_id);
 
             if (! $existingDocument) {
                 return response()->json([
                     'error' => '編集対象のドキュメントが見つかりません',
                 ], 404);
             }
+
+            // パスからslugとcategoryPathを取得（file_order処理用）
+            $pathParts = explode('/', $request->category_path_with_slug);
+            $slug = array_pop($pathParts);
+            $categoryPath = $pathParts;
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             // アクティブブランチを取得
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
