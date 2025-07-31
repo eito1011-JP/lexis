@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -11,15 +12,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('pull_request_edit_session_diffs', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('pull_request_edit_session_id')->constrained('pull_request_edit_sessions')->onDelete('cascade');
-            $table->string('target_type');
-            $table->check("target_type IN ('documents', 'categories')");
-            $table->bigInteger('original_version_id')->nullable(); 
-            $table->bigInteger('current_version_id')->nullable();
-            $table->timestamps();
-        });
+            DB::statement("
+                CREATE TABLE pull_request_edit_session_diffs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pull_request_edit_session_id INTEGER NOT NULL,
+                    target_type TEXT NOT NULL CHECK (target_type IN ('documents', 'categories')),
+                    original_version_id INTEGER,
+                    current_version_id INTEGER,
+                    created_at DATETIME,
+                    updated_at DATETIME,
+                    FOREIGN KEY (pull_request_edit_session_id) REFERENCES pull_request_edit_sessions(id) ON DELETE CASCADE
+                )
+            ");
     }
 
     /**
