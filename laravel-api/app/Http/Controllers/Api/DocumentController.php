@@ -16,6 +16,7 @@ use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
+use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
@@ -204,6 +205,21 @@ class DocumentController extends ApiBaseController
                 'current_version_id' => $document->id,
             ]);
 
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'documents',
+                        'original_version_id' => $document->id,
+                    ],
+                    [
+                        'current_version_id' => $document->id,
+                        'diff_type' => 'created',
+                    ]
+                );
+            }
+
             return response()->json([
                 'document' => $document,
             ]);
@@ -335,6 +351,21 @@ class DocumentController extends ApiBaseController
                 'original_version_id' => $existingDocument->id,
                 'current_version_id' => $newDocumentVersion->id,
             ]);
+
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'documents',
+                        'original_version_id' => $existingDocument->id,
+                    ],
+                    [
+                        'current_version_id' => $newDocumentVersion->id,
+                        'diff_type' => 'updated',
+                    ]
+                );
+            }
 
             DB::commit();
 
@@ -497,6 +528,21 @@ class DocumentController extends ApiBaseController
                 'original_version_id' => $existingDocument->id,
                 'current_version_id' => $newDocumentVersion->id,
             ]);
+
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'documents',
+                        'original_version_id' => $existingDocument->id,
+                    ],
+                    [
+                        'current_version_id' => $newDocumentVersion->id,
+                        'diff_type' => 'deleted',
+                    ]
+                );
+            }
 
             DB::commit();
 

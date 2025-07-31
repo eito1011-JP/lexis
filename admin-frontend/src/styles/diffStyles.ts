@@ -200,4 +200,28 @@ export const diffStyles = `
   .diff-block-deleted p {
     margin: 0 !important;
   }
+
+  .diff-added-content {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #16a34a;
+  }
+
+  .diff-deleted-content {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #dc2626;
+  }
+
+  .diff-block-added {
+    background-color: rgba(34, 197, 94, 0.1);
+    padding: 0.25rem;
+    margin: 0.125rem 0;
+  }
+
+  .diff-block-deleted {
+    background-color: rgba(239, 68, 68, 0.1);
+    padding: 0.25rem;
+    margin: 0.125rem 0;
+  }
+
+
 `;
