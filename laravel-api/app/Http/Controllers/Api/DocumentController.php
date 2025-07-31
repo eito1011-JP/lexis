@@ -355,7 +355,7 @@ class DocumentController extends ApiBaseController
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
                         'target_type' => 'documents',
-                        'current_version_id' => $existingDocument->id,
+                        'original_version_id' => $existingDocument->id,
                     ],
                     [
                         'current_version_id' => $newDocumentVersion->id,
