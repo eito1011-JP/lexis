@@ -10,15 +10,15 @@ import { markdownStyles } from '@/styles/markdownContent';
 import { diffStyles } from '@/styles/diffStyles';
 import { makeDiff, cleanupSemantic } from '@sanity/diff-match-patch';
 
-// 差分データの型定義
-type DiffItem = {
+// 新しい仕様に基づく型定義
+type DocumentVersion = {
   id: number;
   slug: string;
   sidebar_label: string;
   description?: string;
   title?: string;
   content?: string;
-  is_public?: boolean;
+  is_public?: boolean | number;
   position?: number;
   file_order?: number;
   parent_id?: number;
@@ -27,28 +27,43 @@ type DiffItem = {
   user_branch_id: number;
   created_at: string;
   updated_at: string;
-  is_deleted?: boolean;
+  is_deleted?: boolean | number;
   deleted_at?: string | null;
-  originalEditStartVersions?: EditStartVersion[];
 };
 
-type EditStartVersion = {
+type CategoryVersion = {
   id: number;
+  slug: string;
+  sidebar_label: string;
+  description?: string;
+  position?: number;
+  parent_id?: number;
   user_branch_id: number;
-  target_type: string;
-  original_version_id: number | null;
-  current_version_id: number;
-  is_deleted: number;
-  deleted_at: string | null;
   created_at: string;
   updated_at: string;
+  is_deleted?: boolean | number;
+  deleted_at?: string | null;
+};
+
+type DocumentEditItem = {
+  original_version_id: number;
+  current_version_id: number;
+  is_deleted: number;
+  original_document_version: DocumentVersion | null;
+  current_document_version: DocumentVersion | null;
+};
+
+type CategoryEditItem = {
+  original_version_id: number;
+  current_version_id: number;
+  is_deleted: number;
+  original_category_version: CategoryVersion | null;
+  current_category_version: CategoryVersion | null;
 };
 
 type EditSessionResponse = {
-  originalDocumentVersions: DiffItem[];
-  originalCategoryVersions: DiffItem[];
-  currentDocumentVersions: DiffItem[];
-  currentCategoryVersions: DiffItem[];
+  documents: DocumentEditItem[];
+  categories: CategoryEditItem[];
 };
 
 // SmartDiffValueコンポーネント
@@ -288,47 +303,38 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // データをslugでマップ化する関数
-  const mapBySlug = (items: DiffItem[]) => {
-    return items.reduce(
-      (acc, item) => {
-        acc[item.slug] = item;
-        return acc;
-      },
-      {} as Record<string, DiffItem>
-    );
+  // is_deletedの値をチェックするヘルパー関数
+  const isDeleted = (value: boolean | number | undefined): boolean => {
+    return value === true || value === 1;
   };
 
-  // 削除されたドキュメントでも作成の事実を表示するための処理
-  const processDeletedDocuments = () => {
-    if (!diffData) return [];
+  // 編集種別を判定する関数（フロント分岐表に基づく）
+  const getDocumentEditType = (item: DocumentEditItem): 'create' | 'delete' | 'update' => {
+    // 新規作成: original_version_id = current_version_id かつ is_deleted = 0
+    if (item.original_version_id === item.current_version_id && item.is_deleted === 0) {
+      return 'create';
+    }
+    // 削除: original_version_id ≠ current_version_id かつ current_document_version.is_deleted = 1
+    if (item.original_version_id !== item.current_version_id && 
+        isDeleted(item.current_document_version?.is_deleted)) {
+      return 'delete';
+    }
+    // 変更: original_version_id ≠ current_version_id かつ is_deleted = 0
+    return 'update';
+  };
 
-    const deletedDocuments: DiffItem[] = [];
-
-    // currentDocumentVersionsから削除されたドキュメントを抽出
-    diffData.currentDocumentVersions.forEach(currentDoc => {
-      if (currentDoc.is_deleted === true) {
-        // originalEditStartVersionsからis_deleted = 0のレコードを探す
-        const hasActiveOriginalEditStartVersion = currentDoc.originalEditStartVersions?.some(
-          (editVersion: EditStartVersion) => editVersion.is_deleted === 0
-        );
-
-        if (hasActiveOriginalEditStartVersion) {
-          // 削除されたが作成の事実がある場合は表示用のデータを作成
-          deletedDocuments.push({
-            ...currentDoc,
-            // 削除されたドキュメントの場合は、originalValueを空にして作成を示す
-            content: currentDoc.content || '',
-            sidebar_label: currentDoc.sidebar_label || '',
-            slug: currentDoc.slug || '',
-            file_order: currentDoc.file_order || 0,
-            is_public: currentDoc.is_public || false,
-          });
-        }
-      }
-    });
-
-    return deletedDocuments;
+  const getCategoryEditType = (item: CategoryEditItem): 'create' | 'delete' | 'update' => {
+    // 新規作成: original_version_id = current_version_id かつ is_deleted = 0
+    if (item.original_version_id === item.current_version_id && item.is_deleted === 0) {
+      return 'create';
+    }
+    // 削除: original_version_id ≠ current_version_id かつ current_category_version.is_deleted = 1
+    if (item.original_version_id !== item.current_version_id && 
+        isDeleted(item.current_category_version?.is_deleted)) {
+      return 'delete';
+    }
+    // 変更: original_version_id ≠ current_version_id かつ is_deleted = 0
+    return 'update';
   };
 
   useEffect(() => {
@@ -422,9 +428,10 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
     );
   }
 
-  // ドキュメントとカテゴリのマップを作成
-  const originalDocumentsMap = mapBySlug(diffData.originalDocumentVersions);
-  const originalCategoriesMap = mapBySlug(diffData.originalCategoryVersions);
+  console.log('Fetched data:', {
+    documents: diffData.documents,
+    categories: diffData.categories,
+  });
 
   return (
     <AdminLayout title="変更提案編集詳細">
@@ -442,47 +449,53 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
         </div>
 
         {/* カテゴリの変更 */}
-        {diffData.currentCategoryVersions.length > 0 && (
+        {diffData.categories.length > 0 && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-white mb-6">
-              📁 カテゴリの変更 × {diffData.currentCategoryVersions.length}
+              📁 カテゴリの変更 × {diffData.categories.length}
             </h2>
-            {diffData.currentCategoryVersions.map((currentCategory, index) => {
-              const originalCategory = originalCategoriesMap[currentCategory.slug];
+            {diffData.categories.map((categoryEdit, index) => {
+              const editType = getCategoryEditType(categoryEdit);
+              const originalCategory = categoryEdit.original_category_version;
+              const currentCategory = categoryEdit.current_category_version;
+
+              // フロント分岐表に基づく表示制御
+              const leftValue = editType === 'create' ? null : originalCategory;
+              const rightValue = editType === 'delete' ? null : currentCategory;
 
               return (
                 <div
-                  key={`category-${currentCategory.id}-${index}`}
+                  key={`category-${categoryEdit.current_version_id}-${index}`}
                   className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
                 >
-                  <SlugBreadcrumb slug={currentCategory.slug} />
+                  <SlugBreadcrumb slug={currentCategory?.slug || originalCategory?.slug || ''} />
 
                   <SmartDiffValue
                     label="Slug"
-                    originalValue={originalCategory?.slug}
-                    currentValue={currentCategory.slug}
-                    isDeleted={currentCategory.is_deleted === true}
+                    originalValue={leftValue?.slug}
+                    currentValue={rightValue?.slug}
+                    isDeleted={editType === 'delete'}
                   />
 
                   <SmartDiffValue
                     label="カテゴリ名"
-                    originalValue={originalCategory?.sidebar_label}
-                    currentValue={currentCategory.sidebar_label}
-                    isDeleted={currentCategory.is_deleted === true}
+                    originalValue={leftValue?.sidebar_label}
+                    currentValue={rightValue?.sidebar_label}
+                    isDeleted={editType === 'delete'}
                   />
 
                   <SmartDiffValue
                     label="表示順"
-                    originalValue={originalCategory?.position}
-                    currentValue={currentCategory.position}
-                    isDeleted={currentCategory.is_deleted === true}
+                    originalValue={leftValue?.position}
+                    currentValue={rightValue?.position}
+                    isDeleted={editType === 'delete'}
                   />
 
                   <SmartDiffValue
                     label="説明"
-                    originalValue={originalCategory?.description}
-                    currentValue={currentCategory.description}
-                    isDeleted={currentCategory.is_deleted === true}
+                    originalValue={leftValue?.description}
+                    currentValue={rightValue?.description}
+                    isDeleted={editType === 'delete'}
                   />
                 </div>
               );
@@ -491,55 +504,61 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
         )}
 
         {/* ドキュメントの変更 */}
-        {diffData.currentDocumentVersions.length > 0 && (
+        {diffData.documents.length > 0 && (
           <div className="mb-8">
             <h2 className="text-xl font-bold text-white mb-6">
-              📝 ドキュメントの変更 × {diffData.currentDocumentVersions.length}
+              📝 ドキュメントの変更 × {diffData.documents.length}
             </h2>
-            {diffData.currentDocumentVersions.map((currentDoc, index) => {
-              const originalDoc = originalDocumentsMap[currentDoc.slug];
+            {diffData.documents.map((documentEdit, index) => {
+              const editType = getDocumentEditType(documentEdit);
+              const originalDoc = documentEdit.original_document_version;
+              const currentDoc = documentEdit.current_document_version;
+
+              // フロント分岐表に基づく表示制御
+              const leftValue = editType === 'create' ? null : originalDoc;
+              const rightValue = editType === 'delete' ? null : currentDoc;
 
               return (
                 <div
-                  key={`document-${currentDoc.id}-${index}`}
+                  key={`document-${documentEdit.current_version_id}-${index}`}
                   className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
                 >
-                  <SlugBreadcrumb slug={currentDoc.slug} />
+                  <SlugBreadcrumb slug={currentDoc?.slug || originalDoc?.slug || ''} />
 
                   <SmartDiffValue
                     label="Slug"
-                    originalValue={originalDoc?.slug}
-                    currentValue={currentDoc.slug}
-                    isDeleted={currentDoc.is_deleted === true}
+                    originalValue={leftValue?.slug}
+                    currentValue={rightValue?.slug}
+                    isDeleted={editType === 'delete'}
                   />
 
                   <SmartDiffValue
                     label="タイトル"
-                    originalValue={originalDoc?.sidebar_label}
-                    currentValue={currentDoc.sidebar_label}
-                    isDeleted={currentDoc.is_deleted === true}
+                    originalValue={leftValue?.sidebar_label}
+                    currentValue={rightValue?.sidebar_label}
+                    isDeleted={editType === 'delete'}
                   />
 
                   <SmartDiffValue
                     label="表示順序"
-                    originalValue={originalDoc?.file_order}
-                    currentValue={currentDoc.file_order}
-                    isDeleted={currentDoc.is_deleted === true}
+                    originalValue={leftValue?.file_order}
+                    currentValue={rightValue?.file_order}
+                    isDeleted={editType === 'delete'}
                   />
 
                   <SmartDiffValue
                     label="公開設定"
-                    originalValue={originalDoc?.is_public}
-                    currentValue={currentDoc.is_public}
-                    isDeleted={currentDoc.is_deleted === true}
+                    originalValue={leftValue?.is_public}
+                    currentValue={rightValue?.is_public}
+                    isDeleted={editType === 'delete'}
                   />
 
                   <SmartDiffValue
                     label="本文"
-                    originalValue={originalDoc?.content}
-                    currentValue={currentDoc.content}
+                    originalValue={leftValue?.content}
+                    currentValue={rightValue?.content}
                     isMarkdown={true}
-                    isDeleted={currentDoc.is_deleted === true}
+                    isDeleted={editType === 'delete'}
                   />
                 </div>
               );
@@ -547,70 +566,12 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
           </div>
         )}
 
-        {/* 削除されたドキュメント（作成の事実を表示） */}
-        {(() => {
-          const deletedDocuments = processDeletedDocuments();
-          return deletedDocuments.length > 0 ? (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-white mb-6">
-                🗑️ 削除されたドキュメント（作成履歴あり） × {deletedDocuments.length}
-              </h2>
-              {deletedDocuments.map((deletedDoc, index) => (
-                <div
-                  key={`deleted-document-${deletedDoc.id}-${index}`}
-                  className="bg-gray-900/50 rounded-lg border border-gray-700 p-6 mb-6"
-                >
-                  <SlugBreadcrumb slug={deletedDoc.slug} />
-
-                  <SmartDiffValue
-                    label="Slug"
-                    originalValue=""
-                    currentValue={deletedDoc.slug}
-                    isDeleted={true}
-                  />
-
-                  <SmartDiffValue
-                    label="タイトル"
-                    originalValue=""
-                    currentValue={deletedDoc.sidebar_label}
-                    isDeleted={true}
-                  />
-
-                  <SmartDiffValue
-                    label="表示順序"
-                    originalValue=""
-                    currentValue={deletedDoc.file_order}
-                    isDeleted={true}
-                  />
-
-                  <SmartDiffValue
-                    label="公開設定"
-                    originalValue=""
-                    currentValue={deletedDoc.is_public}
-                    isDeleted={true}
-                  />
-
-                  <SmartDiffValue
-                    label="本文"
-                    originalValue=""
-                    currentValue={deletedDoc.content}
-                    isMarkdown={true}
-                    isDeleted={true}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null;
-        })()}
-
         {/* データが空の場合 */}
-        {diffData.currentCategoryVersions.length === 0 &&
-          diffData.currentDocumentVersions.length === 0 &&
-          processDeletedDocuments().length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-gray-400 text-lg">変更内容がありません</div>
-            </div>
-          )}
+        {diffData.categories.length === 0 && diffData.documents.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 text-lg">変更内容がありません</div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

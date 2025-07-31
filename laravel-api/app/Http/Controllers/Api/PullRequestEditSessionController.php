@@ -43,69 +43,59 @@ class PullRequestEditSessionController extends ApiBaseController
                 ], 401);
             }
 
-            // 2. query stringのpull_request_edit_sessions.tokenをform requestでvalidation（FetchEditDiffRequestで済み）
+            // 2. query stringのtokenをvalidation
             $token = $request->validated('token');
 
+            // 3. pull_request_edit_sessionsに対してwhere token = request.tokenでfirstOrFail
             $editSession = PullRequestEditSession::where('token', $token)->firstOrFail();
 
-            Log::info('editSession', [
-                'editSessionId' => $editSession->id,
-            ]);
-            // 
-            $editSession->load([
-                'documentVersions' => function ($query) {
-                    $query->withTrashed()->with(['originalEditStartVersions' => function ($query) {
-                        $query->withTrashed()->with(['originalDocumentVersion', 'currentDocumentVersion']);
-                    }]);
-                },
-                'documentCategories' => function ($query) {
-                    $query->withTrashed()->with(['originalEditStartVersions' => function ($query) {
-                        $query->withTrashed()->with(['originalCategory', 'currentCategory']);
-                    }]);
-                },
-            ]);
+            // 4. pull_request_edit_sessionsに紐づくdocument_versionsとdocument_categoriesをrelationで取得
+            $pullRequest = $editSession->pullRequest;
+            $userBranch = $pullRequest->userBranch;
 
-            $originalDocumentVersionIds = collect();
-            $originalCategoryVersionIds = collect();
-            foreach ($editSession->documentVersions as $documentVersion) {
-                Log::info('documentVersionです', [
-                    'documentVersionId' => $documentVersion->id,
-                    'originalEditStartVersions' => $documentVersion->originalEditStartVersions->pluck('id'),
-                ]);
-                $originalDocumentVersionIds = $originalDocumentVersionIds->merge($documentVersion->originalEditStartVersions->pluck('current_version_id'));
-            }
-            
-            foreach ($editSession->documentCategories as $documentCategory) {
-                Log::info('documentCategoryです', [
-                    'documentCategoryId' => $documentCategory->id,
-                    'originalEditStartVersions' => $documentCategory->originalEditStartVersions->pluck('id'),
-                ]);
-                $originalCategoryVersionIds = $originalCategoryVersionIds->merge($documentCategory->originalEditStartVersions->pluck('current_version_id'));
-            }
+            // document_versionsとdocument_categoriesを取得
+            $documentVersions = DocumentVersion::where('user_branch_id', $userBranch->id)->get();
+            $documentCategories = DocumentCategory::where('user_branch_id', $userBranch->id)->get();
 
-            $currentDocumentVersions = EditStartVersion::where('target_type', 'document')
-                ->whereIn('original_version_id', $originalDocumentVersionIds)
-                ->with(['originalDocumentVersion', 'currentDocumentVersion'])
+            // 5. edit_start_versionsを取得
+            $editStartVersions = EditStartVersion::where('user_branch_id', $userBranch->id)
                 ->get();
 
-            $currentCategoryVersions = EditStartVersion::where('target_type', 'category')
-                ->whereIn('original_version_id', $originalCategoryVersionIds)
-                ->with(['originalCategory', 'currentCategory'])
-                ->get();
+            $documentResults = [];
+            $categoryResults = [];
 
+            // 6. edit_start_versionsをforeach
+            foreach ($editStartVersions as $edit) {
+                if ($edit->target_type === 'document') {
+                    // documentの処理
+                    $original = $documentVersions->firstWhere('id', $edit->original_version_id);
+                    $current = $documentVersions->firstWhere('id', $edit->current_version_id);
 
-            Log::info('originalDocumentVersions', [
-                'originalDocumentVersionId' => $currentDocumentVersions->pluck('id'),
-            ]);
-            Log::info('originalCategoryVersions', [
-                'originalCategoryVersionId' => $currentCategoryVersions->pluck('id'),
-            ]);
+                    $documentResults[] = [
+                        'original_version_id' => $edit->original_version_id,
+                        'current_version_id' => $edit->current_version_id,
+                        'is_deleted' => $edit->is_deleted,
+                        'original_document_version' => $original,
+                        'current_document_version' => $current,
+                    ];
+                } elseif ($edit->target_type === 'category') {
+                    // categoryの処理
+                    $original = $documentCategories->firstWhere('id', $edit->original_version_id);
+                    $current = $documentCategories->firstWhere('id', $edit->current_version_id);
+
+                    $categoryResults[] = [
+                        'original_version_id' => $edit->original_version_id,
+                        'current_version_id' => $edit->current_version_id,
+                        'is_deleted' => $edit->is_deleted,
+                        'original_category_version' => $original,
+                        'current_category_version' => $current,
+                    ];
+                }
+            }
 
             return response()->json([
-                'currentEditVersions' => [
-                    'document' => $currentDocumentVersions,
-                    'category' => $currentCategoryVersions,
-                ],
+                'documents' => $documentResults,
+                'categories' => $categoryResults,
             ]);
 
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
@@ -128,67 +118,6 @@ class PullRequestEditSessionController extends ApiBaseController
 
             return response()->json([
                 'error' => 'プルリクエスト編集差分の取得に失敗しました',
-            ], 500);
-        }
-    }
-
-    /**
-     * プルリクエストの編集を開始する
-     */
-    public function startEditingPullRequest(StartEditingRequest $request): JsonResponse
-    {
-        DB::beginTransaction();
-
-        try {
-            // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
-
-            if (! $user) {
-                return response()->json([
-                    'error' => '認証されていません',
-                ], 401);
-            }
-
-            // 2. pull_request_idをform requestでvalidation（StartEditingRequestで済み）
-            $pullRequestId = $request->validated('pull_request_id');
-
-            // 3. pull_request_idでfirstOrFailしてuser_branch_idを取得
-            $pullRequest = PullRequest::findOrFail($pullRequestId);
-
-            // 4. user_branch_idでuser_branchesのレコードのis_activeをFlag::TRUEに更新
-            $pullRequest->userBranch()->update([
-                'is_active' => Flag::TRUE,
-            ]);
-
-            // 5. tokenを\Illuminate\Support\Str::random(32);で作成
-            $token = Str::random(32);
-
-            // 6. pull_request_edit_sessionsテーブルにレコードを作成
-            $editSession = PullRequestEditSession::create([
-                'pull_request_id' => $pullRequestId,
-                'user_id' => $user->id,
-                'token' => $token,
-                'started_at' => now(),
-            ]);
-
-            DB::commit();
-
-            return response()->json([
-                'token' => $token,
-                'session_id' => $editSession->id,
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('プルリクエスト編集開始エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-                'pull_request_id' => $request->validated('pull_request_id'),
-                'user_id' => $user->id ?? null,
-            ]);
-
-            return response()->json([
-                'error' => 'プルリクエスト編集開始に失敗しました',
             ], 500);
         }
     }
