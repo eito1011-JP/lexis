@@ -122,7 +122,7 @@ class DocumentCategoryController extends ApiBaseController
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
                         'target_type' => 'categories',
-                        'original_version_id' => $category->id,
+                        'current_version_id' => $category->id,
                     ],
                     [
                         'current_version_id' => $category->id,
@@ -219,7 +219,7 @@ class DocumentCategoryController extends ApiBaseController
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
                         'target_type' => 'categories',
-                        'original_version_id' => $existingCategory->id,
+                        'current_version_id' => $existingCategory->id,
                     ],
                     [
                         'current_version_id' => $newCategory->id,
@@ -465,7 +465,7 @@ class DocumentCategoryController extends ApiBaseController
                         [
                             'pull_request_edit_session_id' => $pullRequestEditSessionId,
                             'target_type' => 'categories',
-                            'original_version_id' => $category->id,
+                            'current_version_id' => $category->id,
                         ],
                         [
                             'current_version_id' => $newCategoryId,
