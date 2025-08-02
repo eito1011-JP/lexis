@@ -1,9 +1,8 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-            DB::statement("
+        DB::statement("
                 CREATE TABLE pull_request_edit_session_diffs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     pull_request_edit_session_id INTEGER NOT NULL,
@@ -33,4 +32,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('pull_request_edit_session_diffs');
     }
-}; 
+};

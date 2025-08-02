@@ -718,6 +718,7 @@ class PullRequestController extends ApiBaseController
                     ] : null,
                     'old_pull_request_title' => $log->old_pull_request_title,
                     'new_pull_request_title' => $log->new_pull_request_title,
+                    'fix_request_token' => $log->fix_request_token,
                     'created_at' => $log->created_at->toISOString(),
                 ];
             });

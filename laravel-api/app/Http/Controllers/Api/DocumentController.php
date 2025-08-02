@@ -16,6 +16,7 @@ use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
+use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
@@ -204,6 +205,21 @@ class DocumentController extends ApiBaseController
                 'current_version_id' => $document->id,
             ]);
 
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'documents',
+                        'current_version_id' => $document->id,
+                    ],
+                    [
+                        'current_version_id' => $document->id,
+                        'diff_type' => 'created',
+                    ]
+                );
+            }
+
             return response()->json([
                 'document' => $document,
             ]);
@@ -275,23 +291,20 @@ class DocumentController extends ApiBaseController
                     'error' => '認証が必要です',
                 ], 401);
             }
-            // パスからslugとcategoryPathを取得
-            $pathParts = explode('/', $request->category_path_with_slug);
-            $slug = array_pop($pathParts);
-
-            $categoryPath = $pathParts;
-
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
-
-            $existingDocument = DocumentVersion::where('category_id', $categoryId)
-                ->where('slug', $slug)
-                ->first();
+            // 編集前のdocumentのIdからexistingDocumentを取得
+            $existingDocument = DocumentVersion::find($request->current_document_id);
 
             if (! $existingDocument) {
                 return response()->json([
                     'error' => '編集対象のドキュメントが見つかりません',
                 ], 404);
             }
+
+            // パスからslugとcategoryPathを取得（file_order処理用）
+            $pathParts = explode('/', $request->category_path_with_slug);
+            $slug = array_pop($pathParts);
+            $categoryPath = $pathParts;
+            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
 
             // アクティブブランチを取得
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
@@ -335,6 +348,21 @@ class DocumentController extends ApiBaseController
                 'original_version_id' => $existingDocument->id,
                 'current_version_id' => $newDocumentVersion->id,
             ]);
+
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'documents',
+                        'original_version_id' => $existingDocument->id,
+                    ],
+                    [
+                        'current_version_id' => $newDocumentVersion->id,
+                        'diff_type' => 'updated',
+                    ]
+                );
+            }
 
             DB::commit();
 
@@ -497,6 +525,21 @@ class DocumentController extends ApiBaseController
                 'original_version_id' => $existingDocument->id,
                 'current_version_id' => $newDocumentVersion->id,
             ]);
+
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'documents',
+                        'current_version_id' => $existingDocument->id,
+                    ],
+                    [
+                        'current_version_id' => $newDocumentVersion->id,
+                        'diff_type' => 'deleted',
+                    ]
+                );
+            }
 
             DB::commit();
 

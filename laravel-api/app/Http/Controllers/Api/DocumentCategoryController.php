@@ -14,6 +14,7 @@ use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
+use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
 use Illuminate\Http\JsonResponse;
@@ -115,6 +116,21 @@ class DocumentCategoryController extends ApiBaseController
                 'current_version_id' => $category->id,
             ]);
 
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'categories',
+                        'current_version_id' => $category->id,
+                    ],
+                    [
+                        'current_version_id' => $category->id,
+                        'diff_type' => 'created',
+                    ]
+                );
+            }
+
             DB::commit();
 
             return response()->json([
@@ -196,6 +212,21 @@ class DocumentCategoryController extends ApiBaseController
                 'original_version_id' => $existingCategory->id,
                 'current_version_id' => $newCategory->id,
             ]);
+
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                PullRequestEditSessionDiff::updateOrCreate(
+                    [
+                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                        'target_type' => 'categories',
+                        'current_version_id' => $existingCategory->id,
+                    ],
+                    [
+                        'current_version_id' => $newCategory->id,
+                        'diff_type' => 'updated',
+                    ]
+                );
+            }
 
             DB::commit();
 
@@ -424,6 +455,24 @@ class DocumentCategoryController extends ApiBaseController
             // バルク作成
             if (! empty($editVersionsToCreate)) {
                 EditStartVersion::insert($editVersionsToCreate);
+            }
+
+            // プルリクエスト編集セッション差分の処理
+            if ($pullRequestEditSessionId) {
+                foreach ($categories as $index => $category) {
+                    $newCategoryId = $insertedCategoryIds[$index];
+                    PullRequestEditSessionDiff::updateOrCreate(
+                        [
+                            'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                            'target_type' => 'categories',
+                            'current_version_id' => $category->id,
+                        ],
+                        [
+                            'current_version_id' => $newCategoryId,
+                            'diff_type' => 'deleted',
+                        ]
+                    );
+                }
             }
 
             DB::commit();

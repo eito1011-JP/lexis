@@ -55,4 +55,12 @@ class PullRequestEditSession extends Model
     {
         return $this->hasMany(DocumentCategory::class, 'pull_request_edit_session_id');
     }
+
+    /**
+     * 編集セッション差分とのリレーション
+     */
+    public function editSessionDiffs()
+    {
+        return $this->hasMany(PullRequestEditSessionDiff::class, 'pull_request_edit_session_id');
+    }
 }
