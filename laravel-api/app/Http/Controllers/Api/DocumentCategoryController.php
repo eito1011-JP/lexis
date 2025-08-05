@@ -121,7 +121,7 @@ class DocumentCategoryController extends ApiBaseController
                 PullRequestEditSessionDiff::updateOrCreate(
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => 'categories',
+                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
                         'current_version_id' => $category->id,
                     ],
                     [
@@ -218,7 +218,7 @@ class DocumentCategoryController extends ApiBaseController
                 PullRequestEditSessionDiff::updateOrCreate(
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => 'categories',
+                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
                         'current_version_id' => $existingCategory->id,
                     ],
                     [
@@ -435,7 +435,7 @@ class DocumentCategoryController extends ApiBaseController
                 // 全ての更新操作を表す新しいレコードを作成
                 $editVersionsToCreate[] = [
                     'user_branch_id' => $userBranchId,
-                    'target_type' => 'category',
+                    'target_type' => EditStartVersionTargetType::CATEGORY->value,
                     'original_version_id' => $category->id,
                     'current_version_id' => $newCategoryId,
                     'created_at' => $now,
@@ -464,7 +464,7 @@ class DocumentCategoryController extends ApiBaseController
                     PullRequestEditSessionDiff::updateOrCreate(
                         [
                             'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                            'target_type' => 'categories',
+                            'target_type' => EditStartVersionTargetType::CATEGORY->value,
                             'current_version_id' => $category->id,
                         ],
                         [
