@@ -7,6 +7,7 @@ use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\PullRequestActivityAction;
+use App\Enums\PullRequestEditSessionDiffTargetType;
 use App\Enums\PullRequestReviewerActionStatus;
 use App\Enums\PullRequestStatus;
 use App\Enums\UserRole;
@@ -457,52 +458,53 @@ class PullRequestController extends ApiBaseController
                 ->firstOrFail();
 
             // 4. PR提出時から差分が変わっているかをチェック
-            $pullRequestEditSession = $pullRequest->pullRequestEditSessions()
+            $pullRequestEditSessions = $pullRequest->pullRequestEditSessions()
                 ->whereNotNull('finished_at')
-                ->first();
+                ->get();
 
-            $appliedFixRequest = $pullRequest->fixRequests()
+            $appliedFixRequests = $pullRequest->fixRequests()
                 ->where('status', FixRequestStatus::APPLIED->value)
-                ->first();
+                ->get();
 
             // 5. PR提出時と差分が変わっていない場合
-            if (!$pullRequestEditSession && !$appliedFixRequest) {
-                // GitHub APIでプルリクエストをマージ
-                $this->gitService->mergePullRequest($pullRequest->pr_number);
+            if ($pullRequestEditSessions->isEmpty() && $appliedFixRequests->isEmpty()) {
+                // GitHub APIでプルリクエストをマージ（squashマージを使用）
+                $this->gitService->mergePullRequest($pullRequest->pr_number, 'squash');
             } else {
                 // 6. PR提出時から差分が変更されている場合
-                
                 // 6-1. プルリクエストに紐づくdocument_versionsとdocument_categoriesを取得
                 $userBranch = $pullRequest->userBranch;
                 $documentVersions = $userBranch->documentVersions()->get();
                 $documentCategories = $userBranch->documentCategories()->get();
 
+                Log::info('userBranchId: '.$userBranch->id);
+                Log::info('pullRequestId: '.$pullRequest->id);
+
                 // 6-2. applied fix requestのversion_idを取得
                 $appliedDocumentVersionIds = [];
                 $appliedCategoryVersionIds = [];
-                if ($appliedFixRequest) {
-                    $allAppliedFixRequests = $pullRequest->fixRequests()
-                        ->where('status', FixRequestStatus::APPLIED->value)
-                        ->get();
-                    
-                    $appliedDocumentVersionIds = $allAppliedFixRequests->pluck('document_version_id')->filter()->toArray();
-                    $appliedCategoryVersionIds = $allAppliedFixRequests->pluck('document_category_id')->filter()->toArray();
+                if ($appliedFixRequests->isNotEmpty()) {
+                    $appliedDocumentVersionIds = $appliedFixRequests->pluck('document_version_id')->filter()->toArray();
+                    $appliedCategoryVersionIds = $appliedFixRequests->pluck('document_category_id')->filter()->toArray();
                 }
 
                 // 6-3. 再編集されたdocumentとcategoryのidを取得
                 $reEditDocumentVersionsIds = [];
                 $reEditCategoryVersionsIds = [];
-                if ($pullRequestEditSession) {
-                    $pullRequestEditSessionDiffs = $pullRequestEditSession->editSessionDiffs;
-                    
+                if ($pullRequestEditSessions->isNotEmpty()) {
+                    $pullRequestEditSessionDiffs = $pullRequestEditSessions->flatMap(function ($session) {
+                        return $session->editSessionDiffs;
+                    });
+
+                    Log::info('pullRequestEditSessionDiffIds: '.json_encode($pullRequestEditSessionDiffs->pluck('id')));
                     $reEditDocumentVersionsIds = $pullRequestEditSessionDiffs
-                        ->where('target_type', 'document')
+                        ->where('target_type', PullRequestEditSessionDiffTargetType::DOCUMENT->value)
                         ->pluck('current_version_id')
                         ->filter()
                         ->toArray();
                     
                     $reEditCategoryVersionsIds = $pullRequestEditSessionDiffs
-                        ->where('target_type', 'category')
+                        ->where('target_type', PullRequestEditSessionDiffTargetType::CATEGORY->value)
                         ->pluck('current_version_id')
                         ->filter()
                         ->toArray();
@@ -512,9 +514,25 @@ class PullRequestController extends ApiBaseController
                 $newDocumentVersionIds = array_merge($appliedDocumentVersionIds, $reEditDocumentVersionsIds);
                 $newCategoryVersionIds = array_merge($appliedCategoryVersionIds, $reEditCategoryVersionsIds);
 
+                Log::info('newDocumentVersionIds: '.json_encode($newDocumentVersionIds));
+                Log::info('newCategoryVersionIds: '.json_encode($newCategoryVersionIds));
+
                 // 6-5. 対象のdocumentVersionsとcategoryVersionsを取得
-                $targetDocumentVersions = $documentVersions->whereIn('id', $newDocumentVersionIds);
-                $targetCategoryVersions = $documentCategories->whereIn('id', $newCategoryVersionIds);
+                // document_versionsがis_deleted = 1 or 0 && document_versions.id = edit_start_versions.current_version_idでかつis_deleted = 0のdocument_versions.idをpluck
+                $targetDocumentVersionIds = DocumentVersion::withTrashed()->whereIn('id', $newDocumentVersionIds)
+                    ->whereHas('currentEditStartVersions', function ($query) use ($userBranch) {
+                        $query->where('user_branch_id', $userBranch->id);
+                    })
+                    ->pluck('id');
+
+                $targetCategoryVersionIds = DocumentCategory::withTrashed()->whereIn('id', $newCategoryVersionIds)
+                    ->whereHas('currentEditStartVersions', function ($query) use ($userBranch) {
+                        $query->where('user_branch_id', $userBranch->id);
+                    })
+                    ->pluck('id');
+
+                $targetDocumentVersions = DocumentVersion::whereIn('id', $targetDocumentVersionIds)->withTrashed()->get();
+                $targetCategoryVersions = DocumentCategory::whereIn('id', $targetCategoryVersionIds)->withTrashed()->get();
 
                 $treeItems = [];
 
@@ -568,27 +586,38 @@ class PullRequestController extends ApiBaseController
                     ];
                 }
 
-                // 6-8. treeを作成して、リモートブランチのファイルを編集
+                // 6-8. プルリクエストブランチを最新状態に更新（mainブランチの変更を取り込む）
+                $this->gitService->updatePullRequestBranch($pullRequest->pr_number);
+
+
+                // 6-9. 現在のブランチの最新コミットを取得
+                $currentBranchRef = $this->gitService->getBranchReference($userBranch->branch_name);
+                $currentBranchSha = $currentBranchRef['object']['sha'];
+
+                Log::info('currentBranchRef: '.json_encode($currentBranchRef));
+                Log::info('currentBranchSha: '.$currentBranchSha);
+                Log::info('treeItems: '.json_encode($treeItems));
+                // 6-10. treeを作成して、リモートブランチのファイルを編集
                 $treeResult = $this->gitService->createTree(
-                    $userBranch->snapshot_commit,
+                    $currentBranchSha,
                     $treeItems
                 );
 
-                // 6-9. コミット作成
+                // 6-11. コミット作成
                 $commitResult = $this->gitService->createCommit(
                     $pullRequest->title,
                     $treeResult['sha'],
-                    [$userBranch->snapshot_commit]
+                    [$currentBranchSha]
                 );
 
-                // 6-10. ブランチの最新コミットを更新
+                // 6-12. ブランチの最新コミットを更新
                 $this->gitService->updateBranchReference(
                     $userBranch->branch_name,
                     $commitResult['sha']
                 );
 
-                // GitHub APIでプルリクエストをマージ
-                $this->gitService->mergePullRequest($pullRequest->pr_number);
+                // GitHub APIでプルリクエストをマージ（squashマージを使用）
+                $this->gitService->mergePullRequest($pullRequest->pr_number, 'squash');
             }
 
             // 7. プルリクエストに紐づくuser_branchesテーブルを取得し、

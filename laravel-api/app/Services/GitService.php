@@ -99,7 +99,7 @@ class GitService
     /**
      * ブランチの参照を更新
      */
-    public function updateBranchReference(string $branchName, string $sha): array
+    public function updateBranchReference(string $branchName, string $sha, bool $force = false): array
     {
         $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/refs/heads/{$branchName}";
 
@@ -108,7 +108,7 @@ class GitService
             'Accept' => 'application/vnd.github.v3+json',
         ])->patch($url, [
             'sha' => $sha,
-            'force' => false,
+            'force' => $force,
         ]);
 
         if (! $response->successful()) {
@@ -336,42 +336,14 @@ class GitService
     {
         $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/pulls/{$prNumber}/update-branch";
 
-        // expected_head_shaパラメータを送信しない（空のボディ）
+        // 空のボディではなく、Content-Typeヘッダーを明示的に設定
         $response = Http::withHeaders([
             'Authorization' => "token {$this->githubToken}",
             'Accept' => 'application/vnd.github.v3+json',
-        ])->put($url);
+            'Content-Type' => 'application/json',
+        ])->put($url, null);
 
-        if (! $response->successful()) {
-            $responseBody = $response->body();
-            Log::error('GitHub API Error - Update PR Branch: '.$responseBody);
-            
-            // すでに最新の場合は例外を投げない
-            $responseData = json_decode($responseBody, true);
-            if (isset($responseData['message'])) {
-                $message = $responseData['message'];
-                if (strpos($message, 'merge conflict') !== false ||
-                    strpos($message, 'conflicts') !== false) {
-                    throw new \Exception('マージコンフリクトが発生しました');
-                }
-                if (strpos($message, 'up to date') !== false ||
-                    strpos($message, 'already up-to-date') !== false ||
-                    strpos($message, 'already current') !== false) {
-                    return ['message' => 'Already up to date'];
-                }
-            }
-
-            throw new \Exception('プルリクエストブランチの更新に失敗しました: ' . $responseBody);
-        }
-
-        $result = $response->json();
-        
-        // レスポンスがnullの場合のフォールバック
-        if ($result === null) {
-            return ['message' => 'Branch updated'];
-        }
-
-        return $result;
+        return $response->json();
     }
 
     /**
