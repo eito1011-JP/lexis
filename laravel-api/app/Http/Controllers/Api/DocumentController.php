@@ -210,7 +210,7 @@ class DocumentController extends ApiBaseController
                 PullRequestEditSessionDiff::updateOrCreate(
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => 'documents',
+                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
                         'current_version_id' => $document->id,
                     ],
                     [
@@ -354,7 +354,7 @@ class DocumentController extends ApiBaseController
                 PullRequestEditSessionDiff::updateOrCreate(
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => 'documents',
+                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
                         'original_version_id' => $existingDocument->id,
                     ],
                     [
