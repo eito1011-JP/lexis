@@ -21,6 +21,7 @@ use App\Http\Requests\Api\PullRequest\UpdatePullRequestTitleRequest;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
+use App\Jobs\PullRequestMergeJob;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
@@ -432,8 +433,6 @@ class PullRequestController extends ApiBaseController
      */
     public function merge(MergePullRequestRequest $request): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
             // 1. ログイン認証
             $user = $this->getUserFromSession();
@@ -452,214 +451,24 @@ class PullRequestController extends ApiBaseController
             }
 
             // 3. プルリクエストを取得（status = opened）
-            $pullRequest = PullRequest::with(['userBranch', 'pullRequestEditSessions.editSessionDiffs', 'fixRequests'])
-                ->where('id', $request->pull_request_id)
+            $pullRequest = PullRequest::where('id', $request->pull_request_id)
                 ->where('status', PullRequestStatus::OPENED->value)
                 ->firstOrFail();
 
-            // 4. PR提出時から差分が変わっているかをチェック
-            $pullRequestEditSessions = $pullRequest->pullRequestEditSessions()
-                ->whereNotNull('finished_at')
-                ->get();
-
-            $appliedFixRequests = $pullRequest->fixRequests()
-                ->where('status', FixRequestStatus::APPLIED->value)
-                ->get();
-
-            // 5. PR提出時と差分が変わっていない場合
-            if ($pullRequestEditSessions->isEmpty() && $appliedFixRequests->isEmpty()) {
-                // GitHub APIでプルリクエストをマージ（squashマージを使用）
-                $this->gitService->mergePullRequest($pullRequest->pr_number, 'squash');
-            } else {
-                // 6. PR提出時から差分が変更されている場合
-                // 6-1. プルリクエストに紐づくdocument_versionsとdocument_categoriesを取得
-                $userBranch = $pullRequest->userBranch;
-                $documentVersions = $userBranch->documentVersions()->get();
-                $documentCategories = $userBranch->documentCategories()->get();
-
-                Log::info('userBranchId: '.$userBranch->id);
-                Log::info('pullRequestId: '.$pullRequest->id);
-
-                // 6-2. applied fix requestのversion_idを取得
-                $appliedDocumentVersionIds = [];
-                $appliedCategoryVersionIds = [];
-                if ($appliedFixRequests->isNotEmpty()) {
-                    $appliedDocumentVersionIds = $appliedFixRequests->pluck('document_version_id')->filter()->toArray();
-                    $appliedCategoryVersionIds = $appliedFixRequests->pluck('document_category_id')->filter()->toArray();
-                }
-
-                // 6-3. 再編集されたdocumentとcategoryのidを取得
-                $reEditDocumentVersionsIds = [];
-                $reEditCategoryVersionsIds = [];
-                if ($pullRequestEditSessions->isNotEmpty()) {
-                    $pullRequestEditSessionDiffs = $pullRequestEditSessions->flatMap(function ($session) {
-                        return $session->editSessionDiffs;
-                    });
-
-                    Log::info('pullRequestEditSessionDiffIds: '.json_encode($pullRequestEditSessionDiffs->pluck('id')));
-                    $reEditDocumentVersionsIds = $pullRequestEditSessionDiffs
-                        ->where('target_type', PullRequestEditSessionDiffTargetType::DOCUMENT->value)
-                        ->pluck('current_version_id')
-                        ->filter()
-                        ->toArray();
-                    
-                    $reEditCategoryVersionsIds = $pullRequestEditSessionDiffs
-                        ->where('target_type', PullRequestEditSessionDiffTargetType::CATEGORY->value)
-                        ->pluck('current_version_id')
-                        ->filter()
-                        ->toArray();
-                }
-
-                // 6-4. 新しいバージョンIDをマージ
-                $newDocumentVersionIds = array_merge($appliedDocumentVersionIds, $reEditDocumentVersionsIds);
-                $newCategoryVersionIds = array_merge($appliedCategoryVersionIds, $reEditCategoryVersionsIds);
-
-                Log::info('newDocumentVersionIds: '.json_encode($newDocumentVersionIds));
-                Log::info('newCategoryVersionIds: '.json_encode($newCategoryVersionIds));
-
-                // 6-5. 対象のdocumentVersionsとcategoryVersionsを取得
-                // document_versionsがis_deleted = 1 or 0 && document_versions.id = edit_start_versions.current_version_idでかつis_deleted = 0のdocument_versions.idをpluck
-                $targetDocumentVersionIds = DocumentVersion::withTrashed()->whereIn('id', $newDocumentVersionIds)
-                    ->whereHas('currentEditStartVersions', function ($query) use ($userBranch) {
-                        $query->where('user_branch_id', $userBranch->id);
-                    })
-                    ->pluck('id');
-
-                $targetCategoryVersionIds = DocumentCategory::withTrashed()->whereIn('id', $newCategoryVersionIds)
-                    ->whereHas('currentEditStartVersions', function ($query) use ($userBranch) {
-                        $query->where('user_branch_id', $userBranch->id);
-                    })
-                    ->pluck('id');
-
-                $targetDocumentVersions = DocumentVersion::whereIn('id', $targetDocumentVersionIds)->withTrashed()->get();
-                $targetCategoryVersions = DocumentCategory::whereIn('id', $targetCategoryVersionIds)->withTrashed()->get();
-
-                $treeItems = [];
-
-                // 6-6. documentVersionsを処理
-                foreach ($targetDocumentVersions as $documentVersion) {
-                    $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
-                    $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-                    
-                    $treeItems[] = [
-                        'path' => $filePath,
-                        'mode' => '100644',
-                        'type' => 'blob',
-                        'content' => $markdownContent,
-                    ];
-                }
-
-                // 6-7. categoryVersionsを処理
-                foreach ($targetCategoryVersions as $documentCategory) {
-                    $categoryJsonData = [
-                        'label' => $documentCategory->sidebar_label,
-                        'position' => $documentCategory->position,
-                        'link' => [
-                            'type' => 'generated-index',
-                            'description' => $documentCategory->description,
-                        ],
-                    ];
-                    
-                    $categoryJsonContent = json_encode($categoryJsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                    
-                    $categoryFolderPath = $this->categoryFolderService->generateCategoryFilePath(
-                        $documentCategory->slug, 
-                        $documentCategory->parent_id && $documentCategory->parent_id !== DocumentCategoryConstants::DEFAULT_CATEGORY_ID 
-                            ? $documentCategory->parent_id 
-                            : null
-                    );
-                    
-                    // _category_.jsonファイルを作成
-                    $treeItems[] = [
-                        'path' => $categoryFolderPath.'/_category_.json',
-                        'mode' => '100644',
-                        'type' => 'blob',
-                        'content' => $categoryJsonContent,
-                    ];
-                    
-                    // .gitkeepファイルを作成（空のフォルダをGitで追跡するため）
-                    $treeItems[] = [
-                        'path' => $categoryFolderPath.'/.gitkeep',
-                        'mode' => '100644',
-                        'type' => 'blob',
-                        'content' => '',
-                    ];
-                }
-
-                // 6-8. プルリクエストブランチを最新状態に更新（mainブランチの変更を取り込む）
-                $this->gitService->updatePullRequestBranch($pullRequest->pr_number);
-
-
-                // 6-9. 現在のブランチの最新コミットを取得
-                $currentBranchRef = $this->gitService->getBranchReference($userBranch->branch_name);
-                $currentBranchSha = $currentBranchRef['object']['sha'];
-
-                Log::info('currentBranchRef: '.json_encode($currentBranchRef));
-                Log::info('currentBranchSha: '.$currentBranchSha);
-                Log::info('treeItems: '.json_encode($treeItems));
-                // 6-10. treeを作成して、リモートブランチのファイルを編集
-                $treeResult = $this->gitService->createTree(
-                    $currentBranchSha,
-                    $treeItems
-                );
-
-                // 6-11. コミット作成
-                $commitResult = $this->gitService->createCommit(
-                    $pullRequest->title,
-                    $treeResult['sha'],
-                    [$currentBranchSha]
-                );
-
-                // 6-12. ブランチの最新コミットを更新
-                $this->gitService->updateBranchReference(
-                    $userBranch->branch_name,
-                    $commitResult['sha']
-                );
-
-                // GitHub APIでプルリクエストをマージ（squashマージを使用）
-                $this->gitService->mergePullRequest($pullRequest->pr_number, 'squash');
-            }
-
-            // 7. プルリクエストに紐づくuser_branchesテーブルを取得し、
-            // それに紐づくdocument_versionsとdocument_categoriesのstatusをmergedにupdate
-            $userBranch = $pullRequest->userBranch;
-
-            // DocumentVersionsのstatusを更新
-            $userBranch->documentVersions()->update([
-                'status' => DocumentStatus::MERGED->value,
-            ]);
-
-            // DocumentCategoriesのstatusを更新
-            $userBranch->documentCategories()->update([
-                'status' => DocumentCategoryStatus::MERGED->value,
-            ]);
-
-            // 8. pull_requestsテーブルのstatusをmergedにupdate
-            $pullRequest->update([
-                'status' => PullRequestStatus::MERGED->value,
-            ]);
-
-            // 9. ActivityLogを作成
-            ActivityLogOnPullRequest::create([
-                'user_id' => $user->id,
-                'pull_request_id' => $pullRequest->id,
-                'action' => PullRequestActivityAction::PULL_REQUEST_MERGED->value,
-            ]);
-
-            DB::commit();
+            // 4. マージジョブをキューに追加
+            PullRequestMergeJob::dispatch($pullRequest->id, $user->id);
 
             return response()->json();
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('プルリクエストマージエラー: '.$e->getMessage(), [
+            Log::error('プルリクエストマージジョブ追加エラー: '.$e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),
                 'pull_request_id' => $request->pull_request_id,
             ]);
 
             return response()->json([
-                'error' => 'プルリクエストのマージに失敗しました',
+                'error' => 'マージ処理の開始に失敗しました',
             ], 500);
         }
     }
