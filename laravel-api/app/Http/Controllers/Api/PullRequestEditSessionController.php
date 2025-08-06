@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\Flag;
+use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestActivityAction;
 use App\Http\Requests\Api\PullRequestEditSession\FetchEditDiffRequest;
 use App\Http\Requests\Api\PullRequestEditSession\FinishEditingRequest;
@@ -58,7 +59,7 @@ class PullRequestEditSessionController extends ApiBaseController
             $categories = [];
 
             foreach ($editSessionDiffs as $editSessionDiff) {
-                if ($editSessionDiff->target_type === 'documents') {
+                if ($editSessionDiff->target_type === EditStartVersionTargetType::DOCUMENT->value) {
                     $original = null;
                     $current = null;
 
@@ -77,7 +78,7 @@ class PullRequestEditSessionController extends ApiBaseController
                         'original' => $original ? $original->toArray() : null,
                         'current' => $current ? $current->toArray() : null,
                     ];
-                } elseif ($editSessionDiff->target_type === 'categories') {
+                } elseif ($editSessionDiff->target_type === EditStartVersionTargetType::CATEGORY->value) {
                     $original = null;
                     $current = null;
 

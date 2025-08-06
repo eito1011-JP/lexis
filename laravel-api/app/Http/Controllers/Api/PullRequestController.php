@@ -19,6 +19,7 @@ use App\Http\Requests\Api\PullRequest\UpdatePullRequestTitleRequest;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
+use App\Jobs\PullRequestMergeJob;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
@@ -429,10 +430,8 @@ class PullRequestController extends ApiBaseController
      */
     public function merge(MergePullRequestRequest $request): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
-            // 1. 認証ユーザーか確認
+            // 1. ログイン認証
             $user = $this->getUserFromSession();
 
             if (! $user) {
@@ -449,54 +448,24 @@ class PullRequestController extends ApiBaseController
             }
 
             // 3. プルリクエストを取得（status = opened）
-            $pullRequest = PullRequest::with('userBranch')
-                ->where('id', $request->pull_request_id)
+            $pullRequest = PullRequest::where('id', $request->pull_request_id)
                 ->where('status', PullRequestStatus::OPENED->value)
                 ->firstOrFail();
 
-            // 4. GitHub APIでプルリクエストをマージ
-            $mergeResult = $this->gitService->mergePullRequest($pullRequest->pr_number);
-
-            // 5. プルリクエストに紐づくuser_branchesテーブルを取得し、
-            // それに紐づくdocument_versionsとdocument_categoriesのstatusをmergedにupdate
-            $userBranch = $pullRequest->userBranch;
-
-            // DocumentVersionsのstatusを更新
-            $userBranch->documentVersions()->update([
-                'status' => DocumentStatus::MERGED->value,
-            ]);
-
-            // DocumentCategoriesのstatusを更新
-            $userBranch->documentCategories()->update([
-                'status' => DocumentCategoryStatus::MERGED->value,
-            ]);
-
-            // 6. pull_requestsテーブルのstatusをmergedにupdate
-            $pullRequest->update([
-                'status' => PullRequestStatus::MERGED->value,
-            ]);
-
-            // 7. ActivityLogを作成
-            ActivityLogOnPullRequest::create([
-                'user_id' => $user->id,
-                'pull_request_id' => $pullRequest->id,
-                'action' => PullRequestActivityAction::PULL_REQUEST_MERGED->value,
-            ]);
-
-            DB::commit();
+            // 4. マージジョブをキューに追加
+            PullRequestMergeJob::dispatch($pullRequest->id, $user->id);
 
             return response()->json();
 
         } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('プルリクエストマージエラー: '.$e->getMessage(), [
+            Log::error('プルリクエストマージジョブ追加エラー: '.$e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString(),
                 'pull_request_id' => $request->pull_request_id,
             ]);
 
             return response()->json([
-                'error' => 'プルリクエストのマージに失敗しました',
+                'error' => 'マージ処理の開始に失敗しました',
             ], 500);
         }
     }
