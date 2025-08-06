@@ -48,15 +48,11 @@ class PullRequestMergeJob implements ShouldQueue
             $pullRequest = PullRequest::find($this->pullRequestId);
 
             if (! $pullRequest) {
-                Log::error("PullRequest not found: {$this->pullRequestId}");
-
                 return;
             }
 
             // プルリクエストがopenedでない場合は処理を終了
             if ($pullRequest->status !== \App\Enums\PullRequestStatus::OPENED->value) {
-                Log::info("PullRequest is not opened: {$this->pullRequestId}, status: {$pullRequest->status}");
-
                 return;
             }
 
@@ -77,11 +73,6 @@ class PullRequestMergeJob implements ShouldQueue
                     )->delay(now()->addMinutes(1));
 
                     return;
-                } else {
-                    // 最大リトライ回数に達した場合はエラー
-                    Log::error("PR {$pullRequest->pr_number} reached max retries ({$this->maxRetries}), giving up");
-
-                    throw new \Exception("Mergeable remained false after {$this->maxRetries} retries");
                 }
             }
 
