@@ -15,12 +15,12 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->command('batch:rating')->dailyAt('0:00');
-        
+
         // キューワーカーを1分間隔で実行（PullRequestMergeJobの処理用）
         $schedule->command('queue:work --stop-when-empty --max-time=50')
-                 ->everyMinute()
-                 ->withoutOverlapping()
-                 ->runInBackground();
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**

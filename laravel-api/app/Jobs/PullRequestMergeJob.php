@@ -14,11 +14,17 @@ use Illuminate\Support\Facades\Log;
 
 class PullRequestMergeJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable;
+    use InteractsWithQueue;
+    use Queueable;
+    use SerializesModels;
 
     protected int $pullRequestId;
+
     protected int $userId;
+
     protected int $maxRetries;
+
     protected int $currentRetry;
 
     /**
@@ -40,30 +46,28 @@ class PullRequestMergeJob implements ShouldQueue
         try {
             // プルリクエストを取得
             $pullRequest = PullRequest::find($this->pullRequestId);
-            
-            if (!$pullRequest) {
+
+            if (! $pullRequest) {
                 Log::error("PullRequest not found: {$this->pullRequestId}");
+
                 return;
             }
 
             // プルリクエストがopenedでない場合は処理を終了
             if ($pullRequest->status !== \App\Enums\PullRequestStatus::OPENED->value) {
                 Log::info("PullRequest is not opened: {$this->pullRequestId}, status: {$pullRequest->status}");
+
                 return;
             }
 
-            Log::info("Checking mergeable for PR: {$pullRequest->pr_number}, retry: {$this->currentRetry}");
-
             // mergeable stateをチェック
             $prInfo = $gitService->getPullRequestInfo($pullRequest->pr_number);
-
-            Log::info("PR {$pullRequest->pr_number} mergeable: {$prInfo['mergeable']}");
 
             // mergeableがfalseの場合
             if ($prInfo['mergeable'] === false) {
                 // 最大リトライ回数に達していない場合は1分後に再実行
                 if ($this->currentRetry < $this->maxRetries) {
-                    
+
                     // 1分後に再実行
                     PullRequestMergeJob::dispatch(
                         $this->pullRequestId,
@@ -71,21 +75,18 @@ class PullRequestMergeJob implements ShouldQueue
                         $this->currentRetry + 1,
                         $this->maxRetries
                     )->delay(now()->addMinutes(1));
-                    
+
                     return;
                 } else {
                     // 最大リトライ回数に達した場合はエラー
                     Log::error("PR {$pullRequest->pr_number} reached max retries ({$this->maxRetries}), giving up");
+
                     throw new \Exception("Mergeable remained false after {$this->maxRetries} retries");
                 }
             }
 
             // mergeableがtrueの場合はマージ処理を実行
-            Log::info("PR {$pullRequest->pr_number} is ready for merge, executing merge");
-            
-            $result = $pullRequestMergeService->mergePullRequest($this->pullRequestId, $this->userId);
-            
-            Log::info("PR {$pullRequest->pr_number} merge completed successfully", $result);
+            $pullRequestMergeService->mergePullRequest($this->pullRequestId, $this->userId);
 
         } catch (\Exception $e) {
             Log::error("PullRequestMergeJob failed for PR {$this->pullRequestId}: {$e->getMessage()}", [
@@ -113,4 +114,4 @@ class PullRequestMergeJob implements ShouldQueue
             'current_retry' => $this->currentRetry,
         ]);
     }
-} 
+}

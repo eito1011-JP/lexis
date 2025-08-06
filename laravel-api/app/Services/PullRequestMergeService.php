@@ -2,25 +2,26 @@
 
 namespace App\Services;
 
+use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\FixRequestStatus;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestEditSessionDiffTargetType;
 use App\Enums\PullRequestStatus;
-use App\Enums\UserRole;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\PullRequest;
-use App\Constants\DocumentCategoryConstants;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PullRequestMergeService
 {
     protected GitService $gitService;
+
     protected MdFileService $mdFileService;
+
     protected CategoryFolderService $categoryFolderService;
 
     public function __construct(
@@ -35,10 +36,6 @@ class PullRequestMergeService
 
     /**
      * プルリクエストのマージを実行
-     * 
-     * @param int $pullRequestId
-     * @param int $userId
-     * @return array
      */
     public function mergePullRequest(int $pullRequestId, int $userId): array
     {
@@ -150,7 +147,7 @@ class PullRequestMergeService
                 ->pluck('current_version_id')
                 ->filter()
                 ->toArray();
-            
+
             $reEditCategoryVersionsIds = $pullRequestEditSessionDiffs
                 ->where('target_type', PullRequestEditSessionDiffTargetType::CATEGORY->value)
                 ->pluck('current_version_id')
@@ -187,7 +184,7 @@ class PullRequestMergeService
         foreach ($targetDocumentVersions as $documentVersion) {
             $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
             $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-            
+
             $treeItems[] = [
                 'path' => $filePath,
                 'mode' => '100644',
@@ -206,16 +203,16 @@ class PullRequestMergeService
                     'description' => $documentCategory->description,
                 ],
             ];
-            
+
             $categoryJsonContent = json_encode($categoryJsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-            
+
             $categoryFolderPath = $this->categoryFolderService->generateCategoryFilePath(
-                $documentCategory->slug, 
-                $documentCategory->parent_id && $documentCategory->parent_id !== DocumentCategoryConstants::DEFAULT_CATEGORY_ID 
-                    ? $documentCategory->parent_id 
+                $documentCategory->slug,
+                $documentCategory->parent_id && $documentCategory->parent_id !== DocumentCategoryConstants::DEFAULT_CATEGORY_ID
+                    ? $documentCategory->parent_id
                     : null
             );
-            
+
             // _category_.jsonファイルを作成
             $treeItems[] = [
                 'path' => $categoryFolderPath.'/_category_.json',
@@ -223,7 +220,7 @@ class PullRequestMergeService
                 'type' => 'blob',
                 'content' => $categoryJsonContent,
             ];
-            
+
             // .gitkeepファイルを作成（空のフォルダをGitで追跡するため）
             $treeItems[] = [
                 'path' => $categoryFolderPath.'/.gitkeep',

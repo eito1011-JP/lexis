@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
@@ -13,14 +11,14 @@ return new class extends Migration
     public function up(): void
     {
         // 既存のデータをバックアップ
-        DB::statement("
+        DB::statement('
             CREATE TABLE pull_request_edit_session_diffs_backup AS 
             SELECT * FROM pull_request_edit_session_diffs
-        ");
-        
+        ');
+
         // 古いテーブルを削除
-        DB::statement("DROP TABLE pull_request_edit_session_diffs");
-        
+        DB::statement('DROP TABLE pull_request_edit_session_diffs');
+
         // 新しいチェック制約でテーブルを再作成
         DB::statement("
             CREATE TABLE pull_request_edit_session_diffs (
@@ -35,7 +33,7 @@ return new class extends Migration
                 FOREIGN KEY (pull_request_edit_session_id) REFERENCES pull_request_edit_sessions(id) ON DELETE CASCADE
             )
         ");
-        
+
         // バックアップからデータを復元（target_typeを変換）
         DB::statement("
             INSERT INTO pull_request_edit_session_diffs 
@@ -54,9 +52,9 @@ return new class extends Migration
                 updated_at
             FROM pull_request_edit_session_diffs_backup
         ");
-        
+
         // バックアップテーブルを削除
-        DB::statement("DROP TABLE pull_request_edit_session_diffs_backup");
+        DB::statement('DROP TABLE pull_request_edit_session_diffs_backup');
     }
 
     /**
@@ -65,14 +63,14 @@ return new class extends Migration
     public function down(): void
     {
         // 既存のデータをバックアップ
-        DB::statement("
+        DB::statement('
             CREATE TABLE pull_request_edit_session_diffs_backup AS 
             SELECT * FROM pull_request_edit_session_diffs
-        ");
-        
+        ');
+
         // 古いテーブルを削除
-        DB::statement("DROP TABLE pull_request_edit_session_diffs");
-        
+        DB::statement('DROP TABLE pull_request_edit_session_diffs');
+
         // 元のチェック制約でテーブルを再作成
         DB::statement("
             CREATE TABLE pull_request_edit_session_diffs (
@@ -87,7 +85,7 @@ return new class extends Migration
                 FOREIGN KEY (pull_request_edit_session_id) REFERENCES pull_request_edit_sessions(id) ON DELETE CASCADE
             )
         ");
-        
+
         // バックアップからデータを復元（target_typeを元に戻す）
         DB::statement("
             INSERT INTO pull_request_edit_session_diffs 
@@ -106,8 +104,8 @@ return new class extends Migration
                 updated_at
             FROM pull_request_edit_session_diffs_backup
         ");
-        
+
         // バックアップテーブルを削除
-        DB::statement("DROP TABLE pull_request_edit_session_diffs_backup");
+        DB::statement('DROP TABLE pull_request_edit_session_diffs_backup');
     }
 };

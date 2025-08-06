@@ -185,7 +185,7 @@ class GitService
         $requestData = [
             'merge_method' => $mergeMethod,
         ];
-        
+
         // GitHub Enterprise Server以外の場合はupdate_branchパラメータを追加
         if ($updateBranch) {
             $requestData['update_branch'] = true;
@@ -284,10 +284,10 @@ class GitService
         // まず、両方のブランチのコミット情報を取得
         $baseCommit = $this->getCommit($baseSha);
         $headCommit = $this->getCommit($headSha);
-        
+
         // マージされたツリーSHAを使用（通常はheadのツリーを使用）
         $mergedTreeSha = $headCommit['tree']['sha'];
-        
+
         $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/commits";
 
         $response = Http::withHeaders([
@@ -365,23 +365,23 @@ class GitService
         if (! $response->successful()) {
             $responseBody = $response->body();
             Log::error('GitHub API Error - Merge Upstream: '.$responseBody);
-            
+
             // すでに最新の場合は例外を投げない
             $responseData = json_decode($responseBody, true);
             if (isset($responseData['message'])) {
                 $message = $responseData['message'];
-                if (strpos($message, 'Nothing to merge') !== false || 
+                if (strpos($message, 'Nothing to merge') !== false ||
                     strpos($message, 'already up-to-date') !== false ||
                     strpos($message, 'up to date') !== false) {
                     return ['message' => 'Already up to date'];
                 }
             }
 
-            throw new \Exception('アップストリームマージに失敗しました: ' . $responseBody);
+            throw new \Exception('アップストリームマージに失敗しました: '.$responseBody);
         }
 
         $result = $response->json();
-        
+
         // レスポンスがnullの場合のフォールバック
         if ($result === null) {
             return ['message' => 'Merge completed'];
