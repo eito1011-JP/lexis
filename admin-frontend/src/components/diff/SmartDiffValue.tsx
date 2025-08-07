@@ -253,7 +253,7 @@ export const SmartDiffValue: React.FC<SmartDiffValueProps> = ({
                 dangerouslySetInnerHTML={{ __html: wrappedHtml }}
               />
             ),
-            rightContent: '(削除済み)',
+            rightContent: '',
             hasChanges: true,
           };
         } catch (error) {
@@ -277,7 +277,7 @@ export const SmartDiffValue: React.FC<SmartDiffValueProps> = ({
             }}
           />
         ),
-        rightContent: '(削除済み)',
+        rightContent: '',
         hasChanges: true,
       };
     }

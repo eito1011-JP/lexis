@@ -79,6 +79,7 @@ class DocumentController extends ApiBaseController
 
             $userBranchId = $user->userBranches()->active()->orderBy('id', 'desc')->first()->id ?? null;
 
+            Log::info('userBranchId: '.$userBranchId);
             // edit_pull_request_idが存在する場合、プルリクエストからuser_branch_idを取得
             if ($request->edit_pull_request_id) {
                 $pullRequest = PullRequest::find($request->edit_pull_request_id);
@@ -316,16 +317,7 @@ class DocumentController extends ApiBaseController
             $categoryId = $existingDocument->category_id;
             $finalFileOrder = $this->processFileOrder($request->file_order, $categoryId, $existingDocument->file_order, $userBranchId, $existingDocument->id);
 
-            // 既存ドキュメントを論理削除
-            $existingDocument->delete();
-
-            Log::info('existingDocument: '.$existingDocument->id);
-            EditStartVersion::where('target_type', EditStartVersionTargetType::DOCUMENT->value)
-                ->where('current_version_id', $existingDocument->id)
-                ->first()
-                ->delete();
-
-            // 新しいドキュメントバージョンを作成
+            // 既存ドキュメントは論理削除せず、新しいドキュメントバージョンを作成
             $newDocumentVersion = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
@@ -454,8 +446,7 @@ class DocumentController extends ApiBaseController
                 'category_id' => $doc->category_id,
             ]);
 
-            // 元のバージョンを論理削除
-            $doc->update(['is_deleted' => 1]);
+            // 元のバージョンは論理削除しない
         }
     }
 
@@ -497,11 +488,7 @@ class DocumentController extends ApiBaseController
                 ], 404);
             }
 
-            // 5. 既存ドキュメントを論理削除（is_deleted = 1に更新）
-            $existingDocument->currentEditStartVersions->first()->delete();
-            $existingDocument->delete();
-
-            // 6. 削除されたドキュメントのレコードを新規挿入（ブランチ管理用）
+            // 既存ドキュメントは論理削除せず、新しいdraftステータスのドキュメントを作成（is_deleted = 1）
             $newDocumentVersion = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,

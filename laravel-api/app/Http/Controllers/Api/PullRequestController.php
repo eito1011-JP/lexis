@@ -108,12 +108,14 @@ class PullRequestController extends ApiBaseController
             // 一括でDocumentVersionsを取得
             if (! empty($documentIds)) {
                 $documentVersions = DocumentVersion::where('user_branch_id', $userBranch->id)
+                    ->withTrashed()
                     ->whereIn('id', $documentIds)
                     ->get();
 
                 // 取得したdocumentsのstatusをpushedにbulk update
                 DocumentVersion::where('user_branch_id', $userBranch->id)
                     ->whereIn('id', $documentIds)
+                    ->withTrashed()
                     ->update(['status' => DocumentStatus::PUSHED->value]);
             }
 
@@ -121,11 +123,13 @@ class PullRequestController extends ApiBaseController
             if (! empty($categoryIds)) {
                 $documentCategories = DocumentCategory::where('user_branch_id', $userBranch->id)
                     ->whereIn('id', $categoryIds)
+                    ->withTrashed()
                     ->get();
 
                 // 取得したcategoriesのstatusをpushedにbulk update
                 DocumentCategory::where('user_branch_id', $userBranch->id)
                     ->whereIn('id', $categoryIds)
+                    ->withTrashed()
                     ->update(['status' => DocumentCategoryStatus::PUSHED->value]);
             }
 
@@ -134,10 +138,7 @@ class PullRequestController extends ApiBaseController
 
             foreach ($documentVersions as $documentVersion) {
                 $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
-                Log::info('slug: '.$documentVersion->slug);
-                Log::info('category_path: '.$documentVersion->category_path);
                 $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-                Log::info('filePath: '.$filePath);
                 $treeItems[] = [
                     'path' => $filePath,
                     'mode' => '100644',
