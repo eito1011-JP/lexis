@@ -137,14 +137,24 @@ class PullRequestController extends ApiBaseController
             $treeItems = [];
 
             foreach ($documentVersions as $documentVersion) {
-                $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
                 $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-                $treeItems[] = [
-                    'path' => $filePath,
-                    'mode' => '100644',
-                    'type' => 'blob',
-                    'content' => $markdownContent,
-                ];
+                if ($documentVersion->is_deleted ===  Flag::FALSE) {
+                    $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
+                    
+                    $treeItems[] = [
+                        'path' => $filePath,
+                        'mode' => '100644',
+                        'type' => 'blob',
+                        'content' => $markdownContent,
+                    ];
+                } else {
+                    $treeItems[] = [
+                        'path' => $filePath,
+                        'mode' => '100644',
+                        'type' => 'blob',
+                        'sha' => null,
+                    ];
+                }
             }
 
             foreach ($documentCategories as $documentCategory) {
@@ -180,7 +190,7 @@ class PullRequestController extends ApiBaseController
             }
 
             // 5. GitHubのrepositoryにリモートbranchを作成
-            $branchResult = $this->gitService->createRemoteBranch(
+            $this->gitService->createRemoteBranch(
                 $userBranch->branch_name,
                 $userBranch->snapshot_commit
             );

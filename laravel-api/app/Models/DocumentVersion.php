@@ -73,7 +73,6 @@ class DocumentVersion extends Model
                 $query->orWhere(function ($subQ) use ($excludedOriginalDocumentIds) {
                     $subQ->where('status', DocumentStatus::MERGED->value)
                         ->whereNot('status', DocumentStatus::PUSHED->value);
-                    Log::info('syv: '.json_encode($excludedOriginalDocumentIds));
                     if (! empty($excludedOriginalDocumentIds)) {
                         Log::info('excludedOriginalDocumentIds: '.json_encode($excludedOriginalDocumentIds));
                         $subQ->whereNotIn('id', $excludedOriginalDocumentIds);
