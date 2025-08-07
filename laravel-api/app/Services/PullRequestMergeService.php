@@ -184,7 +184,7 @@ class PullRequestMergeService
         // documentVersionsを処理
         foreach ($targetDocumentVersions as $documentVersion) {
             $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-            if ($documentVersion->is_deleted === Flag::FALSE) {
+            if (!$documentVersion->is_deleted) {
                 $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
 
                 $treeItems[] = [

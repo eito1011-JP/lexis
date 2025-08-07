@@ -138,7 +138,8 @@ class PullRequestController extends ApiBaseController
 
             foreach ($documentVersions as $documentVersion) {
                 $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-                if ($documentVersion->is_deleted ===  Flag::FALSE) {
+                Log::info('documentVersion: '.json_encode($documentVersion->is_deleted));
+                if (!$documentVersion->is_deleted) {
                     $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
                     
                     $treeItems[] = [
