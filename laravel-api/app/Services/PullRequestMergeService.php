@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Constants\DocumentCategoryConstants;
-use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\FixRequestStatus;
@@ -184,7 +183,7 @@ class PullRequestMergeService
         // documentVersionsを処理
         foreach ($targetDocumentVersions as $documentVersion) {
             $filePath = $this->mdFileService->generateFilePath($documentVersion->slug, $documentVersion->category_path);
-            if (!$documentVersion->is_deleted) {
+            if (! $documentVersion->is_deleted) {
                 $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
 
                 $treeItems[] = [
@@ -192,7 +191,7 @@ class PullRequestMergeService
                     'mode' => '100644',
                     'type' => 'blob',
                     'content' => $markdownContent,
-                ]; 
+                ];
             } else {
                 $treeItems[] = [
                     'path' => $filePath,
