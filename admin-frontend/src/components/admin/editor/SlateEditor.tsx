@@ -1,24 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useState, useRef } from 'react';
 import './styles.css';
-import {
-  createEditor,
-  Descendant,
-  Transforms,
-  Editor,
-  Element as SlateElement,
-  Text,
-  Range,
-  BaseEditor,
-} from 'slate';
-import {
-  Slate,
-  Editable,
-  withReact,
-  ReactEditor,
-  RenderElementProps,
-  RenderLeafProps,
-} from 'slate-react';
-import { withHistory, HistoryEditor } from 'slate-history';
 import { Bold as BoldIcon } from '../../icon/editor/Bold';
 import { Italic as ItalicIcon } from '../../icon/editor/Italic';
 import { UnderLine as UnderLineIcon } from '../../icon/editor/UnderLine';
@@ -28,239 +9,550 @@ import { Quote as QuoteIcon } from '../../icon/editor/Quote';
 import { OrderedList as OrderedListIcon } from '../../icon/editor/OrderedList';
 import { CodeBlock as CodeBlockIcon } from '../../icon/editor/CodeBlock';
 import { Image as ImageIcon } from '../../icon/common/Image';
-import { TextFormat } from '../../icon/editor/TextFormat';
 import { Paragraph as ParagraphIcon } from '../../icon/editor/Paragraph';
+import { LineBreak as LineBreakIcon } from '../../icon/editor/LineBreak';
 import Toggle from '../../icon/editor/Toggle';
 
-interface SlateEditorProps {
+interface MarkdownEditorProps {
   initialContent: string;
   onChange: (html: string) => void;
   onMarkdownChange?: (markdown: string) => void;
   placeholder?: string;
 }
 
-// カスタム型定義
-type CustomElement = {
-  type:
-    | 'paragraph'
-    | 'heading-one'
-    | 'heading-two'
-    | 'heading-three'
-    | 'block-quote'
-    | 'bulleted-list'
-    | 'numbered-list'
-    | 'list-item'
-    | 'code'
-    | 'image'
-    | 'link';
-  children: CustomText[] | CustomElement[];
-  url?: string;
-};
-
-type CustomText = {
-  text: string;
-  bold?: boolean;
-  italic?: boolean;
-  underline?: boolean;
-  strike?: boolean;
-  code?: boolean;
-  fontSize?: string;
-};
-
-declare module 'slate' {
-  interface CustomTypes {
-    Editor: BaseEditor & ReactEditor & HistoryEditor;
-    Element: CustomElement;
-    Text: CustomText;
-  }
-}
-
-const LIST_TYPES = ['numbered-list', 'bulleted-list'] as const;
-
-const SlateEditor: React.FC<SlateEditorProps> = ({
+const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   initialContent,
   onChange,
   onMarkdownChange,
-  placeholder = 'ここにドキュメントを作成してください',
+  placeholder = 'ここにMarkdownでドキュメントを作成してください',
 }) => {
   const [showParagraphOptions, setShowParagraphOptions] = useState(false);
-  const [showFontSizeOptions, setShowFontSizeOptions] = useState(false);
-  const editor = useMemo(() => withImages(withHistory(withReact(createEditor()))), []);
+  const [markdown, setMarkdown] = useState(initialContent || '');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
 
-  // Markdown→Slate変換
-  const safeInitialContent = typeof initialContent === 'string' ? initialContent : '';
-  const initialValue: Descendant[] = useMemo(
-    () => parseMarkdownToSlate(safeInitialContent),
-    [safeInitialContent]
-  );
-
-  // HTML変換（簡易）
-  const serialize = (nodes: Descendant[]): string => {
-    return nodes
-      .map(n => {
-        if (Editor.isEditor(n) || !('type' in n)) return Text.isText(n) ? n.text : '';
-        const element = n as CustomElement;
-        switch (element.type) {
-          case 'heading-one':
-            return `<h1>${serialize(element.children)}</h1>`;
-          case 'heading-two':
-            return `<h2>${serialize(element.children)}</h2>`;
-          case 'heading-three':
-            return `<h3>${serialize(element.children)}</h3>`;
-          case 'block-quote':
-            return `<blockquote>${serialize(element.children)}</blockquote>`;
-          case 'bulleted-list':
-            return `<ul>${serialize(element.children)}</ul>`;
-          case 'numbered-list':
-            return `<ol>${serialize(element.children)}</ol>`;
-          case 'list-item':
-            return `<li>${serialize(element.children)}</li>`;
-          case 'code':
-            return `<pre><code>${serialize(element.children)}</code></pre>`;
-          case 'image':
-            return `<img src="${element.url}" alt="" />`;
-          case 'link':
-            return `<a href="${element.url}" target="_blank" rel="noopener noreferrer">${serialize(element.children)}</a>`;
-          case 'paragraph':
-          default:
-            return `<p>${serialize(element.children)}</p>`;
-        }
-      })
-      .join('');
+  // 行番号を計算
+  const getLineNumbers = () => {
+    const lines = markdown.split('\n');
+    return lines.map((_, index) => index + 1);
   };
 
-  // Markdown変換（直接）
-  const serializeToMarkdown = (nodes: Descendant[]): string => {
-    return nodes
-      .map(n => {
-        if (Editor.isEditor(n) || !('type' in n)) {
-          if (Text.isText(n)) {
-            let text = n.text;
-            if (n.bold) text = `**${text}**`;
-            if (n.italic) text = `*${text}*`;
-            if (n.underline) text = `<u>${text}</u>`;
-            if (n.strike) text = `~~${text}~~`;
-            if (n.code) text = `\`${text}\``;
-            return text;
-          }
-          return '';
-        }
-        const element = n as CustomElement;
-        switch (element.type) {
-          case 'heading-one':
-            return `# ${serializeToMarkdown(element.children)}\n\n`;
-          case 'heading-two':
-            return `## ${serializeToMarkdown(element.children)}\n\n`;
-          case 'heading-three':
-            return `### ${serializeToMarkdown(element.children)}\n\n`;
-          case 'block-quote':
-            return `> ${serializeToMarkdown(element.children)}\n\n`;
-          case 'bulleted-list':
-            return (
-              element.children
-                .map(child => {
-                  const childElement = child as CustomElement;
-                  if (childElement.type === 'list-item') {
-                    return `- ${serializeToMarkdown(childElement.children)}`;
-                  }
-                  return '';
-                })
-                .join('\n') + '\n\n'
-            );
-          case 'numbered-list':
-            let counter = 1;
-            return (
-              element.children
-                .map(child => {
-                  const childElement = child as CustomElement;
-                  if (childElement.type === 'list-item') {
-                    return `${counter++}. ${serializeToMarkdown(childElement.children)}`;
-                  }
-                  return '';
-                })
-                .join('\n') + '\n\n'
-            );
-          case 'list-item':
-            return `${serializeToMarkdown(element.children)}`;
-          case 'code':
-            return `\`\`\`\n${serializeToMarkdown(element.children)}\n\`\`\`\n\n`;
-          case 'image':
-            return `![](${element.url})\n\n`;
-          case 'link':
-            return `[${serializeToMarkdown(element.children)}](${element.url})`;
-          case 'paragraph':
-          default:
-            return `${serializeToMarkdown(element.children)}\n\n`;
-        }
-      })
-      .join('')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
+  // テキストエリアとの同期スクロール
+  const handleTextareaScroll = () => {
+    const textarea = textareaRef.current;
+    const lineNumbers = lineNumbersRef.current;
+
+    if (textarea && lineNumbers) {
+      lineNumbers.scrollTop = textarea.scrollTop;
+    }
   };
 
-  // onChange
-  const handleChange = (newValue: Descendant[]) => {
-    onChange(serialize(newValue));
+  // Markdown→HTML変換（改良版）
+  const markdownToHtml = (markdown: string): string => {
+    if (!markdown.trim()) return '';
+
+    // まず全体の改行処理を先に行う
+    let processedMarkdown = markdown.replace(/  \n/g, '<LINEBREAK>');
+
+    const lines = processedMarkdown.split('\n');
+    const htmlLines: string[] = [];
+    let inList = false;
+    let inOrderedList = false;
+    let inCodeBlock = false;
+    let inBlockquote = false;
+    let codeBlockContent: string[] = [];
+    let blockquoteContent = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+
+      // コードブロックの処理
+      if (line.startsWith('```')) {
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        if (inCodeBlock) {
+          htmlLines.push(`<pre><code>${codeBlockContent.join('\n')}</code></pre>`);
+          codeBlockContent = [];
+          inCodeBlock = false;
+        } else {
+          inCodeBlock = true;
+        }
+        continue;
+      }
+
+      if (inCodeBlock) {
+        codeBlockContent.push(line);
+        continue;
+      }
+
+      // 空行の処理
+      if (!line.trim()) {
+        if (inList) {
+          htmlLines.push('</ul>');
+          inList = false;
+        }
+        if (inOrderedList) {
+          htmlLines.push('</ol>');
+          inOrderedList = false;
+        }
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        htmlLines.push('');
+        continue;
+      }
+
+      // 見出しの処理
+      if (line.startsWith('### ')) {
+        if (inList) {
+          htmlLines.push('</ul>');
+          inList = false;
+        }
+        if (inOrderedList) {
+          htmlLines.push('</ol>');
+          inOrderedList = false;
+        }
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        htmlLines.push(`<h3>${processInlineElements(line.substring(4))}</h3>`);
+        continue;
+      }
+      if (line.startsWith('## ')) {
+        if (inList) {
+          htmlLines.push('</ul>');
+          inList = false;
+        }
+        if (inOrderedList) {
+          htmlLines.push('</ol>');
+          inOrderedList = false;
+        }
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        htmlLines.push(`<h2>${processInlineElements(line.substring(3))}</h2>`);
+        continue;
+      }
+      if (line.startsWith('# ')) {
+        if (inList) {
+          htmlLines.push('</ul>');
+          inList = false;
+        }
+        if (inOrderedList) {
+          htmlLines.push('</ol>');
+          inOrderedList = false;
+        }
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        htmlLines.push(`<h1>${processInlineElements(line.substring(2))}</h1>`);
+        continue;
+      }
+
+      // 引用の処理
+      if (line.startsWith('> ')) {
+        if (inList) {
+          htmlLines.push('</ul>');
+          inList = false;
+        }
+        if (inOrderedList) {
+          htmlLines.push('</ol>');
+          inOrderedList = false;
+        }
+
+        if (!inBlockquote) {
+          // 引用ブロックを開始
+          inBlockquote = true;
+          blockquoteContent = `<p>${processInlineElements(line.substring(2))}</p>`;
+        } else {
+          // 既存の引用ブロックに追加
+          blockquoteContent += `<p>${processInlineElements(line.substring(2))}</p>`;
+        }
+        continue;
+      }
+
+      // 箇条書きリストの処理
+      if (line.match(/^[-*+]\s+/)) {
+        if (inOrderedList) {
+          htmlLines.push('</ol>');
+          inOrderedList = false;
+        }
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        if (!inList) {
+          htmlLines.push('<ul>');
+          inList = true;
+        }
+        const listItemContent = line.replace(/^[-*+]\s+/, '').trim();
+        htmlLines.push(`<li>${processInlineElements(listItemContent)}</li>`);
+        continue;
+      }
+
+      // 番号付きリストの処理
+      if (line.match(/^\d+\.\s+/)) {
+        if (inList) {
+          htmlLines.push('</ul>');
+          inList = false;
+        }
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        if (!inOrderedList) {
+          htmlLines.push('<ol>');
+          inOrderedList = true;
+        }
+        const listItemContent = line.replace(/^\d+\.\s+/, '').trim();
+        htmlLines.push(`<li>${processInlineElements(listItemContent)}</li>`);
+        continue;
+      }
+
+      // 引用ブロックが終了した場合
+      if (inBlockquote && !line.startsWith('> ')) {
+        htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+        inBlockquote = false;
+        blockquoteContent = '';
+      }
+
+      // 通常の段落
+      if (line.trim()) {
+        if (inList) {
+          htmlLines.push('</ul>');
+          inList = false;
+        }
+        if (inOrderedList) {
+          htmlLines.push('</ol>');
+          inOrderedList = false;
+        }
+        // 引用ブロックが終了した場合
+        if (inBlockquote) {
+          htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+          inBlockquote = false;
+          blockquoteContent = '';
+        }
+        htmlLines.push(`<p>${processInlineElements(line)}</p>`);
+      }
+    }
+
+    // リストが閉じられていない場合
+    if (inList) htmlLines.push('</ul>');
+    if (inOrderedList) htmlLines.push('</ol>');
+
+    // 引用ブロックが閉じられていない場合
+    if (inBlockquote) {
+      htmlLines.push(`<blockquote>${blockquoteContent}</blockquote>`);
+    }
+
+    return htmlLines.join('\n');
+  };
+
+  // インライン要素の処理
+  const processInlineElements = (text: string): string => {
+    // 最初にHTMLエスケープ（ただしプレースホルダーは保護）
+    let escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      // プレースホルダーを元に戻す
+      .replace(/&lt;LINEBREAK&gt;/g, '<LINEBREAK>');
+
+    return (
+      escaped
+        // 太字
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // 斜体
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        // 下線（マークダウンの __text__ 形式）
+        .replace(/__(.+?)__/g, '<u>$1</u>')
+        // 取り消し線
+        .replace(/~~(.+?)~~/g, '<s>$1</s>')
+        // インラインコード
+        .replace(/`(.+?)`/g, '<code>$1</code>')
+        // リンク
+        .replace(
+          /\[([^\]]+)\]\(([^)]+)\)/g,
+          '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>'
+        )
+        // 画像
+        .replace(
+          /!\[([^\]]*)\]\(([^)]+)\)/g,
+          '<img src="$2" alt="$1" style="max-width: 100%; height: auto;" />'
+        )
+        // 最後にプレースホルダーを<br>に変換
+        .replace(/<LINEBREAK>/g, '<br>')
+    );
+  };
+
+  // マークダウンの変更を処理
+  const handleMarkdownChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newMarkdown = event.target.value;
+    setMarkdown(newMarkdown);
+
+    // HTMLに変換して親コンポーネントに通知
+    const html = markdownToHtml(newMarkdown);
+    onChange(html);
+
+    // マークダウンも通知
     if (onMarkdownChange) {
-      onMarkdownChange(serializeToMarkdown(newValue));
+      onMarkdownChange(newMarkdown);
     }
   };
 
-  // Render Element
-  const renderElement = useCallback((props: RenderElementProps) => <Element {...props} />, []);
-  const renderLeaf = useCallback((props: RenderLeafProps) => <Leaf {...props} />, []);
-
-  // Toolbarの各種コマンド
-  const exec = (format: string, value?: any) => {
-    switch (format) {
-      case 'bold':
-      case 'italic':
-      case 'underline':
-      case 'strike':
-      case 'code':
-        toggleMark(editor, format);
-        break;
-      case 'heading-one':
-      case 'heading-two':
-      case 'heading-three':
-      case 'paragraph':
-      case 'block-quote':
-      case 'bulleted-list':
-      case 'numbered-list':
-        toggleBlock(editor, format);
-        break;
-      case 'image':
-        insertImage(editor);
-        break;
-      case 'font-size':
-        setFontSize(editor, value);
-        break;
-      case 'link':
-        insertLink(editor);
-        break;
-      case 'undo':
-        (editor as HistoryEditor).undo();
-        break;
-      case 'redo':
-        (editor as HistoryEditor).redo();
-        break;
-      default:
-        break;
+  // キーダウンイベントを処理（改行をサポート）
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enterキーの場合、デフォルトの改行動作を許可
+    if (event.key === 'Enter') {
+      // デフォルトの改行動作を妨げない
+      return;
     }
+  };
+
+  // テキストエリアにマークダウン構文を挿入
+  const insertMarkdown = (syntax: string, placeholder = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = markdown.substring(start, end);
+
+    let newText = '';
+    let newCursorPos = start;
+
+    switch (syntax) {
+      case 'heading-one':
+        newText = `# ${selectedText || placeholder}`;
+        newCursorPos = start + 2;
+        break;
+      case 'heading-two':
+        newText = `## ${selectedText || placeholder}`;
+        newCursorPos = start + 3;
+        break;
+      case 'heading-three':
+        newText = `### ${selectedText || placeholder}`;
+        newCursorPos = start + 4;
+        break;
+      case 'bold':
+        if (selectedText.includes('\n')) {
+          // 複数行の場合、各行に太字を適用
+          const lines = selectedText.split('\n');
+          const processedLines = lines.map(line => (line.trim() ? `**${line}**` : line));
+          newText = processedLines.join('\n');
+          newCursorPos = start;
+        } else {
+          newText = `**${selectedText || placeholder}**`;
+          newCursorPos = selectedText ? start : start + 2;
+        }
+        break;
+      case 'italic':
+        if (selectedText.includes('\n')) {
+          // 複数行の場合、各行に斜体を適用
+          const lines = selectedText.split('\n');
+          const processedLines = lines.map(line => (line.trim() ? `*${line}*` : line));
+          newText = processedLines.join('\n');
+          newCursorPos = start;
+        } else {
+          newText = `*${selectedText || placeholder}*`;
+          newCursorPos = selectedText ? start : start + 1;
+        }
+        break;
+      case 'underline':
+        if (selectedText.includes('\n')) {
+          // 複数行の場合、各行に下線を適用
+          const lines = selectedText.split('\n');
+          const processedLines = lines.map(line => (line.trim() ? `__${line}__` : line));
+          newText = processedLines.join('\n');
+          newCursorPos = start;
+        } else {
+          newText = `__${selectedText || placeholder}__`;
+          newCursorPos = selectedText ? start : start + 2;
+        }
+        break;
+      case 'strike':
+        if (selectedText.includes('\n')) {
+          // 複数行の場合、各行に取り消し線を適用
+          const lines = selectedText.split('\n');
+          const processedLines = lines.map(line => (line.trim() ? `~~${line}~~` : line));
+          newText = processedLines.join('\n');
+          newCursorPos = start;
+        } else {
+          newText = `~~${selectedText || placeholder}~~`;
+          newCursorPos = selectedText ? start : start + 2;
+        }
+        break;
+      case 'code':
+        if (selectedText.includes('\n')) {
+          // 複数行の場合はコードブロックとして処理
+          newText = `\`\`\`\n${selectedText || placeholder}\n\`\`\``;
+          newCursorPos = selectedText ? start : start + 4;
+        } else {
+          newText = `\`${selectedText || placeholder}\``;
+          newCursorPos = start + 1;
+        }
+        break;
+      case 'block-quote': {
+        if (selectedText.includes('\n')) {
+          // 複数行が選択されている場合、各行に引用記号を追加
+          const lines = selectedText.split('\n');
+          const processedLines = lines.map(line => (line.trim() ? `> ${line.trim()}` : '> '));
+          newText = processedLines.join('\n');
+          newCursorPos = start;
+        } else if (selectedText.trim()) {
+          // 単一行のテキストが選択されている場合
+          newText = `> ${selectedText.trim()}`;
+          newCursorPos = start;
+        } else {
+          // テキストが選択されていない場合、現在の位置に引用文を挿入
+          const currentLineStart = markdown.lastIndexOf('\n', start - 1) + 1;
+          const currentLine = markdown.substring(currentLineStart, start);
+          if (currentLine.trim() !== '') {
+            newText = `\n> ${placeholder}`;
+            newCursorPos = start + 3;
+          } else {
+            newText = `> ${placeholder}`;
+            newCursorPos = start + 2;
+          }
+        }
+        break;
+      }
+      case 'bulleted-list': {
+        if (selectedText.includes('\n')) {
+          // 複数行が選択されている場合、各行をリストアイテムに変換
+          const lines = selectedText.split('\n');
+          const processedLines = lines.map(line => (line.trim() ? `- ${line.trim()}` : ''));
+          newText = processedLines.join('\n');
+          newCursorPos = start;
+        } else if (selectedText.trim()) {
+          // 単一行のテキストが選択されている場合
+          newText = `- ${selectedText.trim()}`;
+          newCursorPos = start;
+        } else {
+          // テキストが選択されていない場合、現在の位置にリストアイテムを挿入
+          const currentLineStart = markdown.lastIndexOf('\n', start - 1) + 1;
+          const currentLine = markdown.substring(currentLineStart, start);
+          if (currentLine.trim() !== '') {
+            newText = `\n- ${placeholder}`;
+            newCursorPos = start + 3;
+          } else {
+            newText = `- ${placeholder}`;
+            newCursorPos = start + 2;
+          }
+        }
+        break;
+      }
+      case 'numbered-list': {
+        if (selectedText.includes('\n')) {
+          // 複数行が選択されている場合、各行を番号付きリストアイテムに変換
+          const lines = selectedText.split('\n');
+          let counter = 1;
+          const processedLines = lines.map(line =>
+            line.trim() ? `${counter++}. ${line.trim()}` : ''
+          );
+          newText = processedLines.join('\n');
+          newCursorPos = start;
+        } else if (selectedText.trim()) {
+          // 単一行のテキストが選択されている場合
+          newText = `1. ${selectedText.trim()}`;
+          newCursorPos = start;
+        } else {
+          // テキストが選択されていない場合、現在の位置にリストアイテムを挿入
+          const currentLineStart = markdown.lastIndexOf('\n', start - 1) + 1;
+          const currentLine = markdown.substring(currentLineStart, start);
+          if (currentLine.trim() !== '') {
+            newText = `\n1. ${placeholder}`;
+            newCursorPos = start + 4;
+          } else {
+            newText = `1. ${placeholder}`;
+            newCursorPos = start + 3;
+          }
+        }
+        break;
+      }
+      case 'link': {
+        const url = prompt('リンクURLを入力してください:') || '#';
+        newText = `[${selectedText || placeholder}](${url})`;
+        newCursorPos = selectedText ? start : start + 1;
+        break;
+      }
+      case 'image': {
+        const imageUrl = prompt('画像URLを入力してください:') || '#';
+        newText = `![${selectedText || 'alt text'}](${imageUrl})`;
+        newCursorPos = selectedText ? start : start + 2;
+        break;
+      }
+      case 'line-break': {
+        // 改行を挿入（マークダウンの改行記法：行末に2つのスペース + 改行）
+        if (selectedText) {
+          // テキストが選択されている場合、選択されたテキストの後に改行を追加
+          newText = selectedText + '  \n';
+          newCursorPos = start + newText.length;
+        } else {
+          // テキストが選択されていない場合、現在の位置に改行を挿入
+          newText = '  \n';
+          newCursorPos = start + newText.length;
+        }
+        break;
+      }
+      default:
+        return;
+    }
+
+    const newMarkdown = markdown.substring(0, start) + newText + markdown.substring(end);
+    setMarkdown(newMarkdown);
+
+    // HTMLに変換して親コンポーネントに通知
+    const html = markdownToHtml(newMarkdown);
+    onChange(html);
+
+    if (onMarkdownChange) {
+      onMarkdownChange(newMarkdown);
+    }
+
+    // カーソル位置を設定
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(
+        newCursorPos,
+        newCursorPos + (placeholder ? placeholder.length : 0)
+      );
+    }, 0);
   };
 
   // UI
   return (
-    <div className="w-full relative slate-editor">
+    <div className="w-full relative markdown-editor">
       <div className="flex mb-2 pb-5 pt-1 px-1 border-b gap-1 rounded-t">
         {/* 段落・見出し */}
         <div className="relative h-8">
           <button
-            className={`h-8 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent ${showParagraphOptions ? 'border-[#B1B1B1]' : ''}`}
-            title="段落スタイル"
+            className={`h-8 rounded hover:border-[#B1B1B1] border border-transparent px-2 ${showParagraphOptions ? 'border-[#B1B1B1]' : ''}`}
+            title="見出しスタイル"
             onClick={() => {
               setShowParagraphOptions(!showParagraphOptions);
-              setShowFontSizeOptions(false);
             }}
           >
             <div className="flex items-center gap-1">
@@ -269,102 +561,34 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
             </div>
           </button>
           <div
-            className={`absolute ${showParagraphOptions ? 'block' : 'hidden'} bg-white border rounded shadow-lg z-10 w-32`}
+            className={`absolute ${showParagraphOptions ? 'block' : 'hidden'} bg-white border border-gray-300 rounded shadow-lg z-10 w-32 mt-1`}
           >
             <button
               onClick={() => {
-                exec('paragraph');
+                insertMarkdown('heading-one', '見出し1');
                 setShowParagraphOptions(false);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-gray-800 border-b border-gray-200 first:rounded-t last:rounded-b last:border-b-0"
             >
-              段落
+              # 見出し 1
             </button>
             <button
               onClick={() => {
-                exec('heading-one');
+                insertMarkdown('heading-two', '見出し2');
                 setShowParagraphOptions(false);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-gray-800 border-b border-gray-200 first:rounded-t last:rounded-b last:border-b-0"
             >
-              見出し 1
+              ## 見出し 2
             </button>
             <button
               onClick={() => {
-                exec('heading-two');
+                insertMarkdown('heading-three', '見出し3');
                 setShowParagraphOptions(false);
               }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
+              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-gray-800 border-b border-gray-200 first:rounded-t last:rounded-b last:border-b-0"
             >
-              見出し 2
-            </button>
-            <button
-              onClick={() => {
-                exec('heading-three');
-                setShowParagraphOptions(false);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
-            >
-              見出し 3
-            </button>
-          </div>
-        </div>
-        <div className="flex items-center h-8 mx-0.5">
-          <div className="h-5 border-l border-[#B1B1B1]"></div>
-        </div>
-        {/* フォントサイズ */}
-        <div className="relative h-8">
-          <button
-            className={`h-8 bg-transparent rounded hover:border-[#B1B1B1] border border-transparent ${showFontSizeOptions ? 'border-[#B1B1B1]' : ''}`}
-            title="フォントサイズ"
-            onClick={() => {
-              setShowFontSizeOptions(!showFontSizeOptions);
-              setShowParagraphOptions(false);
-            }}
-          >
-            <div className="flex items-center gap-1">
-              <TextFormat width={22} height={22} />
-              <Toggle width={9} height={9} />
-            </div>
-          </button>
-          <div
-            className={`absolute ${showFontSizeOptions ? 'block' : 'hidden'} bg-white border rounded shadow-lg z-10 w-32`}
-          >
-            <button
-              onClick={() => {
-                exec('font-size', '12px');
-                setShowFontSizeOptions(false);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xs"
-            >
-              小 (12px)
-            </button>
-            <button
-              onClick={() => {
-                exec('font-size', '16px');
-                setShowFontSizeOptions(false);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100"
-            >
-              中 (16px)
-            </button>
-            <button
-              onClick={() => {
-                exec('font-size', '20px');
-                setShowFontSizeOptions(false);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-lg"
-            >
-              大 (20px)
-            </button>
-            <button
-              onClick={() => {
-                exec('font-size', '24px');
-                setShowFontSizeOptions(false);
-              }}
-              className="w-full text-left px-3 py-1.5 hover:bg-gray-100 text-xl"
-            >
-              特大 (24px)
+              ### 見出し 3
             </button>
           </div>
         </div>
@@ -373,524 +597,147 @@ const SlateEditor: React.FC<SlateEditorProps> = ({
         </div>
         {/* マーク */}
         <button
-          onClick={() => exec('bold')}
+          onClick={() => insertMarkdown('bold', '太字')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="bold"
+          title="太字 (**text**)"
         >
           <BoldIcon width={16} height={16} />
         </button>
         <button
-          onClick={() => exec('italic')}
+          onClick={() => insertMarkdown('italic', '斜体')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="italic"
+          title="斜体 (*text*)"
         >
           <ItalicIcon width={16} height={16} />
         </button>
         <button
-          onClick={() => exec('underline')}
+          onClick={() => insertMarkdown('underline', '下線')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="underline"
+          title="下線 (__text__)"
         >
           <UnderLineIcon width={16} height={16} />
         </button>
         <button
-          onClick={() => exec('strike')}
+          onClick={() => insertMarkdown('strike', '取り消し線')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="strike"
+          title="取り消し線 (~~text~~)"
         >
           <StrikeThrowIcon width={16} height={16} />
+        </button>
+        <button
+          onClick={() => insertMarkdown('line-break')}
+          className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
+          title="改行 (行末に2つのスペース + 改行)"
+        >
+          <LineBreakIcon width={16} height={16} />
         </button>
         <div className="flex items-center h-8 mx-1">
           <div className="h-5 border-l border-[#B1B1B1]"></div>
         </div>
         {/* リスト・引用・コード */}
         <button
-          onClick={() => exec('bulleted-list')}
+          onClick={() => insertMarkdown('bulleted-list', 'リストアイテム')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="bullet-list"
+          title="箇条書きリスト (- text)"
         >
           <BulletListIcon width={16} height={16} />
         </button>
         <button
-          onClick={() => exec('numbered-list')}
+          onClick={() => insertMarkdown('numbered-list', 'リストアイテム')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="ordered-list"
+          title="番号付きリスト (1. text)"
         >
           <OrderedListIcon width={19} height={19} />
         </button>
         <button
-          onClick={() => exec('block-quote')}
+          onClick={() => insertMarkdown('block-quote', '引用文')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="blockquote"
+          title="引用 (> text)"
         >
           <QuoteIcon width={16} height={16} />
         </button>
         <button
-          onClick={() => exec('code')}
+          onClick={() => insertMarkdown('code', 'コード')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="code block"
+          title="コード (`code` または ```code```)"
         >
           <CodeBlockIcon width={16} height={16} />
         </button>
         <div className="flex items-center h-8 mx-1">
           <div className="h-5 border-l border-[#B1B1B1]"></div>
         </div>
-        {/* 画像 */}
+        {/* 画像・リンク */}
         <button
-          onClick={() => exec('image')}
+          onClick={() => insertMarkdown('image', 'alt text')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="image"
+          title="画像 (![alt](url))"
         >
           <ImageIcon width={16} height={16} />
         </button>
-        {/* リンク */}
         <button
-          onClick={() => exec('link')}
+          onClick={() => insertMarkdown('link', 'リンクテキスト')}
           className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="link"
+          title="リンク ([text](url))"
         >
           🔗
         </button>
-        {/* Undo/Redo */}
-        <button
-          onClick={() => exec('undo')}
-          className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="undo"
-        >
-          ⎌
-        </button>
-        <button
-          onClick={() => exec('redo')}
-          className="bg-transparent px-2 py-1 rounded hover:border-[#B1B1B1] border border-transparent"
-          title="redo"
-        >
-          ⎌⎌
-        </button>
       </div>
       <div className="rounded-b">
-        <div className="w-full pt-4">
-          <Slate
-            editor={editor as ReactEditor}
-            initialValue={initialValue}
-            onValueChange={handleChange}
-          >
-            <Editable
-              renderElement={renderElement}
-              renderLeaf={renderLeaf}
-              placeholder={placeholder}
-              spellCheck
-              autoFocus
-              className="outline-none w-full min-h-[200px] p-2"
-              onKeyDown={event => {
-                if ((event.metaKey || event.ctrlKey) && event.key === 'z') {
-                  event.preventDefault();
-                  (editor as HistoryEditor).undo();
-                }
-                if ((event.metaKey || event.ctrlKey) && event.shiftKey && event.key === 'z') {
-                  event.preventDefault();
-                  (editor as HistoryEditor).redo();
-                }
+        <div className="w-full pt-4 flex">
+          {/* 左側: Markdownエディター */}
+          <div className="flex-1 flex">
+            {/* 行番号 */}
+            <div
+              ref={lineNumbersRef}
+              className="line-numbers flex-shrink-0 text-gray-500 text-sm font-mono overflow-hidden"
+              style={{
+                width: '50px',
+                minHeight: '400px',
+                overflow: 'hidden',
               }}
+            >
+              {getLineNumbers().map(lineNumber => (
+                <div
+                  key={lineNumber}
+                  className="line-number px-2 text-right"
+                  style={{
+                    height: '1.4em',
+                    lineHeight: '1.4em',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {lineNumber}
+                </div>
+              ))}
+            </div>
+
+            {/* テキストエリア */}
+            <textarea
+              ref={textareaRef}
+              value={markdown}
+              onChange={handleMarkdownChange}
+              onKeyDown={handleKeyDown}
+              onScroll={handleTextareaScroll}
+              placeholder={placeholder}
+              className="outline-none flex-1 min-h-[400px] resize-none font-mono text-sm border-0 focus:ring-0"
+              style={{
+                lineHeight: '1.4em',
+              }}
+              spellCheck={false}
             />
-          </Slate>
+          </div>
+
+          {/* 右側: プレビュー */}
+          <div className="flex-1 pl-4">
+            <div
+              className="min-h-[400px] overflow-auto markdown-preview"
+              dangerouslySetInnerHTML={{ __html: markdownToHtml(markdown) }}
+            />
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-// --- Markdown→Slate変換 ---
-
-const parseMarkdownToSlate = (markdown: string): Descendant[] => {
-  if (!markdown || !markdown.trim()) {
-    return [{ type: 'paragraph', children: [{ text: '' }] } as CustomElement];
-  }
-
-  const lines = markdown.split('\n');
-  const result: Descendant[] = [];
-  let currentListItems: CustomElement[] = [];
-  let currentListType: 'numbered-list' | 'bulleted-list' | null = null;
-
-  const flushList = () => {
-    if (currentListItems.length > 0 && currentListType) {
-      result.push({
-        type: currentListType,
-        children: currentListItems,
-      } as CustomElement);
-      currentListItems = [];
-      currentListType = null;
-    }
-  };
-
-  const parseInlineText = (text: string): CustomText[] => {
-    const parts: CustomText[] = [];
-    let current = text;
-
-    // 簡単なインライン要素の解析
-    const patterns = [
-      { regex: /\*\*([^*]+)\*\*/g, style: { bold: true } },
-      { regex: /\*([^*]+)\*/g, style: { italic: true } },
-      { regex: /_([^_]+)_/g, style: { italic: true } },
-      { regex: /~~([^~]+)~~/g, style: { strike: true } },
-      { regex: /`([^`]+)`/g, style: { code: true } },
-    ];
-
-    // 単純にテキストを分割して処理
-    let processedText = current;
-    let hasFormatting = false;
-
-    for (const pattern of patterns) {
-      if (pattern.regex.test(processedText)) {
-        hasFormatting = true;
-        break;
-      }
-    }
-
-    if (!hasFormatting) {
-      return [{ text: current }];
-    }
-
-    // 複雑なフォーマットの解析は簡略化
-    // 太字の解析
-    if (processedText.includes('**')) {
-      const boldMatches = processedText.match(/\*\*([^*]+)\*\*/g);
-      if (boldMatches) {
-        let tempText = processedText;
-        boldMatches.forEach(match => {
-          const content = match.replace(/\*\*/g, '');
-          const beforeMatch = tempText.substring(0, tempText.indexOf(match));
-          const afterMatch = tempText.substring(tempText.indexOf(match) + match.length);
-
-          if (beforeMatch) parts.push({ text: beforeMatch });
-          parts.push({ text: content, bold: true });
-          tempText = afterMatch;
-        });
-        if (tempText) parts.push({ text: tempText });
-        return parts;
-      }
-    }
-
-    return [{ text: current }];
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // 空行の処理
-    if (!line.trim()) {
-      flushList();
-      continue;
-    }
-
-    // ATX形式の見出しの処理
-    if (line.startsWith('# ')) {
-      flushList();
-      result.push({
-        type: 'heading-one',
-        children: parseInlineText(line.substring(2)),
-      } as CustomElement);
-      continue;
-    }
-
-    if (line.startsWith('## ')) {
-      flushList();
-      result.push({
-        type: 'heading-two',
-        children: parseInlineText(line.substring(3)),
-      } as CustomElement);
-      continue;
-    }
-
-    if (line.startsWith('### ')) {
-      flushList();
-      result.push({
-        type: 'heading-three',
-        children: parseInlineText(line.substring(4)),
-      } as CustomElement);
-      continue;
-    }
-
-    // Setext形式の見出しの処理
-    if (i + 1 < lines.length) {
-      const nextLine = lines[i + 1];
-      if (nextLine.match(/^=+\s*$/)) {
-        // H1 見出し
-        flushList();
-        result.push({
-          type: 'heading-one',
-          children: parseInlineText(line),
-        } as CustomElement);
-        i++; // 次の行（=====）をスキップ
-        continue;
-      }
-      if (nextLine.match(/^-+\s*$/)) {
-        // H2 見出し
-        flushList();
-        result.push({
-          type: 'heading-two',
-          children: parseInlineText(line),
-        } as CustomElement);
-        i++; // 次の行（-----）をスキップ
-        continue;
-      }
-    }
-
-    // 引用の処理
-    if (line.startsWith('> ')) {
-      flushList();
-      result.push({
-        type: 'block-quote',
-        children: parseInlineText(line.substring(2)),
-      } as CustomElement);
-      continue;
-    }
-
-    // 番号付きリストの処理
-    const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
-    if (numberedMatch) {
-      if (currentListType !== 'numbered-list') {
-        flushList();
-        currentListType = 'numbered-list';
-      }
-      currentListItems.push({
-        type: 'list-item',
-        children: parseInlineText(numberedMatch[1]),
-      } as CustomElement);
-      continue;
-    }
-
-    // 箇条書きリストの処理
-    if (line.match(/^[-*+]\s+(.+)$/)) {
-      const match = line.match(/^[-*+]\s+(.+)$/);
-      if (match) {
-        if (currentListType !== 'bulleted-list') {
-          flushList();
-          currentListType = 'bulleted-list';
-        }
-        currentListItems.push({
-          type: 'list-item',
-          children: parseInlineText(match[1]),
-        } as CustomElement);
-        continue;
-      }
-    }
-
-    // コードブロックの処理
-    if (line.startsWith('```')) {
-      flushList();
-      let codeContent = '';
-      i++; // 次の行に進む
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeContent += lines[i] + '\n';
-        i++;
-      }
-      result.push({
-        type: 'code',
-        children: [{ text: codeContent.trim() }],
-      } as CustomElement);
-      continue;
-    }
-
-    // 水平線の処理（無視）
-    if (line.match(/^(-{3,}|={3,}|\*{3,})\s*$/)) {
-      flushList();
-      continue;
-    }
-
-    // 通常の段落
-    if (line.trim()) {
-      flushList();
-      result.push({
-        type: 'paragraph',
-        children: parseInlineText(line),
-      } as CustomElement);
-    }
-  }
-
-  // 最後のリストを処理
-  flushList();
-
-  return result.length > 0
-    ? result
-    : [{ type: 'paragraph', children: [{ text: '' }] } as CustomElement];
-};
-
-// --- Slate用ユーティリティ ---
-
-const toggleMark = (editor: Editor, format: string) => {
-  const isActive = isMarkActive(editor, format);
-  if (isActive) {
-    Editor.removeMark(editor, format);
-  } else {
-    Editor.addMark(editor, format, true);
-  }
-};
-
-const isMarkActive = (editor: Editor, format: string) => {
-  const marks = Editor.marks(editor);
-  return marks ? (marks as any)[format] === true : false;
-};
-
-const toggleBlock = (editor: Editor, format: string) => {
-  const isActive = isBlockActive(editor, format);
-  const isList = LIST_TYPES.includes(format as any);
-  const isHeading = ['heading-one', 'heading-two', 'heading-three'].includes(format);
-
-  // リスト要素をアンラップ
-  Transforms.unwrapNodes(editor, {
-    match: n =>
-      !Editor.isEditor(n) &&
-      SlateElement.isElement(n) &&
-      LIST_TYPES.includes((n as CustomElement).type as any),
-    split: true,
-  });
-
-  // 見出し要素をアンラップ（新しい見出しに変換する場合を除く）
-  if (!isHeading) {
-    Transforms.unwrapNodes(editor, {
-      match: n =>
-        !Editor.isEditor(n) &&
-        SlateElement.isElement(n) &&
-        ['heading-one', 'heading-two', 'heading-three'].includes((n as CustomElement).type),
-      split: true,
-    });
-  }
-
-  if (!isActive && isList) {
-    // リストアイテムに変換
-    Transforms.setNodes<CustomElement>(editor, { type: 'list-item' });
-    // リストでラップ
-    const block: CustomElement = { type: format as CustomElement['type'], children: [] };
-    Transforms.wrapNodes(editor, block);
-  } else {
-    // 通常のブロック変換
-    let newType = isActive ? 'paragraph' : format;
-    Transforms.setNodes<CustomElement>(editor, { type: newType as CustomElement['type'] });
-  }
-};
-
-const isBlockActive = (editor: Editor, format: string) => {
-  const { selection } = editor;
-  if (!selection) return false;
-
-  const [match] = Editor.nodes(editor, {
-    match: n =>
-      !Editor.isEditor(n) && SlateElement.isElement(n) && (n as CustomElement).type === format,
-    at: Editor.unhangRange(editor, selection),
-  });
-  return !!match;
-};
-
-const insertImage = (editor: Editor) => {
-  const url = window.prompt('画像URLを入力してください');
-  if (!url) return;
-  const image: CustomElement = { type: 'image', url, children: [{ text: '' }] };
-  Transforms.insertNodes(editor, image);
-};
-
-const withImages = (editor: Editor) => {
-  const { isVoid } = editor;
-  editor.isVoid = element => {
-    return (element as CustomElement).type === 'image' ? true : isVoid(element);
-  };
-  return editor;
-};
-
-const setFontSize = (editor: Editor, size: string) => {
-  Editor.addMark(editor, 'fontSize', size);
-};
-
-const insertLink = (editor: Editor) => {
-  const url = window.prompt('リンクURLを入力してください');
-  if (!url) return;
-  const { selection } = editor;
-  const isCollapsed = selection && Range.isCollapsed(selection);
-  if (isCollapsed) {
-    const link: CustomElement = {
-      type: 'link',
-      url,
-      children: [{ text: url }],
-    };
-    Transforms.insertNodes(editor, link);
-  } else {
-    const link: CustomElement = { type: 'link', url, children: [] };
-    Transforms.wrapNodes(editor, link, { split: true });
-    Transforms.collapse(editor, { edge: 'end' });
-  }
-};
-
-// --- Slate用Element/Leaf ---
-
-const Element: React.FC<RenderElementProps> = ({ attributes, children, element }) => {
-  const customElement = element as CustomElement;
-  switch (customElement.type) {
-    case 'heading-one':
-      return <h1 {...attributes}>{children}</h1>;
-    case 'heading-two':
-      return <h2 {...attributes}>{children}</h2>;
-    case 'heading-three':
-      return <h3 {...attributes}>{children}</h3>;
-    case 'block-quote':
-      return <blockquote {...attributes}>{children}</blockquote>;
-    case 'bulleted-list':
-      return <ul {...attributes}>{children}</ul>;
-    case 'numbered-list':
-      return <ol {...attributes}>{children}</ol>;
-    case 'list-item':
-      return <li {...attributes}>{children}</li>;
-    case 'code':
-      return (
-        <pre {...attributes}>
-          <code>{children}</code>
-        </pre>
-      );
-    case 'image':
-      return (
-        <img
-          {...attributes}
-          src={customElement.url}
-          alt=""
-          style={{ maxWidth: '100%', height: 'auto' }}
-        />
-      );
-    case 'link':
-      return (
-        <a
-          {...attributes}
-          href={customElement.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: '#00a000', textDecoration: 'none' }}
-        >
-          {children}
-        </a>
-      );
-    default:
-      return <p {...attributes}>{children}</p>;
-  }
-};
-
-const Leaf: React.FC<RenderLeafProps> = ({ attributes, children, leaf }) => {
-  const customLeaf = leaf as CustomText;
-  if (customLeaf.bold) {
-    children = <strong>{children}</strong>;
-  }
-  if (customLeaf.italic) {
-    children = <em>{children}</em>;
-  }
-  if (customLeaf.underline) {
-    children = <u>{children}</u>;
-  }
-  if (customLeaf.strike) {
-    children = <s>{children}</s>;
-  }
-  if (customLeaf.code) {
-    children = <code>{children}</code>;
-  }
-  if (customLeaf.fontSize) {
-    children = <span style={{ fontSize: customLeaf.fontSize }}>{children}</span>;
-  }
-  return <span {...attributes}>{children}</span>;
-};
-
-export default SlateEditor;
+export default MarkdownEditor;
