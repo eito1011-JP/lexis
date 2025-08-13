@@ -30,6 +30,7 @@ use App\Services\CategoryFolderService;
 use App\Services\DocumentDiffService;
 use App\Services\GitService;
 use App\Services\MdFileService;
+use App\Services\PullRequestConflictService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -44,16 +45,20 @@ class PullRequestController extends ApiBaseController
 
     protected CategoryFolderService $categoryFolderService;
 
+    protected PullRequestConflictService $pullRequestConflictService;
+
     public function __construct(
         DocumentDiffService $documentDiffService,
         GitService $gitService,
         MdFileService $mdFileService,
-        CategoryFolderService $categoryFolderService
+        CategoryFolderService $categoryFolderService,
+        PullRequestConflictService $pullRequestConflictService
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->gitService = $gitService;
         $this->mdFileService = $mdFileService;
         $this->categoryFolderService = $categoryFolderService;
+        $this->pullRequestConflictService = $pullRequestConflictService;
     }
 
     /**
@@ -773,6 +778,35 @@ class PullRequestController extends ApiBaseController
             return response()->json([
                 'error' => 'プルリクエストタイトルの更新に失敗しました',
             ], 500);
+        }
+    }
+
+    /**
+     * コンフリクト発生時の3-way差分を取得
+     */
+    public function fetchConflictDiff(DetectConflictRequest $request, int $id): JsonResponse
+    {
+        try {
+            $user = $this->getUserFromSession();
+            if (! $user) {
+                return response()->json(['error' => '認証されていません'], 401);
+            }
+
+            $pullRequestId = $request->validated('id');
+            $result = $this->pullRequestConflictService->fetchConflictDiffData($pullRequestId);
+
+            return response()->json($result);
+
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 400);
+        } catch (\Exception $e) {
+            Log::error('コンフリクト差分取得エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $id,
+            ]);
+
+            return response()->json(['error' => 'コンフリクト差分の取得に失敗しました'], 500);
         }
     }
 }

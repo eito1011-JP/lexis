@@ -220,7 +220,7 @@ const LineDiffDisplay = ({
               return (
                 <React.Fragment key={index}>
                   {/* 削除行 */}
-                  <tr 
+                  <tr
                     className="bg-red-900/50 border-red-700 hover:bg-red-900/70 transition-colors cursor-pointer group"
                     onMouseEnter={() => setHoveredLineIndex(index * 2)}
                     onMouseLeave={() => setHoveredLineIndex(null)}
@@ -251,7 +251,7 @@ const LineDiffDisplay = ({
                     </td>
                   </tr>
                   {/* 追加行 */}
-                  <tr 
+                  <tr
                     className="bg-green-900/50 border-green-700 hover:bg-green-900/70 transition-colors cursor-pointer group"
                     onMouseEnter={() => setHoveredLineIndex(index * 2 + 1)}
                     onMouseLeave={() => setHoveredLineIndex(null)}
@@ -285,21 +285,22 @@ const LineDiffDisplay = ({
               );
             }
 
-            const isInteractiveLine = line.type === 'added' || line.type === 'deleted' || line.type === 'unchanged';
+            const isInteractiveLine =
+              line.type === 'added' || line.type === 'deleted' || line.type === 'unchanged';
             const baseRowClass = getRowClass();
-            const hoverClass = isInteractiveLine 
-              ? line.type === 'added' 
-                ? 'hover:bg-green-900/70 cursor-pointer' 
+            const hoverClass = isInteractiveLine
+              ? line.type === 'added'
+                ? 'hover:bg-green-900/70 cursor-pointer'
                 : line.type === 'deleted'
                   ? 'hover:bg-red-900/70 cursor-pointer'
                   : 'hover:bg-gray-800/70 cursor-pointer'
               : '';
 
             return (
-              <tr 
-                key={index} 
+              <tr
+                key={index}
                 className={`${baseRowClass} ${hoverClass} transition-colors group`}
-                onMouseEnter={() => isInteractiveLine ? setHoveredLineIndex(index + 10000) : null}
+                onMouseEnter={() => (isInteractiveLine ? setHoveredLineIndex(index + 10000) : null)}
                 onMouseLeave={() => setHoveredLineIndex(null)}
               >
                 {showLineNumbers && (
@@ -318,7 +319,7 @@ const LineDiffDisplay = ({
                       <PlusIcon className="w-3 h-3" />
                     </div>
                   ) : (
-                    <span 
+                    <span
                       className={`font-bold ${
                         line.type === 'added'
                           ? 'text-green-300'
@@ -602,7 +603,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
   // データ読み込み中
   if (loading) {
     return (
-      <AdminLayout title="変更内容詳細">
+      <AdminLayout title="更内容詳細">
         <div className="flex flex-col items-center justify-center h-full">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
           <p className="text-gray-400">データを読み込み中...</p>

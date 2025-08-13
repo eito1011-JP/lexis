@@ -1374,7 +1374,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   ![PULL_REQUEST_STATUS.MERGED, PULL_REQUEST_STATUS.CLOSED].includes(
                     pullRequestData.status as any
                   ) && (
-                    <div className="flex justify-end mb-4">
+                    <div className="flex justify-end gap-3 mb-4">
                       <button
                         ref={mergeButtonRef}
                         onClick={handleMerge}
@@ -1393,6 +1393,16 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                               ? 'コンフリクトのため反映できません'
                               : '変更を反映する'}
                       </button>
+                      {conflictStatus.mergeable === false && (
+                        <button
+                          onClick={() =>
+                            window.location.assign(`/admin/change-suggestions/${id}/conflicts`)
+                          }
+                          className="px-6 py-2 font-bold rounded-md bg-yellow-600 hover:bg-yellow-700 text-white"
+                        >
+                          競合を修正
+                        </button>
+                      )}
                     </div>
                   )}
               </div>

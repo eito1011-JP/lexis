@@ -11,6 +11,7 @@ import ChangeSuggestionDiffPage from './pages/change-suggestions/diff';
 import FixRequestDetailPage from './pages/change-suggestions/[id]/fix-request';
 import FixRequestDetailPageWithToken from './pages/change-suggestions/[id]/fix-request-detail';
 import PullRequestEditSessionDetailPage from './pages/change-suggestions/[id]/pull_request_edit_sessions/[token]';
+import ConflictResolutionPage from './pages/change-suggestions/[id]/conflicts';
 import { ROUTE_PATHS } from './routes';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -29,6 +30,10 @@ function App() {
         <Route
           path={ROUTE_PATHS['change-suggestion-diff']}
           element={<ChangeSuggestionDiffPage />}
+        />
+        <Route
+          path={ROUTE_PATHS['change-suggestion-conflicts']}
+          element={<ConflictResolutionPage />}
         />
         <Route
           path={ROUTE_PATHS['change-suggestion-fix-request']}

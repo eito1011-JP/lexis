@@ -232,3 +232,33 @@ export const finishPullRequestEditSession = async (
     throw new Error('プルリクエスト編集セッションの終了に失敗しました');
   }
 };
+
+// コンフリクト差分の型定義
+export interface ConflictFileDiff {
+  filename: string;
+  status: string;
+  ancestorText: string | null;
+  baseText: string | null;
+  headText: string | null;
+}
+
+export interface ConflictDiffResponse {
+  files: ConflictFileDiff[];
+}
+
+/**
+ * コンフリクト差分を取得
+ */
+export const fetchConflictDiffs = async (
+  pullRequestId: string | number
+): Promise<ConflictDiffResponse> => {
+  try {
+    const response = await apiClient.get(
+      `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${pullRequestId}/conflict/diff`
+    );
+    return response as ConflictDiffResponse;
+  } catch (error: any) {
+    console.error('コンフリクト差分取得エラー:', error);
+    throw new Error(error?.response?.data?.error || 'コンフリクト差分の取得に失敗しました');
+  }
+};

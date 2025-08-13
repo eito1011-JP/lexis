@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\Pool;
+use GuzzleHttp\Psr7\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -344,6 +347,336 @@ class GitService
         ])->put($url, null);
 
         return $response->json();
+    }
+
+    /**
+     * Compare two refs (base...head)
+     */
+    public function compareCommits(string $base, string $head): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/compare/{$base}...{$head}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->get($url);
+
+        if (! $response->successful()) {
+            Log::error('GitHub API Error - Compare Commits: '.$response->body());
+
+            throw new \Exception('コミット比較の取得に失敗しました');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Get tree recursively by commit SHA
+     */
+    public function getTreeRecursiveByCommit(string $commitSha): array
+    {
+        $commit = $this->getCommit($commitSha);
+        $treeSha = $commit['tree']['sha'] ?? null;
+
+        if (! $treeSha) {
+            throw new \Exception('ツリーSHAの取得に失敗しました');
+        }
+
+        return $this->getTreeRecursiveByTreeSha($treeSha);
+    }
+
+    /**
+     * Get tree recursively by branch name
+     */
+    public function getTreeRecursiveByBranch(string $branchName): array
+    {
+        $ref = $this->getBranchReference($branchName);
+        $commitSha = $ref['object']['sha'] ?? null;
+
+        if (! $commitSha) {
+            throw new \Exception('ブランチ参照からコミットSHAの取得に失敗しました');
+        }
+
+        return $this->getTreeRecursiveByCommit($commitSha);
+    }
+
+    /**
+     * Get tree recursively by tree SHA
+     */
+    public function getTreeRecursiveByTreeSha(string $treeSha): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/trees/{$treeSha}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->get($url, [
+            'recursive' => 1,
+        ]);
+
+        if (! $response->successful()) {
+            Log::error('GitHub API Error - Get Tree: '.$response->body());
+
+            throw new \Exception('ツリーの取得に失敗しました');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Get non-recursive tree by tree SHA (list direct children only)
+     */
+    public function getTreeByTreeSha(string $treeSha): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/trees/{$treeSha}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->get($url);
+
+        if (! $response->successful()) {
+            Log::error('GitHub API Error - Get Tree (non-recursive): '.$response->body());
+
+            throw new \Exception('ツリー（非再帰）の取得に失敗しました');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Resolve a directory path to its tree SHA starting from a commit SHA
+     */
+    protected function resolveTreeShaByPathFromCommit(string $commitSha, string $dirPath): ?string
+    {
+        $commit = $this->getCommit($commitSha);
+        $currentTreeSha = $commit['tree']['sha'] ?? null;
+        if (! $currentTreeSha) {
+            return null;
+        }
+
+        $segments = array_values(array_filter(explode('/', trim($dirPath, '/'))));
+        foreach ($segments as $segment) {
+            $tree = $this->getTreeByTreeSha($currentTreeSha);
+            $next = null;
+            foreach ($tree['tree'] ?? [] as $node) {
+                if (($node['type'] ?? '') === 'tree' && ($node['path'] ?? '') === $segment) {
+                    $next = $node['sha'] ?? null;
+
+                    break;
+                }
+            }
+            if (! $next) {
+                return null;
+            }
+            $currentTreeSha = $next;
+        }
+
+        return $currentTreeSha;
+    }
+
+    /**
+     * Get subtree (e.g., docs/) recursively by commit SHA
+     */
+    public function getSubtreeRecursiveByCommit(string $commitSha, string $dirPath): array
+    {
+        $subtreeSha = $this->resolveTreeShaByPathFromCommit($commitSha, $dirPath);
+        if (! $subtreeSha) {
+            return ['tree' => []];
+        }
+
+        return $this->getTreeRecursiveByTreeSha($subtreeSha);
+    }
+
+    /**
+     * Get subtree (e.g., docs/) recursively by branch
+     */
+    public function getSubtreeRecursiveByBranch(string $branchName, string $dirPath): array
+    {
+        $ref = $this->getBranchReference($branchName);
+        $commitSha = $ref['object']['sha'] ?? null;
+        if (! $commitSha) {
+            return ['tree' => []];
+        }
+
+        return $this->getSubtreeRecursiveByCommit($commitSha, $dirPath);
+    }
+
+    /**
+     * Get single blob by SHA
+     */
+    public function getBlob(string $blobSha): array
+    {
+        $url = "https://api.github.com/repos/{$this->githubOwner}/{$this->githubRepo}/git/blobs/{$blobSha}";
+
+        $response = Http::withHeaders([
+            'Authorization' => "token {$this->githubToken}",
+            'Accept' => 'application/vnd.github.v3+json',
+        ])->get($url);
+
+        if (! $response->successful()) {
+            Log::error('GitHub API Error - Get Blob: '.$response->body());
+
+            throw new \Exception('ブロブの取得に失敗しました');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Get multiple blobs concurrently
+     */
+    public function getBlobs(array $blobShas): array
+    {
+        $t0 = microtime(true);
+        $blobShas = array_values(array_unique(array_filter($blobShas)));
+        if (empty($blobShas)) {
+            return [];
+        }
+
+        Log::info('GitService.getBlobs start', [
+            'count' => count($blobShas),
+        ]);
+
+        $results = [];
+        $client = new Client([
+            'base_uri' => 'https://api.github.com/',
+            'headers' => [
+                'Authorization' => "token {$this->githubToken}",
+                'Accept' => 'application/vnd.github.v3+json',
+            ],
+            // Reasonable timeout to avoid long hangs
+            'timeout' => 20,
+            'http_errors' => false,
+        ]);
+
+        $requests = function () use ($blobShas) {
+            foreach ($blobShas as $sha) {
+                $uri = "repos/{$this->githubOwner}/{$this->githubRepo}/git/blobs/{$sha}";
+                yield $sha => new Request('GET', $uri);
+            }
+        };
+
+        $concurrency = 20;
+        $tPoolStart = microtime(true);
+        $pool = new Pool($client, $requests(), [
+            'concurrency' => $concurrency,
+            'fulfilled' => function ($response, $sha) use (&$results) {
+                $status = $response->getStatusCode();
+                if ($status === 200) {
+                    $json = json_decode((string) $response->getBody(), true);
+                    $results[$sha] = $json;
+                } else {
+                    Log::error('GitHub API Error - Get Blob (guzzle pool): status '.$status);
+                    $results[$sha] = null;
+                }
+            },
+            'rejected' => function ($reason, $sha) use (&$results) {
+                Log::error('GitHub API Error - Get Blob (guzzle pool rejected): '.(string) $reason);
+                $results[$sha] = null;
+            },
+        ]);
+
+        $promise = $pool->promise();
+        $promise->wait();
+        Log::info('GitService.getBlobs pool_done', [
+            'count' => count($blobShas),
+            'pool_ms' => (int) round((microtime(true) - $tPoolStart) * 1000),
+            'concurrency' => $concurrency,
+        ]);
+
+        Log::info('GitService.getBlobs end', [
+            'total_ms' => (int) round((microtime(true) - $t0) * 1000),
+            'success' => count(array_filter($results, fn ($v) => is_array($v))),
+            'failed' => count($blobShas) - count(array_filter($results, fn ($v) => is_array($v))),
+        ]);
+
+        return $results;
+    }
+
+    /**
+     * Get blob SHAs for given file paths at refs (branch or commit SHA) concurrently.
+     * items: array<int, array{key: string, ref: string, path: string}>
+     * returns: array<string, ?string> key => sha|null
+     */
+    public function getBlobShasByPaths(array $items): array
+    {
+        $t0 = microtime(true);
+        // Normalize and de-duplicate by key
+        $normalized = [];
+        foreach ($items as $item) {
+            if (! isset($item['key'], $item['ref'], $item['path'])) {
+                continue;
+            }
+            $normalized[$item['key']] = [
+                'ref' => (string) $item['ref'],
+                'path' => (string) $item['path'],
+            ];
+        }
+        if (empty($normalized)) {
+            return [];
+        }
+
+        $encodePath = function (string $path): string {
+            $segments = array_map('rawurlencode', array_filter(explode('/', trim($path, '/')), fn ($s) => $s !== ''));
+
+            return implode('/', $segments);
+        };
+
+        $client = new Client([
+            'base_uri' => 'https://api.github.com/',
+            'headers' => [
+                'Authorization' => "token {$this->githubToken}",
+                'Accept' => 'application/vnd.github.v3+json',
+            ],
+            'timeout' => 20,
+            'http_errors' => false,
+        ]);
+
+        $requests = function () use ($normalized, $encodePath) {
+            foreach ($normalized as $key => $info) {
+                $ref = $info['ref'];
+                $path = $encodePath($info['path']);
+                $uri = "repos/{$this->githubOwner}/{$this->githubRepo}/contents/{$path}?ref=".rawurlencode($ref);
+                yield $key => new Request('GET', $uri);
+            }
+        };
+
+        $results = [];
+        $concurrency = 30;
+        $tPool = microtime(true);
+        $pool = new Pool($client, $requests(), [
+            'concurrency' => $concurrency,
+            'fulfilled' => function ($response, $key) use (&$results) {
+                $status = $response->getStatusCode();
+                if ($status === 200) {
+                    $json = json_decode((string) $response->getBody(), true);
+                    // File response contains 'sha'. Directory returns an array (which we don't expect)
+                    $results[$key] = is_array($json) && isset($json['sha']) ? ($json['sha'] ?? null) : ($json['sha'] ?? null);
+                } elseif ($status === 404) {
+                    // File not found at ref
+                    $results[$key] = null;
+                } else {
+                    Log::error('GitHub API Error - Get Content (sha) status '.$status);
+                    $results[$key] = null;
+                }
+            },
+            'rejected' => function ($reason, $key) use (&$results) {
+                Log::error('GitHub API Error - Get Content (sha) rejected: '.(string) $reason);
+                $results[$key] = null;
+            },
+        ]);
+
+        $pool->promise()->wait();
+
+        Log::info('GitService.getBlobShasByPaths done', [
+            'count' => count($normalized),
+            'pool_ms' => (int) round((microtime(true) - $tPool) * 1000),
+            'total_ms' => (int) round((microtime(true) - $t0) * 1000),
+            'success' => count(array_filter($results, fn ($v) => is_string($v) && $v !== '')),
+        ]);
+
+        return $results;
     }
 
     /**

@@ -52,6 +52,7 @@ Route::middleware('auth.session')->group(function () {
         Route::get('/', [PullRequestController::class, 'fetchPullRequests']);
         Route::get('/{id}', [PullRequestController::class, 'fetchPullRequestDetail']);
         Route::get('/{id}/conflict', [PullRequestController::class, 'detectConflict']);
+        Route::get('/{id}/conflict/diff', [PullRequestController::class, 'fetchConflictDiff']);
         Route::get('/{id}/comments', [CommentController::class, 'index']);
         Route::get('/{id}/activity-log-on-pull-request', [PullRequestController::class, 'fetchActivityLog']);
         Route::post('/create', [PullRequestController::class, 'createPullRequest']);

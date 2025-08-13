@@ -9,6 +9,7 @@ export const ROUTES = {
   CHANGE_SUGGESTIONS: 'change-suggestions',
   CHANGE_SUGGESTION_DETAIL: 'change-suggestion-detail',
   CHANGE_SUGGESTION_DIFF: 'change-suggestion-diff',
+  CHANGE_SUGGESTION_CONFLICTS: 'change-suggestion-conflicts',
   CHANGE_SUGGESTION_FIX_REQUEST: 'change-suggestion-fix-request',
   CHANGE_SUGGESTION_EDIT_SESSION: 'change-suggestion-edit-session',
 } as const;
@@ -24,6 +25,7 @@ export const ROUTE_PATHS = {
   [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
   [ROUTES.CHANGE_SUGGESTION_DETAIL]: '/change-suggestions/:id',
   [ROUTES.CHANGE_SUGGESTION_DIFF]: '/change-suggestions/:id/diff',
+  [ROUTES.CHANGE_SUGGESTION_CONFLICTS]: '/change-suggestions/:id/conflicts',
   [ROUTES.CHANGE_SUGGESTION_FIX_REQUEST]: '/change-suggestions/:id/fix-request',
   [ROUTES.CHANGE_SUGGESTION_EDIT_SESSION]:
     '/change-suggestions/:id/pull_request_edit_sessions/:token',
