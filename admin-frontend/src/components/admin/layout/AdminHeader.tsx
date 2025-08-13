@@ -24,13 +24,6 @@ export default function AdminHeader(): React.JSX.Element {
           </div>
           <div className="text-sm text-gray-300">{user ? user.email : '未ログイン'}</div>
         </div>
-
-        <Link
-          to="/admin/logout"
-          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-md text-sm transition duration-200"
-        >
-          ログアウト
-        </Link>
       </div>
     </header>
   );
