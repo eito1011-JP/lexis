@@ -1,22 +1,11 @@
 import React from 'react';
-import Link from '@docusaurus/Link';
-import { useSession } from '@site/src/contexts/SessionContext';
+import { useSession } from '../../../contexts/SessionContext';
 
 export default function AdminHeader(): React.JSX.Element {
   const { user, activeBranch } = useSession();
 
   return (
     <header className="border-b border-gray-800 py-4 px-6 flex justify-between items-center">
-      <div className="flex items-center">
-        <Link
-          to="/admin"
-          className="text-white text-xl font-semibold hover:text-gray-200 transition duration-200"
-        >
-          <span className="mr-1">📚</span>
-          ハンドブック管理
-        </Link>
-      </div>
-
       <div className="flex items-center gap-6">
         {/* ブランチ情報表示 */}
         {activeBranch && (
