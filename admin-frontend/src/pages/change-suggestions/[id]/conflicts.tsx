@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
@@ -8,11 +8,11 @@ import MarkdownEditor from '@/components/admin/editor/SlateEditor';
 // front-matterを除去して本文のみを取得する関数
 const extractBodyContent = (content: string | null): string => {
   if (!content) return '';
-  
+
   // front-matterの開始と終了を検出
   const lines = content.split('\n');
   let bodyStartIndex = 0;
-  
+
   // ---で囲まれたfront-matterをスキップ
   if (lines[0]?.trim() === '---') {
     for (let i = 1; i < lines.length; i++) {
@@ -22,20 +22,76 @@ const extractBodyContent = (content: string | null): string => {
       }
     }
   }
-  
+
   return lines.slice(bodyStartIndex).join('\n').trim();
+};
+
+// front-matter（--- で囲まれた先頭ブロック）を素朴にパース
+type FrontMatter = Record<string, string | boolean | number>;
+
+const extractFrontMatter = (content: string | null): FrontMatter => {
+  if (!content) return {};
+  const lines = content.split('\n');
+  if (lines[0]?.trim() !== '---') return {};
+  const fmLines: string[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (line?.trim() === '---') break;
+    fmLines.push(line);
+  }
+  const result: FrontMatter = {};
+  for (const raw of fmLines) {
+    const idx = raw.indexOf(':');
+    if (idx === -1) continue;
+    const key = raw.slice(0, idx).trim();
+    let value = raw.slice(idx + 1).trim();
+    if (!key) continue;
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (value === 'true') {
+      result[key] = true;
+    } else if (value === 'false') {
+      result[key] = false;
+    } else if (!Number.isNaN(Number(value)) && value !== '') {
+      result[key] = Number(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+};
+
+const getTitleFromFrontMatter = (fm: FrontMatter): string => {
+  const raw = fm['title'];
+  return typeof raw === 'string' ? raw : '';
+};
+
+const getPublishLabelFromFrontMatter = (fm: FrontMatter): string => {
+  // draft / published / status のいずれかを参照（存在順優先）
+  const draft = fm['draft'];
+  const published = fm['published'];
+  const status = fm['status'];
+
+  if (typeof draft === 'boolean') return draft ? '下書き' : '公開';
+  if (typeof published === 'boolean') return published ? '公開' : '非公開';
+  if (typeof status === 'string') return status;
+  return '';
 };
 
 // docs/配下のパスからフォルダ名~ファイル名（.md拡張子を除く）を取得
 const extractDisplaySlug = (filename: string): string => {
   if (!filename.startsWith('docs/')) return filename;
-  
+
   // docs/を除去
   const pathWithoutDocs = filename.substring(5);
-  
+
   // .md拡張子を除去
   const pathWithoutExt = pathWithoutDocs.replace(/\.md$/, '');
-  
+
   return pathWithoutExt;
 };
 
@@ -369,6 +425,7 @@ const ConflictResolutionPage: React.FC = () => {
       setError(null);
       try {
         const res = await fetchConflictDiffs(id);
+        console.log('res', res);
         if (!mounted) return;
         setFiles(res.files || []);
       } catch (e: any) {
@@ -387,9 +444,7 @@ const ConflictResolutionPage: React.FC = () => {
   const leftList = useMemo(() => files.map(f => f.filename), [files]);
 
   // 左側のslug表示用（docs/配下のフォルダ名~ファイル名、.md拡張子を除く）
-  const leftListDisplay = useMemo(() => 
-    files.map(f => extractDisplaySlug(f.filename)), [files]
-  );
+  const leftListDisplay = useMemo(() => files.map(f => extractDisplaySlug(f.filename)), [files]);
 
   if (isLoading) {
     return (
@@ -447,77 +502,96 @@ const ConflictResolutionPage: React.FC = () => {
             <div className="space-y-10">
               {files.map((file, idx) => (
                 <div key={file.filename + idx} className="border border-gray-700 rounded-lg p-5">
-                  <div className="text-gray-400 text-xs mb-2">Slug</div>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <input
-                      className="px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
-                      value={extractDisplaySlug(file.filename)}
-                      readOnly
-                    />
-                    <input
-                      className={`px-3 py-2 rounded border ${
-                        file.status === 'deleted'
-                          ? 'border-red-700 bg-red-900/30 text-red-200'
-                          : 'border-gray-700 bg-[#111113] text-white'
-                      }`}
-                      value={extractDisplaySlug(file.filename)}
-                      readOnly
-                    />
-                  </div>
-
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                      <div className="text-gray-400 text-xs mb-2">タイトル</div>
+                      <div className="text-gray-400 text-xs mb-2">Slug</div>
                       <input
                         className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                        value={file.headText ? extractDisplaySlug(file.filename) : ''}
                         readOnly
-                        value=""
                       />
                     </div>
                     <div>
-                      <div className="text-gray-400 text-xs mb-2">タイトル</div>
+                      <div className="text-gray-400 text-xs mb-2">Slug</div>
                       <input
-                        className="w-full px-3 py-2 rounded border border-red-700 bg-red-900/30 text-red-200"
+                        className={`w-full px-3 py-2 rounded border ${
+                          file.status === 'deleted'
+                            ? 'border-red-700 bg-red-900/30 text-red-200'
+                            : 'border-gray-700 bg-[#111113] text-white'
+                        }`}
+                        value={file.baseText ? extractDisplaySlug(file.filename) : ''}
                         readOnly
-                        value=""
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <div className="text-gray-400 text-xs mb-2">公開設定</div>
-                      <input
-                        className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
-                        readOnly
-                        value=""
-                      />
-                    </div>
-                    <div>
-                      <div className="text-gray-400 text-xs mb-2">公開設定</div>
-                      <input
-                        className="w-full px-3 py-2 rounded border border-red-700 bg-red-900/30 text-red-200"
-                        readOnly
-                        value=""
-                      />
-                    </div>
-                  </div>
+                  {(() => {
+                    const baseFm = extractFrontMatter(file.baseText);
+                    const headFm = extractFrontMatter(file.headText);
+                    const baseTitle = getTitleFromFrontMatter(baseFm);
+                    const headTitle = getTitleFromFrontMatter(headFm);
+                    return (
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <div className="text-gray-400 text-xs mb-2">タイトル</div>
+                          <input
+                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            readOnly
+                            value={headTitle}
+                          />
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs mb-2">タイトル</div>
+                          <input
+                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            readOnly
+                            value={baseTitle}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
 
-                  {/* 本文: 左=変更提案の差分（ancestor→base）、右=fetch差分（ancestor→head） */}
+                  {(() => {
+                    const baseFm = extractFrontMatter(file.baseText);
+                    const headFm = extractFrontMatter(file.headText);
+                    const basePub = getPublishLabelFromFrontMatter(baseFm);
+                    const headPub = getPublishLabelFromFrontMatter(headFm);
+                    return (
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <div className="text-gray-400 text-xs mb-2">公開設定</div>
+                          <input
+                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            readOnly
+                            value={headPub}
+                          />
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs mb-2">公開設定</div>
+                          <input
+                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            readOnly
+                            value={basePub}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 本文: 左=変更提案の本文（head）、右=ベースの本文（base） */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-gray-400 text-xs mb-2">本文</div>
-                      <LineDiffDisplay
-                        oldText={extractBodyContent(file.ancestorText)}
-                        newText={extractBodyContent(file.baseText)}
-                      />
+                      <div className="border border-gray-700 rounded-lg bg-gray-900 w-full px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10">
+                        {extractBodyContent(file.headText)}
+                      </div>
                     </div>
                     <div>
                       <div className="text-gray-400 text-xs mb-2">本文</div>
-                      <LineDiffDisplay
-                        oldText={extractBodyContent(file.ancestorText)}
-                        newText={extractBodyContent(file.headText)}
-                      />
+                      <div className="border border-gray-700 rounded-lg bg-gray-900 px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10">
+                        {extractBodyContent(file.baseText)}
+                      </div>
                     </div>
                   </div>
 
@@ -527,7 +601,7 @@ const ConflictResolutionPage: React.FC = () => {
                     <div className="bg-[#111113] border border-gray-700 rounded-md p-2">
                       <MarkdownEditor
                         initialContent={
-                          editedContents[file.filename] ?? extractBodyContent(file.baseText)
+                          editedContents[file.filename] ?? extractBodyContent(file.headText)
                         }
                         onChange={() => {}}
                         onMarkdownChange={md =>
@@ -555,4 +629,4 @@ const ConflictResolutionPage: React.FC = () => {
   );
 };
 
-export default ConflictResolutionPage; 
+export default ConflictResolutionPage;

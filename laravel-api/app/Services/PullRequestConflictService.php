@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\DocumentCategory;
+use App\Models\DocumentVersion;
 use App\Models\PullRequest;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -10,15 +12,21 @@ class PullRequestConflictService
 {
     protected GitService $gitService;
 
+    protected MdFileService $mdFileService;
+
+    protected CategoryFolderService $categoryFolderService;
+
     /**
      * キャッシュ: pullRequestIdごとの直近生成結果
      * value: [ 'generated_at' => float, 'result' => array ]
      */
     protected static array $conflictDiffCache = [];
 
-    public function __construct(GitService $gitService)
+    public function __construct(GitService $gitService, MdFileService $mdFileService, CategoryFolderService $categoryFolderService)
     {
         $this->gitService = $gitService;
+        $this->mdFileService = $mdFileService;
+        $this->categoryFolderService = $categoryFolderService;
     }
 
     /**
@@ -80,6 +88,127 @@ class PullRequestConflictService
 
             return true;
         }));
+
+        // Build local pending overlay (virtualHead) from edit_start_versions (documents & categories)
+        $editStartVersions = $pullRequest->userBranch->editStartVersions()
+            ->with([
+                'currentDocumentVersion.category',
+                'originalDocumentVersion.category',
+                'currentCategory',
+                'originalCategory',
+            ])->get();
+
+        $localOverlayMap = [];
+        foreach ($editStartVersions as $esv) {
+            if ($esv->target_type === 'document') {
+                /** @var DocumentVersion|null $current */
+                $current = $esv->currentDocumentVersion;
+                if (! $current) {
+                    continue;
+                }
+
+                $currentCategoryPath = $current->category ? $current->category->parent_path : null;
+                $currentPath = $this->mdFileService->generateFilePath($current->slug, $currentCategoryPath);
+
+                $original = $esv->originalDocumentVersion;
+                $originalCategoryPath = $original && $original->category ? $original->category->parent_path : null;
+                $originalPath = $original ? $this->mdFileService->generateFilePath($original->slug, $originalCategoryPath) : null;
+
+                // Determine local status (added/modified/deleted/renamed)
+                $isNewCreation = ($esv->original_version_id === $esv->current_version_id)
+                    || (! $original)
+                    || ($original && $current && $original->user_branch_id === $current->user_branch_id);
+                $status = $isNewCreation ? 'added' : 'modified';
+                if ($current->is_deleted) {
+                    $status = 'deleted';
+                } elseif ($originalPath && $originalPath !== $currentPath) {
+                    $status = 'renamed';
+                }
+
+                if (strpos($currentPath, 'docs/') !== 0) {
+                    continue;
+                }
+
+                $content = $current->is_deleted ? null : $this->mdFileService->createMdFileContent($current);
+                $localOverlayMap[$currentPath] = [
+                    'status' => $status,
+                    'content' => $content,
+                    'previous' => $originalPath,
+                ];
+
+                continue;
+            }
+
+            if ($esv->target_type === 'category') {
+                /** @var DocumentCategory|null $currentCat */
+                $currentCat = $esv->currentCategory;
+                if (! $currentCat) {
+                    continue;
+                }
+
+                // Folder path for category
+                $currentFolder = $this->categoryFolderService->generateCategoryFilePath($currentCat->slug, $currentCat->parent_id);
+                $currentPath = rtrim($currentFolder, '/').'/_category_.json';
+
+                $originalCat = $esv->originalCategory;
+                $originalFolder = $originalCat
+                    ? $this->categoryFolderService->generateCategoryFilePath($originalCat->slug, $originalCat->parent_id)
+                    : null;
+                $originalPath = $originalFolder ? rtrim($originalFolder, '/').'/_category_.json' : null;
+
+                // Determine status
+                $isNewCreation = ($esv->original_version_id === $esv->current_version_id) || (! $originalCat);
+                $status = $isNewCreation ? 'added' : 'modified';
+                if (property_exists($currentCat, 'is_deleted') && $currentCat->is_deleted) {
+                    $status = 'deleted';
+                } elseif ($originalPath && $originalPath !== $currentPath) {
+                    $status = 'renamed';
+                }
+
+                if (strpos($currentPath, 'docs/') !== 0) {
+                    continue;
+                }
+
+                // Build content for _category_.json compatible with PR creation
+                $categoryJsonData = [
+                    'label' => $currentCat->sidebar_label,
+                    'position' => $currentCat->position,
+                ];
+                if ($currentCat->description) {
+                    $categoryJsonData['link'] = [
+                        'type' => 'generated-index',
+                        'description' => $currentCat->description,
+                    ];
+                }
+                $content = ($status === 'deleted') ? null : json_encode($categoryJsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+                $localOverlayMap[$currentPath] = [
+                    'status' => $status,
+                    'content' => $content,
+                    'previous' => $originalPath,
+                ];
+
+                continue;
+            }
+        }
+
+        // Merge local-only files into targetFiles (so that they appear in the result set)
+        $existingTargetByPath = [];
+        foreach ($targetFiles as $tf) {
+            $p = $tf['filename'] ?? null;
+            if ($p) {
+                $existingTargetByPath[$p] = true;
+            }
+        }
+        foreach ($localOverlayMap as $path => $info) {
+            if (! isset($existingTargetByPath[$path])) {
+                $targetFiles[] = [
+                    'filename' => $path,
+                    'status' => $info['status'] ?? 'modified',
+                    'previous_filename' => $info['previous'] ?? null,
+                ];
+            }
+        }
 
         // compare結果の対象ファイルに限定して、各refのblob shaを直接取得（ツリー走査をスキップ）
         $paths = [];
@@ -186,6 +315,12 @@ class PullRequestConflictService
                 $baseText = is_string($raw['base'] ?? null) ? $raw['base'] : null;
                 $headText = is_string($raw['head'] ?? null) ? $raw['head'] : null;
 
+                // Override headText with local overlay if present
+                $fname = $file['filename'] ?? '';
+                if (isset($localOverlayMap[$fname])) {
+                    $headText = $localOverlayMap[$fname]['content']; // may be null for deleted
+                }
+
                 $responseFiles[] = [
                     'filename' => $file['filename'] ?? '',
                     'status' => $file['status'] ?? '',
@@ -199,6 +334,12 @@ class PullRequestConflictService
                 $ancestorText = isset($shas['ancestor']) ? $decode($blobMap[$shas['ancestor']] ?? null) : null;
                 $baseText = isset($shas['base']) ? $decode($blobMap[$shas['base']] ?? null) : null;
                 $headText = isset($shas['head']) ? $decode($blobMap[$shas['head']] ?? null) : null;
+
+                // Override with local overlay if exists
+                $fname = $file['filename'] ?? '';
+                if (isset($localOverlayMap[$fname])) {
+                    $headText = $localOverlayMap[$fname]['content'];
+                }
 
                 $responseFiles[] = [
                     'filename' => $file['filename'] ?? '',

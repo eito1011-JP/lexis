@@ -1353,7 +1353,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                       />
                     </svg>
                     <span className="text-sm">
-                      コンフリクトが検出されました。マージできません。{prefetchingConflict ? '（差分を事前読み込み中…）' : ''}
+                      コンフリクトが検出されました。マージできません。
+                      {prefetchingConflict ? '（差分を事前読み込み中…）' : ''}
                     </span>
                   </div>
                 ) : conflictStatus.mergeable === true ? (

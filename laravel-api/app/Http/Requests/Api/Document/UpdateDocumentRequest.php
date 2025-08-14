@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\Document;
 
 use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
+
 // use League\HTMLToMarkdown\HtmlConverter;
 
 class UpdateDocumentRequest extends FormRequest
