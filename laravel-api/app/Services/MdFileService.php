@@ -31,6 +31,8 @@ class MdFileService
         // is_publicが0の場合のみdraftフラグを追加
         if ($documentVersion->is_public === Flag::FALSE) {
             $content .= "draft: true\n";
+        } else {
+            $content .= "draft: false\n";
         }
 
         // last_edited_byが存在する場合のみ追加

@@ -64,10 +64,24 @@ const extractFrontMatter = (content: string | null): FrontMatter => {
   }
   return result;
 };
+const getFileOrderFromFrontMatter = (fm: FrontMatter): string => {
+  const fileOrder = fm['file_order'];
+
+  if (typeof fileOrder === 'number') {
+    return fileOrder.toString();
+  }
+
+  return '';
+};
 
 const getTitleFromFrontMatter = (fm: FrontMatter): string => {
-  const raw = fm['title'];
-  return typeof raw === 'string' ? raw : '';
+  const sidebarLabel = fm['sidebar_label'];
+
+  if (typeof sidebarLabel === 'string' && sidebarLabel.trim()) {
+    return sidebarLabel;
+  }
+
+  return '';
 };
 
 const getPublishLabelFromFrontMatter = (fm: FrontMatter): string => {
@@ -506,7 +520,11 @@ const ConflictResolutionPage: React.FC = () => {
                     <div>
                       <div className="text-gray-400 text-xs mb-2">Slug</div>
                       <input
-                        className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                        className={`w-full px-3 py-2 rounded border ${
+                          file.headText && extractDisplaySlug(file.filename)
+                            ? 'border-gray-700 bg-[#111113] text-white'
+                            : 'border-red-700 bg-red-900/30 text-red-200'
+                        }`}
                         value={file.headText ? extractDisplaySlug(file.filename) : ''}
                         readOnly
                       />
@@ -515,15 +533,49 @@ const ConflictResolutionPage: React.FC = () => {
                       <div className="text-gray-400 text-xs mb-2">Slug</div>
                       <input
                         className={`w-full px-3 py-2 rounded border ${
-                          file.status === 'deleted'
-                            ? 'border-red-700 bg-red-900/30 text-red-200'
-                            : 'border-gray-700 bg-[#111113] text-white'
+                          file.baseText && extractDisplaySlug(file.filename)
+                            ? 'border-gray-700 bg-[#111113] text-white'
+                            : 'border-red-700 bg-red-900/30 text-red-200'
                         }`}
                         value={file.baseText ? extractDisplaySlug(file.filename) : ''}
                         readOnly
                       />
                     </div>
                   </div>
+                  {(() => {
+                    const baseFm = extractFrontMatter(file.baseText);
+                    const headFm = extractFrontMatter(file.headText);
+                    const baseFileOrder = getFileOrderFromFrontMatter(baseFm);
+                    const headFileOrder = getFileOrderFromFrontMatter(headFm);
+                    return (
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <div className="text-gray-400 text-xs mb-2">表示順序</div>
+                          <input
+                            className={`w-full px-3 py-2 rounded border ${
+                              headFileOrder
+                                ? 'border-gray-700 bg-[#111113] text-white'
+                                : 'border-red-700 bg-red-900/30 text-red-200'
+                            }`}
+                            readOnly
+                            value={headFileOrder}
+                          />
+                        </div>
+                        <div>
+                          <div className="text-gray-400 text-xs mb-2">表示順序</div>
+                          <input
+                            className={`w-full px-3 py-2 rounded border ${
+                              baseFileOrder
+                                ? 'border-gray-700 bg-[#111113] text-white'
+                                : 'border-red-700 bg-red-900/30 text-red-200'
+                            }`}
+                            readOnly
+                            value={baseFileOrder}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {(() => {
                     const baseFm = extractFrontMatter(file.baseText);
@@ -535,7 +587,11 @@ const ConflictResolutionPage: React.FC = () => {
                         <div>
                           <div className="text-gray-400 text-xs mb-2">タイトル</div>
                           <input
-                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            className={`w-full px-3 py-2 rounded border ${
+                              headTitle
+                                ? 'border-gray-700 bg-[#111113] text-white'
+                                : 'border-red-700 bg-red-900/30 text-red-200'
+                            }`}
                             readOnly
                             value={headTitle}
                           />
@@ -543,7 +599,11 @@ const ConflictResolutionPage: React.FC = () => {
                         <div>
                           <div className="text-gray-400 text-xs mb-2">タイトル</div>
                           <input
-                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            className={`w-full px-3 py-2 rounded border ${
+                              baseTitle
+                                ? 'border-gray-700 bg-[#111113] text-white'
+                                : 'border-red-700 bg-red-900/30 text-red-200'
+                            }`}
                             readOnly
                             value={baseTitle}
                           />
@@ -562,7 +622,11 @@ const ConflictResolutionPage: React.FC = () => {
                         <div>
                           <div className="text-gray-400 text-xs mb-2">公開設定</div>
                           <input
-                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            className={`w-full px-3 py-2 rounded border ${
+                              headPub
+                                ? 'border-gray-700 bg-[#111113] text-white'
+                                : 'border-red-700 bg-red-900/30 text-red-200'
+                            }`}
                             readOnly
                             value={headPub}
                           />
@@ -570,7 +634,11 @@ const ConflictResolutionPage: React.FC = () => {
                         <div>
                           <div className="text-gray-400 text-xs mb-2">公開設定</div>
                           <input
-                            className="w-full px-3 py-2 rounded border border-gray-700 bg-[#111113] text-white"
+                            className={`w-full px-3 py-2 rounded border ${
+                              basePub
+                                ? 'border-gray-700 bg-[#111113] text-white'
+                                : 'border-red-700 bg-red-900/30 text-red-200'
+                            }`}
                             readOnly
                             value={basePub}
                           />
@@ -583,13 +651,25 @@ const ConflictResolutionPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-gray-400 text-xs mb-2">本文</div>
-                      <div className="border border-gray-700 rounded-lg bg-gray-900 w-full px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10">
+                      <div
+                        className={`border rounded w-full px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10 ${
+                          extractBodyContent(file.headText)
+                            ? 'border-gray-700 bg-[#111113]'
+                            : 'border-red-700 bg-red-900/30 text-red-200'
+                        }`}
+                      >
                         {extractBodyContent(file.headText)}
                       </div>
                     </div>
                     <div>
                       <div className="text-gray-400 text-xs mb-2">本文</div>
-                      <div className="border border-gray-700 rounded-lg bg-gray-900 px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10">
+                      <div
+                        className={`border rounded px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10 ${
+                          extractBodyContent(file.baseText)
+                            ? 'border-gray-700 bg-[#111113]'
+                            : 'border-red-700 bg-red-900/30 text-red-200'
+                        }`}
+                      >
                         {extractBodyContent(file.baseText)}
                       </div>
                     </div>
