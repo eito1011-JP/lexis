@@ -458,6 +458,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     mergeable: boolean | null;
     mergeable_state: string | null;
   }>({ mergeable: null, mergeable_state: null });
+  const [prefetchingConflict, setPrefetchingConflict] = useState(false);
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [comment, setComment] = useState('');
@@ -585,6 +586,16 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
           message: 'コンフリクトが検出されました。マージできません。',
           type: 'error',
         });
+
+        // 先行取得: コンフリクト差分をキャッシュしておく
+        try {
+          setPrefetchingConflict(true);
+          await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${id}/conflict/diff`);
+        } catch (e) {
+          // 失敗しても致命的ではない
+        } finally {
+          setPrefetchingConflict(false);
+        }
       }
     } catch (error) {
       console.error('コンフリクト検知エラー:', error);
@@ -1342,7 +1353,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                       />
                     </svg>
                     <span className="text-sm">
-                      コンフリクトが検出されました。マージできません。
+                      コンフリクトが検出されました。マージできません。{prefetchingConflict ? '（差分を事前読み込み中…）' : ''}
                     </span>
                   </div>
                 ) : conflictStatus.mergeable === true ? (

@@ -595,6 +595,88 @@ class GitService
     }
 
     /**
+     * Get multiple file contents (raw) concurrently via Contents API.
+     * items: array<int, array{key: string, ref: string, path: string}>
+     * returns: array<string, ?string> key => raw_text|null
+     */
+    public function getContentsRawBatch(array $items): array
+    {
+        $t0 = microtime(true);
+        // Normalize and de-duplicate by key
+        $normalized = [];
+        foreach ($items as $item) {
+            if (! isset($item['key'], $item['ref'], $item['path'])) {
+                continue;
+            }
+            $normalized[$item['key']] = [
+                'ref' => (string) $item['ref'],
+                'path' => (string) $item['path'],
+            ];
+        }
+        if (empty($normalized)) {
+            return [];
+        }
+
+        $encodePath = function (string $path): string {
+            $segments = array_map('rawurlencode', array_filter(explode('/', trim($path, '/')), fn ($s) => $s !== ''));
+
+            return implode('/', $segments);
+        };
+
+        $client = new Client([
+            'base_uri' => 'https://api.github.com/',
+            'headers' => [
+                'Authorization' => "token {$this->githubToken}",
+                // RAW content to avoid base64 decoding and improve speed
+                'Accept' => 'application/vnd.github.v3.raw',
+            ],
+            'timeout' => 20,
+            'http_errors' => false,
+        ]);
+
+        $requests = function () use ($normalized, $encodePath) {
+            foreach ($normalized as $key => $info) {
+                $ref = $info['ref'];
+                $path = $encodePath($info['path']);
+                $uri = "repos/{$this->githubOwner}/{$this->githubRepo}/contents/{$path}?ref=".rawurlencode($ref);
+                yield $key => new Request('GET', $uri);
+            }
+        };
+
+        $results = [];
+        $concurrency = 20;
+        $tPool = microtime(true);
+        $pool = new Pool($client, $requests(), [
+            'concurrency' => $concurrency,
+            'fulfilled' => function ($response, $key) use (&$results) {
+                $status = $response->getStatusCode();
+                if ($status === 200) {
+                    $results[$key] = (string) $response->getBody();
+                } elseif ($status === 404) {
+                    $results[$key] = null;
+                } else {
+                    Log::error('GitHub API Error - Get Content RAW status '.$status);
+                    $results[$key] = null;
+                }
+            },
+            'rejected' => function ($reason, $key) use (&$results) {
+                Log::error('GitHub API Error - Get Content RAW rejected: '.(string) $reason);
+                $results[$key] = null;
+            },
+        ]);
+
+        $pool->promise()->wait();
+
+        Log::info('GitService.getContentsRawBatch done', [
+            'count' => count($normalized),
+            'pool_ms' => (int) round((microtime(true) - $tPool) * 1000),
+            'total_ms' => (int) round((microtime(true) - $t0) * 1000),
+        ]);
+
+        return $results;
+    }
+
+    /**
      * Get blob SHAs for given file paths at refs (branch or commit SHA) concurrently.
      * items: array<int, array{key: string, ref: string, path: string}>
      * returns: array<string, ?string> key => sha|null
