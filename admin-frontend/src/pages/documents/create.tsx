@@ -115,8 +115,8 @@ export default function CreateDocumentPage(): JSX.Element {
     }
   }, [searchQuery, users]);
 
-  const handleEditorChange = (html: string) => {
-    setContent(html);
+  const handleEditorChange = (markdown: string) => {
+    setContent(markdown);
   };
 
   const handleSave = async () => {
@@ -134,14 +134,11 @@ export default function CreateDocumentPage(): JSX.Element {
       const category = queryParams.get('category');
       const editPullRequestId = queryParams.get('edit_pull_request_id');
 
-      // HTMLコンテンツをそのまま使用（サーバーサイドで変換される）
-      const finalMarkdownContent = content;
-
       // APIリクエストのペイロードを構築
       const payload: any = {
         category_path: category,
         sidebar_label: label,
-        content: finalMarkdownContent,
+        content: content,
         is_public: publicOption === '公開する', // 公開設定を真偽値に変換
         slug,
         file_order: fileOrder,
@@ -280,7 +277,8 @@ export default function CreateDocumentPage(): JSX.Element {
               <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
                 <SlateEditor
                   initialContent=""
-                  onChange={handleEditorChange}
+                  onChange={() => {}}
+                  onMarkdownChange={handleEditorChange}
                   placeholder="ここにドキュメントを作成してください"
                 />
               </div>

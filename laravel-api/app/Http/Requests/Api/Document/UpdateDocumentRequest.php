@@ -4,7 +4,7 @@ namespace App\Http\Requests\Api\Document;
 
 use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
-use League\HTMLToMarkdown\HtmlConverter;
+// use League\HTMLToMarkdown\HtmlConverter;
 
 class UpdateDocumentRequest extends FormRequest
 {
@@ -50,18 +50,5 @@ class UpdateDocumentRequest extends FormRequest
             'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
             'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
-    }
-
-    public function passedValidation()
-    {
-        // HTMLコンテンツをMarkdown形式に変換
-        if ($this->has('content') && ! empty($this->input('content'))) {
-            $htmlContent = $this->input('content');
-            $converter = new HtmlConverter;
-            $markdownContent = $converter->convert($htmlContent);
-
-            // 変換されたMarkdownコンテンツをリクエストデータに設定
-            $this->merge(['content' => $markdownContent]);
-        }
     }
 }

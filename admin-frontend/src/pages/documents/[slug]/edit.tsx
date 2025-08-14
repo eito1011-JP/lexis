@@ -146,8 +146,8 @@ export default function EditDocumentPage(): JSX.Element {
     validateSlug(value);
   };
 
-  const handleEditorChange = (html: string) => {
-    setContent(html);
+  const handleEditorChange = (markdown: string) => {
+    setContent(markdown);
   };
 
   const handleSave = async () => {
@@ -162,7 +162,7 @@ export default function EditDocumentPage(): JSX.Element {
         return;
       }
 
-      // HTMLコンテンツをそのまま使用（サーバーサイドで変換される）
+      // Markdownをそのまま送信
       const finalMarkdownContent = content;
 
       // URLからedit_pull_request_idを取得
@@ -336,7 +336,8 @@ export default function EditDocumentPage(): JSX.Element {
               <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
                 <SlateEditor
                   initialContent={content}
-                  onChange={handleEditorChange}
+                  onChange={() => {}}
+                  onMarkdownChange={handleEditorChange}
                   placeholder="ここにドキュメントを作成してください"
                 />
               </div>
