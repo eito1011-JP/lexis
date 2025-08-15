@@ -109,6 +109,13 @@ const extractDisplaySlug = (filename: string): string => {
   return pathWithoutExt;
 };
 
+// front-matter の slug を優先し、無ければパスから導出
+const getSlugFromFrontMatterOrPath = (fm: FrontMatter, filename: string): string => {
+  const slug = fm['slug'];
+  if (typeof slug === 'string' && slug.trim()) return slug.trim();
+  return extractDisplaySlug(filename);
+};
+
 // diff.tsxと同じ行単位の差分表示
 const PlusIcon = ({ className }: { className?: string }) => (
   <svg
@@ -665,225 +672,228 @@ const ConflictResolutionPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-10">
-              {files.map((file, idx) => (
-                <div key={file.filename + idx} className="border border-gray-700 rounded-lg p-5">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <div className="text-gray-400 text-xs mb-2">Slug</div>
-                      <input
-                        className={`w-full px-3 py-2 rounded border ${
-                          file.headText && extractDisplaySlug(file.filename)
-                            ? 'border-gray-700 bg-[#111113] text-white'
-                            : 'border-red-700 bg-red-900/30 text-red-200'
-                        }`}
-                        value={file.headText ? extractDisplaySlug(file.filename) : ''}
-                        readOnly
-                      />
-                    </div>
-                    <div>
-                      <div className="text-gray-400 text-xs mb-2">Slug</div>
-                      <input
-                        className={`w-full px-3 py-2 rounded border ${
-                          file.baseText && extractDisplaySlug(file.filename)
-                            ? 'border-gray-700 bg-[#111113] text-white'
-                            : 'border-red-700 bg-red-900/30 text-red-200'
-                        }`}
-                        value={file.baseText ? extractDisplaySlug(file.filename) : ''}
-                        readOnly
-                      />
-                    </div>
-                  </div>
-                  {(() => {
-                    const baseFm = extractFrontMatter(file.baseText);
-                    const headFm = extractFrontMatter(file.headText);
-                    const baseFileOrder = getFileOrderFromFrontMatter(baseFm);
-                    const headFileOrder = getFileOrderFromFrontMatter(headFm);
-                    return (
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <div className="text-gray-400 text-xs mb-2">表示順序</div>
-                          <input
-                            className={`w-full px-3 py-2 rounded border ${
-                              headFileOrder
-                                ? 'border-gray-700 bg-[#111113] text-white'
-                                : 'border-red-700 bg-red-900/30 text-red-200'
-                            }`}
-                            readOnly
-                            value={headFileOrder}
-                          />
-                        </div>
-                        <div>
-                          <div className="text-gray-400 text-xs mb-2">表示順序</div>
-                          <input
-                            className={`w-full px-3 py-2 rounded border ${
-                              baseFileOrder
-                                ? 'border-gray-700 bg-[#111113] text-white'
-                                : 'border-red-700 bg-red-900/30 text-red-200'
-                            }`}
-                            readOnly
-                            value={baseFileOrder}
-                          />
-                        </div>
+              {files.map((file, idx) => {
+                const baseFm = extractFrontMatter(file.baseText);
+                const headFm = extractFrontMatter(file.headText);
+                const headSlug = file.headText
+                  ? getSlugFromFrontMatterOrPath(headFm, file.filename)
+                  : '';
+                const baseSlug = file.baseText
+                  ? getSlugFromFrontMatterOrPath(baseFm, file.filename)
+                  : '';
+                const slugConflict = !!headSlug && !!baseSlug && headSlug !== baseSlug;
+                const getFieldClass = (hasValue: boolean, isConflict: boolean) =>
+                  `w-full px-3 py-2 rounded border ${
+                    isConflict
+                      ? 'border-[#6600FF] bg-[rgba(102,0,255,0.15)] text-white'
+                      : hasValue
+                        ? 'border-gray-700 bg-[#111113] text-white'
+                        : 'border-red-700 bg-red-900/30 text-red-200'
+                  }`;
+                return (
+                  <div key={file.filename + idx} className="border border-gray-700 rounded-lg p-5">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <div className="text-gray-400 text-xs mb-2">Slug</div>
+                        <input
+                          className={getFieldClass(!!headSlug, slugConflict)}
+                          value={headSlug}
+                          readOnly
+                        />
                       </div>
-                    );
-                  })()}
-
-                  {(() => {
-                    const baseFm = extractFrontMatter(file.baseText);
-                    const headFm = extractFrontMatter(file.headText);
-                    const baseTitle = getTitleFromFrontMatter(baseFm);
-                    const headTitle = getTitleFromFrontMatter(headFm);
-                    return (
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <div className="text-gray-400 text-xs mb-2">タイトル</div>
-                          <input
-                            className={`w-full px-3 py-2 rounded border ${
-                              headTitle
-                                ? 'border-gray-700 bg-[#111113] text-white'
-                                : 'border-red-700 bg-red-900/30 text-red-200'
-                            }`}
-                            readOnly
-                            value={headTitle}
-                          />
-                        </div>
-                        <div>
-                          <div className="text-gray-400 text-xs mb-2">タイトル</div>
-                          <input
-                            className={`w-full px-3 py-2 rounded border ${
-                              baseTitle
-                                ? 'border-gray-700 bg-[#111113] text-white'
-                                : 'border-red-700 bg-red-900/30 text-red-200'
-                            }`}
-                            readOnly
-                            value={baseTitle}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {(() => {
-                    const baseFm = extractFrontMatter(file.baseText);
-                    const headFm = extractFrontMatter(file.headText);
-                    const basePub = getPublishLabelFromFrontMatter(baseFm);
-                    const headPub = getPublishLabelFromFrontMatter(headFm);
-                    return (
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <div className="text-gray-400 text-xs mb-2">公開設定</div>
-                          <input
-                            className={`w-full px-3 py-2 rounded border ${
-                              headPub
-                                ? 'border-gray-700 bg-[#111113] text-white'
-                                : 'border-red-700 bg-red-900/30 text-red-200'
-                            }`}
-                            readOnly
-                            value={headPub}
-                          />
-                        </div>
-                        <div>
-                          <div className="text-gray-400 text-xs mb-2">公開設定</div>
-                          <input
-                            className={`w-full px-3 py-2 rounded border ${
-                              basePub
-                                ? 'border-gray-700 bg-[#111113] text-white'
-                                : 'border-red-700 bg-red-900/30 text-red-200'
-                            }`}
-                            readOnly
-                            value={basePub}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* 本文: 左=変更提案の本文（head）、右=ベースの本文（base） */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-gray-400 text-xs mb-2">本文</div>
-                      <div
-                        className={`border rounded w-full px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10 ${
-                          extractBodyContent(file.headText)
-                            ? 'border-gray-700 bg-[#111113]'
-                            : 'border-red-700 bg-red-900/30 text-red-200'
-                        }`}
-                      >
-                        {extractBodyContent(file.headText)}
+                      <div>
+                        <div className="text-gray-400 text-xs mb-2">Slug</div>
+                        <input
+                          className={getFieldClass(!!baseSlug, slugConflict)}
+                          value={baseSlug}
+                          readOnly
+                        />
                       </div>
                     </div>
-                    <div>
-                      <div className="text-gray-400 text-xs mb-2">本文</div>
-                      <div
-                        className={`border rounded px-3 py-2 text-white whitespace-pre-wrap font-mono text-sm min-h-10 ${
-                          extractBodyContent(file.baseText)
-                            ? 'border-gray-700 bg-[#111113]'
-                            : 'border-red-700 bg-red-900/30 text-red-200'
-                        }`}
-                      >
-                        {extractBodyContent(file.baseText)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 下: コンフリクト編集エディタ */}
-                  <div className="mt-6">
-                    <div className="text-gray-400 text-xs mb-2">本文</div>
-                    <div className="bg-[#111113] border border-gray-700 rounded-md p-2">
-                      {(() => {
-                        const baseBody = extractBodyContent(file.baseText);
-                        const headBody = extractBodyContent(file.headText);
-                        const conflictMarked = buildConflictMarkedContent(baseBody, headBody);
-                        const currentContent = editedContents[file.filename] ?? conflictMarked;
-                        return (
-                          <>
-                            <MarkdownEditor
-                              initialContent={currentContent}
-                              onChange={() => {}}
-                              onMarkdownChange={md =>
-                                setEditedContents(prev => ({ ...prev, [file.filename]: md }))
-                              }
+                    {(() => {
+                      const baseFileOrder = getFileOrderFromFrontMatter(baseFm);
+                      const headFileOrder = getFileOrderFromFrontMatter(headFm);
+                      const conflict =
+                        !!headFileOrder && !!baseFileOrder && headFileOrder !== baseFileOrder;
+                      return (
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="text-gray-400 text-xs mb-2">表示順序</div>
+                            <input
+                              className={getFieldClass(!!headFileOrder, conflict)}
+                              readOnly
+                              value={headFileOrder}
                             />
-                            <div className="flex gap-2 mt-3">
-                              <button
-                                className="px-3 py-1 text-xs rounded bg-green-700 hover:bg-green-600 text-white border border-green-600"
-                                onClick={() =>
-                                  setEditedContents(prev => ({
-                                    ...prev,
-                                    [file.filename]: headBody,
-                                  }))
-                                }
-                              >
-                                現在の差分を採用
-                              </button>
-                              <button
-                                className="px-3 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 text-white border border-blue-600"
-                                onClick={() =>
-                                  setEditedContents(prev => ({
-                                    ...prev,
-                                    [file.filename]: baseBody,
-                                  }))
-                                }
-                              >
-                                最新の差分を適用する
-                              </button>
-                              <button
-                                className="px-3 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
-                                onClick={() => {
-                                  const both = [headBody, '=======', baseBody].join('\n');
-                                  setEditedContents(prev => ({ ...prev, [file.filename]: both }));
-                                }}
-                              >
-                                両方の差分を採用する
-                              </button>
+                          </div>
+                          <div>
+                            <div className="text-gray-400 text-xs mb-2">表示順序</div>
+                            <input
+                              className={getFieldClass(!!baseFileOrder, conflict)}
+                              readOnly
+                              value={baseFileOrder}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {(() => {
+                      const baseTitle = getTitleFromFrontMatter(baseFm);
+                      const headTitle = getTitleFromFrontMatter(headFm);
+                      const conflict = !!headTitle && !!baseTitle && headTitle !== baseTitle;
+                      return (
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="text-gray-400 text-xs mb-2">タイトル</div>
+                            <input
+                              className={getFieldClass(!!headTitle, conflict)}
+                              readOnly
+                              value={headTitle}
+                            />
+                          </div>
+                          <div>
+                            <div className="text-gray-400 text-xs mb-2">タイトル</div>
+                            <input
+                              className={getFieldClass(!!baseTitle, conflict)}
+                              readOnly
+                              value={baseTitle}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {(() => {
+                      const basePub = getPublishLabelFromFrontMatter(baseFm);
+                      const headPub = getPublishLabelFromFrontMatter(headFm);
+                      const conflict = !!headPub && !!basePub && headPub !== basePub;
+                      return (
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <div className="text-gray-400 text-xs mb-2">公開設定</div>
+                            <input
+                              className={getFieldClass(!!headPub, conflict)}
+                              readOnly
+                              value={headPub}
+                            />
+                          </div>
+                          <div>
+                            <div className="text-gray-400 text-xs mb-2">公開設定</div>
+                            <input
+                              className={getFieldClass(!!basePub, conflict)}
+                              readOnly
+                              value={basePub}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 本文: 左=変更提案の本文（head）、右=ベースの本文（base） */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-gray-400 text-xs mb-2">本文</div>
+                        {(() => {
+                          const headBody = extractBodyContent(file.headText);
+                          const baseBody = extractBodyContent(file.baseText);
+                          const conflict = !!headBody && !!baseBody && headBody !== baseBody;
+                          return (
+                            <div
+                              className={`border rounded w-full px-3 py-2 whitespace-pre-wrap font-mono text-sm min-h-10 ${
+                                conflict
+                                  ? 'border-[#6600FF] bg-[rgba(102,0,255,0.15)] text-white'
+                                  : headBody
+                                    ? 'border-gray-700 bg-[#111113] text-white'
+                                    : 'border-red-700 bg-red-900/30 text-red-200'
+                              }`}
+                            >
+                              {headBody}
                             </div>
-                          </>
-                        );
-                      })()}
+                          );
+                        })()}
+                      </div>
+                      <div>
+                        <div className="text-gray-400 text-xs mb-2">本文</div>
+                        {(() => {
+                          const headBody = extractBodyContent(file.headText);
+                          const baseBody = extractBodyContent(file.baseText);
+                          const conflict = !!headBody && !!baseBody && headBody !== baseBody;
+                          return (
+                            <div
+                              className={`border rounded px-3 py-2 whitespace-pre-wrap font-mono text-sm min-h-10 ${
+                                conflict
+                                  ? 'border-[#6600FF] bg-[rgba(102,0,255,0.15)] text-white'
+                                  : baseBody
+                                    ? 'border-gray-700 bg-[#111113] text-white'
+                                    : 'border-red-700 bg-red-900/30 text-red-200'
+                              }`}
+                            >
+                              {baseBody}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* 下: コンフリクト編集エディタ */}
+                    <div className="mt-6">
+                      <div className="text-gray-400 text-xs mb-2">本文</div>
+                      <div className="bg-[#111113] border border-gray-700 rounded-md p-2">
+                        {(() => {
+                          const baseBody = extractBodyContent(file.baseText);
+                          const headBody = extractBodyContent(file.headText);
+                          const conflictMarked = buildConflictMarkedContent(baseBody, headBody);
+                          const currentContent = editedContents[file.filename] ?? conflictMarked;
+                          return (
+                            <>
+                              <MarkdownEditor
+                                initialContent={currentContent}
+                                onChange={() => {}}
+                                onMarkdownChange={md =>
+                                  setEditedContents(prev => ({ ...prev, [file.filename]: md }))
+                                }
+                              />
+                              <div className="flex gap-2 mt-3">
+                                <button
+                                  className="px-3 py-1 text-xs rounded bg-green-700 hover:bg-green-600 text-white border border-green-600"
+                                  onClick={() =>
+                                    setEditedContents(prev => ({
+                                      ...prev,
+                                      [file.filename]: headBody,
+                                    }))
+                                  }
+                                >
+                                  現在の差分を採用
+                                </button>
+                                <button
+                                  className="px-3 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 text-white border border-blue-600"
+                                  onClick={() =>
+                                    setEditedContents(prev => ({
+                                      ...prev,
+                                      [file.filename]: baseBody,
+                                    }))
+                                  }
+                                >
+                                  最新の差分を適用する
+                                </button>
+                                <button
+                                  className="px-3 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                                  onClick={() => {
+                                    const both = [headBody, '=======', baseBody].join('\n');
+                                    setEditedContents(prev => ({ ...prev, [file.filename]: both }));
+                                  }}
+                                >
+                                  両方の差分を採用する
+                                </button>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               <div className="flex justify-center">
                 <button

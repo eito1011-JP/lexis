@@ -163,9 +163,11 @@
 }
 .conflict-head-bg {
   background-color: #ff9900; /* 現在の変更提案 */
+  opacity: 0.5;
 }
 .conflict-base-bg {
   background-color: #2577d8; /* 最新の差分(base) */
+  opacity: 0.5;
 }
 .conflict-marker-head,
 .conflict-marker-base,
