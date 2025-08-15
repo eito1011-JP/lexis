@@ -500,6 +500,28 @@ const ConflictResolutionPage: React.FC = () => {
 
         {/* 右: ファイルごとの3カラム比較 */}
         <div className="flex-1">
+          <div className="flex items-center gap-4 mb-6">
+            <button
+              className="bg-gray-900 rounded-xl w-12 h-12 flex items-center justify-center border border-gray-700"
+              onClick={() => window.history.back()}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6 text-white"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+            </button>
+            <h3 className="text-xl font-bold">変更の競合修正</h3>
+          </div>
           <div className="text-2xl font-bold text-white mb-4">初めてのPR提出</div>
 
           {error && (
