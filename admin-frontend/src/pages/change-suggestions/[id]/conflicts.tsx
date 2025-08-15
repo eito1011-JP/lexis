@@ -421,6 +421,135 @@ const LineDiffDisplay = ({
   );
 };
 
+// 2つのテキストの行差分を計算（コンフリクト組み立て用）
+const calculateLineDiffForMerge = (oldText: string, newText: string) => {
+  const oldLines = oldText ? oldText.split('\n') : [];
+  const newLines = newText ? newText.split('\n') : [];
+
+  const lcs = (a: string[], b: string[]) => {
+    const dp: number[][] = Array(a.length + 1)
+      .fill(null)
+      .map(() => Array(b.length + 1).fill(0));
+
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        if (a[i - 1] === b[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+
+    const result: Array<{ oldIndex: number; newIndex: number }> = [];
+    let i = a.length,
+      j = b.length;
+
+    while (i > 0 && j > 0) {
+      if (a[i - 1] === b[j - 1]) {
+        result.unshift({ oldIndex: i - 1, newIndex: j - 1 });
+        i--;
+        j--;
+      } else if (dp[i - 1][j] > dp[i][j - 1]) {
+        i--;
+      } else {
+        j--;
+      }
+    }
+
+    return result;
+  };
+
+  const commonLines = lcs(oldLines, newLines);
+  type DiffLine = {
+    type: 'added' | 'deleted' | 'unchanged' | 'change';
+    content: string;
+    deletedContent?: string;
+    addedContent?: string;
+  };
+  const result: DiffLine[] = [];
+
+  let oldIndex = 0;
+  let newIndex = 0;
+  let commonIndex = 0;
+
+  while (oldIndex < oldLines.length || newIndex < newLines.length) {
+    const nextCommon = commonIndex < commonLines.length ? commonLines[commonIndex] : null;
+
+    if (nextCommon && oldIndex === nextCommon.oldIndex && newIndex === nextCommon.newIndex) {
+      result.push({ type: 'unchanged', content: oldLines[oldIndex] });
+      oldIndex++;
+      newIndex++;
+      commonIndex++;
+    } else if (nextCommon && oldIndex < nextCommon.oldIndex && newIndex < nextCommon.newIndex) {
+      result.push({
+        type: 'change',
+        content: '',
+        deletedContent: oldLines[oldIndex],
+        addedContent: newLines[newIndex],
+      });
+      oldIndex++;
+      newIndex++;
+    } else if (nextCommon && oldIndex < nextCommon.oldIndex) {
+      result.push({ type: 'deleted', content: oldLines[oldIndex] });
+      oldIndex++;
+    } else if (nextCommon && newIndex < nextCommon.newIndex) {
+      result.push({ type: 'added', content: newLines[newIndex] });
+      newIndex++;
+    } else {
+      if (oldIndex < oldLines.length) {
+        result.push({ type: 'deleted', content: oldLines[oldIndex] });
+        oldIndex++;
+      }
+      if (newIndex < newLines.length) {
+        result.push({ type: 'added', content: newLines[newIndex] });
+        newIndex++;
+      }
+    }
+  }
+
+  return result;
+};
+
+// base と head の差分から、エディタに表示するコンフリクト付きテキストを生成
+const buildConflictMarkedContent = (baseBody: string, headBody: string) => {
+  const diff = calculateLineDiffForMerge(baseBody, headBody);
+  const outputLines: string[] = [];
+  let inConflict = false;
+  let headBlock: string[] = [];
+  let baseBlock: string[] = [];
+
+  const flushConflict = () => {
+    if (!inConflict) return;
+    outputLines.push('<<<<<<< 変更提案の差分');
+    outputLines.push(...headBlock);
+    outputLines.push('=======');
+    outputLines.push(...baseBlock);
+    outputLines.push('>>>>>>> 最新の差分');
+    inConflict = false;
+    headBlock = [];
+    baseBlock = [];
+  };
+
+  for (const line of diff) {
+    if (line.type === 'unchanged') {
+      flushConflict();
+      outputLines.push(line.content);
+    } else {
+      // 競合領域
+      inConflict = true;
+      if (line.type === 'change') {
+        if (line.addedContent !== undefined) headBlock.push(line.addedContent);
+        if (line.deletedContent !== undefined) baseBlock.push(line.deletedContent);
+      }
+      if (line.type === 'added') headBlock.push(line.content);
+      if (line.type === 'deleted') baseBlock.push(line.content);
+    }
+  }
+  flushConflict();
+  return outputLines.join('\n');
+};
+
 const ConflictResolutionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -701,15 +830,56 @@ const ConflictResolutionPage: React.FC = () => {
                   <div className="mt-6">
                     <div className="text-gray-400 text-xs mb-2">本文</div>
                     <div className="bg-[#111113] border border-gray-700 rounded-md p-2">
-                      <MarkdownEditor
-                        initialContent={
-                          editedContents[file.filename] ?? extractBodyContent(file.headText)
-                        }
-                        onChange={() => {}}
-                        onMarkdownChange={md =>
-                          setEditedContents(prev => ({ ...prev, [file.filename]: md }))
-                        }
-                      />
+                      {(() => {
+                        const baseBody = extractBodyContent(file.baseText);
+                        const headBody = extractBodyContent(file.headText);
+                        const conflictMarked = buildConflictMarkedContent(baseBody, headBody);
+                        const currentContent = editedContents[file.filename] ?? conflictMarked;
+                        return (
+                          <>
+                            <MarkdownEditor
+                              initialContent={currentContent}
+                              onChange={() => {}}
+                              onMarkdownChange={md =>
+                                setEditedContents(prev => ({ ...prev, [file.filename]: md }))
+                              }
+                            />
+                            <div className="flex gap-2 mt-3">
+                              <button
+                                className="px-3 py-1 text-xs rounded bg-green-700 hover:bg-green-600 text-white border border-green-600"
+                                onClick={() =>
+                                  setEditedContents(prev => ({
+                                    ...prev,
+                                    [file.filename]: headBody,
+                                  }))
+                                }
+                              >
+                                現在の差分を採用
+                              </button>
+                              <button
+                                className="px-3 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 text-white border border-blue-600"
+                                onClick={() =>
+                                  setEditedContents(prev => ({
+                                    ...prev,
+                                    [file.filename]: baseBody,
+                                  }))
+                                }
+                              >
+                                最新の差分を適用する
+                              </button>
+                              <button
+                                className="px-3 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                                onClick={() => {
+                                  const both = [headBody, '=======', baseBody].join('\n');
+                                  setEditedContents(prev => ({ ...prev, [file.filename]: both }));
+                                }}
+                              >
+                                両方の差分を採用する
+                              </button>
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

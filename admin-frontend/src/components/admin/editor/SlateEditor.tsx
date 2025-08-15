@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './styles.css';
 import { Bold as BoldIcon } from '../../icon/editor/Bold';
 import { Italic as ItalicIcon } from '../../icon/editor/Italic';
@@ -28,8 +28,13 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 }) => {
   const [showParagraphOptions, setShowParagraphOptions] = useState(false);
   const [markdown, setMarkdown] = useState(initialContent || '');
+  // 親から渡される初期値が変わったらエディタ内容を更新（ボタン操作で内容を差し替えるため）
+  useEffect(() => {
+    setMarkdown(initialContent || '');
+  }, [initialContent]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
 
   // 行番号を計算
   const getLineNumbers = () => {
@@ -44,6 +49,11 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
 
     if (textarea && lineNumbers) {
       lineNumbers.scrollTop = textarea.scrollTop;
+    }
+
+    const highlight = highlightRef.current;
+    if (textarea && highlight) {
+      highlight.style.transform = `translateY(-${textarea.scrollTop}px)`;
     }
   };
 
@@ -266,6 +276,50 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
     }
 
     return htmlLines.join('\n');
+  };
+
+  // コンフリクトマーカーを色分けするためのハイライトHTMLを生成
+  const getConflictHighlightedHtml = (text: string): string => {
+    const escapeHtml = (s: string) =>
+      s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const lines = text.split('\n');
+    let inHead = false;
+    let inBase = false;
+    const htmlLines: string[] = [];
+
+    for (const raw of lines) {
+      const line = raw ?? '';
+      let cls = 'editor-line';
+
+      if (line.startsWith('<<<<<<<')) {
+        inHead = true;
+        inBase = false;
+        cls += ' conflict-marker-head';
+      } else if (line.startsWith('=======')) {
+        inHead = false;
+        inBase = true;
+        cls += ' conflict-separator';
+      } else if (line.startsWith('>>>>>>>')) {
+        inHead = false;
+        inBase = false;
+        cls += ' conflict-marker-base';
+      } else if (inHead) {
+        cls += ' conflict-head-bg';
+      } else if (inBase) {
+        cls += ' conflict-base-bg';
+      }
+
+      const content = line.length ? escapeHtml(line) : '&nbsp;';
+      htmlLines.push(`<div class="${cls}">${content}</div>`);
+    }
+
+    return htmlLines.join('');
   };
 
   // インライン要素の処理
@@ -711,20 +765,32 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
               ))}
             </div>
 
-            {/* テキストエリア */}
-            <textarea
-              ref={textareaRef}
-              value={markdown}
-              onChange={handleMarkdownChange}
-              onKeyDown={handleKeyDown}
-              onScroll={handleTextareaScroll}
-              placeholder={placeholder}
-              className="outline-none flex-1 min-h-[400px] resize-none font-mono text-sm border-0 focus:ring-0"
-              style={{
-                lineHeight: '1.4em',
-              }}
-              spellCheck={false}
-            />
+            {/* テキストエリア（ハイライトレイヤー重ね） */}
+            <div className="relative flex-1">
+              <div
+                ref={highlightRef}
+                className="absolute inset-0 editor-highlight pointer-events-none font-mono text-sm"
+                style={{
+                  lineHeight: '1.4em',
+                  color: 'transparent',
+                  overflow: 'hidden',
+                }}
+                dangerouslySetInnerHTML={{ __html: getConflictHighlightedHtml(markdown) }}
+              />
+              <textarea
+                ref={textareaRef}
+                value={markdown}
+                onChange={handleMarkdownChange}
+                onKeyDown={handleKeyDown}
+                onScroll={handleTextareaScroll}
+                placeholder={placeholder}
+                className="outline-none flex-1 w-full min-h-[400px] resize-none font-mono text-sm border-0 focus:ring-0 bg-transparent relative"
+                style={{
+                  lineHeight: '1.4em',
+                }}
+                spellCheck={false}
+              />
+            </div>
           </div>
 
           {/* 右側: プレビュー */}

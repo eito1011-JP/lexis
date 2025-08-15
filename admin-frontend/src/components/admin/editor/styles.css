@@ -153,3 +153,23 @@
 .slate-editor .toolbar-button:hover {
   background-color: #f3f4f6;
 }
+
+/* コンフリクトハイライト */
+.editor-highlight {
+  white-space: pre;
+}
+.editor-line {
+  height: 1.4em;
+}
+.conflict-head-bg {
+  background-color: #ff9900; /* 現在の変更提案 */
+}
+.conflict-base-bg {
+  background-color: #2577d8; /* 最新の差分(base) */
+}
+.conflict-marker-head,
+.conflict-marker-base,
+.conflict-separator {
+  color: #cbd5e1 !important; /* マーカー行は文字色を見やすく */
+  background-color: transparent;
+}
