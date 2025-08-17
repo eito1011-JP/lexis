@@ -837,7 +837,7 @@ const ConflictResolutionPage: React.FC = () => {
 
                     {/* 下: コンフリクト編集エディタ */}
                     <div className="mt-6">
-                      <div className="text-gray-400 text-xs mb-2">本文</div>
+                      <div className="text-gray-400 text-xs mb-2">本文（編集用）</div>
                       <div className="bg-[#111113] border border-gray-700 rounded-md p-2">
                         {(() => {
                           const baseBody = extractBodyContent(file.baseText);

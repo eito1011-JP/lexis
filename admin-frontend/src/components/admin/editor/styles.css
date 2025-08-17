@@ -156,10 +156,17 @@
 
 /* コンフリクトハイライト */
 .editor-highlight {
-  white-space: pre;
+  /* テキストエリアと同等の折返し挙動にする */
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .editor-line {
-  height: 1.4em;
+  /* 1行の基本高さは維持しつつ、折返し時は高さを伸ばす */
+  line-height: 1.4em;
+  min-height: 1.4em;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 .conflict-head-bg {
   background-color: #ff9900; /* 現在の変更提案 */
@@ -172,6 +179,7 @@
 .conflict-marker-head,
 .conflict-marker-base,
 .conflict-separator {
-  color: #cbd5e1 !important; /* マーカー行は文字色を見やすく */
+  /* オーバーレイ側ではマーカー行の文字を描画しない（テキストエリア側の文字のみ表示して編集可能にする） */
+  color: transparent !important;
   background-color: transparent;
 }

@@ -35,11 +35,38 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
 
-  // 行番号を計算
-  const getLineNumbers = () => {
+  const [lineRows, setLineRows] = useState<number[]>([]);
+
+  // 折り返しを考慮した行ごとの表示行数を計算
+  const recalcLineRows = () => {
+    const textarea = textareaRef.current;
+    const measure = measureRef.current;
+    if (!textarea || !measure) return;
+
+    const computed = window.getComputedStyle(textarea);
+    const paddingLeft = parseFloat(computed.paddingLeft || '0');
+    const paddingRight = parseFloat(computed.paddingRight || '0');
+    const contentWidth = textarea.clientWidth - paddingLeft - paddingRight;
+    const lineHeightPx = parseFloat(computed.lineHeight || '20');
+
+    // 計測用要素のスタイルを同期
+    measure.style.width = `${contentWidth}px`;
+    measure.style.fontFamily = computed.fontFamily;
+    measure.style.fontSize = computed.fontSize;
+    measure.style.lineHeight = computed.lineHeight;
+
     const lines = markdown.split('\n');
-    return lines.map((_, index) => index + 1);
+    const rows: number[] = [];
+    for (const line of lines) {
+      // 空行は1行として扱う
+      measure.textContent = line.length ? line : ' ';
+      const height = measure.scrollHeight;
+      const rowCount = Math.max(1, Math.round(height / lineHeightPx));
+      rows.push(rowCount);
+    }
+    setLineRows(rows);
   };
 
   // テキストエリアとの同期スクロール
@@ -56,6 +83,19 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       highlight.style.transform = `translateY(-${textarea.scrollTop}px)`;
     }
   };
+
+  // マークダウンやレイアウト変化に応じて行番号の行高を再計算
+  useEffect(() => {
+    recalcLineRows();
+  }, [markdown]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const ro = new ResizeObserver(() => recalcLineRows());
+    ro.observe(textarea);
+    return () => ro.disconnect();
+  }, []);
 
   // Markdown→HTML変換（改良版）
   const markdownToHtml = (markdown: string): string => {
@@ -739,7 +779,7 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
       <div className="rounded-b">
         <div className="w-full pt-4 flex">
           {/* 左側: Markdownエディター */}
-          <div className="flex-1 flex">
+          <div className="w-1/2 flex">
             {/* 行番号 */}
             <div
               ref={lineNumbersRef}
@@ -748,28 +788,40 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 width: '50px',
                 minHeight: '400px',
                 overflow: 'hidden',
+                paddingTop: '12px',
               }}
             >
-              {getLineNumbers().map(lineNumber => (
-                <div
-                  key={lineNumber}
-                  className="line-number px-2 text-right"
-                  style={{
-                    height: '1.4em',
-                    lineHeight: '1.4em',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {lineNumber}
-                </div>
-              ))}
+              {(() => {
+                const elements: JSX.Element[] = [];
+                const totalLines = lineRows.length || markdown.split('\n').length;
+                for (let i = 0; i < totalLines; i++) {
+                  const rowCount = lineRows[i] ?? 1;
+                  for (let r = 0; r < rowCount; r++) {
+                    const showNumber = r === 0 ? i + 1 : '';
+                    elements.push(
+                      <div
+                        key={`${i}-${r}`}
+                        className="line-number px-2 text-right"
+                        style={{
+                          height: '1.4em',
+                          lineHeight: '1.4em',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {showNumber}
+                      </div>
+                    );
+                  }
+                }
+                return elements;
+              })()}
             </div>
 
             {/* テキストエリア（ハイライトレイヤー重ね） */}
             <div className="relative flex-1">
               <div
                 ref={highlightRef}
-                className="absolute inset-0 editor-highlight pointer-events-none font-mono text-sm"
+                className="absolute inset-0 editor-highlight pointer-events-none font-mono text-sm p-3"
                 style={{
                   lineHeight: '1.4em',
                   color: 'transparent',
@@ -784,17 +836,33 @@ const MarkdownEditor: React.FC<MarkdownEditorProps> = ({
                 onKeyDown={handleKeyDown}
                 onScroll={handleTextareaScroll}
                 placeholder={placeholder}
-                className="outline-none flex-1 w-full min-h-[400px] resize-none font-mono text-sm border-0 focus:ring-0 bg-transparent relative"
+                className="outline-none w-full h-full resize-none font-mono text-sm border-0 focus:ring-0 bg-transparent relative p-3"
                 style={{
                   lineHeight: '1.4em',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'anywhere',
+                  minHeight: '400px',
                 }}
                 spellCheck={false}
+              />
+              {/* 計測用の不可視要素（折返し行数の算出に使用） */}
+              <div
+                ref={measureRef}
+                style={{
+                  position: 'absolute',
+                  visibility: 'hidden',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'anywhere',
+                  padding: 0,
+                }}
               />
             </div>
           </div>
 
           {/* 右側: プレビュー */}
-          <div className="flex-1 pl-4">
+          <div className="w-1/2 pl-4">
             <div
               className="min-h-[400px] overflow-auto markdown-preview"
               dangerouslySetInnerHTML={{ __html: markdownToHtml(markdown) }}
