@@ -96,6 +96,11 @@ const getPublishLabelFromFrontMatter = (fm: FrontMatter): string => {
   return '';
 };
 
+// 公開ラベルから作成画面相当のセレクト値に変換
+const toPublicOption = (label: string): string => {
+  return label === '公開' ? '公開する' : '公開しない';
+};
+
 // docs/配下のパスからフォルダ名~ファイル名（.md拡張子を除く）を取得
 const extractDisplaySlug = (filename: string): string => {
   if (!filename.startsWith('docs/')) return filename;
@@ -566,6 +571,17 @@ const ConflictResolutionPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<ConflictFileDiff[]>([]);
   const [editedContents, setEditedContents] = useState<Record<string, string>>({});
+  const [editedDocData, setEditedDocData] = useState<
+    Record<
+      string,
+      {
+        slug: string;
+        fileOrder: string;
+        title: string;
+        publicOption: string; // '公開する' | '公開しない'
+      }
+    >
+  >({});
 
   useEffect(() => {
     let mounted = true;
@@ -834,66 +850,152 @@ const ConflictResolutionPage: React.FC = () => {
                         })()}
                       </div>
                     </div>
-
-                    {/* 下: コンフリクト編集エディタ */}
-                    <div className="mt-6">
-                      <div className="text-gray-400 text-xs mb-2">本文（編集用）</div>
-                      <div className="bg-[#111113] border border-gray-700 rounded-md p-2">
-                        {(() => {
-                          const baseBody = extractBodyContent(file.baseText);
-                          const headBody = extractBodyContent(file.headText);
-                          const conflictMarked = buildConflictMarkedContent(baseBody, headBody);
-                          const currentContent = editedContents[file.filename] ?? conflictMarked;
-                          return (
-                            <>
-                              <MarkdownEditor
-                                initialContent={currentContent}
-                                onChange={() => {}}
-                                onMarkdownChange={md =>
-                                  setEditedContents(prev => ({ ...prev, [file.filename]: md }))
-                                }
-                              />
-                              <div className="flex gap-2 mt-3">
-                                <button
-                                  className="px-3 py-1 text-xs rounded bg-green-700 hover:bg-green-600 text-white border border-green-600"
-                                  onClick={() =>
-                                    setEditedContents(prev => ({
-                                      ...prev,
-                                      [file.filename]: headBody,
-                                    }))
-                                  }
-                                >
-                                  現在の差分を採用
-                                </button>
-                                <button
-                                  className="px-3 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 text-white border border-blue-600"
-                                  onClick={() =>
-                                    setEditedContents(prev => ({
-                                      ...prev,
-                                      [file.filename]: baseBody,
-                                    }))
-                                  }
-                                >
-                                  最新の差分を適用する
-                                </button>
-                                <button
-                                  className="px-3 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
-                                  onClick={() => {
-                                    const both = [headBody, '=======', baseBody].join('\n');
-                                    setEditedContents(prev => ({ ...prev, [file.filename]: both }));
-                                  }}
-                                >
-                                  両方の差分を採用する
-                                </button>
-                              </div>
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
                   </div>
                 );
               })}
+
+              {/* 下: コンフリクト編集セグメント（メタ情報 + 本文の編集） */}
+              <div className="text-white font-semibold mb-1">編集用</div>
+              <div className="mt-6 space-y-10 border border-gray-700 rounded-lg p-5">
+                {files.map(file => {
+                  const baseBody = extractBodyContent(file.baseText);
+                  const headBody = extractBodyContent(file.headText);
+                  const conflictMarked = buildConflictMarkedContent(baseBody, headBody);
+                  const currentContent = editedContents[file.filename] ?? conflictMarked;
+
+                  const baseFm = extractFrontMatter(file.baseText);
+                  const headFm = extractFrontMatter(file.headText);
+                  const headSlug = file.headText
+                    ? getSlugFromFrontMatterOrPath(headFm, file.filename)
+                    : '';
+                  const baseSlug = file.baseText
+                    ? getSlugFromFrontMatterOrPath(baseFm, file.filename)
+                    : '';
+                  const headFileOrder = getFileOrderFromFrontMatter(headFm);
+                  const baseFileOrder = getFileOrderFromFrontMatter(baseFm);
+                  const headTitle = getTitleFromFrontMatter(headFm);
+                  const baseTitle = getTitleFromFrontMatter(baseFm);
+                  const headPub = getPublishLabelFromFrontMatter(headFm);
+                  const basePub = getPublishLabelFromFrontMatter(baseFm);
+
+                  const currentDoc = editedDocData[file.filename] ?? {
+                    slug: headSlug || baseSlug || '',
+                    fileOrder: headFileOrder || baseFileOrder || '',
+                    title: headTitle || baseTitle || '',
+                    publicOption: toPublicOption(headPub || basePub || ''),
+                  };
+                  return (
+                    <div key={`editor-${file.filename}`} className="rounded-md p-4 space-y-5">
+                      <div>
+                        <div className="grid gap-4">
+                          <div>
+                            <label className="block mb-2 font-bold text-sm">Slug</label>
+                            <input
+                              type="text"
+                              value={currentDoc.slug}
+                              onChange={e =>
+                                setEditedDocData(prev => ({
+                                  ...prev,
+                                  [file.filename]: { ...currentDoc, slug: e.target.value },
+                                }))
+                              }
+                              className="w-full px-3 py-2.5 border border-gray-700 rounded bg-transparent text-white"
+                              placeholder="slugを入力してください"
+                            />
+                          </div>
+                          <div>
+                            <label className="block mb-2 font-bold text-sm">表示順序</label>
+                            <input
+                              type="number"
+                              value={currentDoc.fileOrder}
+                              onChange={e =>
+                                setEditedDocData(prev => ({
+                                  ...prev,
+                                  [file.filename]: { ...currentDoc, fileOrder: e.target.value },
+                                }))
+                              }
+                              className="w-full px-3 py-2.5 border border-gray-700 rounded bg-transparent text-white"
+                              placeholder="表示順序を入力してください"
+                            />
+                          </div>
+                          <div>
+                            <label className="block mb-2 font-bold text-sm">タイトル</label>
+                            <input
+                              type="text"
+                              value={currentDoc.title}
+                              onChange={e =>
+                                setEditedDocData(prev => ({
+                                  ...prev,
+                                  [file.filename]: { ...currentDoc, title: e.target.value },
+                                }))
+                              }
+                              className="w-full px-3 py-2.5 border border-gray-700 rounded bg-transparent text-white"
+                              placeholder="タイトルを入力してください"
+                            />
+                          </div>
+                          <div>
+                            <label className="block mb-2 font-bold text-sm">公開設定</label>
+                            <select
+                              value={currentDoc.publicOption}
+                              onChange={e =>
+                                setEditedDocData(prev => ({
+                                  ...prev,
+                                  [file.filename]: { ...currentDoc, publicOption: e.target.value },
+                                }))
+                              }
+                              className="w-full px-3 py-2.5 border border-gray-700 rounded bg-transparent text-white appearance-none pr-10"
+                            >
+                              <option value="公開する">公開する</option>
+                              <option value="公開しない">公開しない</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-gray-400 text-xs">本文（編集用）</div>
+                      <MarkdownEditor
+                        initialContent={currentContent}
+                        onChange={() => {}}
+                        onMarkdownChange={md =>
+                          setEditedContents(prev => ({ ...prev, [file.filename]: md }))
+                        }
+                      />
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          className="px-3 py-1 text-xs rounded bg-green-700 hover:bg-green-600 text-white border border-green-600"
+                          onClick={() =>
+                            setEditedContents(prev => ({
+                              ...prev,
+                              [file.filename]: headBody,
+                            }))
+                          }
+                        >
+                          現在の差分を採用
+                        </button>
+                        <button
+                          className="px-3 py-1 text-xs rounded bg-blue-700 hover:bg-blue-600 text-white border border-blue-600"
+                          onClick={() =>
+                            setEditedContents(prev => ({
+                              ...prev,
+                              [file.filename]: baseBody,
+                            }))
+                          }
+                        >
+                          最新の差分を適用する
+                        </button>
+                        <button
+                          className="px-3 py-1 text-xs rounded bg-gray-700 hover:bg-gray-600 text-white border border-gray-600"
+                          onClick={() => {
+                            const both = [headBody, '=======', baseBody].join('\n');
+                            setEditedContents(prev => ({ ...prev, [file.filename]: both }));
+                          }}
+                        >
+                          両方の差分を採用する
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
 
               <div className="flex justify-center">
                 <button
