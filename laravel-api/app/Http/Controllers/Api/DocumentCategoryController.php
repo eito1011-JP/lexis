@@ -47,7 +47,7 @@ class DocumentCategoryController extends ApiBaseController
             $slug = array_pop($pathParts);
             $categoryPath = $pathParts;
 
-            $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             $documentCategory = DocumentCategory::where('parent_id', $parentCategoryId)
                 ->where('slug', $slug)
@@ -92,7 +92,7 @@ class DocumentCategoryController extends ApiBaseController
             $categoryPath = array_filter(explode('/', $request->category_path));
 
             // カテゴリIDを取得（パスから）
-            $currentParentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $currentParentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             $position = $this->documentCategoryService->normalizePosition(
                 $request->position,
@@ -172,7 +172,7 @@ class DocumentCategoryController extends ApiBaseController
             $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
-            $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             $existingCategory = DocumentCategory::where('parent_id', $parentCategoryId)->where('slug', $request->slug)->first();
 
@@ -270,7 +270,7 @@ class DocumentCategoryController extends ApiBaseController
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));
             $slug = array_pop($pathParts);
             $categoryPath = $pathParts;
-            $parentCategoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             // 削除対象のルートカテゴリの存在確認
             $rootCategory = DocumentCategory::where('slug', $slug)

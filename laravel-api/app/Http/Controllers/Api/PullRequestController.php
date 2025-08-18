@@ -848,6 +848,7 @@ class PullRequestController extends ApiBaseController
                 'trace' => $e->getTraceAsString(),
                 'pull_request_id' => $id,
             ]);
+
             return response()->json(['error' => '一時検証に失敗しました'], 500);
         }
     }

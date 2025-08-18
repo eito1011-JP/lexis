@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Constants\DocumentCategoryConstants;
 use App\Models\DocumentCategory;
-use App\Models\DocumentVersion;
 
 class DocumentCategoryService
 {
@@ -33,55 +33,35 @@ class DocumentCategoryService
     }
 
     /**
-     * カテゴリツリーを取得（slugから）
+     * カテゴリパスからparentとなるcategory idを再帰的に取得
      *
-     * @param  string  $slug
-     * @param  int  $userBranchId
+     * @param  array  $categoryPath
+     *                               parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは['parent', 'child', 'grandchild']のような配列
+     * @return int|null カテゴリID
      */
-    public function getCategoryTreeFromSlug(string $categoryPath): array
+    public function getIdFromPath(array $categoryPath): ?int
     {
-        // カテゴリパスを取得
-        $categoryPath = array_filter(explode('/', $categoryPath));
-
-        // ルートカテゴリIDを取得
-        $rootCategoryId = DocumentCategory::getIdFromPath($categoryPath);
-
-        if (! $rootCategoryId) {
-            return ['categories' => [], 'documents' => []];
+        if (empty($categoryPath)) {
+            return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
         }
 
-        // 削除対象のカテゴリとその子カテゴリを再帰的に取得
-        $categories = $this->getCategoriesRecursively($rootCategoryId);
+        // デフォルトカテゴリ（uncategorized）から開始
+        $parentId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
+        $currentParentCategoryId = null;
 
-        // カテゴリに属するドキュメントを取得
-        $categoryIds = collect($categories)->pluck('id')->toArray();
-        $documents = DocumentVersion::whereIn('category_id', $categoryIds)->get();
+        foreach ($categoryPath as $slug) {
+            $category = DocumentCategory::where('slug', $slug)
+                ->where('parent_id', $parentId)
+                ->first();
 
-        return [
-            'categories' => $categories,
-            'documents' => $documents,
-        ];
-    }
-
-    /**
-     * カテゴリを再帰的に取得
-     */
-    private function getCategoriesRecursively(int $categoryId): array
-    {
-        $categories = [];
-
-        // 現在のカテゴリを取得
-        $category = DocumentCategory::find($categoryId);
-        if ($category) {
-            $categories[] = $category;
-
-            // 子カテゴリを再帰的に取得
-            $childCategories = DocumentCategory::where('parent_id', $categoryId)->get();
-            foreach ($childCategories as $childCategory) {
-                $categories = array_merge($categories, $this->getCategoriesRecursively($childCategory->id));
+            if (! $category) {
+                return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
             }
+
+            $currentParentCategoryId = $category->id;
+            $parentId = $category->id;
         }
 
-        return $categories;
+        return $currentParentCategoryId;
     }
 }

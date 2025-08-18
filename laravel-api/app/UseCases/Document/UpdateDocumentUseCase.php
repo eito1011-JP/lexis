@@ -7,23 +7,21 @@ use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSessionDiff;
-use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use Illuminate\Support\Facades\Log;
 
-class CreateDocumentUseCase
+class UpdateDocumentUseCase
 {
     public function __construct(
         private DocumentService $documentService,
         private UserBranchService $userBranchService,
-        private PullRequestEditSessionService $pullRequestEditSessionService,
-        private DocumentCategoryService $documentCategoryService
+        private PullRequestEditSessionService $pullRequestEditSessionService
     ) {}
 
     /**
-     * ドキュメントを作成
+     * ドキュメントを更新
      *
      * @param  array  $requestData  リクエストデータ
      * @param  object  $user  認証済みユーザー
@@ -32,13 +30,27 @@ class CreateDocumentUseCase
     public function execute(array $requestData, object $user): array
     {
         try {
-            // ユーザーブランチIDを取得または作成
+            // 編集前のdocumentのIdからexistingDocumentを取得
+            $existingDocument = DocumentVersion::find($requestData['current_document_id']);
+
+            if (! $existingDocument) {
+                return [
+                    'success' => false,
+                    'error' => '編集対象のドキュメントが見つかりません',
+                ];
+            }
+
+            // パスからslugとcategoryPathを取得（file_order処理用）
+            $pathInfo = $this->documentService->parseCategoryPathWithSlug($requestData['category_path_with_slug']);
+            $categoryId = $pathInfo['categoryId'];
+
+            // アクティブブランチを取得
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
                 $requestData['edit_pull_request_id'] ?? null
             );
 
-            // プルリクエスト編集セッションIDを取得
+            // 編集セッションIDを取得
             $pullRequestEditSessionId = null;
             if (! empty($requestData['edit_pull_request_id']) && ! empty($requestData['pull_request_edit_token'])) {
                 $pullRequestEditSessionId = $this->pullRequestEditSessionService->getPullRequestEditSessionId(
@@ -48,44 +60,38 @@ class CreateDocumentUseCase
                 );
             }
 
-            // カテゴリパスからカテゴリIDを取得
-            $categoryPath = array_filter(explode('/', $requestData['category_path'] ?? ''));
-            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
-
-            // file_orderの重複処理・自動採番
-            $correctedFileOrder = $this->documentService->normalizeFileOrder(
-                $requestData['file_order'] ? (int) $requestData['file_order'] : null,
-                $categoryId ?? null
+            // file_orderの処理
+            $categoryId = $existingDocument->category_id;
+            $finalFileOrder = $this->documentService->processFileOrder(
+                $requestData['file_order'],
+                $categoryId,
+                $existingDocument->file_order,
+                $userBranchId,
+                $existingDocument->id
             );
 
-            // ファイルパスの生成
-            $filePath = $this->documentService->generateDocumentFilePath(
-                $requestData['category'] ?? '',
-                $requestData['slug'] ?? ''
-            );
-
-            // ドキュメントを作成
-            $document = DocumentVersion::create([
+            // 既存ドキュメントは論理削除せず、新しいドキュメントバージョンを作成
+            $newDocumentVersion = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                'category_id' => $categoryId,
-                'sidebar_label' => $requestData['sidebar_label'] ?? '',
-                'slug' => $requestData['slug'] ?? '',
-                'content' => $requestData['content'] ?? '',
-                'is_public' => $requestData['is_public'] ?? false,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId ?? null,
+                'file_path' => $existingDocument->file_path,
                 'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
+                'content' => $requestData['content'],
+                'slug' => $requestData['slug'],
+                'sidebar_label' => $requestData['sidebar_label'],
+                'file_order' => $finalFileOrder,
                 'last_edited_by' => $user->email,
-                'file_order' => $correctedFileOrder,
-                'file_path' => $filePath,
+                'is_public' => $requestData['is_public'],
+                'category_id' => $categoryId,
             ]);
 
-            // EditStartVersionを作成
+            // 編集開始バージョンを記録
             EditStartVersion::create([
                 'user_branch_id' => $userBranchId,
                 'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                'original_version_id' => $document->id,
-                'current_version_id' => $document->id,
+                'original_version_id' => $existingDocument->id,
+                'current_version_id' => $newDocumentVersion->id,
             ]);
 
             // プルリクエスト編集セッション差分の処理
@@ -94,29 +100,30 @@ class CreateDocumentUseCase
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
                         'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                        'current_version_id' => $document->id,
+                        'original_version_id' => $existingDocument->id,
                     ],
                     [
-                        'current_version_id' => $document->id,
-                        'diff_type' => 'created',
+                        'current_version_id' => $newDocumentVersion->id,
+                        'diff_type' => 'updated',
                     ]
                 );
             }
 
             return [
                 'success' => true,
-                'document' => $document,
+                'document' => $newDocumentVersion,
             ];
 
         } catch (\Exception $e) {
-            Log::error('CreateDocumentUseCase: エラー', [
+            Log::error('UpdateDocumentUseCase: エラー', [
                 'error' => $e->getMessage(),
                 'user_id' => $user->id ?? null,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
-                'error' => 'ドキュメントの作成に失敗しました',
+                'error' => 'ドキュメントの更新に失敗しました',
             ];
         }
     }

@@ -3,10 +3,15 @@
 namespace App\Services;
 
 use App\Constants\DocumentCategoryConstants;
+use App\Enums\DocumentStatus;
 use App\Models\DocumentVersion;
 
 class DocumentService
 {
+    public function __construct(
+        private DocumentCategoryService $documentCategoryService
+    ) {}
+
     /**
      * file_orderの重複処理・自動採番を行う
      *
@@ -47,5 +52,113 @@ class DocumentService
         $categoryPath = $category ? trim($category, '/') : '';
 
         return $categoryPath ? "{$categoryPath}/{$slug}.md" : "{$slug}.md";
+    }
+
+    /**
+     * カテゴリパスからslugとcategoryPathを分離
+     *
+     * @param  string  $categoryPathWithSlug  カテゴリパスとスラッグを含む文字列
+     * @return array{slug: string, categoryPath: array, categoryId: int|null}
+     */
+    public function parseCategoryPathWithSlug(string $categoryPathWithSlug): array
+    {
+        $pathParts = explode('/', $categoryPathWithSlug);
+        $slug = array_pop($pathParts);
+        $categoryPath = $pathParts;
+        $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
+
+        return [
+            'slug' => $slug,
+            'categoryPath' => $categoryPath,
+            'categoryId' => $categoryId,
+        ];
+    }
+
+    /**
+     * file_orderの処理と他のドキュメントの順序調整
+     *
+     * @param  mixed  $fileOrder  リクエストされたfile_order
+     * @param  int  $categoryId  カテゴリID
+     * @param  int  $oldFileOrder  既存のfile_order
+     * @param  int  $userBranchId  ユーザーブランチID
+     * @param  int  $excludeId  除外するドキュメントID
+     * @return int 最終的なfile_order
+     */
+    public function processFileOrder($fileOrder, int $categoryId, int $oldFileOrder, int $userBranchId, int $excludeId): int
+    {
+        // file_orderが空の場合は最大値+1を設定
+        if (empty($fileOrder) && $fileOrder !== 0) {
+            $maxOrder = DocumentVersion::where('category_id', $categoryId)
+                ->where('status', DocumentStatus::MERGED->value)
+                ->max('file_order');
+
+            return ($maxOrder ?? 0) + 1;
+        }
+
+        $newFileOrder = (int) $fileOrder;
+
+        // file_orderが変更された場合のみ他のドキュメントを調整
+        if ($newFileOrder !== $oldFileOrder) {
+            $this->adjustOtherDocumentsOrder($categoryId, $newFileOrder, $oldFileOrder, $userBranchId, $excludeId);
+        }
+
+        return $newFileOrder;
+    }
+
+    /**
+     * 他のドキュメントの順序を調整
+     *
+     * @param  int  $categoryId  カテゴリID
+     * @param  int  $newFileOrder  新しいfile_order
+     * @param  int  $oldFileOrder  古いfile_order
+     * @param  int  $userBranchId  ユーザーブランチID
+     * @param  int  $excludeId  除外するドキュメントID
+     */
+    private function adjustOtherDocumentsOrder(int $categoryId, int $newFileOrder, int $oldFileOrder, int $userBranchId, int $excludeId): void
+    {
+        $documentsToShift = DocumentVersion::where('category_id', $categoryId)
+            ->where(function ($query) use ($userBranchId) {
+                $query->where('status', DocumentStatus::MERGED->value)
+                    ->orWhere('user_branch_id', $userBranchId);
+            })
+            ->where('id', '!=', $excludeId);
+
+        if ($newFileOrder < $oldFileOrder) {
+            // 上に移動する場合：新しい位置以上、元の位置未満の範囲のレコードを+1
+            $documentsToShift = $documentsToShift
+                ->where('file_order', '>=', $newFileOrder)
+                ->where('file_order', '<', $oldFileOrder)
+                ->orderBy('file_order', 'asc');
+        } else {
+            // 下に移動する場合：元の位置超過、新しい位置以下の範囲のレコードを-1
+            $documentsToShift = $documentsToShift
+                ->where('file_order', '>', $oldFileOrder)
+                ->where('file_order', '<=', $newFileOrder)
+                ->orderBy('file_order', 'asc');
+        }
+
+        $documents = $documentsToShift->get();
+
+        foreach ($documents as $doc) {
+            $newOrder = $newFileOrder < $oldFileOrder ? $doc->file_order + 1 : $doc->file_order - 1;
+
+            // 新しいバージョンを作成して順序を更新
+            DocumentVersion::create([
+                'user_id' => $doc->user_id,
+                'user_branch_id' => $userBranchId,
+                'file_path' => $doc->file_path,
+                'status' => DocumentStatus::DRAFT->value,
+                'content' => $doc->content,
+                'slug' => $doc->slug,
+                'sidebar_label' => $doc->sidebar_label,
+                'file_order' => $newOrder,
+                'last_edited_by' => $doc->last_edited_by,
+                'is_deleted' => 0,
+                'is_public' => $doc->is_public,
+                'category_id' => $doc->category_id,
+            ]);
+
+            // 元のバージョンは論理削除しない
+        }
     }
 }

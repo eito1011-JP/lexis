@@ -15,10 +15,12 @@ use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSessionDiff;
+use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
+use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,18 +34,26 @@ class DocumentController extends ApiBaseController
 
     protected CreateDocumentUseCase $createDocumentUseCase;
 
+    protected UpdateDocumentUseCase $updateDocumentUseCase;
+
     protected PullRequestEditSessionService $pullRequestEditSessionService;
+
+    protected DocumentCategoryService $documentCategoryService;
 
     public function __construct(
         DocumentService $documentService,
         UserBranchService $userBranchService,
         CreateDocumentUseCase $createDocumentUseCase,
-        PullRequestEditSessionService $pullRequestEditSessionService
+        UpdateDocumentUseCase $updateDocumentUseCase,
+        PullRequestEditSessionService $pullRequestEditSessionService,
+        DocumentCategoryService $documentCategoryService
     ) {
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
         $this->createDocumentUseCase = $createDocumentUseCase;
+        $this->updateDocumentUseCase = $updateDocumentUseCase;
         $this->pullRequestEditSessionService = $pullRequestEditSessionService;
+        $this->documentCategoryService = $documentCategoryService;
     }
 
     /**
@@ -85,7 +95,7 @@ class DocumentController extends ApiBaseController
             $categoryPath = array_filter(explode('/', $request->category_path));
 
             // カテゴリIDを取得（パスから）
-            $parentId = DocumentCategory::getIdFromPath($categoryPath);
+            $parentId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             $userBranchId = $user->userBranches()->active()->orderBy('id', 'desc')->first()->id ?? null;
 
@@ -190,7 +200,7 @@ class DocumentController extends ApiBaseController
 
             // パスから所属しているカテゴリのcategoryIdを取得
             $categoryPath = explode('/', $request->category_path);
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             $document = DocumentVersion::where(function ($query) use ($categoryId, $request) {
                 $query->where('category_id', $categoryId)
@@ -220,180 +230,26 @@ class DocumentController extends ApiBaseController
      */
     public function updateDocument(UpdateDocumentRequest $request): JsonResponse
     {
-        DB::beginTransaction();
+        // 認証チェック
+        $user = $this->getUserFromSession();
 
-        try {
-            // 認証チェック
-            $user = $this->getUserFromSession();
-
-            if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
-            }
-            // 編集前のdocumentのIdからexistingDocumentを取得
-            $existingDocument = DocumentVersion::find($request->current_document_id);
-
-            if (! $existingDocument) {
-                return response()->json([
-                    'error' => '編集対象のドキュメントが見つかりません',
-                ], 404);
-            }
-
-            // パスからslugとcategoryPathを取得（file_order処理用）
-            $pathParts = explode('/', $request->category_path_with_slug);
-            $slug = array_pop($pathParts);
-            $categoryPath = $pathParts;
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
-
-            // アクティブブランチを取得
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-
-            // 編集セッションIDを取得
-            $pullRequestEditSessionId = null;
-            if ($request->edit_pull_request_id && $request->pull_request_edit_token) {
-                $pullRequestEditSessionId = $this->pullRequestEditSessionService->getPullRequestEditSessionId(
-                    $request->edit_pull_request_id,
-                    $request->pull_request_edit_token,
-                    $user->id
-                );
-            }
-
-            // file_orderの処理
-            $categoryId = $existingDocument->category_id;
-            $finalFileOrder = $this->processFileOrder($request->file_order, $categoryId, $existingDocument->file_order, $userBranchId, $existingDocument->id);
-
-            // 既存ドキュメントは論理削除せず、新しいドキュメントバージョンを作成
-            $newDocumentVersion = DocumentVersion::create([
-                'user_id' => $user->id,
-                'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId ?? null,
-                'file_path' => $existingDocument->file_path,
-                'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
-                'content' => $request->content,
-                'slug' => $request->slug,
-                'sidebar_label' => $request->sidebar_label,
-                'file_order' => $finalFileOrder,
-                'last_edited_by' => $user->email,
-                'is_public' => $request->is_public,
-                'category_id' => $categoryId,
-            ]);
-
-            // 編集開始バージョンを記録
-            EditStartVersion::create([
-                'user_branch_id' => $userBranchId,
-                'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                'original_version_id' => $existingDocument->id,
-                'current_version_id' => $newDocumentVersion->id,
-            ]);
-
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                        'original_version_id' => $existingDocument->id,
-                    ],
-                    [
-                        'current_version_id' => $newDocumentVersion->id,
-                        'diff_type' => 'updated',
-                    ]
-                );
-            }
-
-            DB::commit();
-
+        if (! $user) {
             return response()->json([
-                'updated_document' => $newDocumentVersion,
-            ]);
+                'error' => '認証が必要です',
+            ], 401);
+        }
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('ドキュメント更新エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-            ]);
+        $result = $this->updateDocumentUseCase->execute($request->validated(), $user);
 
+        if (! $result['success']) {
             return response()->json([
-                'error' => 'ドキュメントの更新に失敗しました',
-            ], 500);
-        }
-    }
-
-    /**
-     * file_orderの処理と他のドキュメントの順序調整
-     */
-    private function processFileOrder($file_order, int $categoryId, int $old_file_order, int $userBranchId, int $excludeId): int
-    {
-        // file_orderが空の場合は最大値+1を設定
-        if (empty($file_order) && $file_order !== 0) {
-            $maxOrder = DocumentVersion::where('category_id', $categoryId)
-                ->where('status', DocumentStatus::MERGED->value)
-                ->max('file_order');
-
-            return ($maxOrder ?? 0) + 1;
+                'error' => $result['error'],
+            ], 404);
         }
 
-        $new_file_order = (int) $file_order;
-
-        // file_orderが変更された場合のみ他のドキュメントを調整
-        if ($new_file_order !== $old_file_order) {
-            $this->adjustOtherDocumentsOrder($categoryId, $new_file_order, $old_file_order, $userBranchId, $excludeId);
-        }
-
-        return $new_file_order;
-    }
-
-    /**
-     * 他のドキュメントの順序を調整
-     */
-    private function adjustOtherDocumentsOrder(int $categoryId, int $new_file_order, int $old_file_order, int $userBranchId, int $excludeId): void
-    {
-        $documentsToShift = DocumentVersion::where('category_id', $categoryId)
-            ->where(function ($query) use ($userBranchId) {
-                $query->where('status', DocumentStatus::MERGED->value)
-                    ->orWhere('user_branch_id', $userBranchId);
-            })
-            ->where('id', '!=', $excludeId);
-
-        if ($new_file_order < $old_file_order) {
-            // 上に移動する場合：新しい位置以上、元の位置未満の範囲のレコードを+1
-            $documentsToShift = $documentsToShift
-                ->where('file_order', '>=', $new_file_order)
-                ->where('file_order', '<', $old_file_order)
-                ->orderBy('file_order', 'asc');
-        } else {
-            // 下に移動する場合：元の位置超過、新しい位置以下の範囲のレコードを-1
-            $documentsToShift = $documentsToShift
-                ->where('file_order', '>', $old_file_order)
-                ->where('file_order', '<=', $new_file_order)
-                ->orderBy('file_order', 'asc');
-        }
-
-        $documents = $documentsToShift->get();
-
-        foreach ($documents as $doc) {
-            $newOrder = $new_file_order < $old_file_order ? $doc->file_order + 1 : $doc->file_order - 1;
-
-            // 新しいバージョンを作成して順序を更新
-            DocumentVersion::create([
-                'user_id' => $doc->user_id,
-                'user_branch_id' => $userBranchId,
-                'file_path' => $doc->file_path,
-                'status' => DocumentStatus::DRAFT->value,
-                'content' => $doc->content,
-                'slug' => $doc->slug,
-                'sidebar_label' => $doc->sidebar_label,
-                'file_order' => $newOrder,
-                'last_edited_by' => $doc->last_edited_by,
-                'is_deleted' => 0,
-                'is_public' => $doc->is_public,
-                'category_id' => $doc->category_id,
-            ]);
-
-            // 元のバージョンは論理削除しない
-        }
+        return response()->json([
+            'updated_document' => $result['document'],
+        ]);
     }
 
     /**
@@ -425,7 +281,7 @@ class DocumentController extends ApiBaseController
             $slug = array_pop($pathParts);
             $categoryPath = $pathParts;
 
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
+            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             // 3. 削除対象のドキュメントを取得
             $existingDocument = DocumentVersion::where('category_id', $categoryId)

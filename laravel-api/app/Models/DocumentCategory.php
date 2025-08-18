@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\FixRequestStatus;
 use App\Traits\SoftDeletes;
@@ -33,37 +32,6 @@ class DocumentCategory extends Model
         'position' => 'integer',
         'is_deleted' => 'boolean',
     ];
-
-    /**
-     * カテゴリパスからparentとなるcategory idを再帰的に取得
-     *
-     * @param  array  $categoryPath
-     *                               parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは['parent', 'child', 'grandchild']のような配列
-     */
-    public static function getIdFromPath(array $categoryPath): ?int
-    {
-        if (empty($categoryPath)) {
-            return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-        }
-
-        // デフォルトカテゴリ（uncategorized）から開始
-        $parentId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-        $currentParentCategoryId = null;
-
-        foreach ($categoryPath as $slug) {
-            $category = self::where('slug', $slug)
-                ->where('parent_id', $parentId)
-                ->first();
-
-            if (! $category) {
-                return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-            }
-
-            $currentParentCategoryId = $category->id;
-        }
-
-        return $currentParentCategoryId;
-    }
 
     /**
      * サブカテゴリを取得（ブランチ別）
