@@ -2,8 +2,15 @@ import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/layout';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { fetchConflictDiffs, type ConflictFileDiff } from '@/api/pullRequest';
+import {
+  fetchConflictDiffs,
+  handleFixConflictTemporary,
+  type ConflictFileDiff,
+  type FixConflictTemporaryRequestItem,
+  type FixConflictTemporaryResponse,
+} from '@/api/pullRequest';
 import MarkdownEditor from '@/components/admin/editor/SlateEditor';
+import { Toast } from '@/components/admin/Toast';
 
 // front-matterを除去して本文のみを取得する関数
 const extractBodyContent = (content: string | null): string => {
@@ -583,6 +590,10 @@ const ConflictResolutionPage: React.FC = () => {
     >
   >({});
 
+  const [checking, setChecking] = useState(false);
+  const [checkedFiles, setCheckedFiles] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
   useEffect(() => {
     let mounted = true;
     const run = async () => {
@@ -639,14 +650,23 @@ const ConflictResolutionPage: React.FC = () => {
             {leftList.length === 0 && (
               <div className="text-gray-400 text-sm">対象ファイルがありません</div>
             )}
-            {leftListDisplay.map((name, index) => (
-              <div
-                key={files[index].filename}
-                className="text-xs px-3 py-2 rounded border border-gray-700 text-white bg-[#171717]"
-              >
-                {name}
-              </div>
-            ))}
+            {leftListDisplay.map((name, index) => {
+              const filename = files[index].filename;
+              const checked = checkedFiles[filename];
+              return (
+                <div
+                  key={filename}
+                  className="text-xs px-3 py-2 rounded border border-gray-700 text-white bg-[#171717] flex items-center justify-between"
+                >
+                  <span>{name}</span>
+                  {checked && (
+                    <span className="ml-2 text-green-400" title="修正済み">
+                      ✓
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -889,7 +909,7 @@ const ConflictResolutionPage: React.FC = () => {
                       <div>
                         <div className="grid gap-4">
                           <div>
-                            <label className="block mb-2 font-bold text-sm">Slug</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">Slug</label>
                             <input
                               type="text"
                               value={currentDoc.slug}
@@ -904,7 +924,7 @@ const ConflictResolutionPage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block mb-2 font-bold text-sm">表示順序</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">表示順序</label>
                             <input
                               type="number"
                               value={currentDoc.fileOrder}
@@ -919,7 +939,7 @@ const ConflictResolutionPage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block mb-2 font-bold text-sm">タイトル</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">タイトル</label>
                             <input
                               type="text"
                               value={currentDoc.title}
@@ -934,7 +954,7 @@ const ConflictResolutionPage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block mb-2 font-bold text-sm">公開設定</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">公開設定</label>
                             <select
                               value={currentDoc.publicOption}
                               onChange={e =>
@@ -951,7 +971,7 @@ const ConflictResolutionPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="text-gray-400 text-xs">本文（編集用）</div>
+                      <div className="text-gray-400 text-xs">本文</div>
                       <MarkdownEditor
                         initialContent={currentContent}
                         onChange={() => {}}
@@ -998,17 +1018,73 @@ const ConflictResolutionPage: React.FC = () => {
               </div>
 
               <div className="flex justify-center">
-                <button
-                  className="px-6 py-2 bg-[#3832A5] hover:bg-blue-600 text-white rounded-md"
-                  onClick={() => navigate(`/admin/change-suggestions/${id}`)}
-                >
-                  保存
-                </button>
+                {files.length > 0 && files.every(f => checkedFiles[f.filename]) ? (
+                  <button
+                    className="px-6 py-2 bg-green-700 hover:bg-green-600 text-white rounded-md"
+                    onClick={() => navigate(`/admin/change-suggestions/${id}`)}
+                  >
+                    修正を完了する
+                  </button>
+                ) : (
+                  <button
+                    className="px-6 py-2 bg-[#3832A5] hover:bg-blue-600 text-white rounded-md disabled:opacity-60"
+                    disabled={checking}
+                    onClick={async () => {
+                      if (!id) return;
+                      try {
+                        setChecking(true);
+                        const target = files[0];
+                        if (!target) return;
+                        const body = extractBodyContent(
+                          editedContents[target.filename] ??
+                            buildConflictMarkedContent(
+                              extractBodyContent(target.baseText),
+                              extractBodyContent(target.headText)
+                            )
+                        );
+                        const item: FixConflictTemporaryRequestItem = {
+                          filename: target.filename,
+                          body,
+                        };
+                        const res: FixConflictTemporaryResponse = await handleFixConflictTemporary(id, item);
+                        const next: Record<string, boolean> = {};
+                        next[target.filename] = !res.is_conflict;
+                        setCheckedFiles(next);
+                        setError(null);
+                        
+                        // コンフリクトが発生した場合、トーストエラー通知を表示
+                        if (res.is_conflict) {
+                          setToast({ message: '競合している部分があります。修正してください。', type: 'error' });
+                        } else {
+                          setToast({ message: '保存が完了しました。', type: 'success' });
+                        }
+                      } catch (e: any) {
+                        const apiErr: any = e;
+                        const errorMessage = apiErr?.error || 'コンフリクトを修正してください';
+                        setError(errorMessage);
+                        setToast({ message: errorMessage, type: 'error' });
+                      } finally {
+                        setChecking(false);
+                      }
+                    }}
+                  >
+                    保存
+                  </button>
+                )}
               </div>
             </div>
           )}
         </div>
       </div>
+      
+      {/* Toast通知 */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </AdminLayout>
   );
 };

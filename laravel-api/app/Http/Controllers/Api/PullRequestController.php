@@ -31,7 +31,9 @@ use App\Services\DocumentDiffService;
 use App\Services\GitService;
 use App\Services\MdFileService;
 use App\Services\PullRequestConflictService;
+use App\UseCases\PullRequest\IsConflictResolvedUseCase;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -47,18 +49,22 @@ class PullRequestController extends ApiBaseController
 
     protected PullRequestConflictService $pullRequestConflictService;
 
+    protected IsConflictResolvedUseCase $isConflictResolvedUseCase;
+
     public function __construct(
         DocumentDiffService $documentDiffService,
         GitService $gitService,
         MdFileService $mdFileService,
         CategoryFolderService $categoryFolderService,
-        PullRequestConflictService $pullRequestConflictService
+        PullRequestConflictService $pullRequestConflictService,
+        IsConflictResolvedUseCase $isConflictResolvedUseCase
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->gitService = $gitService;
         $this->mdFileService = $mdFileService;
         $this->categoryFolderService = $categoryFolderService;
         $this->pullRequestConflictService = $pullRequestConflictService;
+        $this->isConflictResolvedUseCase = $isConflictResolvedUseCase;
     }
 
     /**
@@ -807,6 +813,42 @@ class PullRequestController extends ApiBaseController
             ]);
 
             return response()->json(['error' => 'コンフリクト差分の取得に失敗しました'], 500);
+        }
+    }
+
+    /**
+     * フロントのコンフリクト修正一時検証
+     * - 本文(編集用)テキストにコンフリクトマーカーが含まれていないかを確認
+     * - 含まれていなければ各ファイルの状態をOKとして返す
+     * - 含まれていればエラーを返す
+     */
+    public function isConflictResolved(Request $request, int $id): JsonResponse
+    {
+        try {
+            $user = $this->getUserFromSession();
+            if (! $user) {
+                return response()->json(['error' => '認証されていません'], 401);
+            }
+
+            // 単一のファイルオブジェクトのみを処理
+            $file = $request->input('file');
+            if (!is_array($file)) {
+                return response()->json(['error' => '不正なリクエスト形式です'], 422);
+            }
+
+            // UseCaseクラスのメソッドを呼び出し
+            $result = $this->isConflictResolvedUseCase->execute($file);
+
+            return response()->json($result);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            Log::error('handleFixConflictTemporary エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+                'pull_request_id' => $id,
+            ]);
+            return response()->json(['error' => '一時検証に失敗しました'], 500);
         }
     }
 }

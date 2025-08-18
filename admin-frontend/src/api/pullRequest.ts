@@ -246,6 +246,15 @@ export interface ConflictDiffResponse {
   files: ConflictFileDiff[];
 }
 
+export interface FixConflictTemporaryRequestItem {
+  filename: string;
+  body: string; // 編集用本文（front-matter除去後）を想定
+}
+
+export interface FixConflictTemporaryResponse {
+  is_conflict: boolean;
+}
+
 /**
  * コンフリクト差分を取得
  */
@@ -260,5 +269,27 @@ export const fetchConflictDiffs = async (
   } catch (error: any) {
     console.error('コンフリクト差分取得エラー:', error);
     throw new Error(error?.response?.data?.error || 'コンフリクト差分の取得に失敗しました');
+  }
+};
+
+/**
+ * コンフリクト修正一時検証
+ */
+export const handleFixConflictTemporary = async (
+  pullRequestId: string | number,
+  item: FixConflictTemporaryRequestItem
+): Promise<FixConflictTemporaryResponse> => {
+  try {
+    const response = await apiClient.post(
+      `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${pullRequestId}/conflict/temporary`,
+      { file: item }
+    );
+
+    return response as FixConflictTemporaryResponse;
+  } catch (error: any) {
+    if (error?.response?.data) {
+      throw error.response.data;
+    }
+    throw { error: '一時検証に失敗しました' };
   }
 };
