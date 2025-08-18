@@ -35,4 +35,17 @@ class DocumentService
             return $maxOrder + 1;
         }
     }
+
+    /**
+     * ドキュメントファイルパスを生成
+     *
+     * @param  string  $category  カテゴリ
+     * @param  string  $slug  スラッグ
+     */
+    public function generateDocumentFilePath(string $category, string $slug): string
+    {
+        $categoryPath = $category ? trim($category, '/') : '';
+
+        return $categoryPath ? "{$categoryPath}/{$slug}.md" : "{$slug}.md";
+    }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Constants\DocumentPathConstants;
 use App\Consts\Flag;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
@@ -15,10 +14,11 @@ use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequest;
-use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentService;
+use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
+use App\UseCases\Document\CreateDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,10 +30,20 @@ class DocumentController extends ApiBaseController
 
     protected UserBranchService $userBranchService;
 
-    public function __construct(DocumentService $documentService, UserBranchService $userBranchService)
-    {
+    protected CreateDocumentUseCase $createDocumentUseCase;
+
+    protected PullRequestEditSessionService $pullRequestEditSessionService;
+
+    public function __construct(
+        DocumentService $documentService,
+        UserBranchService $userBranchService,
+        CreateDocumentUseCase $createDocumentUseCase,
+        PullRequestEditSessionService $pullRequestEditSessionService
+    ) {
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
+        $this->createDocumentUseCase = $createDocumentUseCase;
+        $this->pullRequestEditSessionService = $pullRequestEditSessionService;
     }
 
     /**
@@ -136,102 +146,31 @@ class DocumentController extends ApiBaseController
     }
 
     /**
-     * ドキュメントファイルパスを生成
-     *
-     * @param  string|null  $category  カテゴリ名
-     * @param  string  $slug  ドキュメントのスラッグ
-     * @return string 生成されたファイルパス
-     */
-    private function generateDocumentFilePath(?string $category, string $slug): string
-    {
-        $targetDir = $category
-            ? base_path(DocumentPathConstants::DOCS_BASE_PATH.'/'.$category)
-            : base_path(DocumentPathConstants::DOCS_BASE_PATH);
-
-        return $targetDir.'/'.$slug.DocumentPathConstants::DOCUMENT_FILE_EXTENSION;
-    }
-
-    /**
      * ドキュメントを作成
      */
     public function createDocument(CreateDocumentRequest $request): JsonResponse
     {
-        try {
-            // 認証チェック
-            $user = $this->getUserFromSession();
+        // 認証チェック
+        $user = $this->getUserFromSession();
 
-            if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
-            }
-            Log::info('request', $request->all());
-
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-
-            // 編集セッションIDを取得
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
-
-            $categoryPath = array_filter(explode('/', $request->category_path));
-            $categoryId = DocumentCategory::getIdFromPath($categoryPath);
-
-            // file_orderの重複処理・自動採番
-            $correctedFileOrder = $this->documentService->normalizeFileOrder(
-                $request->file_order ? (int) $request->file_order : null,
-                $categoryId ?? null
-            );
-
-            // ファイルパスの生成
-            $filePath = $this->generateDocumentFilePath($request->category, $request->slug);
-
-            $document = DocumentVersion::create([
-                'user_id' => $user->id,
-                'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                'category_id' => $categoryId,
-                'sidebar_label' => $request->sidebar_label,
-                'slug' => $request->slug,
-                'content' => $request->content,
-                'is_public' => $request->is_public,
-                'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
-                'last_edited_by' => $user->email,
-                'file_order' => $correctedFileOrder,
-                'file_path' => $filePath,
-            ]);
-
-            EditStartVersion::create([
-                'user_branch_id' => $userBranchId,
-                'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                'original_version_id' => $document->id,
-                'current_version_id' => $document->id,
-            ]);
-
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                        'current_version_id' => $document->id,
-                    ],
-                    [
-                        'current_version_id' => $document->id,
-                        'diff_type' => 'created',
-                    ]
-                );
-            }
-
+        if (! $user) {
             return response()->json([
-                'document' => $document,
-            ]);
+                'error' => '認証が必要です',
+            ], 401);
+        }
 
-        } catch (\Exception $e) {
-            Log::error($e);
+        // UseCaseを実行
+        $result = $this->createDocumentUseCase->execute($request->all(), $user);
 
+        if (! $result['success']) {
             return response()->json([
-                'error' => 'ドキュメントの作成に失敗しました',
+                'error' => $result['error'],
             ], 500);
         }
+
+        return response()->json([
+            'document' => $result['document'],
+        ]);
     }
 
     /**
@@ -311,7 +250,14 @@ class DocumentController extends ApiBaseController
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
             // 編集セッションIDを取得
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
+            $pullRequestEditSessionId = null;
+            if ($request->edit_pull_request_id && $request->pull_request_edit_token) {
+                $pullRequestEditSessionId = $this->pullRequestEditSessionService->getPullRequestEditSessionId(
+                    $request->edit_pull_request_id,
+                    $request->pull_request_edit_token,
+                    $user->id
+                );
+            }
 
             // file_orderの処理
             $categoryId = $existingDocument->category_id;
@@ -321,7 +267,7 @@ class DocumentController extends ApiBaseController
             $newDocumentVersion = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId ?? null,
                 'file_path' => $existingDocument->file_path,
                 'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
                 'content' => $request->content,
@@ -469,7 +415,11 @@ class DocumentController extends ApiBaseController
 
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
 
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
+            $pullRequestEditSessionId = $this->pullRequestEditSessionService->getPullRequestEditSessionId(
+                $request->edit_pull_request_id,
+                $request->pull_request_edit_token,
+                $user->id
+            );
 
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));
             $slug = array_pop($pathParts);
@@ -608,24 +558,5 @@ class DocumentController extends ApiBaseController
                 'error' => 'カテゴリコンテンツの取得に失敗しました',
             ], 500);
         }
-    }
-
-    /**
-     * プルリクエスト編集セッションIDを取得する
-     */
-    private function getPullRequestEditSessionId($user, ?int $editPullRequestId, ?string $pullRequestEditToken): ?int
-    {
-        if (! $editPullRequestId) {
-            return null;
-        }
-
-        // 指定されたプルリクエストで現在進行中の編集セッションを取得
-        $editSession = PullRequestEditSession::where('pull_request_id', $editPullRequestId)
-            ->where('user_id', $user->id)
-            ->whereNull('finished_at')
-            ->where('token', $pullRequestEditToken)
-            ->first();
-
-        return $editSession?->id;
     }
 }

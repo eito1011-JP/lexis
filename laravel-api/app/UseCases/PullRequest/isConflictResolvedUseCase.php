@@ -12,14 +12,15 @@ class IsConflictResolvedUseCase
      * - 含まれていなければ各ファイルの状態をOKとして返す
      * - 含まれていればエラーを返す
      *
-     * @param array $file 検証対象のファイルオブジェクト
+     * @param  array  $file  検証対象のファイルオブジェクト
      * @return array{is_conflict: bool}
+     *
      * @throws \InvalidArgumentException
      */
     public function execute(array $file): array
     {
         Log::info('IsConflictResolvedUseCase: 開始', [
-            'filename' => $file['filename'] ?? 'unknown'
+            'filename' => $file['filename'] ?? 'unknown',
         ]);
 
         $markerPatterns = [
@@ -29,9 +30,9 @@ class IsConflictResolvedUseCase
         ];
 
         $filename = $file['filename'] ?? null;
-        $body = (string)($file['body'] ?? '');
-        
-        if (!$filename) {
+        $body = (string) ($file['body'] ?? '');
+
+        if (! $filename) {
             throw new \InvalidArgumentException('filename は必須です');
         }
 
@@ -41,8 +42,9 @@ class IsConflictResolvedUseCase
                 $hasMarker = true;
                 Log::info('HandleFixConflictTemporaryUseCase: コンフリクトマーカーを検出', [
                     'filename' => $filename,
-                    'pattern' => $pattern
+                    'pattern' => $pattern,
                 ]);
+
                 break;
             }
         }
@@ -53,7 +55,7 @@ class IsConflictResolvedUseCase
 
         Log::info('IsConflictResolvedUseCase: 完了', [
             'filename' => $filename,
-            'result' => $result
+            'result' => $result,
         ]);
 
         return $result;

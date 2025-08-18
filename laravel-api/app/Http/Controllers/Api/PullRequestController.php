@@ -832,7 +832,7 @@ class PullRequestController extends ApiBaseController
 
             // 単一のファイルオブジェクトのみを処理
             $file = $request->input('file');
-            if (!is_array($file)) {
+            if (! is_array($file)) {
                 return response()->json(['error' => '不正なリクエスト形式です'], 422);
             }
 
