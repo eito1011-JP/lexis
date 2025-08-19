@@ -2,12 +2,9 @@
 
 namespace App\Models;
 
-use App\Enums\DocumentStatus;
-use App\Enums\FixRequestStatus;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 
 class DocumentVersion extends Model
 {
@@ -40,64 +37,6 @@ class DocumentVersion extends Model
         'file_order' => 'integer',
         'is_deleted' => 'boolean',
     ];
-
-    /**
-     * カテゴリのドキュメントを取得（ブランチ別）
-     */
-    public static function getDocumentsByCategoryId(int $categoryId, ?int $userBranchId = null, ?int $editPullRequestId = null): \Illuminate\Database\Eloquent\Collection
-    {
-        return self::select('id', 'user_branch_id', 'category_id', 'sidebar_label', 'slug', 'is_public', 'status', 'last_edited_by', 'file_order')
-            ->when($editPullRequestId, function ($query, $editPullRequestId) {
-                $query->orWhere(function ($subQ) use ($editPullRequestId) {
-                    $subQ->whereHas('userBranch.pullRequests', function ($prQ) use ($editPullRequestId) {
-                        $prQ->where('id', $editPullRequestId);
-                    })
-                        ->where('status', DocumentStatus::PUSHED->value);
-                });
-            })
-            ->when($userBranchId, function ($query, $userBranchId) use ($categoryId) {
-                // 指定されたブランチの下書きドキュメントを取得
-                $query->orWhere(function ($subQ) use ($userBranchId) {
-                    $subQ->where('status', DocumentStatus::DRAFT->value)
-                        ->where('user_branch_id', $userBranchId)
-                        ->whereNot('status', DocumentStatus::PUSHED->value);
-                });
-
-                // 指定されたブランチのmergedドキュメントを取得（EditStartVersionのoriginal_document_idと一致するものは除外）
-                $excludedOriginalDocumentIds = EditStartVersion::where('user_branch_id', $userBranchId)
-                    ->where('target_type', 'document')
-                    ->whereNotNull('original_version_id')
-                    ->pluck('original_version_id')
-                    ->toArray();
-
-                $query->orWhere(function ($subQ) use ($excludedOriginalDocumentIds) {
-                    $subQ->where('status', DocumentStatus::MERGED->value)
-                        ->whereNot('status', DocumentStatus::PUSHED->value);
-                    if (! empty($excludedOriginalDocumentIds)) {
-                        Log::info('excludedOriginalDocumentIds: '.json_encode($excludedOriginalDocumentIds));
-                        $subQ->whereNotIn('id', $excludedOriginalDocumentIds);
-                    }
-                });
-
-                $appliedFixRequestDocumentIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
-                    ->whereNotNull('document_version_id')
-                    ->whereHas('documentVersion', function ($q) use ($userBranchId, $categoryId) {
-                        $q->where('user_branch_id', $userBranchId)
-                            ->where('category_id', $categoryId);
-                    })
-                    ->pluck('document_version_id')
-                    ->toArray();
-
-                if (! empty($appliedFixRequestDocumentIds)) {
-                    $query->orWhereIn('id', $appliedFixRequestDocumentIds);
-                }
-            })
-            ->when(! $userBranchId, function ($query) {
-                $query->where('status', DocumentStatus::MERGED->value);
-            })
-            ->where('category_id', $categoryId)
-            ->get();
-    }
 
     /**
      * カテゴリとのリレーション

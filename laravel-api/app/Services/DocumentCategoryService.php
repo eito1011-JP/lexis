@@ -3,7 +3,11 @@
 namespace App\Services;
 
 use App\Constants\DocumentCategoryConstants;
+use App\Enums\DocumentCategoryStatus;
+use App\Enums\FixRequestStatus;
 use App\Models\DocumentCategory;
+use App\Models\FixRequest;
+use Illuminate\Database\Eloquent\Collection;
 
 class DocumentCategoryService
 {
@@ -63,5 +67,47 @@ class DocumentCategoryService
         }
 
         return $currentParentCategoryId;
+    }
+
+    /**
+     * サブカテゴリを取得（ブランチ別）
+     */
+    public function getSubCategories(
+        int $parentId, 
+        ?int $userBranchId = null, 
+        ?int $editPullRequestId = null
+    ): Collection {
+        $query = DocumentCategory::select('slug', 'sidebar_label', 'position')
+            ->where('parent_id', $parentId)
+            ->where(function ($q) use ($userBranchId) {
+                $q->where('status', 'merged')
+                    ->orWhere(function ($subQ) use ($userBranchId) {
+                        $subQ->where('user_branch_id', $userBranchId)
+                            ->where('status', DocumentCategoryStatus::DRAFT->value);
+                    });
+            })
+            ->when($editPullRequestId, function ($query, $editPullRequestId) {
+                return $query->orWhere(function ($subQ) use ($editPullRequestId) {
+                    $subQ->whereHas('userBranch.pullRequests', function ($prQ) use ($editPullRequestId) {
+                        $prQ->where('id', $editPullRequestId);
+                    })
+                        ->where('status', DocumentCategoryStatus::PUSHED->value);
+                });
+            })
+            ->when($userBranchId, function ($query, $userBranchId) {
+                $appliedFixRequestCategoryIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
+                    ->whereNotNull('document_category_id')
+                    ->whereHas('documentCategory', function ($q) use ($userBranchId) {
+                        $q->where('user_branch_id', $userBranchId);
+                    })
+                    ->pluck('document_category_id')
+                    ->toArray();
+
+                if (! empty($appliedFixRequestCategoryIds)) {
+                    $query->orWhereIn('id', $appliedFixRequestCategoryIds);
+                }
+            });
+
+        return $query->orderBy('position', 'asc')->get();
     }
 }

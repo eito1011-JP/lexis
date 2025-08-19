@@ -76,7 +76,7 @@ class UpdateDocumentUseCase
                 'user_branch_id' => $userBranchId,
                 'pull_request_edit_session_id' => $pullRequestEditSessionId ?? null,
                 'file_path' => $existingDocument->file_path,
-                'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
+                'status' => DocumentStatus::DRAFT->value,
                 'content' => $requestData['content'],
                 'slug' => $requestData['slug'],
                 'sidebar_label' => $requestData['sidebar_label'],

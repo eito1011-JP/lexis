@@ -74,7 +74,7 @@ class CreateDocumentUseCase
                 'slug' => $requestData['slug'] ?? '',
                 'content' => $requestData['content'] ?? '',
                 'is_public' => $requestData['is_public'] ?? false,
-                'status' => $pullRequestEditSessionId ? DocumentStatus::PUSHED->value : DocumentStatus::DRAFT->value,
+                'status' => DocumentStatus::DRAFT->value,
                 'last_edited_by' => $user->email,
                 'file_order' => $correctedFileOrder,
                 'file_path' => $filePath,

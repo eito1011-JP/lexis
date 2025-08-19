@@ -107,10 +107,10 @@ class DocumentController extends ApiBaseController
             }
 
             // サブカテゴリを取得
-            $subCategories = DocumentCategory::getSubCategories($parentId, $userBranchId, $request->edit_pull_request_id);
+            $subCategories = $this->documentCategoryService->getSubCategories($parentId, $userBranchId, $request->edit_pull_request_id);
 
             // ドキュメントを取得
-            $documents = DocumentVersion::getDocumentsByCategoryId($parentId, $userBranchId, $request->edit_pull_request_id);
+            $documents = $this->documentService->getDocumentsByCategoryId($parentId, $userBranchId, $request->edit_pull_request_id);
 
             // ソート処理
             $sortedDocuments = $documents
@@ -324,7 +324,7 @@ class DocumentController extends ApiBaseController
                 PullRequestEditSessionDiff::updateOrCreate(
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => 'documents',
+                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
                         'current_version_id' => $existingDocument->id,
                     ],
                     [
