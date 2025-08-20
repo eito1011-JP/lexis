@@ -32,5 +32,3 @@ class DocumentCategorySeeder extends Seeder
         );
     }
 }
-
-

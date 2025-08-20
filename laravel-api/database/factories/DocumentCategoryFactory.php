@@ -1,0 +1,61 @@
+<?php
+
+namespace Database\Factories;
+
+use App\Enums\DocumentCategoryStatus;
+use App\Models\DocumentCategory;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\DocumentCategory>
+ */
+class DocumentCategoryFactory extends Factory
+{
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = DocumentCategory::class;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        return [
+            'slug' => $this->faker->slug(),
+            'sidebar_label' => $this->faker->words(2, true),
+            'position' => $this->faker->numberBetween(1, 100),
+            'description' => $this->faker->sentence(),
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'parent_id' => null,
+            'user_branch_id' => null,
+            'is_deleted' => false,
+            'deleted_at' => null,
+        ];
+    }
+
+    /**
+     * Indicate that the category is a child category.
+     */
+    public function child(DocumentCategory $parent): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'parent_id' => $parent->id,
+            'parent_path' => $parent->parent_path ? $parent->parent_path.'/'.$parent->slug : $parent->slug,
+        ]);
+    }
+
+    /**
+     * Indicate that the category is draft.
+     */
+    public function draft(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'status' => DocumentCategoryStatus::DRAFT->value,
+        ]);
+    }
+}

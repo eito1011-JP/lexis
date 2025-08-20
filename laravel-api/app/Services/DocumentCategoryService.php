@@ -73,8 +73,8 @@ class DocumentCategoryService
      * サブカテゴリを取得（ブランチ別）
      */
     public function getSubCategories(
-        int $parentId, 
-        ?int $userBranchId = null, 
+        int $parentId,
+        ?int $userBranchId = null,
         ?int $editPullRequestId = null
     ): Collection {
         $query = DocumentCategory::select('slug', 'sidebar_label', 'position')
