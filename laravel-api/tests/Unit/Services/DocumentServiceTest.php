@@ -58,7 +58,7 @@ class DocumentServiceTest extends TestCase
         ];
     }
 
-    private function setupBasicTestEnvironmentWhenPrExistsBySameUser(User $user): array
+    private function createUserBranchAndPullRequest(User $user): array
     {
         $userBranch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
         $pullRequest = PullRequest::factory()->create(['user_branch_id' => $userBranch->id]);
@@ -73,7 +73,7 @@ class DocumentServiceTest extends TestCase
     /**
      * ドキュメントを作成する
      */
-    private function createDocument(array $env, int $categoryId = 1, ?PullRequestEditSession $editSession = null, string $slug = 'policy', string $status = DocumentStatus::DRAFT->value): DocumentVersion
+    private function createDocument(array $env, int $categoryId = 1, ?PullRequestEditSession $editSession = null, string $slug = 'policy', string $status = DocumentStatus::DRAFT->value, ?string $originalVersionId = null): DocumentVersion
     {
         $document = DocumentVersion::factory()->create([
             'user_id' => $env['user']->id,
@@ -87,8 +87,8 @@ class DocumentServiceTest extends TestCase
         EditStartVersion::factory()->create([
             'user_branch_id' => $env['userBranch']->id,
             'target_type' => 'document',
-            'original_version_id' => $document->id,
-            'current_version_id' => $document->id,
+            'original_version_id' => $originalVersionId ?? $document->id,
+            'current_version_id' => $document->id, // current_version_idは常に$document->id
         ]);
 
         return $document;
@@ -124,7 +124,7 @@ class DocumentServiceTest extends TestCase
     /**
      * 他のユーザーのドキュメントを作成する
      */
-    private function createOtherUserDocument(array $env, int $categoryId = 1, string $status = DocumentStatus::DRAFT->value, ?int $editSessionId = null, string $slug = 'policy', bool $isReEdit = false): DocumentVersion
+    private function createOtherUserDocument(array $env, int $categoryId = 1, string $status = DocumentStatus::DRAFT->value, ?int $editSessionId = null, string $slug = 'policy', bool $isReEdit = false, ?string $originalVersionId = null): DocumentVersion
     {
         if ($isReEdit) {
             $editSession = $this->createPullRequestEditSession($env);
@@ -143,7 +143,7 @@ class DocumentServiceTest extends TestCase
         EditStartVersion::factory()->create([
             'user_branch_id' => $env['userBranch']->id,
             'target_type' => 'document',
-            'original_version_id' => $otherUserDocument->id,
+            'original_version_id' => $originalVersionId ?? $otherUserDocument->id,
             'current_version_id' => $otherUserDocument->id,
         ]);
 
@@ -194,21 +194,6 @@ class DocumentServiceTest extends TestCase
             'env' => $env,
             'draft' => $draft,
         ];
-    }
-
-    /**
-     * ドラフトドキュメントを作成する（編集セッションなし）
-     */
-    private function createDraftDocumentWithoutSession(array $env, int $categoryId = 1, string $slug = 'policy'): DocumentVersion
-    {
-        return DocumentVersion::factory()->create([
-            'user_id' => $env['user']->id,
-            'user_branch_id' => $env['userBranch']->id,
-            'category_id' => $categoryId,
-            'status' => DocumentStatus::DRAFT->value,
-            'slug' => $slug,
-            'pull_request_edit_session_id' => null,
-        ]);
     }
 
     // ① 再編集モード（userBranchId と editPullRequestId の両方あり）
@@ -315,7 +300,7 @@ class DocumentServiceTest extends TestCase
 
         $draft = $this->createDocument($setup['env'], 1, $setup['editSession'], 'policy', DocumentStatus::DRAFT->value);
 
-        $setupForSameUser = $this->setupBasicTestEnvironmentWhenPrExistsBySameUser($setup['env']['user']);
+        $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $sameUserDraft = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::DRAFT->value);
 
         $result = $this->documentService->getDocumentsByCategoryId(
@@ -339,7 +324,7 @@ class DocumentServiceTest extends TestCase
 
         $draft = $this->createDocument($setup['env'], 1, $setup['editSession'], 'policy', DocumentStatus::DRAFT->value);
 
-        $setupForSameUser = $this->setupBasicTestEnvironmentWhenPrExistsBySameUser($setup['env']['user']);
+        $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $sameUserPushed = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::PUSHED->value);
 
         $result = $this->documentService->getDocumentsByCategoryId(
@@ -363,7 +348,7 @@ class DocumentServiceTest extends TestCase
 
         $draft = $this->createDocument($setup['env'], 1, $setup['editSession'], 'policy', DocumentStatus::DRAFT->value);
 
-        $setupForSameUser = $this->setupBasicTestEnvironmentWhenPrExistsBySameUser($setup['env']['user']);
+        $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $sameUserMerged = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::MERGED->value);
 
         $result = $this->documentService->getDocumentsByCategoryId(
@@ -465,9 +450,79 @@ class DocumentServiceTest extends TestCase
         $this->assertEquals('policy', $result->first()->slug);
     }
 
-    // 変更提案を提出する前(user_branch作成済み)
     #[Test]
-    public function case12_before_submit_pr_with_draft()
+    public function case12_edit_again_with_having_draft_to_update_merged()
+    {
+        // Arrange
+        $otherUserSetup = $this->setupBasicTestEnvironmentWhenPrExists();
+        $otherUserMerged = $this->createOtherUserDocument($otherUserSetup, 1, DocumentStatus::MERGED->value);
+
+        $userSetup = $this->setupEditAgainEnvironment();
+        $draft = $this->createDocument($userSetup['env'], 1, $userSetup['editSession'], 'policy', DocumentStatus::DRAFT->value, $otherUserMerged->id);
+
+        $result = $this->documentService->getDocumentsByCategoryId(
+            1,
+            $userSetup['env']['userBranch']->id,
+            $userSetup['env']['pullRequest']->id
+        );
+
+        // draftのみが表示される
+        $this->assertCount(1, $result);
+        $this->assertEquals($draft->id, $result->first()->id);
+        $this->assertFalse($result->pluck('id')->contains($otherUserMerged->id));
+        $this->assertEquals('policy', $result->first()->slug);
+    }
+
+    #[Test]
+    public function case13_edit_again_with_created_draft_to_update_draft_on_same_branch()
+    {
+        // Arrange
+        $userSetup = $this->setupEditAgainEnvironment();
+        $draft = $this->createDocument($userSetup['env'], 1, $userSetup['editSession'], 'policy', DocumentStatus::DRAFT->value);
+
+        $draft2 = $this->createDocument($userSetup['env'], 1, $userSetup['editSession'], 'policy', DocumentStatus::DRAFT->value, $draft->id);
+
+        $result = $this->documentService->getDocumentsByCategoryId(
+            1,
+            $userSetup['env']['userBranch']->id,
+            $userSetup['env']['pullRequest']->id
+        );
+
+        // draft2のみが表示される
+        $this->assertCount(1, $result);
+        $this->assertEquals($draft2->id, $result->first()->id);
+        $this->assertFalse($result->pluck('id')->contains($draft->id));
+        $this->assertEquals('policy', $result->first()->slug);
+    }
+
+    #[Test]
+    public function case14_edit_again_with_created_draft_to_update_pushed_on_same_branch()
+    {
+        // Arrange
+        $user = User::factory()->create();
+        $userSetup = $this->createUserBranchAndPullRequest($user);
+        $pushed = $this->createDocument($userSetup, 1, null, 'policy', DocumentStatus::PUSHED->value);
+
+        // 編集セッション作成
+        $editSession = $this->createPullRequestEditSession($userSetup);
+        $draft = $this->createDocument($userSetup, 1, $editSession, 'policy', DocumentStatus::DRAFT->value, $pushed->id);
+
+        $result = $this->documentService->getDocumentsByCategoryId(
+            1,
+            $userSetup['userBranch']->id,
+            $userSetup['pullRequest']->id
+        );
+
+        // draftのみが表示される
+        $this->assertCount(1, $result);
+        $this->assertEquals($draft->id, $result->first()->id);
+        $this->assertFalse($result->pluck('id')->contains($pushed->id));
+        $this->assertEquals('policy', $result->first()->slug);
+    }
+
+    // ② 変更提案を提出する前(user_branch作成済み)
+    #[Test]
+    public function case15_before_submit_pr_with_draft()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
@@ -485,7 +540,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case13_before_submit_pr_with_draft_and_other_user_have_draft_by_reedit()
+    public function case16_before_submit_pr_with_draft_and_other_user_have_draft_by_reedit()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
@@ -508,7 +563,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case14_before_submit_pr_with_draft_and_other_user_have_pushed()
+    public function case17_before_submit_pr_with_draft_and_other_user_have_pushed()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
@@ -531,7 +586,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case15_before_submit_pr_with_draft_and_other_user_have_draft_on_different_slug()
+    public function case18_before_submit_pr_with_draft_and_other_user_have_draft_on_different_slug()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
@@ -554,7 +609,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case16_before_submit_pr_with_draft_and_other_user_have_pushed_on_same_slug()
+    public function case19_before_submit_pr_with_draft_and_other_user_have_pushed_on_same_slug()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
@@ -577,7 +632,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case17_before_submit_pr_with_draft_and_other_user_have_merged()
+    public function case20_before_submit_pr_with_draft_and_other_user_have_merged()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
@@ -600,7 +655,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case18_before_submit_pr_with_draft_and_other_user_have_merged_on_same_slug()
+    public function case21_before_submit_pr_with_draft_and_other_user_have_merged_on_same_slug()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
@@ -622,9 +677,9 @@ class DocumentServiceTest extends TestCase
         $this->assertEquals('policy', $result->first()->slug);
     }
 
-    // 変更提案を提出する前(user_branch作成前)
+    // ③ 変更提案を提出する前(user_branch作成前)
     #[Test]
-    public function case20_before_submit_pr_with_no_draft_and_other_user_have_draft()
+    public function case22_before_submit_pr_with_no_draft_and_other_user_have_draft()
     {
         // Arrange
         User::factory()->create();
@@ -645,7 +700,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case21_before_submit_pr_with_no_draft_and_other_user_have_pushed()
+    public function case23_before_submit_pr_with_no_draft_and_other_user_have_pushed()
     {
         // Arrange
         User::factory()->create();
@@ -666,7 +721,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case22_before_submit_pr_with_no_draft_and_other_user_have_merged()
+    public function case24_before_submit_pr_with_no_draft_and_other_user_have_merged()
     {
         // Arrange
         User::factory()->create();
@@ -687,7 +742,7 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case23_before_submit_pr_with_no_draft_and_other_user_have_draft_on_different_slug()
+    public function case25_before_submit_pr_with_no_draft_and_other_user_have_draft_on_different_slug()
     {
         // Arrange
         User::factory()->create();
@@ -707,13 +762,13 @@ class DocumentServiceTest extends TestCase
         $this->assertFalse($result->pluck('id')->contains($otherUserDraft->id));
     }
 
-    // エッジケース
+    // ④ エッジケース
     #[Test]
-    public function case27_before_submit_pr_with_no_draft_and_same_user_have_submitted_pushed()
+    public function case26_before_submit_pr_with_no_draft_and_same_user_have_submitted_pushed()
     {
         // Arrange
         $user = User::factory()->create();
-        $setupForSameUser = $this->setupBasicTestEnvironmentWhenPrExistsBySameUser($user);
+        $setupForSameUser = $this->createUserBranchAndPullRequest($user);
 
         $sameUserPushed = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::PUSHED->value);
 
@@ -729,11 +784,11 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case28_before_submit_pr_with_no_draft_and_same_user_have_submitted_merged()
+    public function case27_before_submit_pr_with_no_draft_and_same_user_have_submitted_merged()
     {
         // Arrange
         $user = User::factory()->create();
-        $setupForSameUser = $this->setupBasicTestEnvironmentWhenPrExistsBySameUser($user);
+        $setupForSameUser = $this->createUserBranchAndPullRequest($user);
 
         $sameUserMerged = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::MERGED->value);
 
@@ -749,13 +804,13 @@ class DocumentServiceTest extends TestCase
     }
 
     #[Test]
-    public function case29_before_submit_pr_with_duplicated_draft_by_same_user()
+    public function case28_before_submit_pr_with_duplicated_draft_by_same_user()
     {
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
 
         // すでにpush済みのドキュメントが存在する
-        $setupForSameUser = $this->setupBasicTestEnvironmentWhenPrExistsBySameUser($setup['env']['user']);
+        $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $pushed = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::PUSHED->value);
 
         $result = $this->documentService->getDocumentsByCategoryId(
@@ -768,6 +823,31 @@ class DocumentServiceTest extends TestCase
         $this->assertCount(1, $result);
         $this->assertEquals($setup['draft']->id, $result->first()->id);
         $this->assertFalse($result->pluck('id')->contains($pushed->id));
+        $this->assertEquals('policy', $result->first()->slug);
+    }
+
+    // ⑤ 既存ドキュメントを編集した場合
+    #[Test]
+    public function case29_before_submit_pr_with_have_draft_to_update_merged()
+    {
+        // Arrange
+        $otherUserSetup = $this->setupBasicTestEnvironmentWhenPrExists();
+        $otherUserMerged = $this->createOtherUserDocument($otherUserSetup, 1, DocumentStatus::MERGED->value);
+
+        $user = User::factory()->create();
+        $userSetup = $this->createUserBranchAndPullRequest($user);
+        $draft = $this->createDocument($userSetup, 1, null, 'policy', DocumentStatus::DRAFT->value, $otherUserMerged->id);
+
+        $result = $this->documentService->getDocumentsByCategoryId(
+            1,
+            $userSetup['env']['userBranch']->id,
+            null
+        );
+
+        // draftのみが表示される
+        $this->assertCount(1, $result);
+        $this->assertEquals($draft->id, $result->first()->id);
+        $this->assertFalse($result->pluck('id')->contains($otherUserMerged->id));
         $this->assertEquals('policy', $result->first()->slug);
     }
 }

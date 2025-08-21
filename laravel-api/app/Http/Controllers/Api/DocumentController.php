@@ -13,13 +13,13 @@ use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
-use App\Models\PullRequest;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
+use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,6 +34,8 @@ class DocumentController extends ApiBaseController
 
     protected CreateDocumentUseCase $createDocumentUseCase;
 
+    protected GetDocumentsUseCase $getDocumentsUseCase;
+
     protected UpdateDocumentUseCase $updateDocumentUseCase;
 
     protected PullRequestEditSessionService $pullRequestEditSessionService;
@@ -44,6 +46,7 @@ class DocumentController extends ApiBaseController
         DocumentService $documentService,
         UserBranchService $userBranchService,
         CreateDocumentUseCase $createDocumentUseCase,
+        GetDocumentsUseCase $getDocumentsUseCase,
         UpdateDocumentUseCase $updateDocumentUseCase,
         PullRequestEditSessionService $pullRequestEditSessionService,
         DocumentCategoryService $documentCategoryService
@@ -51,6 +54,7 @@ class DocumentController extends ApiBaseController
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
         $this->createDocumentUseCase = $createDocumentUseCase;
+        $this->getDocumentsUseCase = $getDocumentsUseCase;
         $this->updateDocumentUseCase = $updateDocumentUseCase;
         $this->pullRequestEditSessionService = $pullRequestEditSessionService;
         $this->documentCategoryService = $documentCategoryService;
@@ -82,77 +86,28 @@ class DocumentController extends ApiBaseController
      */
     public function getDocuments(GetDocumentsRequest $request): JsonResponse
     {
-        try {
-            // 認証チェック（新しいメソッドを使用）
-            $user = $this->getUserFromSession();
+        // 認証チェック（新しいメソッドを使用）
+        $user = $this->getUserFromSession();
 
-            if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
-            }
-
-            $categoryPath = array_filter(explode('/', $request->category_path));
-
-            // カテゴリIDを取得（パスから）
-            $parentId = $this->documentCategoryService->getIdFromPath($categoryPath);
-
-            $userBranchId = $user->userBranches()->active()->orderBy('id', 'desc')->first()->id ?? null;
-
-            Log::info('userBranchId: '.$userBranchId);
-            // edit_pull_request_idが存在する場合、プルリクエストからuser_branch_idを取得
-            if ($request->edit_pull_request_id) {
-                $pullRequest = PullRequest::find($request->edit_pull_request_id);
-                $userBranchId = $pullRequest?->user_branch_id ?? null;
-            }
-
-            // サブカテゴリを取得
-            $subCategories = $this->documentCategoryService->getSubCategories($parentId, $userBranchId, $request->edit_pull_request_id);
-
-            // ドキュメントを取得
-            $documents = $this->documentService->getDocumentsByCategoryId($parentId, $userBranchId, $request->edit_pull_request_id);
-
-            // ソート処理
-            $sortedDocuments = $documents
-                ->filter(function ($doc) {
-                    return $doc->file_order !== null;
-                })
-                ->sortBy('file_order')
-                ->map(function ($doc) {
-                    return [
-                        'sidebar_label' => $doc->sidebar_label,
-                        'slug' => $doc->slug,
-                        'is_public' => (bool) $doc->is_public,
-                        'status' => $doc->status,
-                        'last_edited_by' => $doc->last_edited_by,
-                        'file_order' => $doc->file_order,
-                    ];
-                });
-
-            $sortedCategories = $subCategories
-                ->filter(function ($cat) {
-                    return $cat->position !== null;
-                })
-                ->sortBy('position')
-                ->map(function ($cat) {
-                    return [
-                        'slug' => $cat->slug,
-                        'sidebar_label' => $cat->sidebar_label,
-                    ];
-                });
-
+        if (! $user) {
             return response()->json([
-                'documents' => $sortedDocuments->values(),
-                'categories' => $sortedCategories->values(),
-            ]);
+                'error' => '認証が必要です',
+            ], 401);
+        }
 
-        } catch (\Exception $e) {
-            Log::error('ドキュメント一覧の取得に失敗しました: '.$e);
+        // UseCaseを実行
+        $result = $this->getDocumentsUseCase->execute($request->validated(), $user);
 
+        if (! $result['success']) {
             return response()->json([
-                'error' => 'ドキュメント一覧の取得に失敗しました',
+                'error' => $result['error'],
             ], 500);
         }
+
+        return response()->json([
+            'documents' => $result['documents'],
+            'categories' => $result['categories'],
+        ]);
     }
 
     /**
