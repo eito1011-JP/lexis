@@ -187,21 +187,34 @@ class DocumentService
             )
             ->where('category_id', $categoryId);
 
-        // edit_start_versions による除外条件を適用
-        $base->whereNotExists(function ($query) use ($userBranchId) {
-            $query->select(DB::raw(1))
-                ->from('edit_start_versions as e')
-                ->whereColumn('e.original_version_id', 'document_versions.id')
-                ->where('e.target_type', 'document');
-
-            if ($userBranchId) {
-                $query->where('e.user_branch_id', $userBranchId);
-            }
-        });
+        // 同一ブランチにおいて、より新しいバージョンに置き換えられた「古い元版」を除外
+        // current_version_id が自分自身ではない original_version を隠す
+        if (! is_null($userBranchId)) {
+            $base->whereNotExists(function ($query) use ($userBranchId) {
+                $query->select(DB::raw(1))
+                    ->from('edit_start_versions as e')
+                    ->whereColumn('e.original_version_id', 'document_versions.id')
+                    ->where('e.target_type', 'document')
+                    ->whereColumn('e.current_version_id', '!=', 'document_versions.id')
+                    ->where('e.user_branch_id', $userBranchId);
+            });
+        }
 
         // 参照のみ（user_branch_id なし）の場合
         if (is_null($userBranchId)) {
-            return $base->where('status', DocumentStatus::MERGED->value)->get();
+            return $base
+                ->where('status', DocumentStatus::MERGED->value)
+                ->where(function ($q) {
+                    // 本線（user_branch_id が null）は常に表示
+                    $q->whereNull('user_branch_id')
+                        // ブランチに紐づく MERGED は、そのブランチに PR が存在しない場合のみ表示
+                        ->orWhereNotExists(function ($sub) {
+                            $sub->select(DB::raw(1))
+                                ->from('pull_requests as pr')
+                                ->whereColumn('pr.user_branch_id', 'document_versions.user_branch_id');
+                        });
+                })
+                ->get();
         }
 
         // 再編集時（user_branch_id && edit_pull_request_id が存在）
@@ -223,7 +236,50 @@ class DocumentService
                 // 閲覧用の安定版（MERGED）。作業中と同じ slug は隠す（衝突回避）
                 $q->orWhere(function ($q2) use ($userBranchId, $editPullRequestId, $categoryId) {
                     $q2->where('status', DocumentStatus::MERGED->value)
-                        ->where('user_branch_id', '<>', $userBranchId)
+                        ->where(function ($q2a) use ($userBranchId) {
+                            $q2a->whereNull('user_branch_id')
+                                ->orWhere('user_branch_id', '<>', $userBranchId);
+                        })
+                        // 同一PRで作業中の slug は隠す
+                        ->whereNotIn('slug', function ($slugQuery) use ($userBranchId, $editPullRequestId, $categoryId) {
+                            $slugQuery->select('d2.slug')
+                                ->from('document_versions as d2')
+                                ->where('d2.user_branch_id', $userBranchId)
+                                ->where('d2.category_id', $categoryId)
+                                ->whereIn('d2.status', [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value])
+                                ->whereIn('d2.pull_request_edit_session_id', function ($sessionQuery2) use ($editPullRequestId, $userBranchId) {
+                                    $sessionQuery2->select('s.id')
+                                        ->from('pull_request_edit_sessions as s')
+                                        ->join('pull_requests as pr', 's.pull_request_id', '=', 'pr.id')
+                                        ->where('s.pull_request_id', $editPullRequestId)
+                                        ->where('pr.user_branch_id', $userBranchId);
+                                });
+                        })
+                        // 同一ブランチ上の（PR外含む）作業中 slug も隠す（再編集前のPUSHED を優先表示するため）
+                        ->whereNotIn('slug', function ($slugQuery) use ($userBranchId, $categoryId) {
+                            $slugQuery->select('d3.slug')
+                                ->from('document_versions as d3')
+                                ->where('d3.user_branch_id', $userBranchId)
+                                ->where('d3.category_id', $categoryId)
+                                ->whereIn('d3.status', [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value]);
+                        });
+                });
+
+                // このPRに紐づかない「同一ブランチ上のPUSHED」（再編集前の状態）。
+                // ただし、当該PRで作業中の slug があれば隠す
+                $q->orWhere(function ($q3) use ($userBranchId, $editPullRequestId, $categoryId) {
+                    $q3->where('user_branch_id', $userBranchId)
+                        ->where('status', DocumentStatus::PUSHED->value)
+                        ->where(function ($q3a) use ($editPullRequestId, $userBranchId) {
+                            $q3a->whereNull('pull_request_edit_session_id')
+                                ->orWhereNotIn('pull_request_edit_session_id', function ($sessionQuery) use ($editPullRequestId, $userBranchId) {
+                                    $sessionQuery->select('s.id')
+                                        ->from('pull_request_edit_sessions as s')
+                                        ->join('pull_requests as pr', 's.pull_request_id', '=', 'pr.id')
+                                        ->where('s.pull_request_id', $editPullRequestId)
+                                        ->where('pr.user_branch_id', $userBranchId);
+                                });
+                        })
                         ->whereNotIn('slug', function ($slugQuery) use ($userBranchId, $editPullRequestId, $categoryId) {
                             $slugQuery->select('d2.slug')
                                 ->from('document_versions as d2')

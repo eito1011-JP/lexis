@@ -840,7 +840,7 @@ class DocumentServiceTest extends TestCase
 
         $result = $this->documentService->getDocumentsByCategoryId(
             1,
-            $userSetup['env']['userBranch']->id,
+            $userSetup['userBranch']->id,
             null
         );
 
