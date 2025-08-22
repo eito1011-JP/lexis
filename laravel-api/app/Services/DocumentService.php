@@ -147,7 +147,7 @@ class DocumentService
     /**
      * カテゴリのドキュメントを取得（ブランチ別）
      */
-    public function getDocumentsByCategoryId(
+    public function fetchDocumentsByCategoryId(
         int $categoryId,
         ?int $userBranchId = null,
         ?int $editPullRequestId = null

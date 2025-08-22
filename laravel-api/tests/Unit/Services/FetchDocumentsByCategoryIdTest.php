@@ -16,7 +16,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-class DocumentServiceTest extends TestCase
+class FetchDocumentsByCategoryIdTest extends TestCase
 {
     use DatabaseTransactions;
 
@@ -205,7 +205,7 @@ class DocumentServiceTest extends TestCase
 
         $draft = $this->createDocument($setup['env'], 1, $setup['editSession'], 'policy', DocumentStatus::DRAFT->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -230,7 +230,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -255,7 +255,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::PUSHED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -279,7 +279,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserMerged = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::MERGED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -303,7 +303,7 @@ class DocumentServiceTest extends TestCase
         $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $sameUserDraft = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::DRAFT->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -327,7 +327,7 @@ class DocumentServiceTest extends TestCase
         $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $sameUserPushed = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::PUSHED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -351,7 +351,7 @@ class DocumentServiceTest extends TestCase
         $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $sameUserMerged = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::MERGED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -369,7 +369,7 @@ class DocumentServiceTest extends TestCase
     {
         $setup = $this->setupEditAgainNoDraftEnvironment();
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -391,7 +391,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -414,7 +414,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserPushed = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::PUSHED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -437,7 +437,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserMerged = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::MERGED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             $setup['env']['pullRequest']->id
@@ -460,7 +460,7 @@ class DocumentServiceTest extends TestCase
         $userSetup = $this->setupEditAgainEnvironment();
         $draft = $this->createDocument($userSetup['env'], 1, $userSetup['editSession'], 'policy', DocumentStatus::DRAFT->value, $otherUserMerged->id);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             $userSetup['env']['userBranch']->id,
             $userSetup['env']['pullRequest']->id
@@ -482,7 +482,7 @@ class DocumentServiceTest extends TestCase
 
         $draft2 = $this->createDocument($userSetup['env'], 1, $userSetup['editSession'], 'policy', DocumentStatus::DRAFT->value, $draft->id);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             $userSetup['env']['userBranch']->id,
             $userSetup['env']['pullRequest']->id
@@ -507,7 +507,7 @@ class DocumentServiceTest extends TestCase
         $editSession = $this->createPullRequestEditSession($userSetup);
         $draft = $this->createDocument($userSetup, 1, $editSession, 'policy', DocumentStatus::DRAFT->value, $pushed->id);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             $userSetup['userBranch']->id,
             $userSetup['pullRequest']->id
@@ -527,7 +527,7 @@ class DocumentServiceTest extends TestCase
         // Arrange
         $setup = $this->setupBeforeSubmitPrWithDraftEnvironment();
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             null // 編集セッションなし
@@ -549,7 +549,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'policy', true);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             null
@@ -572,7 +572,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserPushed = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::PUSHED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             null
@@ -595,7 +595,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'handbook', false);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             null
@@ -618,7 +618,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserPushed = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::PUSHED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             null
@@ -641,7 +641,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserMerged = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::MERGED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             null
@@ -664,7 +664,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
         $otherUserMerged = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::MERGED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
             $setup['env']['userBranch']->id,
             null
@@ -688,7 +688,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrDoesNotExist();
         $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'policy', false);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             null,
             null
@@ -709,7 +709,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrDoesNotExist();
         $otherUserPushed = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::PUSHED->value, null, 'policy', false);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             null,
             null
@@ -730,7 +730,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrDoesNotExist();
         $otherUserMerged = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::MERGED->value, null, 'policy', false);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             null,
             null
@@ -751,7 +751,7 @@ class DocumentServiceTest extends TestCase
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrDoesNotExist();
         $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'handbook', false);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             null,
             null
@@ -772,7 +772,7 @@ class DocumentServiceTest extends TestCase
 
         $sameUserPushed = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::PUSHED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             null,
             null
@@ -792,7 +792,7 @@ class DocumentServiceTest extends TestCase
 
         $sameUserMerged = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::MERGED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             null,
             null
@@ -813,7 +813,7 @@ class DocumentServiceTest extends TestCase
         $setupForSameUser = $this->createUserBranchAndPullRequest($setup['env']['user']);
         $pushed = $this->createDocument($setupForSameUser, 1, null, 'policy', DocumentStatus::PUSHED->value);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             $setup['env']['userBranch']->id,
             null
@@ -838,7 +838,7 @@ class DocumentServiceTest extends TestCase
         $userSetup = $this->createUserBranchAndPullRequest($user);
         $draft = $this->createDocument($userSetup, 1, null, 'policy', DocumentStatus::DRAFT->value, $otherUserMerged->id);
 
-        $result = $this->documentService->getDocumentsByCategoryId(
+        $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
             $userSetup['userBranch']->id,
             null

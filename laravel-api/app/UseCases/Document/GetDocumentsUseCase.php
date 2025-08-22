@@ -47,7 +47,7 @@ class GetDocumentsUseCase
             );
 
             // ドキュメントを取得
-            $documents = $this->documentService->getDocumentsByCategoryId(
+            $documents = $this->documentService->fetchDocumentsByCategoryId(
                 $parentId,
                 $userBranchId,
                 $requestData['edit_pull_request_id'] ?? null
