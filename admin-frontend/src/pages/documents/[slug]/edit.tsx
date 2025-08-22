@@ -172,7 +172,7 @@ export default function EditDocumentPage(): JSX.Element {
 
       // APIリクエストのペイロードを構築
       const payload: any = {
-        category_path_with_slug: category ? `${category}/${documentSlug}` : documentSlug,
+        category_path: category,
         current_document_id: documentId,
         sidebar_label: label,
         content: finalMarkdownContent,

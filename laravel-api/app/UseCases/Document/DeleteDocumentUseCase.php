@@ -53,7 +53,7 @@ class DeleteDocumentUseCase
             // パスからスラッグとカテゴリパスを分離
             $pathParts = array_filter(explode('/', $requestData['category_path_with_slug']));
             $slug = array_pop($pathParts);
-            $categoryPath = $pathParts;
+            $categoryPath = implode('/', $pathParts);
 
             // カテゴリパスからカテゴリIDを取得
             $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);

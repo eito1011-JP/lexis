@@ -21,6 +21,7 @@ use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Dto\UseCase\Document\UpdateDocumentDto;
 
 class DocumentController extends ApiBaseController
 {
@@ -194,7 +195,8 @@ class DocumentController extends ApiBaseController
             ], 401);
         }
 
-        $result = $this->updateDocumentUseCase->execute($request->validated(), $user);
+        $dto = new UpdateDocumentDto($request);
+        $result = $this->updateDocumentUseCase->execute($dto, $user);
 
         if (! $result['success']) {
             return response()->json([

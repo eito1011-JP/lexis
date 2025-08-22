@@ -25,7 +25,7 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_path_with_slug' => 'required|string',
+            'category_path' => 'required|nullable|string',
             'current_document_id' => 'required|integer',
             'sidebar_label' => 'required|string|max:255',
             'content' => 'required|string',

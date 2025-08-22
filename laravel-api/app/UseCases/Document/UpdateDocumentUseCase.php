@@ -2,11 +2,13 @@
 
 namespace App\UseCases\Document;
 
+use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSessionDiff;
+use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
@@ -17,21 +19,22 @@ class UpdateDocumentUseCase
     public function __construct(
         private DocumentService $documentService,
         private UserBranchService $userBranchService,
-        private PullRequestEditSessionService $pullRequestEditSessionService
+        private PullRequestEditSessionService $pullRequestEditSessionService,
+        private DocumentCategoryService $documentCategoryService
     ) {}
 
     /**
      * ドキュメントを更新
      *
-     * @param  array  $requestData  リクエストデータ
+     * @param  UpdateDocumentDto  $dto  ドキュメント更新用DTO
      * @param  object  $user  認証済みユーザー
      * @return array{success: bool, document?: object, error?: string}
      */
-    public function execute(array $requestData, object $user): array
+    public function execute(UpdateDocumentDto $dto, object $user): array
     {
         try {
             // 編集前のdocumentのIdからexistingDocumentを取得
-            $existingDocument = DocumentVersion::find($requestData['current_document_id']);
+            $existingDocument = DocumentVersion::find($dto->current_document_id);
 
             if (! $existingDocument) {
                 return [
@@ -40,22 +43,21 @@ class UpdateDocumentUseCase
                 ];
             }
 
-            // パスからslugとcategoryPathを取得（file_order処理用）
-            $pathInfo = $this->documentService->parseCategoryPathWithSlug($requestData['category_path_with_slug']);
-            $categoryId = $pathInfo['categoryId'];
+            // category_pathからcategoryIdを取得（file_order処理用）
+            $categoryId = $this->documentCategoryService->getIdFromPath($dto->category_path);
 
             // アクティブブランチを取得
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
-                $requestData['edit_pull_request_id'] ?? null
+                $dto->edit_pull_request_id ?? null
             );
 
             // 編集セッションIDを取得
             $pullRequestEditSessionId = null;
-            if (! empty($requestData['edit_pull_request_id']) && ! empty($requestData['pull_request_edit_token'])) {
+            if (! empty($dto->edit_pull_request_id) && ! empty($dto->pull_request_edit_token)) {
                 $pullRequestEditSessionId = $this->pullRequestEditSessionService->getPullRequestEditSessionId(
-                    $requestData['edit_pull_request_id'],
-                    $requestData['pull_request_edit_token'],
+                    $dto->edit_pull_request_id,
+                    $dto->pull_request_edit_token,
                     $user->id
                 );
             }
@@ -63,7 +65,7 @@ class UpdateDocumentUseCase
             // file_orderの処理
             $categoryId = $existingDocument->category_id;
             $finalFileOrder = $this->documentService->processFileOrder(
-                $requestData['file_order'],
+                $dto->file_order,
                 $categoryId,
                 $existingDocument->file_order,
                 $userBranchId,
@@ -77,12 +79,12 @@ class UpdateDocumentUseCase
                 'pull_request_edit_session_id' => $pullRequestEditSessionId ?? null,
                 'file_path' => $existingDocument->file_path,
                 'status' => DocumentStatus::DRAFT->value,
-                'content' => $requestData['content'],
-                'slug' => $requestData['slug'],
-                'sidebar_label' => $requestData['sidebar_label'],
+                'content' => $dto->content,
+                'slug' => $dto->slug,
+                'sidebar_label' => $dto->sidebar_label,
                 'file_order' => $finalFileOrder,
                 'last_edited_by' => $user->email,
-                'is_public' => $requestData['is_public'],
+                'is_public' => $dto->is_public,
                 'category_id' => $categoryId,
             ]);
 

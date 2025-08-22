@@ -27,7 +27,7 @@ class GetDocumentsUseCase
             $categoryPath = array_filter(explode('/', $requestData['category_path'] ?? ''));
 
             // カテゴリIDを取得（パスから）
-            $parentId = $this->documentCategoryService->getIdFromPath($categoryPath);
+            $parentId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
 
             $userBranchId = $user->userBranches()->active()->orderBy('id', 'desc')->first()->id ?? null;
 

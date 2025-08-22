@@ -45,7 +45,7 @@ class DocumentCategoryController extends ApiBaseController
 
             // 最後の値をslugとして取得、それ以外をcategoryPathとして取得
             $slug = array_pop($pathParts);
-            $categoryPath = $pathParts;
+            $categoryPath = implode('/', $pathParts);
 
             $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
@@ -92,7 +92,7 @@ class DocumentCategoryController extends ApiBaseController
             $categoryPath = array_filter(explode('/', $request->category_path));
 
             // カテゴリIDを取得（パスから）
-            $currentParentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
+            $currentParentCategoryId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
 
             $position = $this->documentCategoryService->normalizePosition(
                 $request->position,
@@ -172,7 +172,7 @@ class DocumentCategoryController extends ApiBaseController
             $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
 
             $categoryPath = array_filter(explode('/', $request->category_path));
-            $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
+            $parentCategoryId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
 
             $existingCategory = DocumentCategory::where('parent_id', $parentCategoryId)->where('slug', $request->slug)->first();
 
@@ -269,7 +269,7 @@ class DocumentCategoryController extends ApiBaseController
             // カテゴリパスの取得と処理
             $pathParts = array_filter(explode('/', $request->category_path_with_slug));
             $slug = array_pop($pathParts);
-            $categoryPath = $pathParts;
+            $categoryPath = implode('/', $pathParts);
             $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             // 削除対象のルートカテゴリの存在確認

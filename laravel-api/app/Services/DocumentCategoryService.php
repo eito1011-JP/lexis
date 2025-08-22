@@ -39,13 +39,25 @@ class DocumentCategoryService
     /**
      * カテゴリパスからparentとなるcategory idを再帰的に取得
      *
-     * @param  array  $categoryPath
-     *                               parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは['parent', 'child', 'grandchild']のような配列
+     * @param  string  $categoryPath
+     *                               parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは'parent/child/grandchild'のような文字列
      * @return int|null カテゴリID
      */
-    public function getIdFromPath(array $categoryPath): ?int
+    public function getIdFromPath(string $categoryPath): ?int
     {
         if (empty($categoryPath)) {
+            return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
+        }
+
+        // スラッシュでパスを分割
+        $pathSegments = explode('/', $categoryPath);
+        
+        // 空のセグメントを除去
+        $pathSegments = array_filter($pathSegments, function($segment) {
+            return !empty($segment);
+        });
+
+        if (empty($pathSegments)) {
             return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
         }
 
@@ -53,7 +65,7 @@ class DocumentCategoryService
         $parentId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
         $currentParentCategoryId = null;
 
-        foreach ($categoryPath as $slug) {
+        foreach ($pathSegments as $slug) {
             $category = DocumentCategory::where('slug', $slug)
                 ->where('parent_id', $parentId)
                 ->first();

@@ -23,8 +23,7 @@ class GetDocumentDetailUseCase
     {
         try {
             // パスから所属しているカテゴリのcategoryIdを取得
-            $categoryPathArray = explode('/', $categoryPath);
-            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPathArray);
+            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             $document = DocumentVersion::where(function ($query) use ($categoryId, $slug) {
                 $query->where('category_id', $categoryId)

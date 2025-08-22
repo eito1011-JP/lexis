@@ -57,26 +57,6 @@ class DocumentService
     }
 
     /**
-     * カテゴリパスからslugとcategoryPathを分離
-     *
-     * @param  string  $categoryPathWithSlug  カテゴリパスとスラッグを含む文字列
-     * @return array{slug: string, categoryPath: array, categoryId: int|null}
-     */
-    public function parseCategoryPathWithSlug(string $categoryPathWithSlug): array
-    {
-        $pathParts = explode('/', $categoryPathWithSlug);
-        $slug = array_pop($pathParts);
-        $categoryPath = $pathParts;
-        $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
-
-        return [
-            'slug' => $slug,
-            'categoryPath' => $categoryPath,
-            'categoryId' => $categoryId,
-        ];
-    }
-
-    /**
      * file_orderの処理と他のドキュメントの順序調整
      *
      * @param  mixed  $fileOrder  リクエストされたfile_order

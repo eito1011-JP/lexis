@@ -34,7 +34,7 @@ class UniqueSlugInSameParent implements ValidationRule
 
         // LaravelのサービスコンテナからDocumentCategoryServiceを取得
         $documentCategoryService = app(DocumentCategoryService::class);
-        $parentId = $documentCategoryService->getIdFromPath($categoryPath);
+        $parentId = $documentCategoryService->getIdFromPath(implode('/', $categoryPath));
 
         $duplicateSlug = DocumentCategory::where('slug', $value)
             ->where('parent_id', $parentId)

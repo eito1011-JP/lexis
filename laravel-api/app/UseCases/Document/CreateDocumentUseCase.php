@@ -58,7 +58,7 @@ class CreateDocumentUseCase
 
             // カテゴリパスからカテゴリIDを取得
             $categoryPath = array_filter(explode('/', $requestData['category_path'] ?? ''));
-            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
+            $categoryId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
 
             // file_orderの重複処理・自動採番
             $correctedFileOrder = $this->documentService->normalizeFileOrder(
