@@ -131,12 +131,12 @@ export default function CreateDocumentPage(): JSX.Element {
       }
 
       const queryParams = new URLSearchParams(window.location.search);
-      const category = queryParams.get('category');
+      const category_path = queryParams.get('category_path');
       const editPullRequestId = queryParams.get('edit_pull_request_id');
 
       // APIリクエストのペイロードを構築
       const payload: any = {
-        category_path: category,
+        category_path: category_path,
         sidebar_label: label,
         content: content,
         is_public: publicOption === '公開する', // 公開設定を真偽値に変換
@@ -154,7 +154,7 @@ export default function CreateDocumentPage(): JSX.Element {
 
       alert('ドキュメントが作成されました');
       // 成功したら一覧ページに戻る
-      let redirectUrl = `/admin/documents/${category ?? ''}`;
+      let redirectUrl = `/admin/documents/${category_path ?? ''}`;
       if (editPullRequestId && pullRequestEditToken) {
         redirectUrl += `?edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
       }

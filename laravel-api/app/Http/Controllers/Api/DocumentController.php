@@ -2,9 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Consts\Flag;
-use App\Enums\DocumentStatus;
-use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\GetDocumentDetailRequest;
@@ -12,18 +9,17 @@ use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
-use App\Models\EditStartVersion;
-use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
+use App\UseCases\Document\DeleteDocumentUseCase;
+use App\UseCases\Document\GetDocumentDetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class DocumentController extends ApiBaseController
@@ -38,6 +34,10 @@ class DocumentController extends ApiBaseController
 
     protected UpdateDocumentUseCase $updateDocumentUseCase;
 
+    protected GetDocumentDetailUseCase $getDocumentDetailUseCase;
+
+    protected DeleteDocumentUseCase $deleteDocumentUseCase;
+
     protected PullRequestEditSessionService $pullRequestEditSessionService;
 
     protected DocumentCategoryService $documentCategoryService;
@@ -48,6 +48,8 @@ class DocumentController extends ApiBaseController
         CreateDocumentUseCase $createDocumentUseCase,
         GetDocumentsUseCase $getDocumentsUseCase,
         UpdateDocumentUseCase $updateDocumentUseCase,
+        GetDocumentDetailUseCase $getDocumentDetailUseCase,
+        DeleteDocumentUseCase $deleteDocumentUseCase,
         PullRequestEditSessionService $pullRequestEditSessionService,
         DocumentCategoryService $documentCategoryService
     ) {
@@ -56,6 +58,8 @@ class DocumentController extends ApiBaseController
         $this->createDocumentUseCase = $createDocumentUseCase;
         $this->getDocumentsUseCase = $getDocumentsUseCase;
         $this->updateDocumentUseCase = $updateDocumentUseCase;
+        $this->getDocumentDetailUseCase = $getDocumentDetailUseCase;
+        $this->deleteDocumentUseCase = $deleteDocumentUseCase;
         $this->pullRequestEditSessionService = $pullRequestEditSessionService;
         $this->documentCategoryService = $documentCategoryService;
     }
@@ -153,23 +157,19 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            // パスから所属しているカテゴリのcategoryIdを取得
-            $categoryPath = explode('/', $request->category_path);
-            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
+            // UseCaseを使用してドキュメントを取得
+            $result = $this->getDocumentDetailUseCase->execute(
+                $request->category_path,
+                $request->slug
+            );
 
-            $document = DocumentVersion::where(function ($query) use ($categoryId, $request) {
-                $query->where('category_id', $categoryId)
-                    ->where('slug', $request->slug);
-            })
-                ->first();
-
-            if (! $document) {
+            if (! $result['success']) {
                 return response()->json([
-                    'error' => 'ドキュメントが見つかりません',
+                    'error' => $result['error'],
                 ], 404);
             }
 
-            return response()->json($document);
+            return response()->json($result['document']);
 
         } catch (\Exception $e) {
             Log::error('ドキュメント取得エラー: '.$e);
@@ -212,99 +212,29 @@ class DocumentController extends ApiBaseController
      */
     public function deleteDocument(DeleteDocumentRequest $request): JsonResponse
     {
-        DB::beginTransaction();
+        // 認証チェック
+        $user = $this->getUserFromSession();
 
-        try {
-            // 1. 認証チェック
-            $user = $this->getUserFromSession();
-
-            if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
-            }
-
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-
-            $pullRequestEditSessionId = $this->pullRequestEditSessionService->getPullRequestEditSessionId(
-                $request->edit_pull_request_id,
-                $request->pull_request_edit_token,
-                $user->id
-            );
-
-            $pathParts = array_filter(explode('/', $request->category_path_with_slug));
-            $slug = array_pop($pathParts);
-            $categoryPath = $pathParts;
-
-            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
-
-            // 3. 削除対象のドキュメントを取得
-            $existingDocument = DocumentVersion::where('category_id', $categoryId)
-                ->where('slug', $slug)
-                ->first();
-
-            if (! $existingDocument) {
-                return response()->json([
-                    'error' => '削除対象のドキュメントが見つかりません',
-                ], 404);
-            }
-
-            // 既存ドキュメントは論理削除せず、新しいdraftステータスのドキュメントを作成（is_deleted = 1）
-            $newDocumentVersion = DocumentVersion::create([
-                'user_id' => $user->id,
-                'user_branch_id' => $userBranchId,
-                'file_path' => $existingDocument->file_path,
-                'status' => DocumentStatus::DRAFT->value,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                'content' => $existingDocument->content,
-                'slug' => $existingDocument->slug,
-                'sidebar_label' => $existingDocument->sidebar_label,
-                'file_order' => $existingDocument->file_order,
-                'last_edited_by' => $user->email,
-                'is_public' => $existingDocument->is_public,
-                'category_id' => $existingDocument->category_id,
-                'deleted_at' => now(),
-                'is_deleted' => Flag::TRUE,
-            ]);
-
-            EditStartVersion::create([
-                'user_branch_id' => $userBranchId,
-                'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                'original_version_id' => $existingDocument->id,
-                'current_version_id' => $newDocumentVersion->id,
-            ]);
-
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                        'current_version_id' => $existingDocument->id,
-                    ],
-                    [
-                        'current_version_id' => $newDocumentVersion->id,
-                        'diff_type' => 'deleted',
-                    ]
-                );
-            }
-
-            DB::commit();
-
-            // 7. 成功レスポンス
-            return response()->json();
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('ドキュメント削除エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
+        if (! $user) {
             return response()->json([
-                'error' => 'ドキュメントの削除に失敗しました',
-            ], 500);
+                'error' => '認証が必要です',
+            ], 401);
         }
+
+        // UseCaseを実行
+        $result = $this->deleteDocumentUseCase->execute([
+            'category_path_with_slug' => $request->category_path_with_slug,
+            'edit_pull_request_id' => $request->edit_pull_request_id,
+            'pull_request_edit_token' => $request->pull_request_edit_token,
+        ], $user);
+
+        if (! $result['success']) {
+            return response()->json([
+                'error' => $result['error'],
+            ], 404);
+        }
+
+        return response()->json();
     }
 
     /**

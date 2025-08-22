@@ -2,40 +2,34 @@
 
 namespace App\UseCases\Document;
 
+use App\Consts\Flag;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
-use App\Services\DocumentService;
 use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use Illuminate\Support\Facades\Log;
 
-class CreateDocumentUseCase
+class DeleteDocumentUseCase
 {
     public function __construct(
-        private DocumentService $documentService,
         private UserBranchService $userBranchService,
         private PullRequestEditSessionService $pullRequestEditSessionService,
         private DocumentCategoryService $documentCategoryService
     ) {}
 
     /**
-     * ドキュメントを作成
+     * ドキュメントを削除
      *
      * @param array $requestData リクエストデータ
-     *  - category_path: string カテゴリパス（例: 'tutorial/basics'）
-     *  - slug: string ドキュメントのスラッグ
-     *  - sidebar_label: string サイドバーに表示されるラベル
-     *  - content: string ドキュメントの内容（Markdown形式）
-     *  - file_order: int|null ファイルの表示順序
-     *  - is_public: bool 公開フラグ
+     *  - category_path_with_slug: string カテゴリパスとスラッグ（例: 'tutorial/basics/my-document'）
      *  - edit_pull_request_id: int|null 編集対象のプルリクエストID
      *  - pull_request_edit_token: string|null プルリクエスト編集トークン
      * @param object $user 認証済みユーザー
-     * @return array{success: bool, document?: object, error?: string}
+     * @return array{success: bool, error?: string}
      */
     public function execute(array $requestData, object $user): array
     {
@@ -56,44 +50,50 @@ class CreateDocumentUseCase
                 );
             }
 
+            // パスからスラッグとカテゴリパスを分離
+            $pathParts = array_filter(explode('/', $requestData['category_path_with_slug']));
+            $slug = array_pop($pathParts);
+            $categoryPath = $pathParts;
+
             // カテゴリパスからカテゴリIDを取得
-            $categoryPath = array_filter(explode('/', $requestData['category_path'] ?? ''));
             $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
-            // file_orderの重複処理・自動採番
-            $correctedFileOrder = $this->documentService->normalizeFileOrder(
-                $requestData['file_order'] ? (int) $requestData['file_order'] : null,
-                $categoryId ?? null
-            );
+            // 削除対象のドキュメントを取得
+            $existingDocument = DocumentVersion::where('category_id', $categoryId)
+                ->where('slug', $slug)
+                ->first();
 
-            // ファイルパスの生成
-            $filePath = $this->documentService->generateDocumentFilePath(
-                $requestData['category_path'] ?? '',
-                $requestData['slug'] ?? ''
-            );
+            if (! $existingDocument) {
+                return [
+                    'success' => false,
+                    'error' => '削除対象のドキュメントが見つかりません',
+                ];
+            }
 
-            // ドキュメントを作成
-            $document = DocumentVersion::create([
+            // 既存ドキュメントは論理削除せず、新しいdraftステータスのドキュメントを作成（is_deleted = 1）
+            $newDocumentVersion = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                'category_id' => $categoryId,
-                'sidebar_label' => $requestData['sidebar_label'] ?? '',
-                'slug' => $requestData['slug'] ?? '',
-                'content' => $requestData['content'] ?? '',
-                'is_public' => $requestData['is_public'] ?? false,
+                'file_path' => $existingDocument->file_path,
                 'status' => DocumentStatus::DRAFT->value,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                'content' => $existingDocument->content,
+                'slug' => $existingDocument->slug,
+                'sidebar_label' => $existingDocument->sidebar_label,
+                'file_order' => $existingDocument->file_order,
                 'last_edited_by' => $user->email,
-                'file_order' => $correctedFileOrder,
-                'file_path' => $filePath,
+                'is_public' => $existingDocument->is_public,
+                'category_id' => $existingDocument->category_id,
+                'deleted_at' => now(),
+                'is_deleted' => Flag::TRUE,
             ]);
 
             // EditStartVersionを作成
             EditStartVersion::create([
                 'user_branch_id' => $userBranchId,
                 'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                'original_version_id' => $document->id,
-                'current_version_id' => $document->id,
+                'original_version_id' => $existingDocument->id,
+                'current_version_id' => $newDocumentVersion->id,
             ]);
 
             // プルリクエスト編集セッション差分の処理
@@ -102,29 +102,29 @@ class CreateDocumentUseCase
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
                         'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                        'current_version_id' => $document->id,
+                        'current_version_id' => $existingDocument->id,
                     ],
                     [
-                        'current_version_id' => $document->id,
-                        'diff_type' => 'created',
+                        'current_version_id' => $newDocumentVersion->id,
+                        'diff_type' => 'deleted',
                     ]
                 );
             }
 
             return [
                 'success' => true,
-                'document' => $document,
             ];
 
         } catch (\Exception $e) {
-            Log::error('CreateDocumentUseCase: エラー', [
+            Log::error('DeleteDocumentUseCase: エラー', [
                 'error' => $e->getMessage(),
                 'user_id' => $user->id ?? null,
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return [
                 'success' => false,
-                'error' => 'ドキュメントの作成に失敗しました',
+                'error' => 'ドキュメントの削除に失敗しました',
             ];
         }
     }

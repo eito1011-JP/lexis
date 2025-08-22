@@ -46,12 +46,12 @@ class DocumentService
     /**
      * ドキュメントファイルパスを生成
      *
-     * @param  string  $category  カテゴリ
+     * @param  string  $categoryPath  カテゴリパス
      * @param  string  $slug  スラッグ
      */
-    public function generateDocumentFilePath(string $category, string $slug): string
+    public function generateDocumentFilePath(string $categoryPath, string $slug): string
     {
-        $categoryPath = $category ? trim($category, '/') : '';
+        $categoryPath = $categoryPath ? trim($categoryPath, '/') : '';
 
         return $categoryPath ? "{$categoryPath}/{$slug}.md" : "{$slug}.md";
     }
