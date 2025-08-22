@@ -38,10 +38,23 @@ class CreateDocumentUseCaseTest extends TestCase
     {
         parent::setUp();
 
-        $this->documentService = new DocumentService(new DocumentCategoryService);
         $this->userBranchService = Mockery::mock(UserBranchService::class);
         $this->pullRequestEditSessionService = Mockery::mock(PullRequestEditSessionService::class);
-        $this->documentCategoryService = new DocumentCategoryService;
+        $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
+        $this->documentService = Mockery::mock(DocumentService::class);
+
+        // DocumentServiceのモックメソッドを設定
+        $this->documentService
+            ->shouldReceive('normalizeFileOrder')
+            ->andReturnUsing(function ($fileOrder, $categoryId) {
+                return $fileOrder ?? 1;
+            });
+
+        $this->documentService
+            ->shouldReceive('generateDocumentFilePath')
+            ->andReturnUsing(function ($categoryPath, $slug) {
+                return $categoryPath ? "{$categoryPath}/{$slug}.md" : "{$slug}.md";
+            });
 
         $this->useCase = new CreateDocumentUseCase(
             $this->documentService,
@@ -68,6 +81,7 @@ class CreateDocumentUseCaseTest extends TestCase
     #[Test]
     public function create_document_before_submit_pr(): void
     {
+        // Arrange
         [$user, $branch] = $this->createUserAndActiveBranch();
 
         $this->userBranchService
@@ -75,6 +89,12 @@ class CreateDocumentUseCaseTest extends TestCase
             ->once()
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), null)
             ->andReturn($branch->id);
+
+        $this->documentCategoryService
+            ->shouldReceive('getIdFromPath')
+            ->once()
+            ->with([])
+            ->andReturn(1);
 
         $request = [
             'category_path' => '',
@@ -86,8 +106,10 @@ class CreateDocumentUseCaseTest extends TestCase
             // file_order 未指定で自動採番させる
         ];
 
+        // Act
         $result = $this->useCase->execute($request, $user);
 
+        // Assert
         $this->assertTrue($result['success']);
         $doc = $result['document'];
         $this->assertInstanceOf(DocumentVersion::class, $doc);
@@ -107,6 +129,7 @@ class CreateDocumentUseCaseTest extends TestCase
     #[Test]
     public function create_document_belongs_to_category_before_submit_pr(): void
     {
+        // Arrange
         [$user, $branch] = $this->createUserAndActiveBranch();
 
         $this->userBranchService
@@ -137,14 +160,16 @@ class CreateDocumentUseCaseTest extends TestCase
             'status' => 'merged',
         ]);
 
-        $request['category_path'] = $this->documentCategoryService
+        $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with(['parent', 'child'])
             ->andReturn($child->id);
 
+        // Act
         $result = $this->useCase->execute($request, $user);
 
+        // Assert
         $this->assertTrue($result['success']);
         $doc = $result['document'];
         $this->assertInstanceOf(DocumentVersion::class, $doc);
@@ -164,6 +189,7 @@ class CreateDocumentUseCaseTest extends TestCase
     #[Test]
     public function create_document_after_submit_pr_on_edit_session(): void
     {
+        // Arrange
         [$user, $branch] = $this->createUserAndActiveBranch();
         $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branch->id]);
         $session = PullRequestEditSession::factory()->create([
@@ -184,6 +210,12 @@ class CreateDocumentUseCaseTest extends TestCase
             ->with($pullRequest->id, 'valid-token', $user->id)
             ->andReturn($session->id);
 
+        $this->documentCategoryService
+            ->shouldReceive('getIdFromPath')
+            ->once()
+            ->with([])
+            ->andReturn(1);
+
         $request = [
             'edit_pull_request_id' => $pullRequest->id,
             'pull_request_edit_token' => 'valid-token',
@@ -195,8 +227,10 @@ class CreateDocumentUseCaseTest extends TestCase
             'file_order' => 1,
         ];
 
+        // Act
         $result = $this->useCase->execute($request, $user);
 
+        // Assert
         $this->assertTrue($result['success']);
         $doc = $result['document'];
 
@@ -232,6 +266,7 @@ class CreateDocumentUseCaseTest extends TestCase
     #[Test]
     public function create_document_belongs_to_category_after_submit_pr_on_edit_session(): void
     {
+        // Arrange
         [$user, $branch] = $this->createUserAndActiveBranch();
         $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branch->id]);
         $session = PullRequestEditSession::factory()->create([
@@ -276,8 +311,16 @@ class CreateDocumentUseCaseTest extends TestCase
             'status' => 'merged',
         ]);
 
+        $this->documentCategoryService
+            ->shouldReceive('getIdFromPath')
+            ->once()
+            ->with(['parent', 'child'])
+            ->andReturn($child->id);
+
+        // Act
         $result = $this->useCase->execute($request, $user);
 
+        // Assert
         $this->assertTrue($result['success']);
         /** @var DocumentVersion $doc */
         $doc = $result['document'];
@@ -294,6 +337,7 @@ class CreateDocumentUseCaseTest extends TestCase
     #[Test]
     public function create_document_after_submit_pr_on_edit_session_but_token_is_not_specified(): void
     {
+        // Arrange
         [$user, $branch] = $this->createUserAndActiveBranch();
         $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branch->id]);
 
@@ -307,6 +351,12 @@ class CreateDocumentUseCaseTest extends TestCase
             ->shouldReceive('getPullRequestEditSessionId')
             ->never();
 
+        $this->documentCategoryService
+            ->shouldReceive('getIdFromPath')
+            ->once()
+            ->with([])
+            ->andReturn(1);
+
         $request = [
             'edit_pull_request_id' => $pullRequest->id,
             // 'pull_request_edit_token' => null,
@@ -314,8 +364,10 @@ class CreateDocumentUseCaseTest extends TestCase
             'file_order' => null,
         ];
 
+        // Act
         $result = $this->useCase->execute($request, $user);
 
+        // Assert
         $this->assertTrue($result['success']);
         /** @var DocumentVersion $doc */
         $doc = $result['document'];
@@ -330,6 +382,7 @@ class CreateDocumentUseCaseTest extends TestCase
     #[Test]
     public function create_document_failed_when_exception_is_thrown(): void
     {
+        // Arrange
         [$user] = $this->createUserAndActiveBranch();
 
         // fetchOrCreateActiveBranch が例外を投げるケース
@@ -343,8 +396,10 @@ class CreateDocumentUseCaseTest extends TestCase
             'slug' => 'will-fail',
         ];
 
+        // Act
         $result = $this->useCase->execute($request, $user);
 
+        // Assert
         $this->assertFalse($result['success']);
         $this->assertSame('ドキュメントの作成に失敗しました', $result['error']);
     }

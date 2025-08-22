@@ -909,7 +909,9 @@ const ConflictResolutionPage: React.FC = () => {
                       <div>
                         <div className="grid gap-4">
                           <div>
-                            <label className="block mb-2 text-gray-400 font-bold text-xs">Slug</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">
+                              Slug
+                            </label>
                             <input
                               type="text"
                               value={currentDoc.slug}
@@ -924,7 +926,9 @@ const ConflictResolutionPage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block mb-2 text-gray-400 font-bold text-xs">表示順序</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">
+                              表示順序
+                            </label>
                             <input
                               type="number"
                               value={currentDoc.fileOrder}
@@ -939,7 +943,9 @@ const ConflictResolutionPage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block mb-2 text-gray-400 font-bold text-xs">タイトル</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">
+                              タイトル
+                            </label>
                             <input
                               type="text"
                               value={currentDoc.title}
@@ -954,7 +960,9 @@ const ConflictResolutionPage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block mb-2 text-gray-400 font-bold text-xs">公開設定</label>
+                            <label className="block mb-2 text-gray-400 font-bold text-xs">
+                              公開設定
+                            </label>
                             <select
                               value={currentDoc.publicOption}
                               onChange={e =>
@@ -1046,15 +1054,21 @@ const ConflictResolutionPage: React.FC = () => {
                           filename: target.filename,
                           body,
                         };
-                        const res: FixConflictTemporaryResponse = await handleFixConflictTemporary(id, item);
+                        const res: FixConflictTemporaryResponse = await handleFixConflictTemporary(
+                          id,
+                          item
+                        );
                         const next: Record<string, boolean> = {};
                         next[target.filename] = !res.is_conflict;
                         setCheckedFiles(next);
                         setError(null);
-                        
+
                         // コンフリクトが発生した場合、トーストエラー通知を表示
                         if (res.is_conflict) {
-                          setToast({ message: '競合している部分があります。修正してください。', type: 'error' });
+                          setToast({
+                            message: '競合している部分があります。修正してください。',
+                            type: 'error',
+                          });
                         } else {
                           setToast({ message: '保存が完了しました。', type: 'success' });
                         }
@@ -1076,15 +1090,9 @@ const ConflictResolutionPage: React.FC = () => {
           )}
         </div>
       </div>
-      
+
       {/* Toast通知 */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </AdminLayout>
   );
 };
