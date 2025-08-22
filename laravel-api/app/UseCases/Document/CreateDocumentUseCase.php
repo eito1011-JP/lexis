@@ -25,16 +25,16 @@ class CreateDocumentUseCase
     /**
      * ドキュメントを作成
      *
-     * @param array $requestData リクエストデータ
-     *  - category_path: string カテゴリパス（例: 'tutorial/basics'）
-     *  - slug: string ドキュメントのスラッグ
-     *  - sidebar_label: string サイドバーに表示されるラベル
-     *  - content: string ドキュメントの内容（Markdown形式）
-     *  - file_order: int|null ファイルの表示順序
-     *  - is_public: bool 公開フラグ
-     *  - edit_pull_request_id: int|null 編集対象のプルリクエストID
-     *  - pull_request_edit_token: string|null プルリクエスト編集トークン
-     * @param object $user 認証済みユーザー
+     * @param  array  $requestData  リクエストデータ
+     *                              - category_path: string カテゴリパス（例: 'tutorial/basics'）
+     *                              - slug: string ドキュメントのスラッグ
+     *                              - sidebar_label: string サイドバーに表示されるラベル
+     *                              - content: string ドキュメントの内容（Markdown形式）
+     *                              - file_order: int|null ファイルの表示順序
+     *                              - is_public: bool 公開フラグ
+     *                              - edit_pull_request_id: int|null 編集対象のプルリクエストID
+     *                              - pull_request_edit_token: string|null プルリクエスト編集トークン
+     * @param  object  $user  認証済みユーザー
      * @return array{success: bool, document?: object, error?: string}
      */
     public function execute(array $requestData, object $user): array

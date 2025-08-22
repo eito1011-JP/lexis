@@ -28,7 +28,6 @@ class UpdateDocumentUseCase
      *
      * @param  UpdateDocumentDto  $dto  ドキュメント更新用DTO
      * @param  object  $user  認証済みユーザー
-        * @return DocumentVersion
      */
     public function execute(UpdateDocumentDto $dto, object $user): DocumentVersion
     {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\GetDocumentDetailRequest;
@@ -21,7 +22,6 @@ use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use App\Dto\UseCase\Document\UpdateDocumentDto;
 
 class DocumentController extends ApiBaseController
 {

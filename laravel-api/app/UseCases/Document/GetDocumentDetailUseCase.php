@@ -15,8 +15,8 @@ class GetDocumentDetailUseCase
     /**
      * スラッグでドキュメントを取得
      *
-     * @param string $categoryPath カテゴリパス（例: 'tutorial/basics'）
-     * @param string $slug ドキュメントのスラッグ
+     * @param  string  $categoryPath  カテゴリパス（例: 'tutorial/basics'）
+     * @param  string  $slug  ドキュメントのスラッグ
      * @return array{success: bool, document?: object, error?: string}
      */
     public function execute(string $categoryPath, string $slug): array

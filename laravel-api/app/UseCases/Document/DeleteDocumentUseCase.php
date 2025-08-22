@@ -24,11 +24,11 @@ class DeleteDocumentUseCase
     /**
      * ドキュメントを削除
      *
-     * @param array $requestData リクエストデータ
-     *  - category_path_with_slug: string カテゴリパスとスラッグ（例: 'tutorial/basics/my-document'）
-     *  - edit_pull_request_id: int|null 編集対象のプルリクエストID
-     *  - pull_request_edit_token: string|null プルリクエスト編集トークン
-     * @param object $user 認証済みユーザー
+     * @param  array  $requestData  リクエストデータ
+     *                              - category_path_with_slug: string カテゴリパスとスラッグ（例: 'tutorial/basics/my-document'）
+     *                              - edit_pull_request_id: int|null 編集対象のプルリクエストID
+     *                              - pull_request_edit_token: string|null プルリクエスト編集トークン
+     * @param  object  $user  認証済みユーザー
      * @return array{success: bool, error?: string}
      */
     public function execute(array $requestData, object $user): array

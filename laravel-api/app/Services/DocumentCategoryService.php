@@ -40,7 +40,7 @@ class DocumentCategoryService
      * カテゴリパスからparentとなるcategory idを再帰的に取得
      *
      * @param  string  $categoryPath
-     *                               parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは'parent/child/grandchild'のような文字列
+     *                                parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは'parent/child/grandchild'のような文字列
      * @return int|null カテゴリID
      */
     public function getIdFromPath(string $categoryPath): ?int
@@ -51,10 +51,10 @@ class DocumentCategoryService
 
         // スラッシュでパスを分割
         $pathSegments = explode('/', $categoryPath);
-        
+
         // 空のセグメントを除去
-        $pathSegments = array_filter($pathSegments, function($segment) {
-            return !empty($segment);
+        $pathSegments = array_filter($pathSegments, function ($segment) {
+            return ! empty($segment);
         });
 
         if (empty($pathSegments)) {
