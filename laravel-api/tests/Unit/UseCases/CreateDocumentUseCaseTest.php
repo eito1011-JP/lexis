@@ -93,7 +93,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
-            ->with([])
+            ->with('')
             ->andReturn(1);
 
         $request = [
@@ -163,7 +163,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
-            ->with(['parent', 'child'])
+            ->with('parent/child')
             ->andReturn($child->id);
 
         // Act
@@ -213,7 +213,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
-            ->with([])
+            ->with('')
             ->andReturn(1);
 
         $request = [
@@ -314,7 +314,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
-            ->with(['parent', 'child'])
+            ->with('parent/child')
             ->andReturn($child->id);
 
         // Act
@@ -354,7 +354,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
-            ->with([])
+            ->with('')
             ->andReturn(1);
 
         $request = [

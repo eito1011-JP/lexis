@@ -196,17 +196,9 @@ class DocumentController extends ApiBaseController
         }
 
         $dto = new UpdateDocumentDto($request);
-        $result = $this->updateDocumentUseCase->execute($dto, $user);
+        $this->updateDocumentUseCase->execute($dto, $user);
 
-        if (! $result['success']) {
-            return response()->json([
-                'error' => $result['error'],
-            ], 404);
-        }
-
-        return response()->json([
-            'updated_document' => $result['document'],
-        ]);
+        return response()->json();
     }
 
     /**

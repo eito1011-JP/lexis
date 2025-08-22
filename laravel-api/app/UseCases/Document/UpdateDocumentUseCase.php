@@ -28,19 +28,16 @@ class UpdateDocumentUseCase
      *
      * @param  UpdateDocumentDto  $dto  ドキュメント更新用DTO
      * @param  object  $user  認証済みユーザー
-     * @return array{success: bool, document?: object, error?: string}
+        * @return DocumentVersion
      */
-    public function execute(UpdateDocumentDto $dto, object $user): array
+    public function execute(UpdateDocumentDto $dto, object $user): DocumentVersion
     {
         try {
             // 編集前のdocumentのIdからexistingDocumentを取得
             $existingDocument = DocumentVersion::find($dto->current_document_id);
 
             if (! $existingDocument) {
-                return [
-                    'success' => false,
-                    'error' => '編集対象のドキュメントが見つかりません',
-                ];
+                throw new \Exception('編集対象のドキュメントが見つかりません');
             }
 
             // category_pathからcategoryIdを取得（file_order処理用）
@@ -111,11 +108,7 @@ class UpdateDocumentUseCase
                 );
             }
 
-            return [
-                'success' => true,
-                'document' => $newDocumentVersion,
-            ];
-
+            return $newDocumentVersion;
         } catch (\Exception $e) {
             Log::error('UpdateDocumentUseCase: エラー', [
                 'error' => $e->getMessage(),
@@ -123,10 +116,7 @@ class UpdateDocumentUseCase
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return [
-                'success' => false,
-                'error' => 'ドキュメントの更新に失敗しました',
-            ];
+            throw $e;
         }
     }
 }
