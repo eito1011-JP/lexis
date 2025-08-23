@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'laravel-api/**'
-      - 'test.db'
+      - 'database/test.db.sql'
       - '.github/workflows/laravel-test.yml'
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
     env:
       APP_ENV: testing
       DB_CONNECTION: sqlite
-      DB_DATABASE: ../test.db
+      # DB_DATABASE はここでは未設定（下の Set DB path で注入）
 
     defaults:
       run:
@@ -41,28 +41,28 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: Generate APP_KEY
-        run: echo "APP_KEY=$(php -r 'echo \"base64:".base64_encode(random_bytes(32));"')" >> $GITHUB_ENV
+        run: echo APP_KEY=$(php -r 'echo "base64:".base64_encode(random_bytes(32));') >> $GITHUB_ENV
 
-      - name: Ensure SQLite test database file exists
-        run: test -f ../test.db || touch ../test.db
+      # ← ここで後続ステップ用の DB_DATABASE を“注入”
+      - name: Set DB path (per-job)
+        run: echo "DB_DATABASE=$RUNNER_TEMP/test.db" >> $GITHUB_ENV
 
       - name: Ensure sqlite3 CLI is available
         run: sudo apt-get update && sudo apt-get install -y sqlite3
 
-      - name: Clear config cache
-        run: php artisan config:clear
+      - name: Prepare SQLite (fresh file + WAL + timeout)
+        run: |
+          rm -f "$DB_DATABASE"
+          sqlite3 "$DB_DATABASE" 'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=60000;'
 
       - name: Initialize database schema from SQL dump
-        run: |
-          test -f database/test.db.sql
-          rm -f ../test.db
-          sqlite3 ../test.db < database/test.db.sql
+        run: sqlite3 "$DB_DATABASE" < database/test.db.sql
+
+      - name: Clear config cache
+        run: php artisan config:clear
 
       - name: Seed master data
         run: php artisan db:seed --force -n
 
       - name: Run tests
         run: php artisan test --colors=never
-
-
-

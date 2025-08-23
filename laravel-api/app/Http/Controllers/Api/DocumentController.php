@@ -43,6 +43,8 @@ class DocumentController extends ApiBaseController
 
     protected DocumentCategoryService $documentCategoryService;
 
+    protected UpdateDocumentDto $updateDocumentDto;
+
     public function __construct(
         DocumentService $documentService,
         UserBranchService $userBranchService,
@@ -52,7 +54,8 @@ class DocumentController extends ApiBaseController
         GetDocumentDetailUseCase $getDocumentDetailUseCase,
         DeleteDocumentUseCase $deleteDocumentUseCase,
         PullRequestEditSessionService $pullRequestEditSessionService,
-        DocumentCategoryService $documentCategoryService
+        DocumentCategoryService $documentCategoryService,
+        UpdateDocumentDto $updateDocumentDto
     ) {
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
@@ -63,6 +66,7 @@ class DocumentController extends ApiBaseController
         $this->deleteDocumentUseCase = $deleteDocumentUseCase;
         $this->pullRequestEditSessionService = $pullRequestEditSessionService;
         $this->documentCategoryService = $documentCategoryService;
+        $this->updateDocumentDto = $updateDocumentDto;
     }
 
     /**
@@ -195,8 +199,20 @@ class DocumentController extends ApiBaseController
             ], 401);
         }
 
-        $dto = new UpdateDocumentDto($request);
-        $this->updateDocumentUseCase->execute($dto, $user);
+        $validatedRequest = $request->validated();
+        $payload = [
+            'category_path' => $validatedRequest['category_path'] ?? null,
+            'current_document_id' => $validatedRequest['current_document_id'],
+            'sidebar_label' => $validatedRequest['sidebar_label'],
+            'content' => $validatedRequest['content'],
+            'is_public' => $validatedRequest['is_public'],
+            'slug' => $validatedRequest['slug'],
+            'file_order' => $validatedRequest['file_order'] ?? null,
+            'edit_pull_request_id' => $validatedRequest['edit_pull_request_id'] ?? null,
+            'pull_request_edit_token' => $validatedRequest['pull_request_edit_token'] ?? null,
+        ];
+        $this->updateDocumentDto = UpdateDocumentDto::fromArray($payload);
+        $this->updateDocumentUseCase->execute($this->updateDocumentDto, $user);
 
         return response()->json();
     }

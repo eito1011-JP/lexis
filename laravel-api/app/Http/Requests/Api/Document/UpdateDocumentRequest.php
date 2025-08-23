@@ -52,4 +52,17 @@ class UpdateDocumentRequest extends FormRequest
             'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
     }
+
+    /**
+     * Handle a passed validation attempt.
+     */
+    protected function passedValidation(): void
+    {
+        $this->merge([
+            'current_document_id' => (int) $this->current_document_id,
+            'is_public' => (bool) $this->is_public,
+            'file_order' => $this->file_order ? (int) $this->file_order : null,
+            'edit_pull_request_id' => $this->edit_pull_request_id ? (int) $this->edit_pull_request_id : null,
+        ]);
+    }
 }

@@ -8,6 +8,7 @@ use App\Enums\FixRequestStatus;
 use App\Models\DocumentCategory;
 use App\Models\FixRequest;
 use Illuminate\Database\Eloquent\Collection;
+use InvalidArgumentException;
 
 class DocumentCategoryService
 {
@@ -40,42 +41,38 @@ class DocumentCategoryService
      * カテゴリパスからparentとなるcategory idを再帰的に取得
      *
      * @param  string  $categoryPath
-     *                                parent/child/grandchildのカテゴリパスの場合, リクエストとして期待するのは'parent/child/grandchild'のような文字列
-     * @return int|null カテゴリID
+     *                                parent/child/grandchildのカテゴリパスの場合、'parent/child/grandchild'の文字列を期待
+     * @return int カテゴリID
+     *
+     * @throws InvalidArgumentException 不正なパス形式または存在しないカテゴリの場合
      */
-    public function getIdFromPath(string $categoryPath): ?int
+    public function getIdFromPath(string $categoryPath): int
     {
         if (empty($categoryPath)) {
             return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
         }
 
+        // 正しいパス形式（英数字、ハイフン、アンダースコアのセグメントをスラッシュで区切った形式）以外は無効
+        if (! preg_match('/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/', $categoryPath)) {
+            throw new InvalidArgumentException('Invalid path format: path must contain only alphanumeric characters, hyphens, and underscores separated by single slashes');
+        }
+
         // スラッシュでパスを分割
         $pathSegments = explode('/', $categoryPath);
 
-        // 空のセグメントを除去
-        $pathSegments = array_filter($pathSegments, function ($segment) {
-            return ! empty($segment);
-        });
-
-        if (empty($pathSegments)) {
-            return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-        }
-
         // デフォルトカテゴリ（uncategorized）から開始
-        $parentId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-        $currentParentCategoryId = null;
+        $currentParentCategoryId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
 
         foreach ($pathSegments as $slug) {
             $category = DocumentCategory::where('slug', $slug)
-                ->where('parent_id', $parentId)
+                ->where('parent_id', $currentParentCategoryId)
                 ->first();
 
             if (! $category) {
-                return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
+                throw new InvalidArgumentException("Category not found: {$slug}");
             }
 
             $currentParentCategoryId = $category->id;
-            $parentId = $category->id;
         }
 
         return $currentParentCategoryId;

@@ -142,7 +142,19 @@ class UpdateDocumentUseCaseTest extends TestCase
         $request->shouldReceive('all')->andReturn($data);
 
         // DTOを作成
-        return new UpdateDocumentDto($request);
+        $payload = [
+            'category_path' => $data['category_path'] ?? null,
+            'current_document_id' => $data['current_document_id'],
+            'sidebar_label' => $data['sidebar_label'],
+            'content' => $data['content'],
+            'is_public' => $data['is_public'],
+            'slug' => $data['slug'],
+            'file_order' => $data['file_order'] ?? null,
+            'edit_pull_request_id' => $data['edit_pull_request_id'] ?? null,
+            'pull_request_edit_token' => $data['pull_request_edit_token'] ?? null,
+        ];
+
+        return UpdateDocumentDto::fromArray($payload);
     }
 
     #[Test]
