@@ -41,7 +41,7 @@ jobs:
         run: composer install --no-interaction --no-progress --prefer-dist
 
       - name: Generate APP_KEY
-        run: echo "APP_KEY=$(php -r \"echo 'base64:'.base64_encode(random_bytes(32));\")" >> $GITHUB_ENV
+        run: echo "APP_KEY=$(php -r 'echo \"base64:".base64_encode(random_bytes(32));"')" >> $GITHUB_ENV
 
       - name: Ensure SQLite test database file exists
         run: test -f ../test.db || touch ../test.db
