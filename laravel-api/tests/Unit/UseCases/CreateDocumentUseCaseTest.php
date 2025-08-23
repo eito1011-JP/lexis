@@ -12,7 +12,6 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
-use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -26,12 +25,13 @@ class CreateDocumentUseCaseTest extends TestCase
 
     private CreateDocumentUseCase $useCase;
 
+    /** @var \Mockery\MockInterface&DocumentService */
     private DocumentService $documentService;
 
+    /** @var \Mockery\MockInterface&UserBranchService */
     private UserBranchService $userBranchService;
 
-    private PullRequestEditSessionService $pullRequestEditSessionService;
-
+    /** @var \Mockery\MockInterface&DocumentCategoryService */
     private DocumentCategoryService $documentCategoryService;
 
     protected function setUp(): void
@@ -39,7 +39,7 @@ class CreateDocumentUseCaseTest extends TestCase
         parent::setUp();
 
         $this->userBranchService = Mockery::mock(UserBranchService::class);
-        $this->pullRequestEditSessionService = Mockery::mock(PullRequestEditSessionService::class);
+
         $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
         $this->documentService = Mockery::mock(DocumentService::class);
 
@@ -59,7 +59,6 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->useCase = new CreateDocumentUseCase(
             $this->documentService,
             $this->userBranchService,
-            $this->pullRequestEditSessionService,
             $this->documentCategoryService
         );
     }
@@ -204,11 +203,13 @@ class CreateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequest->id)
             ->andReturn($branch->id);
 
-        $this->pullRequestEditSessionService
-            ->shouldReceive('getPullRequestEditSessionId')
-            ->once()
-            ->with($pullRequest->id, 'valid-token', $user->id)
-            ->andReturn($session->id);
+        // 実際のPullRequestEditSessionデータを作成（モックの代わり）
+        $session->update([
+            'pull_request_id' => $pullRequest->id,
+            'user_id' => $user->id,
+            'token' => 'valid-token',
+            'finished_at' => null,
+        ]);
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
@@ -281,11 +282,13 @@ class CreateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequest->id)
             ->andReturn($branch->id);
 
-        $this->pullRequestEditSessionService
-            ->shouldReceive('getPullRequestEditSessionId')
-            ->once()
-            ->with($pullRequest->id, 'valid-token', $user->id)
-            ->andReturn($session->id);
+        // 実際のPullRequestEditSessionデータを作成（モックの代わり）
+        $session->update([
+            'pull_request_id' => $pullRequest->id,
+            'user_id' => $user->id,
+            'token' => 'valid-token',
+            'finished_at' => null,
+        ]);
 
         $request = [
             'edit_pull_request_id' => $pullRequest->id,
@@ -347,9 +350,7 @@ class CreateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequest->id)
             ->andReturn($branch->id);
 
-        $this->pullRequestEditSessionService
-            ->shouldReceive('getPullRequestEditSessionId')
-            ->never();
+        // PullRequestEditSessionのトークンが存在しないため、findEditSessionIdは呼ばれない（実際のデータベースクエリで処理）
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')

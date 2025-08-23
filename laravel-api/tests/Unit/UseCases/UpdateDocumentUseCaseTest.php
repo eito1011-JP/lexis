@@ -16,7 +16,6 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
-use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -36,9 +35,6 @@ class UpdateDocumentUseCaseTest extends TestCase
     /** @var \Mockery\MockInterface&UserBranchService */
     private UserBranchService $userBranchService;
 
-    /** @var \Mockery\MockInterface&PullRequestEditSessionService */
-    private PullRequestEditSessionService $pullRequestEditSessionService;
-
     /** @var \Mockery\MockInterface&DocumentCategoryService */
     private DocumentCategoryService $documentCategoryService;
 
@@ -48,7 +44,7 @@ class UpdateDocumentUseCaseTest extends TestCase
 
         $this->documentService = Mockery::mock(DocumentService::class);
         $this->userBranchService = Mockery::mock(UserBranchService::class);
-        $this->pullRequestEditSessionService = Mockery::mock(PullRequestEditSessionService::class);
+
         $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
 
         // updateFileOrder は入力に応じてそのまま返す簡易モック
@@ -66,7 +62,6 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->useCase = new UpdateDocumentUseCase(
             $this->documentService,
             $this->userBranchService,
-            $this->pullRequestEditSessionService,
             $this->documentCategoryService
         );
     }
@@ -298,11 +293,13 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequestB->id)
             ->andReturn($newBranchB->id);
 
-        $this->pullRequestEditSessionService
-            ->shouldReceive('getPullRequestEditSessionId')
-            ->once()
-            ->with($pullRequestB->id, 'token', $user->id)
-            ->andReturn($pullRequestEditSession->id);
+        // 実際のPullRequestEditSessionデータを作成（モックの代わり）
+        $pullRequestEditSession->update([
+            'pull_request_id' => $pullRequestB->id,
+            'user_id' => $user->id,
+            'token' => 'token',
+            'finished_at' => null,
+        ]);
 
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,

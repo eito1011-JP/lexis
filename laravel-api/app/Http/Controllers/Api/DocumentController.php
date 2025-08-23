@@ -12,7 +12,6 @@ use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
-use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
 use App\UseCases\Document\DeleteDocumentUseCase;
@@ -39,8 +38,6 @@ class DocumentController extends ApiBaseController
 
     protected DeleteDocumentUseCase $deleteDocumentUseCase;
 
-    protected PullRequestEditSessionService $pullRequestEditSessionService;
-
     protected DocumentCategoryService $documentCategoryService;
 
     protected UpdateDocumentDto $updateDocumentDto;
@@ -53,7 +50,6 @@ class DocumentController extends ApiBaseController
         UpdateDocumentUseCase $updateDocumentUseCase,
         GetDocumentDetailUseCase $getDocumentDetailUseCase,
         DeleteDocumentUseCase $deleteDocumentUseCase,
-        PullRequestEditSessionService $pullRequestEditSessionService,
         DocumentCategoryService $documentCategoryService,
         UpdateDocumentDto $updateDocumentDto
     ) {
@@ -64,7 +60,7 @@ class DocumentController extends ApiBaseController
         $this->updateDocumentUseCase = $updateDocumentUseCase;
         $this->getDocumentDetailUseCase = $getDocumentDetailUseCase;
         $this->deleteDocumentUseCase = $deleteDocumentUseCase;
-        $this->pullRequestEditSessionService = $pullRequestEditSessionService;
+
         $this->documentCategoryService = $documentCategoryService;
         $this->updateDocumentDto = $updateDocumentDto;
     }
