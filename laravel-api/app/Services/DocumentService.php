@@ -62,15 +62,15 @@ class DocumentService
      * file_order の並べ替えに伴い、影響を受ける「他の」ドキュメントについて
      * 新規の DocumentVersion(DRAFT) を作成し、EditStartVersion を記録する。
      *
-     * @param  int         $newFileOrder        リクエストされた file_order（1始まり）
-     * @param  int         $oldFileOrder        既存の file_order
-     * @param  int         $categoryId          カテゴリID
-     * @param  int         $userBranchId        編集中のユーザーブランチID
-     * @param  int|null    $editPullRequestId   編集対象のPR ID（null/0なら PR 未提出モード）
-     * @param  int         $excludeDocumentId   対象本人の DocumentVersion ID（並び替えから除外）
-     * @param  int         $actorUserId         この操作を行うユーザーID（差分版の作成者）
-     * @param  string      $actorEmail          この操作を行うユーザーのメール（last_edited_by に入れる）
-     * @return int                               クランプ後の最終 new file_order（呼び出し側で対象本人にセットして使う）
+     * @param  int  $newFileOrder  リクエストされた file_order（1始まり）
+     * @param  int  $oldFileOrder  既存の file_order
+     * @param  int  $categoryId  カテゴリID
+     * @param  int  $userBranchId  編集中のユーザーブランチID
+     * @param  int|null  $editPullRequestId  編集対象のPR ID（null/0なら PR 未提出モード）
+     * @param  int  $excludeDocumentId  対象本人の DocumentVersion ID（並び替えから除外）
+     * @param  int  $actorUserId  この操作を行うユーザーID（差分版の作成者）
+     * @param  string  $actorEmail  この操作を行うユーザーのメール（last_edited_by に入れる）
+     * @return int クランプ後の最終 new file_order（呼び出し側で対象本人にセットして使う）
      */
     public function updateFileOrder(
         int $newFileOrder,
@@ -107,13 +107,13 @@ class DocumentService
             if ($isMovingUp) {
                 // 上へ： [new, old) を +1
                 $q->where('file_order', '>=', $finalFileOrder)
-                  ->where('file_order', '<',  $oldFileOrder)
-                  ->orderBy('file_order', 'asc');
+                    ->where('file_order', '<',  $oldFileOrder)
+                    ->orderBy('file_order', 'asc');
             } else {
                 // 下へ： (old, new] を -1
                 $q->where('file_order', '>',  $oldFileOrder)
-                  ->where('file_order', '<=', $finalFileOrder)
-                  ->orderBy('file_order', 'asc');
+                    ->where('file_order', '<=', $finalFileOrder)
+                    ->orderBy('file_order', 'asc');
             }
 
             $affected = $q->get();
@@ -124,25 +124,25 @@ class DocumentService
 
                 // 影響ドキュメントの「差分版（DRAFT）」を新規作成
                 $newVersion = DocumentVersion::create([
-                    'user_id'                      => $actorUserId,       // 差分を作った操作者として記録
-                    'user_branch_id'               => $userBranchId,      // 編集中ブランチに紐づく
+                    'user_id' => $actorUserId,       // 差分を作った操作者として記録
+                    'user_branch_id' => $userBranchId,      // 編集中ブランチに紐づく
                     'pull_request_edit_session_id' => null,               // 必要なら呼出側で追加
-                    'file_path'                    => $doc->file_path,
-                    'status'                       => DocumentStatus::DRAFT->value,
-                    'content'                      => $doc->content,
-                    'slug'                         => $doc->slug,
-                    'sidebar_label'                => $doc->sidebar_label,
-                    'file_order'                   => $shiftedOrder,
-                    'last_edited_by'               => $actorEmail,
-                    'is_public'                    => $doc->is_public,
-                    'category_id'                  => $doc->category_id,
+                    'file_path' => $doc->file_path,
+                    'status' => DocumentStatus::DRAFT->value,
+                    'content' => $doc->content,
+                    'slug' => $doc->slug,
+                    'sidebar_label' => $doc->sidebar_label,
+                    'file_order' => $shiftedOrder,
+                    'last_edited_by' => $actorEmail,
+                    'is_public' => $doc->is_public,
+                    'category_id' => $doc->category_id,
                 ]);
 
                 // EditStartVersion を記録（“元”と“新規差分”の対応）
                 EditStartVersion::create([
-                    'user_branch_id'     => $userBranchId,
-                    'target_type'        => EditStartVersionTargetType::DOCUMENT->value,
-                    'original_version_id'=> $doc->id,
+                    'user_branch_id' => $userBranchId,
+                    'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+                    'original_version_id' => $doc->id,
                     'current_version_id' => $newVersion->id,
                 ]);
             }

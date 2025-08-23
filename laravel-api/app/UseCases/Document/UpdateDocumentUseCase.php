@@ -60,12 +60,15 @@ class UpdateDocumentUseCase
 
             // file_orderの処理
             $categoryId = $existingDocument->category_id;
-            $finalFileOrder = $this->documentService->processFileOrder(
+            $finalFileOrder = $this->documentService->updateFileOrder(
                 $dto->file_order,
-                $categoryId,
                 $existingDocument->file_order,
+                $categoryId,
                 $userBranchId,
-                $existingDocument->id
+                $dto->edit_pull_request_id ?? null,
+                $existingDocument->id,
+                $user->id,
+                $user->email
             );
 
             // 既存ドキュメントは論理削除せず、新しいドキュメントバージョンを作成

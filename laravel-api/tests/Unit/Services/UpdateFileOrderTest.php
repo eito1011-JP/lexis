@@ -20,17 +20,20 @@ class UpdateFileOrderTest extends TestCase
     use DatabaseTransactions;
 
     private DocumentService $documentService;
+
     private DocumentCategoryService $documentCategoryService;
+
     private DocumentCategory $category;
+
     private UserBranch $userBranch;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->category = DocumentCategory::factory()->create();
         $this->userBranch = UserBranch::factory()->create();
-        
+
         $this->documentCategoryService = $this->createMock(DocumentCategoryService::class);
         $this->documentService = new DocumentService($this->documentCategoryService);
     }
@@ -92,7 +95,7 @@ class UpdateFileOrderTest extends TestCase
             'category_id' => $document->category_id,
             'file_order' => $document->file_order,
             'user_branch_id' => $document->user_branch_id,
-            'status' => $document->status
+            'status' => $document->status,
         ]);
     }
 
@@ -134,7 +137,7 @@ class UpdateFileOrderTest extends TestCase
         DocumentVersion $originalDocument
     ): void {
         $newEditStartVersion = EditStartVersion::where('current_version_id', $newDraftVersion->id)->first();
-        
+
         $this->assertNotNull($newEditStartVersion);
         $this->assertSame($this->userBranch->id, $newEditStartVersion->user_branch_id);
         $this->assertSame(EditStartVersionTargetType::DOCUMENT->value, $newEditStartVersion->target_type);
@@ -207,7 +210,7 @@ class UpdateFileOrderTest extends TestCase
 
         // Assert
         $this->assertSame($newFileOrder, $finalFileOrder);
-        
+
         // 既存のドキュメントは変更されない
         $this->assertDocumentUnchanged($existingDocument);
         $this->assertDocumentUnchanged($targetDocument);
@@ -226,9 +229,9 @@ class UpdateFileOrderTest extends TestCase
         $this->assertNewEditStartVersionCreated($newDraftVersion, $existingDocument);
     }
 
-    # =========================
-    # 3件以上: 中間へ上移動（3→2）
-    # =========================
+    // =========================
+    // 3件以上: 中間へ上移動（3→2）
+    // =========================
     #[Test]
     public function three_items_move_up_3_to_2_before_submit_pr(): void
     {
@@ -238,10 +241,9 @@ class UpdateFileOrderTest extends TestCase
         $targetDocument = $this->createDocumentWithEditStartVersion(3);
         $user = User::factory()->create();
         $newFileOrder = 2;
-        
+
         // Act
         $finalFileOrder = $this->callUpdateFileOrder($newFileOrder, $targetDocument, $user);
-        
 
         // Assert
         $this->assertSame($newFileOrder, $finalFileOrder);
@@ -262,21 +264,21 @@ class UpdateFileOrderTest extends TestCase
             'category_id' => $existingDocumentA->category_id,
             'file_order' => $existingDocumentA->file_order,
             'user_branch_id' => $existingDocumentA->user_branch_id,
-            'status' => $existingDocumentA->status
+            'status' => $existingDocumentA->status,
         ]);
         $this->assertDatabaseHas(DocumentVersion::class, [
             'id' => $existingDocumentB->id,
             'category_id' => $existingDocumentB->category_id,
             'file_order' => $existingDocumentB->file_order,
             'user_branch_id' => $existingDocumentB->user_branch_id,
-            'status' => $existingDocumentB->status
+            'status' => $existingDocumentB->status,
         ]);
         $this->assertDatabaseHas(DocumentVersion::class, [
             'id' => $targetDocument->id,
             'category_id' => $targetDocument->category_id,
             'file_order' => $targetDocument->file_order,
             'user_branch_id' => $targetDocument->user_branch_id,
-            'status' => $targetDocument->status
+            'status' => $targetDocument->status,
         ]);
 
         $newDraftVersion = $this->assertNewDraftVersionCreated(
@@ -289,9 +291,9 @@ class UpdateFileOrderTest extends TestCase
         $this->assertNewEditStartVersionCreated($newDraftVersion, $existingDocumentB);
     }
 
-    # =========================
-    # 3件以上: 中間へ下移動（2→3）
-    # =========================
+    // =========================
+    // 3件以上: 中間へ下移動（2→3）
+    // =========================
     #[Test]
     public function three_items_move_down_2_to_3_before_submit_pr(): void
     {
@@ -301,8 +303,7 @@ class UpdateFileOrderTest extends TestCase
         $targetDocument = $this->createDocumentWithEditStartVersion(2);
         $user = User::factory()->create();
         $newFileOrder = 3;
-        
-        
+
         // Act
         $finalFileOrder = $this->callUpdateFileOrder($newFileOrder, $targetDocument, $user);
 
@@ -325,21 +326,21 @@ class UpdateFileOrderTest extends TestCase
             'category_id' => $existingDocumentA->category_id,
             'file_order' => $existingDocumentA->file_order,
             'user_branch_id' => $existingDocumentA->user_branch_id,
-            'status' => $existingDocumentA->status
+            'status' => $existingDocumentA->status,
         ]);
         $this->assertDatabaseHas(DocumentVersion::class, [
             'id' => $existingDocumentB->id,
             'category_id' => $existingDocumentB->category_id,
             'file_order' => $existingDocumentB->file_order,
             'user_branch_id' => $existingDocumentB->user_branch_id,
-            'status' => $existingDocumentB->status
+            'status' => $existingDocumentB->status,
         ]);
         $this->assertDatabaseHas(DocumentVersion::class, [
             'id' => $targetDocument->id,
             'category_id' => $targetDocument->category_id,
             'file_order' => $targetDocument->file_order,
             'user_branch_id' => $targetDocument->user_branch_id,
-            'status' => $targetDocument->status
+            'status' => $targetDocument->status,
         ]);
 
         $newDraftVersion = $this->assertNewDraftVersionCreated(
@@ -348,7 +349,7 @@ class UpdateFileOrderTest extends TestCase
             $user,
             2
         );
-        
+
         $this->assertNewEditStartVersionCreated($newDraftVersion, $existingDocumentB);
     }
 }

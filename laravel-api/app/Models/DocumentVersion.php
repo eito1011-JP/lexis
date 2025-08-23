@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use App\Traits\SoftDeletes;
 use App\Enums\DocumentStatus;
+use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -106,19 +106,19 @@ class DocumentVersion extends Model
      */
     public function scopeForOrdering($query, int $categoryId, int $userBranchId, ?int $editPullRequestId)
     {
-        $isEditSession = !empty($editPullRequestId);
+        $isEditSession = ! empty($editPullRequestId);
 
         return $query->where('category_id', $categoryId)
             ->where(function ($q) use ($userBranchId, $isEditSession) {
                 $q->where('status', DocumentStatus::MERGED->value)
-                  ->orWhere(function ($q2) use ($userBranchId, $isEditSession) {
-                      $statuses = $isEditSession
-                          ? [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value]
-                          : [DocumentStatus::DRAFT->value];
+                    ->orWhere(function ($q2) use ($userBranchId, $isEditSession) {
+                        $statuses = $isEditSession
+                            ? [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value]
+                            : [DocumentStatus::DRAFT->value];
 
-                      $q2->where('user_branch_id', $userBranchId)
-                         ->whereIn('status', $statuses);
-                  });
+                        $q2->where('user_branch_id', $userBranchId)
+                            ->whereIn('status', $statuses);
+                    });
             });
     }
 }

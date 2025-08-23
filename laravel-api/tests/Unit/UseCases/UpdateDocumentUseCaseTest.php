@@ -90,7 +90,7 @@ class UpdateDocumentUseCaseTest extends TestCase
     private function assertDocumentUpdated(DocumentVersion $result, DocumentVersion $existingDocument, User $user, array $expectedChanges): void
     {
         $this->assertInstanceOf(DocumentVersion::class, $result);
-        
+
         // データベースに保存された値を検証
         $this->assertDatabaseHas('document_versions', [
             'id' => $result->id,
