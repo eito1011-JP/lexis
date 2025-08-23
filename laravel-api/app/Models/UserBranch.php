@@ -34,6 +34,14 @@ class UserBranch extends Model
     }
 
     /**
+     * 作成日時の降順でソートするスコープ
+     */
+    public function scopeOrderByCreatedAtDesc($query)
+    {
+        return $query->orderBy('created_at', 'desc');
+    }
+
+    /**
      * ユーザーのアクティブなブランチを取得
      */
     public static function getActiveBranch(int $userId): ?self

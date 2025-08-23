@@ -10,6 +10,10 @@ use Github\Client;
 
 class UserBranchService
 {
+    public function __construct(
+        private Client $githubClient
+    ) {}
+
     /**
      * ユーザーのアクティブなブランチを取得または作成する
      *
@@ -27,7 +31,7 @@ class UserBranchService
         }
 
         // アクティブなユーザーブランチを確認
-        $activeBranch = $user->userBranches()->active()->first();
+        $activeBranch = $user->userBranches()->active()->orderByCreatedAtDesc()->first();
 
         // アクティブなブランチが存在する場合はそのIDを返す
         if ($activeBranch) {
@@ -61,9 +65,7 @@ class UserBranchService
      */
     private function findLatestCommit(): string
     {
-        $client = new Client;
-
-        $response = $client->gitData()->references()->show(
+        $response = $this->githubClient->gitData()->references()->show(
             config('services.github.owner'),
             config('services.github.repo'),
             'heads/main'
