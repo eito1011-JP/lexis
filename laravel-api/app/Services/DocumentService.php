@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -57,91 +59,97 @@ class DocumentService
     }
 
     /**
-     * file_orderの処理と他のドキュメントの順序調整
+     * file_order の並べ替えに伴い、影響を受ける「他の」ドキュメントについて
+     * 新規の DocumentVersion(DRAFT) を作成し、EditStartVersion を記録する。
      *
-     * @param  mixed  $fileOrder  リクエストされたfile_order
-     * @param  int  $categoryId  カテゴリID
-     * @param  int  $oldFileOrder  既存のfile_order
-     * @param  int  $userBranchId  ユーザーブランチID
-     * @param  int  $excludeId  除外するドキュメントID
-     * @return int 最終的なfile_order
+     * @param  int         $newFileOrder        リクエストされた file_order（1始まり）
+     * @param  int         $oldFileOrder        既存の file_order
+     * @param  int         $categoryId          カテゴリID
+     * @param  int         $userBranchId        編集中のユーザーブランチID
+     * @param  int|null    $editPullRequestId   編集対象のPR ID（null/0なら PR 未提出モード）
+     * @param  int         $excludeDocumentId   対象本人の DocumentVersion ID（並び替えから除外）
+     * @param  int         $actorUserId         この操作を行うユーザーID（差分版の作成者）
+     * @param  string      $actorEmail          この操作を行うユーザーのメール（last_edited_by に入れる）
+     * @return int                               クランプ後の最終 new file_order（呼び出し側で対象本人にセットして使う）
      */
-    public function processFileOrder($fileOrder, int $categoryId, int $oldFileOrder, int $userBranchId, int $excludeId): int
-    {
-        // file_orderが空の場合は最大値+1を設定
-        if (empty($fileOrder) && $fileOrder !== 0) {
-            $maxOrder = DocumentVersion::where('category_id', $categoryId)
-                ->where('status', DocumentStatus::MERGED->value)
-                ->max('file_order');
+    public function updateFileOrder(
+        int $newFileOrder,
+        int $oldFileOrder,
+        int $categoryId,
+        int $userBranchId,
+        ?int $editPullRequestId,
+        int $excludeDocumentId,
+        int $actorUserId,
+        string $actorEmail
+    ): int {
+        // 対象集合（スコープ）を構築
+        $base = DocumentVersion::forOrdering($categoryId, $userBranchId, $editPullRequestId);
 
-            return ($maxOrder ?? 0) + 1;
+        // new をスコープの最大にクランプ（1..max）
+        $maxOrder = (int) (clone $base)->max('file_order') ?: 0;
+        if ($maxOrder <= 0) {
+            // 並べ替え対象がそもそも居ない：変更なし扱い
+            return $oldFileOrder;
+        }
+        $finalFileOrder = max(1, min($newFileOrder, $maxOrder));
+
+        // 変更なし → 何も作らない
+        if ($finalFileOrder === $oldFileOrder) {
+            return $oldFileOrder;
         }
 
-        $newFileOrder = (int) $fileOrder;
+        $isMovingUp = $finalFileOrder < $oldFileOrder;
 
-        // file_orderが変更された場合のみ他のドキュメントを調整
-        if ($newFileOrder !== $oldFileOrder) {
-            $this->adjustOtherDocumentsOrder($categoryId, $newFileOrder, $oldFileOrder, $userBranchId, $excludeId);
-        }
+        DB::transaction(function () use ($base, $isMovingUp, $finalFileOrder, $oldFileOrder, $excludeDocumentId, $userBranchId, $actorUserId, $actorEmail) {
+            // 影響範囲の抽出（対象本人除外）
+            $q = (clone $base)->where('id', '!=', $excludeDocumentId);
 
-        return $newFileOrder;
-    }
+            if ($isMovingUp) {
+                // 上へ： [new, old) を +1
+                $q->where('file_order', '>=', $finalFileOrder)
+                  ->where('file_order', '<',  $oldFileOrder)
+                  ->orderBy('file_order', 'asc');
+            } else {
+                // 下へ： (old, new] を -1
+                $q->where('file_order', '>',  $oldFileOrder)
+                  ->where('file_order', '<=', $finalFileOrder)
+                  ->orderBy('file_order', 'asc');
+            }
 
-    /**
-     * 他のドキュメントの順序を調整
-     *
-     * @param  int  $categoryId  カテゴリID
-     * @param  int  $newFileOrder  新しいfile_order
-     * @param  int  $oldFileOrder  古いfile_order
-     * @param  int  $userBranchId  ユーザーブランチID
-     * @param  int  $excludeId  除外するドキュメントID
-     */
-    private function adjustOtherDocumentsOrder(int $categoryId, int $newFileOrder, int $oldFileOrder, int $userBranchId, int $excludeId): void
-    {
-        $documentsToShift = DocumentVersion::where('category_id', $categoryId)
-            ->where(function ($query) use ($userBranchId) {
-                $query->where('status', DocumentStatus::MERGED->value)
-                    ->orWhere('user_branch_id', $userBranchId);
-            })
-            ->where('id', '!=', $excludeId);
+            $affected = $q->get();
 
-        if ($newFileOrder < $oldFileOrder) {
-            // 上に移動する場合：新しい位置以上、元の位置未満の範囲のレコードを+1
-            $documentsToShift = $documentsToShift
-                ->where('file_order', '>=', $newFileOrder)
-                ->where('file_order', '<', $oldFileOrder)
-                ->orderBy('file_order', 'asc');
-        } else {
-            // 下に移動する場合：元の位置超過、新しい位置以下の範囲のレコードを-1
-            $documentsToShift = $documentsToShift
-                ->where('file_order', '>', $oldFileOrder)
-                ->where('file_order', '<=', $newFileOrder)
-                ->orderBy('file_order', 'asc');
-        }
+            // memo: 本当はforeachではなくbulk insertするようにしたい
+            foreach ($affected as $doc) {
+                $shiftedOrder = $isMovingUp ? $doc->file_order + 1 : $doc->file_order - 1;
 
-        $documents = $documentsToShift->get();
+                // 影響ドキュメントの「差分版（DRAFT）」を新規作成
+                $newVersion = DocumentVersion::create([
+                    'user_id'                      => $actorUserId,       // 差分を作った操作者として記録
+                    'user_branch_id'               => $userBranchId,      // 編集中ブランチに紐づく
+                    'pull_request_edit_session_id' => null,               // 必要なら呼出側で追加
+                    'file_path'                    => $doc->file_path,
+                    'status'                       => DocumentStatus::DRAFT->value,
+                    'content'                      => $doc->content,
+                    'slug'                         => $doc->slug,
+                    'sidebar_label'                => $doc->sidebar_label,
+                    'file_order'                   => $shiftedOrder,
+                    'last_edited_by'               => $actorEmail,
+                    'is_public'                    => $doc->is_public,
+                    'category_id'                  => $doc->category_id,
+                ]);
 
-        foreach ($documents as $doc) {
-            $newOrder = $newFileOrder < $oldFileOrder ? $doc->file_order + 1 : $doc->file_order - 1;
+                // EditStartVersion を記録（“元”と“新規差分”の対応）
+                EditStartVersion::create([
+                    'user_branch_id'     => $userBranchId,
+                    'target_type'        => EditStartVersionTargetType::DOCUMENT->value,
+                    'original_version_id'=> $doc->id,
+                    'current_version_id' => $newVersion->id,
+                ]);
+            }
+        });
 
-            // 新しいバージョンを作成して順序を更新
-            DocumentVersion::create([
-                'user_id' => $doc->user_id,
-                'user_branch_id' => $userBranchId,
-                'file_path' => $doc->file_path,
-                'status' => DocumentStatus::DRAFT->value,
-                'content' => $doc->content,
-                'slug' => $doc->slug,
-                'sidebar_label' => $doc->sidebar_label,
-                'file_order' => $newOrder,
-                'last_edited_by' => $doc->last_edited_by,
-                'is_deleted' => 0,
-                'is_public' => $doc->is_public,
-                'category_id' => $doc->category_id,
-            ]);
-
-            // 元のバージョンは論理削除しない
-        }
+        // 対象本人の新バージョンのfile_orderを返却
+        return $finalFileOrder;
     }
 
     /**

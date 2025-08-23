@@ -51,9 +51,9 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->pullRequestEditSessionService = Mockery::mock(PullRequestEditSessionService::class);
         $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
 
-        // processFileOrder は入力に応じてそのまま返す簡易モック
+        // updateFileOrder は入力に応じてそのまま返す簡易モック
         $this->documentService
-            ->shouldReceive('processFileOrder')
+            ->shouldReceive('updateFileOrder')
             ->andReturnUsing(function ($fileOrder, $categoryId, $oldFileOrder, $userBranchId, $documentId) {
                 return $fileOrder ?? ($oldFileOrder + 1);
             });
@@ -90,18 +90,23 @@ class UpdateDocumentUseCaseTest extends TestCase
     private function assertDocumentUpdated(DocumentVersion $result, DocumentVersion $existingDocument, User $user, array $expectedChanges): void
     {
         $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertSame($existingDocument->category_id, $result->category_id);
-        $this->assertSame($expectedChanges['user_branch_id'], $result->user_branch_id);
-        $this->assertSame($existingDocument->file_path, $result->file_path);
-        $this->assertSame(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertSame($expectedChanges['content'], $result->content);
-        $this->assertSame($expectedChanges['slug'], $result->slug);
-        $this->assertSame($expectedChanges['sidebar_label'], $result->sidebar_label);
-        $this->assertSame($expectedChanges['file_order'], $result->file_order);
-        $this->assertSame($user->id, $result->user_id);
-        $this->assertSame($user->email, $result->last_edited_by);
-        $this->assertSame($expectedChanges['is_public'], $result->is_public);
-        $this->assertSame($expectedChanges['pull_request_edit_session_id'], $result->pull_request_edit_session_id);
+        
+        // データベースに保存された値を検証
+        $this->assertDatabaseHas('document_versions', [
+            'id' => $result->id,
+            'category_id' => $existingDocument->category_id,
+            'user_branch_id' => $expectedChanges['user_branch_id'],
+            'file_path' => $existingDocument->file_path,
+            'status' => DocumentStatus::DRAFT->value,
+            'content' => $expectedChanges['content'],
+            'slug' => $expectedChanges['slug'],
+            'sidebar_label' => $expectedChanges['sidebar_label'],
+            'file_order' => $expectedChanges['file_order'],
+            'user_id' => $user->id,
+            'last_edited_by' => $user->email,
+            'is_public' => $expectedChanges['is_public'],
+            'pull_request_edit_session_id' => $expectedChanges['pull_request_edit_session_id'],
+        ]);
     }
 
     private function createDocument(User $user, UserBranch $branch, string $status, int $categoryId, ?int $originalVersionId = null, ?int $pullRequestEditSessionId = null): DocumentVersion
