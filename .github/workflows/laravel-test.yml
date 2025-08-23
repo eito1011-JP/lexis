@@ -16,8 +16,7 @@ jobs:
     env:
       APP_ENV: testing
       DB_CONNECTION: sqlite
-      # ★ ジョブ固有の一時DB（実行ごとにクリーン）
-      DB_DATABASE: ${{ runner.temp }}/test.db
+      # DB_DATABASE はここでは未設定（下の Set DB path で注入）
 
     defaults:
       run:
@@ -44,18 +43,20 @@ jobs:
       - name: Generate APP_KEY
         run: echo APP_KEY=$(php -r 'echo "base64:".base64_encode(random_bytes(32));') >> $GITHUB_ENV
 
+      # ← ここで後続ステップ用の DB_DATABASE を“注入”
+      - name: Set DB path (per-job)
+        run: echo "DB_DATABASE=$RUNNER_TEMP/test.db" >> $GITHUB_ENV
+
       - name: Ensure sqlite3 CLI is available
         run: sudo apt-get update && sudo apt-get install -y sqlite3
 
-      # ★ ジョブ専用DBを作成し、WAL+busy_timeoutを設定
       - name: Prepare SQLite (fresh file + WAL + timeout)
         run: |
-          rm -f "${{ runner.temp }}/test.db"
-          sqlite3 "${{ runner.temp }}/test.db" 'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=60000;'
+          rm -f "$DB_DATABASE"
+          sqlite3 "$DB_DATABASE" 'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=60000;'
 
-      # ★ スキーマを流し込む（SQLダンプ利用）
       - name: Initialize database schema from SQL dump
-        run: sqlite3 "${{ runner.temp }}/test.db" < database/test.db.sql
+        run: sqlite3 "$DB_DATABASE" < database/test.db.sql
 
       - name: Clear config cache
         run: php artisan config:clear
