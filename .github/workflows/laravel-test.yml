@@ -1,0 +1,68 @@
+name: Laravel tests on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'laravel-api/**'
+      - 'test.db'
+      - '.github/workflows/laravel-test.yml'
+
+jobs:
+  php-tests:
+    if: ${{ github.event.pull_request.draft == false && !startsWith(github.head_ref, 'branch_') }}
+    runs-on: ubuntu-latest
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ../test.db
+
+    defaults:
+      run:
+        working-directory: laravel-api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_sqlite, sqlite3, mbstring, dom, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer files
+        run: composer validate --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Generate APP_KEY
+        run: echo "APP_KEY=$(php -r \"echo 'base64:'.base64_encode(random_bytes(32));\")" >> $GITHUB_ENV
+
+      - name: Ensure SQLite test database file exists
+        run: test -f ../test.db || touch ../test.db
+
+      - name: Ensure sqlite3 CLI is available
+        run: sudo apt-get update && sudo apt-get install -y sqlite3
+
+      - name: Clear config cache
+        run: php artisan config:clear
+
+      - name: Initialize database schema from SQL dump
+        run: |
+          test -f database/test.db.sql
+          rm -f ../test.db
+          sqlite3 ../test.db < database/test.db.sql
+
+      - name: Seed master data
+        run: php artisan db:seed --force -n
+
+      - name: Run tests
+        run: php artisan test --colors=never
+
+
+
