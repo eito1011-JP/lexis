@@ -347,7 +347,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         // 新しいブランチを作成
         $newBranch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
         $pullRequestB = PullRequest::factory()->create(['user_branch_id' => $newBranch->id, 'status' => PullRequestStatus::OPENED->value]);
-        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id]);
+        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id, 'user_id' => $user->id]);
 
         // 既存のドキュメントを編集して、draftにする
         $draftCreatedDocumentOnEditSession = $this->createOrUpdateDocument($user, $newBranch, DocumentStatus::DRAFT->value, 1, $existingDocument->id, $pullRequestEditSession->id);
@@ -427,7 +427,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         // 新しいブランチを作成
         $newBranch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
         $pullRequestB = PullRequest::factory()->create(['user_branch_id' => $newBranch->id, 'status' => PullRequestStatus::OPENED->value]);
-        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id]);
+        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id, 'user_id' => $user->id]);
 
         // 既存のドキュメントを編集して、pushedにする
         $pushedCreatedDocumentOnEditSession = $this->createOrUpdateDocument($user, $newBranch, DocumentStatus::PUSHED->value, 1, $existingDocument->id, $pullRequestEditSession->id);
@@ -505,7 +505,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         // 同じユーザーがedit_session上で既存のmergedドキュメントを更新
         $newBranchB = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
         $pullRequestB = PullRequest::factory()->create(['user_branch_id' => $newBranchB->id, 'status' => PullRequestStatus::OPENED->value]);
-        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id]);
+        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id, 'user_id' => $userB->id]);
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
@@ -562,7 +562,75 @@ class UpdateDocumentUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function update_merged_document_by_other_user_on_edit_session(): void {}
+    public function update_merged_document_by_other_user_on_edit_session(): void {
+        // Arrange
+        // ユーザーAがドキュメントを作成してマージ
+        $userA = User::factory()->create();
+        $branchA = UserBranch::factory()->create(['user_id' => $userA->id, 'is_active' => false]);
+        $pullRequestA = PullRequest::factory()->create(['user_branch_id' => $branchA->id, 'status' => PullRequestStatus::MERGED->value]);
+
+        [$userA, $branchA, $pullRequestA, $existingDocument] = $this->setUpForSubmittedDocumentByUser($userA, $branchA, $pullRequestA, 1, DocumentStatus::MERGED->value);
+
+        // ユーザーB（別のユーザー）が編集セッション上で既存のマージ済みドキュメントを更新
+        $userB = User::factory()->create();
+        $branchB = UserBranch::factory()->create(['user_id' => $userB->id, 'is_active' => true]);
+        $pullRequestB = PullRequest::factory()->create(['user_branch_id' => $branchB->id, 'status' => PullRequestStatus::OPENED->value]);
+        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id, 'user_id' => $userB->id]);
+
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->with(Mockery::on(fn ($u) => $u->id === $userB->id), $pullRequestB->id)
+            ->andReturn($branchB->id);
+
+        $dto = $this->createUpdateDocumentDto([
+            'current_document_id' => $existingDocument->id,
+            'category_path' => '',
+            'file_order' => 2,
+            'content' => 'new content by userB',
+            'slug' => 'new-slug-by-userB',
+            'sidebar_label' => 'New Sidebar by UserB',
+            'is_public' => true,
+            'edit_pull_request_id' => $pullRequestB->id,
+            'pull_request_edit_token' => $pullRequestEditSession->token,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $userB);
+
+        // Assert
+        // 既存のマージ済みドキュメントは論理削除されない
+        $this->assertDatabaseHas('document_versions', ['id' => $existingDocument->id, 'deleted_at' => null]);
+
+        // 新しいドキュメントバージョンが作成される（他のユーザーによる編集）
+        $this->assertDocumentUpdated($result, $existingDocument, $userB, [
+            'user_branch_id' => $branchB->id,
+            'content' => 'new content by userB',
+            'slug' => 'new-slug-by-userB',
+            'sidebar_label' => 'New Sidebar by UserB',
+            'file_order' => 2,
+            'is_public' => true,
+            'pull_request_edit_session_id' => $pullRequestEditSession->id,
+        ]);
+
+        // 編集開始バージョン記録
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $branchB->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $existingDocument->id,
+            'current_version_id' => $result->id,
+        ]);
+
+        // セッション差分
+        $this->assertDatabaseCount('pull_request_edit_session_diffs', 1);
+        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
+            'pull_request_edit_session_id' => $pullRequestEditSession->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $existingDocument->id,
+            'current_version_id' => $result->id,
+            'diff_type' => PullRequestEditSessionDiffType::UPDATED->value,
+        ]);
+    }
 
     #[Test]
     public function update_document_when_edit_session_is_invalid(): void {}
