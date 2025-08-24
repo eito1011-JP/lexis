@@ -367,7 +367,7 @@ class UpdateDocumentUseCaseTest extends TestCase
             'sidebar_label' => 'New Sidebar',
             'is_public' => true,
             'edit_pull_request_id' => $pullRequestB->id,
-            'pull_request_edit_token' => 'token',
+            'pull_request_edit_token' => $pullRequestEditSession->token,
         ]);
 
         // Act
@@ -417,6 +417,79 @@ class UpdateDocumentUseCaseTest extends TestCase
     #[Test]
     public function update_pushed_document_by_same_user_on_edit_session(): void
     {
+        // Arrange
+        // 既存のドキュメントがある状態をset up
+        $user = User::factory()->create();
+        $branch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => false]);
+        $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branch->id, 'status' => PullRequestStatus::MERGED->value]);
+        [$user, $branch, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($user, $branch, $pullRequest, 1, DocumentStatus::MERGED->value);
+
+        // 新しいブランチを作成
+        $newBranch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $pullRequestB = PullRequest::factory()->create(['user_branch_id' => $newBranch->id, 'status' => PullRequestStatus::OPENED->value]);
+        $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id]);
+
+        // 既存のドキュメントを編集して、pushedにする
+        $pushedCreatedDocumentOnEditSession = $this->createOrUpdateDocument($user, $newBranch, DocumentStatus::PUSHED->value, 1, $existingDocument->id, $pullRequestEditSession->id);
+
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequestB->id)
+            ->andReturn($newBranch->id);
+
+        $dto = $this->createUpdateDocumentDto([
+            'current_document_id' => $pushedCreatedDocumentOnEditSession->id,
+            'category_path' => '',
+            'file_order' => 2,
+            'content' => 'new content',
+            'slug' => 'new-slug',
+            'sidebar_label' => 'New Sidebar',
+            'is_public' => true,
+            'edit_pull_request_id' => $pullRequestB->id,
+            'pull_request_edit_token' => $pullRequestEditSession->token,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $user);
+
+        // Assert
+        // 既存のMergedドキュメントは論理削除されない
+        $this->assertDatabaseHas('document_versions', ['id' => $existingDocument->id, 'deleted_at' => null]);
+
+        // pushedCreatedDocumentOnEditSessionも論理削除されない
+        $this->assertDatabaseHas('document_versions', ['id' => $pushedCreatedDocumentOnEditSession->id, 'deleted_at' => null]);
+
+        // 新しいドキュメントバージョンが作成される
+        $this->assertDocumentUpdated($result, $pushedCreatedDocumentOnEditSession, $user, [
+            'user_branch_id' => $newBranch->id,
+            'content' => 'new content',
+            'slug' => 'new-slug',
+            'sidebar_label' => 'New Sidebar',
+            'file_order' => 2,
+            'is_public' => true,
+            'pull_request_edit_session_id' => $pullRequestEditSession->id,
+        ]);
+
+        // 編集開始バージョン記録
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $newBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedCreatedDocumentOnEditSession->id,
+            'current_version_id' => $result->id,
+        ]);
+
+        // セッション差分は1件のみ
+        $this->assertDatabaseCount('pull_request_edit_session_diffs', 1);
+
+        // セッション差分の内容を検証
+        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
+            'pull_request_edit_session_id' => $pullRequestEditSession->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedCreatedDocumentOnEditSession->id,
+            'current_version_id' => $result->id,
+            'diff_type' => PullRequestEditSessionDiffType::UPDATED->value,
+        ]);
     }
 
     #[Test]
@@ -430,9 +503,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         [$user, $branch, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($user, $branch, $pullRequest, 1, DocumentStatus::MERGED->value);
 
         // 同じユーザーがedit_session上で既存のmergedドキュメントを更新
-        // updateを行うPRのset up
         $newBranchB = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
-        $this->createOrUpdateDocument($user, $newBranchB, DocumentStatus::PUSHED->value, 1);
         $pullRequestB = PullRequest::factory()->create(['user_branch_id' => $newBranchB->id, 'status' => PullRequestStatus::OPENED->value]);
         $pullRequestEditSession = PullRequestEditSession::factory()->create(['pull_request_id' => $pullRequestB->id]);
 
@@ -441,14 +512,6 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequestB->id)
             ->andReturn($newBranchB->id);
-
-        // 実際のPullRequestEditSessionデータを作成（モックの代わり）
-        $pullRequestEditSession->update([
-            'pull_request_id' => $pullRequestB->id,
-            'user_id' => $user->id,
-            'token' => 'token',
-            'finished_at' => null,
-        ]);
 
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,
@@ -459,13 +522,17 @@ class UpdateDocumentUseCaseTest extends TestCase
             'sidebar_label' => 'New Sidebar',
             'is_public' => true,
             'edit_pull_request_id' => $pullRequestB->id,
-            'pull_request_edit_token' => 'token',
+            'pull_request_edit_token' => $pullRequestEditSession->token,
         ]);
 
         // Act
         $result = $this->useCase->execute($dto, $user);
 
         // Assert
+        // 既存のMergedドキュメントは論理削除されない
+        $this->assertDatabaseHas('document_versions', ['id' => $existingDocument->id, 'deleted_at' => null]);
+
+        // 新しいドキュメントバージョンが作成される
         $this->assertDocumentUpdated($result, $existingDocument, $user, [
             'user_branch_id' => $newBranchB->id,
             'content' => 'new content',
