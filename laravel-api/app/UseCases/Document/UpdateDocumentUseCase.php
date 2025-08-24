@@ -7,10 +7,10 @@ use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
+use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
-use App\Services\PullRequestEditSessionService;
 use App\Services\UserBranchService;
 use Illuminate\Support\Facades\Log;
 
@@ -19,7 +19,6 @@ class UpdateDocumentUseCase
     public function __construct(
         private DocumentService $documentService,
         private UserBranchService $userBranchService,
-        private PullRequestEditSessionService $pullRequestEditSessionService,
         private DocumentCategoryService $documentCategoryService
     ) {}
 
@@ -51,7 +50,7 @@ class UpdateDocumentUseCase
             // 編集セッションIDを取得
             $pullRequestEditSessionId = null;
             if (! empty($dto->edit_pull_request_id) && ! empty($dto->pull_request_edit_token)) {
-                $pullRequestEditSessionId = $this->pullRequestEditSessionService->getPullRequestEditSessionId(
+                $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId(
                     $dto->edit_pull_request_id,
                     $dto->pull_request_edit_token,
                     $user->id

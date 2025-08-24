@@ -63,4 +63,21 @@ class PullRequestEditSession extends Model
     {
         return $this->hasMany(PullRequestEditSessionDiff::class, 'pull_request_edit_session_id');
     }
+
+    /**
+     * プルリクエスト編集セッションIDを取得
+     *
+     * @param  int  $pull_request_id  プルリクエストID
+     * @param  string  $token  編集トークン
+     * @param  int  $user_id  ユーザーID
+     * @return int|null 編集セッションID
+     */
+    public static function findEditSessionId(int $pull_request_id, string $token, int $user_id): ?int
+    {
+        return self::where('pull_request_id', $pull_request_id)
+            ->where('token', $token)
+            ->whereNull('finished_at')
+            ->where('user_id', $user_id)
+            ->value('id');
+    }
 }
