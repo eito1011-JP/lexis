@@ -28,7 +28,7 @@ class UpdateDocumentUseCase
      * @param  UpdateDocumentDto  $dto  ドキュメント更新用DTO
      * @param  object  $user  認証済みユーザー
      */
-    public function execute(UpdateDocumentDto $dto, object $user): DocumentVersion
+    public function execute(UpdateDocumentDto $dto, object $user): array
     {
         try {
             // 編集前のdocumentのIdからexistingDocumentを取得
@@ -109,7 +109,9 @@ class UpdateDocumentUseCase
                 );
             }
 
-            return $newDocumentVersion;
+            return [
+                'result' => 'successfully_updated'
+            ];
         } catch (\Exception $e) {
             Log::error('UpdateDocumentUseCase: エラー', [
                 'error' => $e->getMessage(),

@@ -99,6 +99,11 @@ class DocumentVersion extends Model
         return $this->category->parent_path;
     }
 
+    public function scopeForStatus($query, int $status)
+    {
+        return $query->where('status', $status);
+    }
+
     /**
      * 並べ替え対象のスコープを組み立て
      * - PR未提出: MERGED + (自ブランチの DRAFT)
