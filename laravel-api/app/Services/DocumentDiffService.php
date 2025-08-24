@@ -3,6 +3,9 @@
 namespace App\Services;
 
 use App\Enums\EditStartVersionTargetType;
+use App\Enums\DocumentStatus;
+use App\Dto\UseCase\Document\UpdateDocumentDto;
+use App\Models\DocumentVersion;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -221,5 +224,46 @@ class DocumentDiffService
         }
 
         return $changedFields;
+    }
+
+    /**
+     * ドキュメントに変更があるかをチェック
+     */
+    public function hasDocumentChanges(UpdateDocumentDto $dto, DocumentVersion $existingDocument): bool
+    {
+        $noContentChange = $dto->content === $existingDocument->content;
+        $noSlugChange = $dto->slug === $existingDocument->slug;
+        $noSidebarLabelChange = $dto->sidebar_label === $existingDocument->sidebar_label;
+        $noIsPublicChange = (bool) $dto->is_public === (bool) $existingDocument->is_public;
+        $noFileOrderChange = $dto->file_order === null || $dto->file_order === $existingDocument->file_order;
+
+        return !($noContentChange && $noSlugChange && $noSidebarLabelChange && $noIsPublicChange && $noFileOrderChange);
+    }
+
+    /**
+     * ドキュメントの編集権限をチェック
+     */
+    public function canEditDocument(
+        DocumentVersion $existingDocument, 
+        int $userBranchId, 
+        ?int $pullRequestEditSessionId = null
+    ): bool {
+        // 編集セッション中は既存のロジックが適用される（権限チェックを通す）
+        if ($pullRequestEditSessionId) {
+            return true;
+        }
+
+        // 同じユーザーブランチなら編集可能
+        if ($existingDocument->user_branch_id === $userBranchId) {
+            return true;
+        }
+
+        // 他のユーザーのDRAFT/PUSHEDドキュメントは編集不可
+        if (in_array($existingDocument->status, [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value], true)) {
+            return false;
+        }
+
+        // MERGEDドキュメントは他のユーザーでも編集可能
+        return true;
     }
 }

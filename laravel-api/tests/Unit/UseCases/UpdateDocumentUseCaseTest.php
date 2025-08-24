@@ -17,6 +17,7 @@ use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\DocumentCategoryService;
+use App\Services\DocumentDiffService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\UpdateDocumentUseCase;
@@ -41,14 +42,17 @@ class UpdateDocumentUseCaseTest extends TestCase
     /** @var \Mockery\MockInterface&DocumentCategoryService */
     private DocumentCategoryService $documentCategoryService;
 
+    /** @var \Mockery\MockInterface&DocumentDiffService */
+    private DocumentDiffService $documentDiffService;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->documentService = Mockery::mock(DocumentService::class);
         $this->userBranchService = Mockery::mock(UserBranchService::class);
-
         $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
+        $this->documentDiffService = Mockery::mock(DocumentDiffService::class);
 
         // updateFileOrder は入力に応じてそのまま返す簡易モック
         $this->documentService
@@ -62,10 +66,22 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->shouldReceive('getIdFromPath')
             ->andReturn(1);
 
+        // DocumentDiffServiceのモックを追加（基本的に変更があると仮定）
+        $this->documentDiffService
+            ->shouldReceive('hasDocumentChanges')
+            ->andReturn(true)
+            ->byDefault();
+
+        $this->documentDiffService
+            ->shouldReceive('canEditDocument')
+            ->andReturn(true)
+            ->byDefault();
+
         $this->useCase = new UpdateDocumentUseCase(
             $this->documentService,
             $this->userBranchService,
-            $this->documentCategoryService
+            $this->documentCategoryService,
+            $this->documentDiffService
         );
     }
 
@@ -701,6 +717,13 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $userB->id), null)
             ->andReturn($userBranchB->id);
 
+        // 編集権限なしのモック設定
+        $this->documentDiffService
+            ->shouldReceive('canEditDocument')
+            ->once()
+            ->with(Mockery::any(), $userBranchB->id, null)
+            ->andReturn(false);
+
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $createdDocumentByUserA->id,
             'category_path' => '',
@@ -711,12 +734,10 @@ class UpdateDocumentUseCaseTest extends TestCase
             'is_public' => true,
         ]);
 
-        // Act
-        $this->useCase->execute($dto, $userB);
-
-        // Assert
+        // Act & Assert
         // 他のユーザーが編集したdraftドキュメントは編集できない
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('他のユーザーの未マージドキュメントは編集できません');
         $this->useCase->execute($dto, $userB);
     }
 
@@ -730,7 +751,7 @@ class UpdateDocumentUseCaseTest extends TestCase
 
         $createdDocumentByUserA = $this->createOrUpdateDocument($userA, $userBranchA, DocumentStatus::PUSHED->value, 1);
 
-        // 別のユーザーが編集したdraftドキュメントを更新
+        // 別のユーザーが編集したpushedドキュメントを更新
         $userB = User::factory()->create();
         $userBranchB = UserBranch::factory()->create(['user_id' => $userB->id, 'is_active' => true]);
 
@@ -739,6 +760,13 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with(Mockery::on(fn ($u) => $u->id === $userB->id), null)
             ->andReturn($userBranchB->id);
+
+        // 編集権限なしのモック設定
+        $this->documentDiffService
+            ->shouldReceive('canEditDocument')
+            ->once()
+            ->with(Mockery::any(), $userBranchB->id, null)
+            ->andReturn(false);
 
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $createdDocumentByUserA->id,
@@ -750,12 +778,10 @@ class UpdateDocumentUseCaseTest extends TestCase
             'is_public' => true,
         ]);
 
-        // Act
-        $this->useCase->execute($dto, $userB);
-
-        // Assert
+        // Act & Assert
         // 他のユーザーが編集したpushedドキュメントは編集できない
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('他のユーザーの未マージドキュメントは編集できません');
         $this->useCase->execute($dto, $userB);
     }
 
@@ -793,6 +819,17 @@ class UpdateDocumentUseCaseTest extends TestCase
             'sidebar_label' => $existing->sidebar_label,
             'is_public' => $existing->is_public,
         ]);
+
+        // 差分なしの場合のモック設定
+        $this->documentDiffService
+            ->shouldReceive('canEditDocument')
+            ->once()
+            ->andReturn(true);
+
+        $this->documentDiffService
+            ->shouldReceive('hasDocumentChanges')
+            ->once()
+            ->andReturn(false);
 
         // 差分なしなら updateFileOrder は呼ばれない
         $this->documentService->shouldReceive('updateFileOrder')->never();
