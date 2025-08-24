@@ -234,8 +234,8 @@ class DocumentDiffService
         $noContentChange = $dto->content === $existingDocument->content;
         $noSlugChange = $dto->slug === $existingDocument->slug;
         $noSidebarLabelChange = $dto->sidebar_label === $existingDocument->sidebar_label;
-        $noIsPublicChange = (bool) $dto->is_public === (bool) $existingDocument->is_public;
-        $noFileOrderChange = $dto->file_order === null || $dto->file_order === $existingDocument->file_order;
+        $noIsPublicChange = $dto->is_public === $existingDocument->is_public;
+        $noFileOrderChange = $dto->file_order === $existingDocument->file_order;
 
         return !($noContentChange && $noSlugChange && $noSidebarLabelChange && $noIsPublicChange && $noFileOrderChange);
     }
