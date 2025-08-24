@@ -7,6 +7,7 @@ use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestEditSessionDiffType;
 use App\Enums\PullRequestStatus;
+use App\Exceptions\TargetDocumentNotFoundException;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -905,17 +906,10 @@ class UpdateDocumentUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function update_document_returns_error_when_target_not_found(): void
+    public function update_document_throws_exception_when_target_document_not_found(): void
     {
         // Arrange
         $user = User::factory()->create();
-        $branch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with(Mockery::on(fn ($u) => $u->id === $user->id), null)
-            ->andReturn($branch->id);
 
         // 存在しないドキュメントIDでDTOを作成
         $dto = $this->createUpdateDocumentDto([
@@ -929,7 +923,9 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         // Act & Assert
-        $this->expectException(\Exception::class);
+        $this->expectException(TargetDocumentNotFoundException::class);
+        $this->expectExceptionMessage('編集対象のドキュメントが見つかりません');
+
         $this->useCase->execute($dto, $user);
     }
 

@@ -30,7 +30,7 @@ class TargetDocumentNotFoundExceptionTest extends TestCase
     public function exception_uses_default_message_when_not_provided(): void
     {
         // Arrange
-        $exception = new TargetDocumentNotFoundException();
+        $exception = new TargetDocumentNotFoundException;
         $request = Request::create('/test', 'GET');
 
         // Act
@@ -45,7 +45,7 @@ class TargetDocumentNotFoundExceptionTest extends TestCase
     public function exception_does_not_report_to_logs(): void
     {
         // Arrange
-        $exception = new TargetDocumentNotFoundException();
+        $exception = new TargetDocumentNotFoundException;
 
         // Act & Assert
         $this->assertFalse($exception->report());

@@ -13,9 +13,9 @@ class TargetDocumentNotFoundException extends Exception
     /**
      * コンストラクタ
      *
-     * @param string $message エラーメッセージ
-     * @param int $code エラーコード
-     * @param Exception|null $previous 前の例外
+     * @param  string  $message  エラーメッセージ
+     * @param  int  $code  エラーコード
+     * @param  Exception|null  $previous  前の例外
      */
     public function __construct(
         string $message = '対象のドキュメントが見つかりません',
@@ -29,7 +29,6 @@ class TargetDocumentNotFoundException extends Exception
      * 例外をHTTPレスポンスに変換
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return JsonResponse
      */
     public function render($request): JsonResponse
     {
@@ -41,8 +40,6 @@ class TargetDocumentNotFoundException extends Exception
 
     /**
      * 例外をログに記録する際の処理
-     *
-     * @return bool
      */
     public function report(): bool
     {
