@@ -866,6 +866,11 @@ class UpdateDocumentUseCaseTest extends TestCase
             'is_public' => $existingDocument->is_public, // 同じ
         ]);
 
+        // カウント退避（前後差で検証）
+        $beforeVersions = DocumentVersion::count();
+        $beforeEdits = EditStartVersion::count();
+        $beforeDiffs = PullRequestEditSessionDiff::count();
+
         // Act
         $result = $this->useCase->execute($dto, $user);
         $resultDocumentVersion = $result['document_version'];
@@ -875,7 +880,8 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->assertSoftDeleted('document_versions', ['id' => $existingDocument->id]);
 
         // 一部変更された新しいドキュメントバージョンが作成される
-        $this->assertDocumentUpdated($result['document_version'], $existingDocument, $user, [
+        $this->assertSame($beforeVersions + 1, DocumentVersion::count());
+        $this->assertDocumentUpdated($resultDocumentVersion, $existingDocument, $user, [
             'user_branch_id' => $branch->id,
             'content' => 'updated content',
             'slug' => $existingDocument->slug,
@@ -884,6 +890,18 @@ class UpdateDocumentUseCaseTest extends TestCase
             'is_public' => $existingDocument->is_public,
             'pull_request_edit_session_id' => null,
         ]);
+
+        // 編集開始バージョンも作成される
+        $this->assertSame($beforeEdits + 1, EditStartVersion::count());
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $branch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $existingDocument->id,
+            'current_version_id' => $resultDocumentVersion->id,
+        ]);
+
+        // セッション差分は作成されない
+        $this->assertSame($beforeDiffs, PullRequestEditSessionDiff::count());
     }
 
     #[Test]
