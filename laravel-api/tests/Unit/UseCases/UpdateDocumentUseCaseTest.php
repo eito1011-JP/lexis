@@ -50,7 +50,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         // updateFileOrder は入力に応じてそのまま返す簡易モック
         $this->documentService
             ->shouldReceive('updateFileOrder')
-            ->andReturnUsing(function ($fileOrder, $categoryId, $oldFileOrder, $userBranchId, $documentId) {
+            ->andReturnUsing(function ($fileOrder, $oldFileOrder, $categoryId, $userBranchId, $editPullRequestId, $documentId, $userId, $userEmail) {
                 return $fileOrder ?? ($oldFileOrder + 1);
             });
 
@@ -72,9 +72,9 @@ class UpdateDocumentUseCaseTest extends TestCase
         parent::tearDown();
     }
 
-    private function setUpForSubmittedDocumentByUser(User $user, UserBranch $branch, PullRequest $pullRequest, int $categoryId): array
+    private function setUpForSubmittedDocumentByUser(User $user, UserBranch $branch, PullRequest $pullRequest, int $categoryId, string $documentStatus): array
     {
-        $existingDocument = $this->createDocument($user, $branch, DocumentStatus::MERGED->value, $categoryId);
+        $existingDocument = $this->createDocument($user, $branch, $documentStatus, $categoryId);
 
         return [$user, $branch, $pullRequest, $existingDocument];
     }
@@ -153,7 +153,7 @@ class UpdateDocumentUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function update_document_by_same_user_before_submit_pull_request(): void
+    public function update_merged_document_by_same_user_before_submit_pull_request(): void
     {
         // Arrange
         // 既存のドキュメントがある状態をset up
@@ -161,7 +161,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         $branch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => false]);
         $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branch->id, 'status' => PullRequestStatus::MERGED->value]);
 
-        [$user, $branch, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($user, $branch, $pullRequest, 1);
+        [$user, $branch, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($user, $branch, $pullRequest, 1, DocumentStatus::MERGED->value);
 
         // update existing document
         $newBranch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
@@ -211,7 +211,7 @@ class UpdateDocumentUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function update_document_by_other_user_before_submit_pull_request(): void
+    public function update_merged_document_by_other_user_before_submit_pull_request(): void
     {
         // Arrange
         // 既存のドキュメントがある状態をset up
@@ -220,7 +220,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         $branchA = UserBranch::factory()->create(['user_id' => $userA->id, 'is_active' => false]);
         $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branchA->id, 'status' => PullRequestStatus::MERGED->value]);
 
-        [$userA, $branchA, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($userA, $branchA, $pullRequest, 1);
+        [$userA, $branchA, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($userA, $branchA, $pullRequest, 1, DocumentStatus::MERGED->value);
 
         // ユーザーB(login user)がドキュメントを更新
         $userB = User::factory()->create();
@@ -246,6 +246,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $userB);
 
         // Assert
+        // 新しいドキュメントバージョンが作成される
         $this->assertDocumentUpdated($result, $existingDocument, $userB, [
             'user_branch_id' => $newBranch->id,
             'content' => 'new content',
@@ -271,6 +272,69 @@ class UpdateDocumentUseCaseTest extends TestCase
     }
 
     #[Test]
+    public function update_draft_document_by_same_user_before_submit_pull_request(): void
+    {
+       // Arrange
+        // 既存のドキュメントがある状態をset up
+        $user = User::factory()->create();
+        $branch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branch->id, 'status' => PullRequestStatus::OPENED->value]);
+
+        [$user, $branch, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($user, $branch, $pullRequest, 1, DocumentStatus::DRAFT->value);
+
+        // update existing document
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->with(Mockery::on(fn ($u) => $u->id === $user->id), null)
+            ->andReturn($branch->id);
+
+        // 変更できる箇所は全て変更する
+        $dto = $this->createUpdateDocumentDto([
+            'current_document_id' => $existingDocument->id,
+            'category_path' => '', // category_pathは変更できないので、空文字
+            'file_order' => 2,
+            'content' => 'new content',
+            'slug' => 'new-slug',
+            'sidebar_label' => 'New Sidebar',
+            'is_public' => true,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $user);
+
+        // Assert
+        // 既存のドキュメントは論理削除される
+        $this->assertSoftDeleted('document_versions', [
+            'id' => $existingDocument->id,
+        ]);
+
+        // 新しいドキュメントバージョンが作成される
+        $this->assertDocumentUpdated($result, $existingDocument, $user, [
+            'user_branch_id' => $branch->id,
+            'content' => 'new content',
+            'slug' => 'new-slug',
+            'sidebar_label' => 'New Sidebar',
+            'file_order' => 2,
+            'is_public' => true,
+            'pull_request_edit_session_id' => null,
+        ]);
+
+        // 編集開始バージョン記録
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $branch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $existingDocument->id,
+            'current_version_id' => $result->id,
+        ]);
+
+        // セッション差分は発生しない
+        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
+            'current_version_id' => $result->id,
+        ]);
+    }
+
+    #[Test]
     public function update_merged_document_by_same_user_on_edit_session(): void
     {
         // Arrange
@@ -278,7 +342,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         $branch = UserBranch::factory()->create(['user_id' => $user->id, 'is_active' => false]);
         $pullRequest = PullRequest::factory()->create(['user_branch_id' => $branch->id, 'status' => PullRequestStatus::MERGED->value]);
 
-        [$user, $branch, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($user, $branch, $pullRequest, 1);
+        [$user, $branch, $pullRequest, $existingDocument] = $this->setUpForSubmittedDocumentByUser($user, $branch, $pullRequest, 1, DocumentStatus::MERGED->value);
 
         // 同じユーザーがedit_session上で既存のmergedドキュメントを更新
         // updateを行うPRのset up
