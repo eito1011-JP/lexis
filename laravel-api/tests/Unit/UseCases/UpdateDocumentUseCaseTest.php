@@ -335,6 +335,12 @@ class UpdateDocumentUseCaseTest extends TestCase
     }
 
     #[Test]
+    public function update_draft_document_by_same_user_on_edit_session(): void {}
+
+    #[Test]
+    public function update_pushed_document_by_same_user_on_edit_session(): void {}
+
+    #[Test]
     public function update_merged_document_by_same_user_on_edit_session(): void
     {
         // Arrange
@@ -410,13 +416,16 @@ class UpdateDocumentUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function update_draft_document_by_same_user_on_edit_session(): void {}
-
-    #[Test]
-    public function update_pushed_document_by_same_user_on_edit_session(): void {}
-
-    #[Test]
     public function update_merged_document_by_other_user_on_edit_session(): void {}
+
+    #[Test]
+    public function update_document_when_edit_session_is_invalid(): void {}
+
+    #[Test]
+    public function update_same_document_twice(): void {}
+
+    #[Test]
+    public function update_draft_document_on_different_user_branch(): void {}
 
     #[Test]
     public function update_document_with_same_requests_as_existing_document(): void {}
