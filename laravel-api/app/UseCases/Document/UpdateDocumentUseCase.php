@@ -110,7 +110,8 @@ class UpdateDocumentUseCase
             }
 
             return [
-                'result' => 'successfully_updated'
+                'result' => 'successfully_updated',
+                'document_version' => $newDocumentVersion,
             ];
         } catch (\Exception $e) {
             Log::error('UpdateDocumentUseCase: エラー', [
