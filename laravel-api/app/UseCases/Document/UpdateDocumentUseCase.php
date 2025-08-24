@@ -5,6 +5,7 @@ namespace App\UseCases\Document;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
+use App\Exceptions\TargetDocumentNotFoundException;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
@@ -35,7 +36,7 @@ class UpdateDocumentUseCase
             $existingDocument = DocumentVersion::find($dto->current_document_id);
 
             if (! $existingDocument) {
-                throw new \Exception('編集対象のドキュメントが見つかりません');
+                throw new TargetDocumentNotFoundException('編集対象のドキュメントが見つかりません');
             }
 
             // category_pathからcategoryIdを取得（file_order処理用）
@@ -113,6 +114,9 @@ class UpdateDocumentUseCase
                 'result' => 'successfully_updated',
                 'document_version' => $newDocumentVersion,
             ];
+        } catch (TargetDocumentNotFoundException $e) {
+            // ビジネスロジックエラーはそのまま再スロー
+            throw $e;
         } catch (\Exception $e) {
             Log::error('UpdateDocumentUseCase: エラー', [
                 'error' => $e->getMessage(),
