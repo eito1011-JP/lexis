@@ -40,8 +40,6 @@ class DocumentController extends ApiBaseController
 
     protected DocumentCategoryService $documentCategoryService;
 
-    protected UpdateDocumentDto $updateDocumentDto;
-
     public function __construct(
         DocumentService $documentService,
         UserBranchService $userBranchService,
@@ -50,8 +48,7 @@ class DocumentController extends ApiBaseController
         UpdateDocumentUseCase $updateDocumentUseCase,
         GetDocumentDetailUseCase $getDocumentDetailUseCase,
         DeleteDocumentUseCase $deleteDocumentUseCase,
-        DocumentCategoryService $documentCategoryService,
-        UpdateDocumentDto $updateDocumentDto
+        DocumentCategoryService $documentCategoryService
     ) {
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
@@ -62,7 +59,6 @@ class DocumentController extends ApiBaseController
         $this->deleteDocumentUseCase = $deleteDocumentUseCase;
 
         $this->documentCategoryService = $documentCategoryService;
-        $this->updateDocumentDto = $updateDocumentDto;
     }
 
     /**
@@ -207,8 +203,8 @@ class DocumentController extends ApiBaseController
             'edit_pull_request_id' => $validatedRequest['edit_pull_request_id'] ?? null,
             'pull_request_edit_token' => $validatedRequest['pull_request_edit_token'] ?? null,
         ];
-        $this->updateDocumentDto = UpdateDocumentDto::fromArray($payload);
-        $this->updateDocumentUseCase->execute($this->updateDocumentDto, $user);
+        $updateDocumentDto = UpdateDocumentDto::fromArray($payload);
+        $this->updateDocumentUseCase->execute($updateDocumentDto, $user);
 
         return response()->json();
     }

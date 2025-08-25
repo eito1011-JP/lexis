@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\EditStartVersionTargetType;
+use App\Models\DocumentVersion;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
@@ -221,5 +223,19 @@ class DocumentDiffService
         }
 
         return $changedFields;
+    }
+
+    /**
+     * ドキュメントに変更があるかをチェック
+     */
+    public function hasDocumentChanges(UpdateDocumentDto $dto, DocumentVersion $existingDocument): bool
+    {
+        $noContentChange = $dto->content === $existingDocument->content;
+        $noSlugChange = $dto->slug === $existingDocument->slug;
+        $noSidebarLabelChange = $dto->sidebar_label === $existingDocument->sidebar_label;
+        $noIsPublicChange = $dto->is_public === $existingDocument->is_public;
+        $noFileOrderChange = $dto->file_order === $existingDocument->file_order;
+
+        return ! ($noContentChange && $noSlugChange && $noSidebarLabelChange && $noIsPublicChange && $noFileOrderChange);
     }
 }
