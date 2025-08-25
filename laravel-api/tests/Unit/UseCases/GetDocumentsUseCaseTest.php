@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\UseCases;
 
+use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
@@ -96,9 +97,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         $mockDocuments = collect([
             $this->createMockDocument(['file_order' => 2, 'slug' => 'doc2']),
@@ -130,7 +131,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -156,9 +157,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => 'parent/child',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: 'parent/child'
+        );
 
         $mockDocuments = collect([
             $this->createMockDocument(['file_order' => 1]),
@@ -188,7 +189,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -205,10 +206,10 @@ class GetDocumentsUseCaseTest extends TestCase
             'user_branch_id' => $branch->id,
         ]);
 
-        $requestData = [
-            'category_path' => '',
-            'edit_pull_request_id' => $pullRequest->id,
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: '',
+            edit_pull_request_id: $pullRequest->id
+        );
 
         $mockDocuments = collect([
             $this->createMockDocument(),
@@ -238,7 +239,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -253,9 +254,9 @@ class GetDocumentsUseCaseTest extends TestCase
         $user = User::factory()->create();
         // アクティブなブランチを作成しない
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         $mockDocuments = collect([
             $this->createMockDocument(),
@@ -285,7 +286,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -299,9 +300,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         // file_orderがnullのドキュメントを含む
         $mockDocuments = collect([
@@ -332,7 +333,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -350,9 +351,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         $mockDocuments = collect([]);
 
@@ -383,7 +384,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -401,9 +402,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         $mockDocuments = collect([
             $this->createMockDocument([
@@ -438,7 +439,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -458,9 +459,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         $mockDocuments = collect([]);
 
@@ -492,7 +493,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -508,9 +509,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         $mockDocuments = collect([]);
         $mockCategories = collect([]);
@@ -540,7 +541,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->with("userBranchId: {$branch->id}");
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -552,9 +553,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         // Mock設定（例外をスロー）
         $this->documentCategoryService
@@ -570,7 +571,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->with(Mockery::type('string'));
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertFalse($result['success']);
@@ -585,9 +586,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '//invalid//path//',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: '//invalid//path//'
+        );
 
         $mockDocuments = collect([]);
         $mockCategories = collect([]);
@@ -612,7 +613,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -624,10 +625,10 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-            'edit_pull_request_id' => 99999, // 存在しないID
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: '',
+            edit_pull_request_id: 99999 // 存在しないID
+        );
 
         $mockDocuments = collect([]);
         $mockCategories = collect([]);
@@ -652,7 +653,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
@@ -664,9 +665,9 @@ class GetDocumentsUseCaseTest extends TestCase
         // Arrange
         [$user, $branch] = $this->createUserWithActiveBranch();
 
-        $requestData = [
-            'category_path' => '',
-        ];
+        $dto = new GetDocumentsDto(
+            category_path: ''
+        );
 
         $mockDocuments = collect([]);
         $mockCategories = collect([]);
@@ -691,7 +692,7 @@ class GetDocumentsUseCaseTest extends TestCase
             ->andReturn($mockDocuments);
 
         // Act
-        $result = $this->useCase->execute($requestData, $user);
+        $result = $this->useCase->execute($dto, $user);
 
         // Assert
         $this->assertTrue($result['success']);
