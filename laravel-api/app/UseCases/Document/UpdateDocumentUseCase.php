@@ -72,7 +72,6 @@ class UpdateDocumentUseCase
             }
 
             // file_orderの処理
-            $categoryId = $existingDocument->category_id;
             $finalFileOrder = $this->documentService->updateFileOrder(
                 $dto->file_order,
                 $existingDocument->file_order,
