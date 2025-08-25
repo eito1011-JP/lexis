@@ -33,9 +33,9 @@ class VersionEditPermissionService
     ): array {
         // 編集セッションが指定されている場合のみ処理
         $pullRequestEditSessionId = null;
-        $hasEditSession = $editPullRequestId && $pullRequestEditToken;
+        $hasReEditSession = $editPullRequestId && $pullRequestEditToken;
         
-        if ($hasEditSession) {
+        if ($hasReEditSession) {
             $pullRequestEditSessionId = $this->findEditSession($user, $editPullRequestId, $pullRequestEditToken);
         }
 
@@ -46,7 +46,7 @@ class VersionEditPermissionService
 
         return [
             'can_edit' => true,
-            'has_edit_session' => $hasEditSession,
+            'has_re_edit_session' => $hasReEditSession,
             'pull_request_edit_session_id' => $pullRequestEditSessionId,
         ];
     }
