@@ -161,14 +161,7 @@ class DocumentController extends ApiBaseController
             $dto = GetDocumentDetailDto::fromArray($request->validated());
             $result = $this->getDocumentDetailUseCase->execute($dto);
 
-            if (! $result['success']) {
-                return response()->json([
-                    'error' => $result['error'],
-                ], 404);
-            }
-
-            return response()->json($result['document']);
-
+            return response()->json($result);
         } catch (\Exception $e) {
             Log::error('ドキュメント取得エラー: '.$e);
 
