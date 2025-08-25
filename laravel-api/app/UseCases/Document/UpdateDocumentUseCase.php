@@ -9,12 +9,12 @@ use App\Enums\PullRequestEditSessionDiffType;
 use App\Exceptions\TargetDocumentNotFoundException;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
-use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentDiffService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
+use App\Services\VersionEditPermissionService;
 use Illuminate\Support\Facades\Log;
 
 class UpdateDocumentUseCase
@@ -23,7 +23,8 @@ class UpdateDocumentUseCase
         private DocumentService $documentService,
         private UserBranchService $userBranchService,
         private DocumentCategoryService $documentCategoryService,
-        private DocumentDiffService $documentDiffService
+        private DocumentDiffService $documentDiffService,
+        private VersionEditPermissionService $versionEditPermissionService
     ) {}
 
     /**
@@ -51,28 +52,19 @@ class UpdateDocumentUseCase
                 $dto->edit_pull_request_id ?? null
             );
 
-            // 編集セッションIDを取得
-            $pullRequestEditSessionId = null;
-            $isEditSessionSpecified = ! empty($dto->edit_pull_request_id) && ! empty($dto->pull_request_edit_token);
-            if ($isEditSessionSpecified) {
-                $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId(
-                    $dto->edit_pull_request_id,
-                    $dto->pull_request_edit_token,
-                    $user->id
-                );
-
-                // 指定された編集セッションが無効
-                if (empty($pullRequestEditSessionId)) {
-                    throw new \InvalidArgumentException('無効な編集セッションです');
-                }
-            }
-
             // 編集権限チェック
-            if (!$this->documentDiffService->canEditDocument($existingDocument, $userBranchId, $pullRequestEditSessionId)) {
-                throw new \InvalidArgumentException('他のユーザーの未マージドキュメントは編集できません');
-            }
+            $permissionResult = $this->versionEditPermissionService->hasEditPermission(
+                $existingDocument,
+                $userBranchId,
+                $user,
+                $dto->edit_pull_request_id,
+                $dto->pull_request_edit_token
+            );
 
-            // 差分なしであれば何もしない
+            $hasReEditSession = $permissionResult['has_re_edit_session'];
+            $pullRequestEditSessionId = $hasReEditSession ? $permissionResult['pull_request_edit_session_id'] : null;
+
+            // 差分なしであれば、何もしない
             if (!$this->documentDiffService->hasDocumentChanges($dto, $existingDocument)) {
                 return [
                     'result' => 'no_changes_exist',
@@ -92,31 +84,17 @@ class UpdateDocumentUseCase
                 $user->email
             );
 
-            // 既存ドキュメントのソフトデリート条件
-            $shouldSoftDeleteExisting = false;
-            if ($pullRequestEditSessionId) {
-                // 編集セッション中は DRAFT のみ論理削除
-                $shouldSoftDeleteExisting = $existingDocument->status === DocumentStatus::DRAFT->value;
-            } else {
-                // 通常編集では DRAFT/PUSHED は論理削除、MERGED は保持
-                $shouldSoftDeleteExisting = in_array($existingDocument->status, [
-                    DocumentStatus::DRAFT->value,
-                    DocumentStatus::PUSHED->value,
-                ], true);
-            }
-
+            // draftドキュメントのみ論理削除
+            $shouldSoftDeleteExisting = $existingDocument->status === DocumentStatus::DRAFT->value;
             if ($shouldSoftDeleteExisting) {
-                // プロジェクトのアサーション基準に合わせ、deleted_at のみを更新
-                // （is_deleted は更新しない）
-                $existingDocument->deleted_at = now();
-                $existingDocument->save();
+                $existingDocument->delete();
             }
 
             // 新しいドキュメントバージョンを作成
             $newDocumentVersion = DocumentVersion::create([
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId ?? null,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'file_path' => $existingDocument->file_path,
                 'status' => DocumentStatus::DRAFT->value,
                 'content' => $dto->content,
@@ -137,7 +115,7 @@ class UpdateDocumentUseCase
             ]);
 
             // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
+            if ($hasReEditSession) {
                 PullRequestEditSessionDiff::updateOrCreate(
                     [
                         'pull_request_edit_session_id' => $pullRequestEditSessionId,
@@ -156,7 +134,6 @@ class UpdateDocumentUseCase
                 'document_version' => $newDocumentVersion,
             ];
         } catch (TargetDocumentNotFoundException $e) {
-            // ビジネスロジックエラーはそのまま再スロー
             throw $e;
         } catch (\Exception $e) {
             Log::error('UpdateDocumentUseCase: エラー', [
