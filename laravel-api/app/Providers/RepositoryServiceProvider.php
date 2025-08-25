@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Repositories\DocumentVersionRepository;
+use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Repositories\Interfaces\PullRequestEditSessionRepositoryInterface;
 use App\Repositories\PullRequestEditSessionRepository;
 use Illuminate\Support\ServiceProvider;
@@ -24,12 +26,11 @@ class RepositoryServiceProvider extends ServiceProvider
             PullRequestEditSessionRepository::class
         );
 
-        // 今後追加するRepositoryのバインディングはここに追加
-        // 例：
-        // $this->app->bind(
-        //     DocumentRepositoryInterface::class,
-        //     DocumentRepository::class
-        // );
+        // DocumentVersion Repository バインディング
+        $this->app->bind(
+            DocumentVersionRepositoryInterface::class,
+            DocumentVersionRepository::class
+        );
     }
 
     /**

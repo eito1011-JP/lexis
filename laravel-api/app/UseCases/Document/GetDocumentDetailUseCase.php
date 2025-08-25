@@ -3,14 +3,15 @@
 namespace App\UseCases\Document;
 
 use App\Dto\UseCase\Document\GetDocumentDetailDto;
-use App\Models\DocumentVersion;
+use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\DocumentCategoryService;
 use Illuminate\Support\Facades\Log;
 
 class GetDocumentDetailUseCase
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService
+        private DocumentCategoryService $documentCategoryService,
+        private DocumentVersionRepositoryInterface $documentVersionRepository
     ) {}
 
     /**
@@ -25,11 +26,7 @@ class GetDocumentDetailUseCase
             // パスから所属しているカテゴリのcategoryIdを取得
             $categoryId = $this->documentCategoryService->getIdFromPath($dto->category_path ?? '');
 
-            $document = DocumentVersion::where(function ($query) use ($categoryId, $dto) {
-                $query->where('category_id', $categoryId)
-                    ->where('slug', $dto->slug);
-            })
-                ->first();
+            $document = $this->documentVersionRepository->findByCategoryAndSlug($categoryId, $dto->slug);
 
             if (! $document) {
                 return [
