@@ -239,31 +239,4 @@ class DocumentDiffService
 
         return !($noContentChange && $noSlugChange && $noSidebarLabelChange && $noIsPublicChange && $noFileOrderChange);
     }
-
-    /**
-     * ドキュメントの編集権限をチェック
-     */
-    public function canEditDocument(
-        DocumentVersion $existingDocument, 
-        int $userBranchId, 
-        ?int $pullRequestEditSessionId = null
-    ): bool {
-        // 編集セッション中は既存のロジックが適用される（権限チェックを通す）
-        if ($pullRequestEditSessionId) {
-            return true;
-        }
-
-        // 同じユーザーブランチなら編集可能
-        if ($existingDocument->user_branch_id === $userBranchId) {
-            return true;
-        }
-
-        // 他のユーザーのDRAFT/PUSHEDドキュメントは編集不可
-        if (in_array($existingDocument->status, [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value], true)) {
-            return false;
-        }
-
-        // MERGEDドキュメントは他のユーザーでも編集可能
-        return true;
-    }
 }
