@@ -2,58 +2,50 @@
 
 namespace App\UseCases\Document;
 
-use App\Models\DocumentVersion;
+use App\Dto\UseCase\Document\GetDocumentDetailDto;
+use App\Exceptions\DocumentNotFoundException;
+use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\DocumentCategoryService;
+use App\Models\DocumentVersion;
 use Illuminate\Support\Facades\Log;
 
 class GetDocumentDetailUseCase
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService
+        private DocumentCategoryService $documentCategoryService,
+        private DocumentVersionRepositoryInterface $documentVersionRepository
     ) {}
 
     /**
      * スラッグでドキュメントを取得
      *
-     * @param  string  $categoryPath  カテゴリパス（例: 'tutorial/basics'）
-     * @param  string  $slug  ドキュメントのスラッグ
-     * @return array{success: bool, document?: object, error?: string}
+     * @param  GetDocumentDetailDto  $dto  リクエストデータ
+     * @return DocumentVersion
      */
-    public function execute(string $categoryPath, string $slug): array
+    public function execute(GetDocumentDetailDto $dto): DocumentVersion
     {
         try {
             // パスから所属しているカテゴリのcategoryIdを取得
-            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
+            $categoryId = $this->documentCategoryService->getIdFromPath($dto->category_path);
 
-            $document = DocumentVersion::where(function ($query) use ($categoryId, $slug) {
-                $query->where('category_id', $categoryId)
-                    ->where('slug', $slug);
-            })
-                ->first();
+            $document = $this->documentVersionRepository->findByCategoryAndSlug($categoryId, $dto->slug);
 
             if (! $document) {
-                return [
-                    'success' => false,
-                    'error' => 'ドキュメントが見つかりません',
-                ];
+                throw new DocumentNotFoundException('ドキュメントが見つかりません');
             }
 
-            return [
-                'success' => true,
-                'document' => $document,
-            ];
+            return $document;
 
+        } catch (DocumentNotFoundException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('GetDocumentDetailUseCase: エラー', [
                 'error' => $e->getMessage(),
-                'category_path' => $categoryPath,
-                'slug' => $slug,
+                'category_path' => $dto->category_path,
+                'slug' => $dto->slug,
             ]);
 
-            return [
-                'success' => false,
-                'error' => 'ドキュメントの取得に失敗しました',
-            ];
+            throw $e;
         }
     }
 }

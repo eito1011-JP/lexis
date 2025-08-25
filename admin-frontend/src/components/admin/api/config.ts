@@ -30,7 +30,6 @@ export const API_CONFIG = {
     },
     USERS: {
       GET_ALL: '/api/admin/users',
-      GET_BY_ID: '/api/admin/users',
     },
     USER_BRANCHES: {
       HAS_USER_CHANGES: '/api/admin/user-branches/has-changes',

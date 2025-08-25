@@ -2,6 +2,7 @@
 
 namespace App\UseCases\Document;
 
+use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Models\PullRequest;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
@@ -17,14 +18,14 @@ class GetDocumentsUseCase
     /**
      * ドキュメント一覧を取得
      *
-     * @param  array  $requestData  リクエストデータ
+     * @param  GetDocumentsDto  $dto  リクエストデータ
      * @param  object  $user  認証済みユーザー
      * @return array{success: bool, documents?: array, categories?: array, error?: string}
      */
-    public function execute(array $requestData, object $user): array
+    public function execute(GetDocumentsDto $dto, object $user): array
     {
         try {
-            $categoryPath = array_filter(explode('/', $requestData['category_path'] ?? ''));
+            $categoryPath = array_filter(explode('/', $dto->category_path ?? ''));
 
             // カテゴリIDを取得（パスから）
             $parentId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
@@ -34,8 +35,8 @@ class GetDocumentsUseCase
             Log::info('userBranchId: '.$userBranchId);
 
             // edit_pull_request_idが存在する場合、プルリクエストからuser_branch_idを取得
-            if (! empty($requestData['edit_pull_request_id'])) {
-                $pullRequest = PullRequest::find($requestData['edit_pull_request_id']);
+            if (! empty($dto->edit_pull_request_id)) {
+                $pullRequest = PullRequest::find($dto->edit_pull_request_id);
                 $userBranchId = $pullRequest?->user_branch_id ?? null;
             }
 
@@ -43,14 +44,14 @@ class GetDocumentsUseCase
             $subCategories = $this->documentCategoryService->getSubCategories(
                 $parentId,
                 $userBranchId,
-                $requestData['edit_pull_request_id'] ?? null
+                $dto->edit_pull_request_id
             );
 
             // ドキュメントを取得
             $documents = $this->documentService->fetchDocumentsByCategoryId(
                 $parentId,
                 $userBranchId,
-                $requestData['edit_pull_request_id'] ?? null
+                $dto->edit_pull_request_id
             );
 
             // ソート処理

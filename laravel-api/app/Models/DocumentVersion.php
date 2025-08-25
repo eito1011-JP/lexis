@@ -99,9 +99,28 @@ class DocumentVersion extends Model
         return $this->category->parent_path;
     }
 
+    /**
+     * ステータスによるスコープ
+     */
     public function scopeForStatus($query, int $status)
     {
         return $query->where('status', $status);
+    }
+
+    /**
+     * カテゴリIDによるスコープ
+     */
+    public function scopeByCategory($query, int $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
+    }
+
+    /**
+     * スラッグによるスコープ
+     */
+    public function scopeBySlug($query, string $slug)
+    {
+        return $query->where('slug', $slug);
     }
 
     /**
