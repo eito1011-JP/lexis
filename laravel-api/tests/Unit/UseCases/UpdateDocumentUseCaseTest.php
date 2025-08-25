@@ -962,10 +962,21 @@ class UpdateDocumentUseCaseTest extends TestCase
                 'pull_request_edit_session_id' => null,
             ]);
 
+        // 既存のモックをリセットして、差分なしを返すように設定
+        $this->documentDiffService = Mockery::mock(DocumentDiffService::class);
         $this->documentDiffService
             ->shouldReceive('hasDocumentChanges')
             ->once()
             ->andReturn(false);
+
+        // UseCaseを再作成してモックを反映
+        $this->useCase = new UpdateDocumentUseCase(
+            $this->documentService,
+            $this->userBranchService,
+            $this->documentCategoryService,
+            $this->documentDiffService,
+            $this->versionEditPermissionService
+        );
 
         // 差分なしなら updateFileOrder は呼ばれない
         $this->documentService->shouldReceive('updateFileOrder')->never();
@@ -1039,6 +1050,22 @@ class UpdateDocumentUseCaseTest extends TestCase
                 'pull_request_edit_session_id' => null,
             ]);
 
+        // // 差分があることを示すモック設定
+        // $this->documentDiffService = Mockery::mock(DocumentDiffService::class);
+        // $this->documentDiffService
+        //     ->shouldReceive('hasDocumentChanges')
+        //     ->once()
+        //     ->andReturn(true);
+
+        // // UseCaseを再作成してモックを反映
+        // $this->useCase = new UpdateDocumentUseCase(
+        //     $this->documentService,
+        //     $this->userBranchService,
+        //     $this->documentCategoryService,
+        //     $this->documentDiffService,
+        //     $this->versionEditPermissionService
+        // );
+
         // 一部の項目のみ変更したDTOを作成
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,
@@ -1057,6 +1084,7 @@ class UpdateDocumentUseCaseTest extends TestCase
 
         // Act
         $result = $this->useCase->execute($dto, $user);
+
         $resultDocumentVersion = $result['document_version'];
 
         // Assert
@@ -1064,7 +1092,10 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->assertSoftDeleted('document_versions', ['id' => $existingDocument->id]);
 
         // 一部変更された新しいドキュメントバージョンが作成される
-        $this->assertSame($beforeVersions + 1, DocumentVersion::count());
+        // 1つが論理削除され、1つが新規作成されるため、削除されていないレコード数は変わらない
+        $this->assertSame($beforeVersions, DocumentVersion::count());
+        // 削除されたレコードも含む総数は+1される
+        $this->assertSame(1, DocumentVersion::onlyTrashed()->count());
         $this->assertDocumentUpdated($resultDocumentVersion, $existingDocument, $user, [
             'user_branch_id' => $branch->id,
             'content' => 'updated content',

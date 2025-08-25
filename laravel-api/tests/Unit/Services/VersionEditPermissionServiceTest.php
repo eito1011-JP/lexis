@@ -13,8 +13,8 @@ use Tests\TestCase;
 
 class VersionEditPermissionServiceTest extends TestCase
 {
-
     private VersionEditPermissionService $service;
+
     private $mockRepository;
 
     protected function setUp(): void
@@ -151,7 +151,7 @@ class VersionEditPermissionServiceTest extends TestCase
         $existingDocument->shouldReceive('getAttribute')
             ->with('user_branch_id')
             ->andReturn(1);
-        
+
         $userBranchId = 1; // 同じユーザーブランチIDに変更
         $pullRequestEditSessionId = 10;
 
