@@ -104,4 +104,10 @@ class GetIdFromPathTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->service->getIdFromPath('/parent//child/');
     }
+
+    public function test_returns_default_when_null_is_passed(): void
+    {
+        $id = $this->service->getIdFromPath(null);
+        $this->assertSame(DocumentCategoryConstants::DEFAULT_CATEGORY_ID, $id);
+    }
 }
