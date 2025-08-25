@@ -68,7 +68,6 @@ class PullRequestEditSession extends Model
      * プルリクエストIDでフィルター
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  int  $pull_request_id
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByPullRequest($query, int $pull_request_id)
@@ -80,7 +79,6 @@ class PullRequestEditSession extends Model
      * トークンでフィルター
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  string  $token
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByToken($query, string $token)
@@ -92,7 +90,6 @@ class PullRequestEditSession extends Model
      * ユーザーIDでフィルター
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @param  int  $user_id
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeByUser($query, int $user_id)

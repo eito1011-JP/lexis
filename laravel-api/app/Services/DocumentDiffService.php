@@ -2,9 +2,8 @@
 
 namespace App\Services;
 
-use App\Enums\EditStartVersionTargetType;
-use App\Enums\DocumentStatus;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
+use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -237,6 +236,6 @@ class DocumentDiffService
         $noIsPublicChange = $dto->is_public === $existingDocument->is_public;
         $noFileOrderChange = $dto->file_order === $existingDocument->file_order;
 
-        return !($noContentChange && $noSlugChange && $noSidebarLabelChange && $noIsPublicChange && $noFileOrderChange);
+        return ! ($noContentChange && $noSlugChange && $noSidebarLabelChange && $noIsPublicChange && $noFileOrderChange);
     }
 }

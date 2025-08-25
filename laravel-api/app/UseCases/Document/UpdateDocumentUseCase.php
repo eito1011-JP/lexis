@@ -68,7 +68,7 @@ class UpdateDocumentUseCase
                     $pullRequestEditSessionId = $hasReEditSession ? $permissionResult['pull_request_edit_session_id'] : null;
 
                     // 差分なしであれば、何もしない
-                    if (!$this->documentDiffService->hasDocumentChanges($dto, $existingDocument)) {
+                    if (! $this->documentDiffService->hasDocumentChanges($dto, $existingDocument)) {
                         return [
                             'result' => 'no_changes_exist',
                         ];
@@ -142,7 +142,7 @@ class UpdateDocumentUseCase
                         'current_document_id' => $dto->current_document_id ?? null,
                         'trace' => $e->getTraceAsString(),
                     ]);
-                    
+
                     throw $e;
                 }
             });

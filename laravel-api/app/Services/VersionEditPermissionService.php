@@ -8,7 +8,7 @@ use App\Models\PullRequestEditSession;
 
 /**
  * バージョン編集権限確認サービス
- * 
+ *
  * 編集セッションの取得と編集権限の確認を統合した汎用的なサービス
  */
 class VersionEditPermissionService
@@ -16,12 +16,13 @@ class VersionEditPermissionService
     /**
      * 編集権限をチェックし、編集セッションIDを取得する
      *
-     * @param DocumentVersion $existingDocument 既存のドキュメント
-     * @param int $userBranchId ユーザーブランチID
-     * @param object $user 認証済みユーザー
-     * @param int|null $editPullRequestId 編集プルリクエストID
-     * @param string|null $pullRequestEditToken プルリクエスト編集トークン
+     * @param  DocumentVersion  $existingDocument  既存のドキュメント
+     * @param  int  $userBranchId  ユーザーブランチID
+     * @param  object  $user  認証済みユーザー
+     * @param  int|null  $editPullRequestId  編集プルリクエストID
+     * @param  string|null  $pullRequestEditToken  プルリクエスト編集トークン
      * @return array 編集権限の結果とセッションID
+     *
      * @throws \InvalidArgumentException 権限がない場合や無効なセッション
      */
     public function hasEditPermission(
@@ -34,13 +35,13 @@ class VersionEditPermissionService
         // 編集セッションが指定されている場合のみ処理
         $pullRequestEditSessionId = null;
         $hasReEditSession = $editPullRequestId && $pullRequestEditToken;
-        
+
         if ($hasReEditSession) {
             $pullRequestEditSessionId = $this->findEditSession($user, $editPullRequestId, $pullRequestEditToken);
         }
 
         // 編集権限チェック
-        if (!$this->canEditDocument($existingDocument, $userBranchId, $pullRequestEditSessionId)) {
+        if (! $this->canEditDocument($existingDocument, $userBranchId, $pullRequestEditSessionId)) {
             throw new \InvalidArgumentException('他のユーザーの未マージドキュメントは編集できません');
         }
 
@@ -54,10 +55,11 @@ class VersionEditPermissionService
     /**
      * 編集セッションを検索してIDを取得
      *
-     * @param object $user 認証済みユーザー
-     * @param int $editPullRequestId 編集プルリクエストID
-     * @param string $pullRequestEditToken プルリクエスト編集トークン
+     * @param  object  $user  認証済みユーザー
+     * @param  int  $editPullRequestId  編集プルリクエストID
+     * @param  string  $pullRequestEditToken  プルリクエスト編集トークン
      * @return int 編集セッションID
+     *
      * @throws \InvalidArgumentException 無効なセッション
      */
     private function findEditSession(
@@ -71,7 +73,7 @@ class VersionEditPermissionService
             $user->id
         );
 
-        if (!$validSession) {
+        if (! $validSession) {
             throw new \InvalidArgumentException('無効な編集セッションです');
         }
 
@@ -81,9 +83,9 @@ class VersionEditPermissionService
     /**
      * ドキュメントの編集権限をチェック
      *
-     * @param DocumentVersion $existingDocument 既存のドキュメント
-     * @param int $userBranchId ユーザーブランチID
-     * @param int|null $pullRequestEditSessionId プルリクエスト編集セッションID
+     * @param  DocumentVersion  $existingDocument  既存のドキュメント
+     * @param  int  $userBranchId  ユーザーブランチID
+     * @param  int|null  $pullRequestEditSessionId  プルリクエスト編集セッションID
      * @return bool 編集可能かどうか
      */
     public function canEditDocument(
@@ -102,10 +104,10 @@ class VersionEditPermissionService
             if ($pullRequestEditSessionId) {
                 return in_array($existingDocument->status, [
                     DocumentStatus::DRAFT->value,
-                    DocumentStatus::PUSHED->value
+                    DocumentStatus::PUSHED->value,
                 ], true);
             }
-            
+
             // 編集セッションが存在しない場合：DRAFT ステータスのみ編集可能
             return $existingDocument->status === DocumentStatus::DRAFT->value;
         }

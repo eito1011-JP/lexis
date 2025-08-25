@@ -7,14 +7,15 @@ use App\Models\DocumentVersion;
 use App\Models\PullRequestEditSession;
 use App\Services\VersionEditPermissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Tests\TestCase;
 use Mockery;
+use Tests\TestCase;
 
 class VersionEditPermissionServiceTest extends TestCase
 {
     use RefreshDatabase;
 
     private VersionEditPermissionService $service;
+
     private $mockPullRequestEditSession;
 
     protected function setUp(): void
@@ -27,7 +28,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * 編集セッションが指定された場合の権限チェックのテスト
      */
-    public function testHasEditPermissionWithValidEditSession(): void
+    public function test_has_edit_permission_with_valid_edit_session(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -67,7 +68,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * 無効な編集セッションが指定された場合のテスト
      */
-    public function testHasEditPermissionWithInvalidEditSession(): void
+    public function test_has_edit_permission_with_invalid_edit_session(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -97,7 +98,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * 編集セッションが指定されていない場合のテスト
      */
-    public function testHasEditPermissionWithoutEditSession(): void
+    public function test_has_edit_permission_without_edit_session(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -123,7 +124,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * 編集権限がない場合のテスト
      */
-    public function testHasEditPermissionWithNoPermission(): void
+    public function test_has_edit_permission_with_no_permission(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -147,7 +148,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * canEditDocument - 編集セッション中の場合のテスト
      */
-    public function testCanEditDocumentWithEditSession(): void
+    public function test_can_edit_document_with_edit_session(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -168,7 +169,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * canEditDocument - 同じユーザーブランチの場合のテスト
      */
-    public function testCanEditDocumentWithSameUserBranch(): void
+    public function test_can_edit_document_with_same_user_branch(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -186,7 +187,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * canEditDocument - 他のユーザーのDRAFTドキュメントの場合のテスト
      */
-    public function testCanEditDocumentWithOtherUserDraftDocument(): void
+    public function test_can_edit_document_with_other_user_draft_document(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -205,7 +206,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * canEditDocument - 他のユーザーのPUSHEDドキュメントの場合のテスト
      */
-    public function testCanEditDocumentWithOtherUserPushedDocument(): void
+    public function test_can_edit_document_with_other_user_pushed_document(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
@@ -224,7 +225,7 @@ class VersionEditPermissionServiceTest extends TestCase
     /**
      * canEditDocument - 他のユーザーのMERGEDドキュメントの場合のテスト
      */
-    public function testCanEditDocumentWithOtherUserMergedDocument(): void
+    public function test_can_edit_document_with_other_user_merged_document(): void
     {
         // Arrange
         $existingDocument = Mockery::mock(DocumentVersion::class);
