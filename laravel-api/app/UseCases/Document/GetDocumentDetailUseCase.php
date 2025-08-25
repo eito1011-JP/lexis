@@ -2,6 +2,7 @@
 
 namespace App\UseCases\Document;
 
+use App\Dto\UseCase\Document\GetDocumentDetailDto;
 use App\Models\DocumentVersion;
 use App\Services\DocumentCategoryService;
 use Illuminate\Support\Facades\Log;
@@ -15,19 +16,18 @@ class GetDocumentDetailUseCase
     /**
      * スラッグでドキュメントを取得
      *
-     * @param  string  $categoryPath  カテゴリパス（例: 'tutorial/basics'）
-     * @param  string  $slug  ドキュメントのスラッグ
+     * @param  GetDocumentDetailDto  $dto  リクエストデータ
      * @return array{success: bool, document?: object, error?: string}
      */
-    public function execute(string $categoryPath, string $slug): array
+    public function execute(GetDocumentDetailDto $dto): array
     {
         try {
             // パスから所属しているカテゴリのcategoryIdを取得
-            $categoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
+            $categoryId = $this->documentCategoryService->getIdFromPath($dto->category_path ?? '');
 
-            $document = DocumentVersion::where(function ($query) use ($categoryId, $slug) {
+            $document = DocumentVersion::where(function ($query) use ($categoryId, $dto) {
                 $query->where('category_id', $categoryId)
-                    ->where('slug', $slug);
+                    ->where('slug', $dto->slug);
             })
                 ->first();
 
@@ -46,8 +46,8 @@ class GetDocumentDetailUseCase
         } catch (\Exception $e) {
             Log::error('GetDocumentDetailUseCase: エラー', [
                 'error' => $e->getMessage(),
-                'category_path' => $categoryPath,
-                'slug' => $slug,
+                'category_path' => $dto->category_path,
+                'slug' => $dto->slug,
             ]);
 
             return [

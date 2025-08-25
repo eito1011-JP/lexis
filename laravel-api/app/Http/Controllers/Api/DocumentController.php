@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Dto\UseCase\Document\GetDocumentDetailDto;
 use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
@@ -156,11 +157,9 @@ class DocumentController extends ApiBaseController
                 ], 401);
             }
 
-            // UseCaseを使用してドキュメントを取得
-            $result = $this->getDocumentDetailUseCase->execute(
-                $request->category_path,
-                $request->slug
-            );
+            // DTOを作成してUseCaseを実行
+            $dto = GetDocumentDetailDto::fromArray($request->validated());
+            $result = $this->getDocumentDetailUseCase->execute($dto);
 
             if (! $result['success']) {
                 return response()->json([
