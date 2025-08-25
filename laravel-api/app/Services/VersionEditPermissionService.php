@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Enums\DocumentStatus;
 use App\Models\DocumentVersion;
-use App\Models\PullRequestEditSession;
+use App\Repositories\Interfaces\PullRequestEditSessionRepositoryInterface;
 
 /**
  * バージョン編集権限確認サービス
@@ -13,6 +13,15 @@ use App\Models\PullRequestEditSession;
  */
 class VersionEditPermissionService
 {
+    /**
+     * コンストラクタ
+     *
+     * @param  PullRequestEditSessionRepositoryInterface  $pullRequestEditSessionRepository  プルリクエスト編集セッションRepository
+     */
+    public function __construct(
+        private PullRequestEditSessionRepositoryInterface $pullRequestEditSessionRepository
+    ) {}
+
     /**
      * 編集権限をチェックし、編集セッションIDを取得する
      *
@@ -67,7 +76,7 @@ class VersionEditPermissionService
         int $editPullRequestId,
         string $pullRequestEditToken
     ): int {
-        $validSession = PullRequestEditSession::findValidSession(
+        $validSession = $this->pullRequestEditSessionRepository->findValidSession(
             $editPullRequestId,
             $pullRequestEditToken,
             $user->id
