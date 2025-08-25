@@ -76,14 +76,7 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->shouldReceive('hasDocumentChanges')
             ->andReturn(true);
 
-        // VersionEditPermissionServiceのモックを追加（基本的に編集可能と仮定）
-        $this->versionEditPermissionService
-            ->shouldReceive('hasEditPermission')
-            ->andReturn([
-                'can_edit' => true,
-                'has_re_edit_session' => false,
-                'pull_request_edit_session_id' => null,
-            ]);
+        // VersionEditPermissionServiceのモックは各テストで個別に設定
 
         $this->useCase = new UpdateDocumentUseCase(
             $this->documentService,
@@ -199,6 +192,16 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), null)
             ->andReturn($newBranch->id);
 
+        // 編集権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => false,
+                'pull_request_edit_session_id' => null,
+            ]);
+
         // 変更できる箇所は全て変更する
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,
@@ -260,6 +263,16 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $userB->id), null)
             ->andReturn($newBranch->id);
 
+        // 編集権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => false,
+                'pull_request_edit_session_id' => null,
+            ]);
+
         // 変更できる箇所は全て変更する
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,
@@ -318,6 +331,16 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), null)
             ->andReturn($branch->id);
+
+        // 編集権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => false,
+                'pull_request_edit_session_id' => null,
+            ]);
 
         // 変更できる箇所は全て変更する
         $dto = $this->createUpdateDocumentDto([
@@ -1005,6 +1028,16 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), null)
             ->andReturn($branch->id);
+
+        // 編集権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => false,
+                'pull_request_edit_session_id' => null,
+            ]);
 
         // 一部の項目のみ変更したDTOを作成
         $dto = $this->createUpdateDocumentDto([
