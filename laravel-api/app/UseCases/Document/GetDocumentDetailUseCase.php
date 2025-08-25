@@ -3,8 +3,10 @@
 namespace App\UseCases\Document;
 
 use App\Dto\UseCase\Document\GetDocumentDetailDto;
+use App\Exceptions\DocumentNotFoundException;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\DocumentCategoryService;
+use App\Models\DocumentVersion;
 use Illuminate\Support\Facades\Log;
 
 class GetDocumentDetailUseCase
@@ -18,28 +20,24 @@ class GetDocumentDetailUseCase
      * スラッグでドキュメントを取得
      *
      * @param  GetDocumentDetailDto  $dto  リクエストデータ
-     * @return array{success: bool, document?: object, error?: string}
+     * @return DocumentVersion
      */
-    public function execute(GetDocumentDetailDto $dto): array
+    public function execute(GetDocumentDetailDto $dto): DocumentVersion
     {
         try {
             // パスから所属しているカテゴリのcategoryIdを取得
-            $categoryId = $this->documentCategoryService->getIdFromPath($dto->category_path ?? '');
+            $categoryId = $this->documentCategoryService->getIdFromPath($dto->category_path);
 
             $document = $this->documentVersionRepository->findByCategoryAndSlug($categoryId, $dto->slug);
 
             if (! $document) {
-                return [
-                    'success' => false,
-                    'error' => 'ドキュメントが見つかりません',
-                ];
+                throw new DocumentNotFoundException('ドキュメントが見つかりません');
             }
 
-            return [
-                'success' => true,
-                'document' => $document,
-            ];
+            return $document;
 
+        } catch (DocumentNotFoundException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('GetDocumentDetailUseCase: エラー', [
                 'error' => $e->getMessage(),
@@ -47,10 +45,7 @@ class GetDocumentDetailUseCase
                 'slug' => $dto->slug,
             ]);
 
-            return [
-                'success' => false,
-                'error' => 'ドキュメントの取得に失敗しました',
-            ];
+            throw $e;
         }
     }
 }
