@@ -3,11 +3,11 @@
 namespace Tests\Unit\UseCases;
 
 use App\Dto\UseCase\Document\GetDocumentDetailDto;
-use App\Models\DocumentCategory;
+use App\Exceptions\DocumentNotFoundException;
 use App\Models\DocumentVersion;
+use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\DocumentCategoryService;
 use App\UseCases\Document\GetDocumentDetailUseCase;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Log;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
@@ -15,21 +15,24 @@ use Tests\TestCase;
 
 class GetDocumentDetailUseCaseTest extends TestCase
 {
-    use DatabaseTransactions;
-
     private GetDocumentDetailUseCase $useCase;
 
     /** @var \Mockery\MockInterface&DocumentCategoryService */
     private DocumentCategoryService $documentCategoryService;
+
+    /** @var \Mockery\MockInterface&DocumentVersionRepositoryInterface */
+    private DocumentVersionRepositoryInterface $documentVersionRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
+        $this->documentVersionRepository = Mockery::mock(DocumentVersionRepositoryInterface::class);
 
         $this->useCase = new GetDocumentDetailUseCase(
-            $this->documentCategoryService
+            $this->documentCategoryService,
+            $this->documentVersionRepository
         );
     }
 
@@ -40,7 +43,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function execute_with_empty_category_path_returns_document_successfully(): void
+    public function executeWithEmptyCategoryPathReturnsDocumentSuccessfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -48,34 +51,38 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'test-document'
         );
 
-        $category = DocumentCategory::factory()->create();
-        $document = DocumentVersion::factory()->create([
-            'category_id' => $category->id,
+        $document = new DocumentVersion([
             'slug' => 'test-document',
             'sidebar_label' => 'Test Document',
             'content' => 'Test content',
+            'category_id' => 1,
         ]);
+        $document->id = 1;
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('')
-            ->andReturn($category->id);
+            ->andReturn(1);
+
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with(1, 'test-document')
+            ->andReturn($document);
 
         // Act
         $result = $this->useCase->execute($dto);
 
         // Assert
-        $this->assertTrue($result['success']);
-        $this->assertArrayHasKey('document', $result);
-        $this->assertInstanceOf(DocumentVersion::class, $result['document']);
-        $this->assertSame('test-document', $result['document']->slug);
-        $this->assertSame('Test Document', $result['document']->sidebar_label);
-        $this->assertArrayNotHasKey('error', $result);
+        $this->assertInstanceOf(DocumentVersion::class, $result);
+        $this->assertSame('test-document', $result->slug);
+        $this->assertSame('Test Document', $result->sidebar_label);
+        $this->assertSame(1, $result->category_id);
     }
 
     #[Test]
-    public function execute_with_category_path_returns_document_successfully(): void
+    public function executeWithCategoryPathReturnsDocumentSuccessfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -83,43 +90,39 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'test-document'
         );
 
-        $parent = DocumentCategory::factory()->create([
-            'slug' => 'parent',
-            'parent_id' => 1,
-        ]);
-
-        $child = DocumentCategory::factory()->create([
-            'slug' => 'child',
-            'parent_id' => $parent->id,
-        ]);
-
-        $document = DocumentVersion::factory()->create([
-            'category_id' => $child->id,
+        $categoryId = 2;
+        $document = new DocumentVersion([
+            'category_id' => $categoryId,
             'slug' => 'test-document',
             'sidebar_label' => 'Test Document in Category',
             'content' => 'Test content in category',
         ]);
+        $document->id = 1;
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('parent/child')
-            ->andReturn($child->id);
+            ->andReturn($categoryId);
+
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with($categoryId, 'test-document')
+            ->andReturn($document);
 
         // Act
         $result = $this->useCase->execute($dto);
 
         // Assert
-        $this->assertTrue($result['success']);
-        $this->assertArrayHasKey('document', $result);
-        $this->assertInstanceOf(DocumentVersion::class, $result['document']);
-        $this->assertSame('test-document', $result['document']->slug);
-        $this->assertSame($child->id, $result['document']->category_id);
-        $this->assertArrayNotHasKey('error', $result);
+        $this->assertInstanceOf(DocumentVersion::class, $result);
+        $this->assertSame('test-document', $result->slug);
+        $this->assertSame($categoryId, $result->category_id);
+        $this->assertSame('Test Document in Category', $result->sidebar_label);
     }
 
     #[Test]
-    public function execute_with_null_category_path_returns_document_successfully(): void
+    public function executeWithNullCategoryPathReturnsDocumentSuccessfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -127,31 +130,37 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'test-document'
         );
 
-        $category = DocumentCategory::factory()->create();
-        $document = DocumentVersion::factory()->create([
-            'category_id' => $category->id,
+        $categoryId = 1;
+        $document = new DocumentVersion([
+            'category_id' => $categoryId,
             'slug' => 'test-document',
+            'sidebar_label' => 'Test Document',
         ]);
+        $document->id = 1;
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
-            ->with('')
-            ->andReturn($category->id);
+            ->with(null)
+            ->andReturn($categoryId);
+
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with($categoryId, 'test-document')
+            ->andReturn($document);
 
         // Act
         $result = $this->useCase->execute($dto);
 
         // Assert
-        $this->assertTrue($result['success']);
-        $this->assertArrayHasKey('document', $result);
-        $this->assertInstanceOf(DocumentVersion::class, $result['document']);
-        $this->assertSame('test-document', $result['document']->slug);
-        $this->assertArrayNotHasKey('error', $result);
+        $this->assertInstanceOf(DocumentVersion::class, $result);
+        $this->assertSame('test-document', $result->slug);
+        $this->assertSame($categoryId, $result->category_id);
     }
 
     #[Test]
-    public function execute_returns_error_when_document_not_found(): void
+    public function executeThrowsDocumentNotFoundExceptionWhenDocumentNotFound(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -159,26 +168,27 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'non-existent-document'
         );
 
-        $category = DocumentCategory::factory()->create();
-
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('')
-            ->andReturn($category->id);
+            ->andReturn(1);
 
-        // Act
-        $result = $this->useCase->execute($dto);
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with(1, 'non-existent-document')
+            ->andReturn(null);
 
-        // Assert
-        $this->assertFalse($result['success']);
-        $this->assertArrayHasKey('error', $result);
-        $this->assertSame('ドキュメントが見つかりません', $result['error']);
-        $this->assertArrayNotHasKey('document', $result);
+        // Act & Assert
+        $this->expectException(DocumentNotFoundException::class);
+        $this->expectExceptionMessage('ドキュメントが見つかりません');
+
+        $this->useCase->execute($dto);
     }
 
     #[Test]
-    public function execute_returns_error_when_document_not_found_in_specified_category(): void
+    public function executeThrowsDocumentNotFoundExceptionWhenDocumentNotFoundInSpecifiedCategory(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -186,42 +196,29 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'test-document'
         );
 
-        $parent = DocumentCategory::factory()->create([
-            'slug' => 'parent',
-            'parent_id' => 1,
-        ]);
-
-        $child = DocumentCategory::factory()->create([
-            'slug' => 'child',
-            'parent_id' => $parent->id,
-        ]);
-
-        $otherCategory = DocumentCategory::factory()->create();
-
-        // 別のカテゴリにドキュメントを作成（指定されたカテゴリではない）
-        DocumentVersion::factory()->create([
-            'category_id' => $otherCategory->id,
-            'slug' => 'test-document',
-        ]);
+        $categoryId = 2;
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('parent/child')
-            ->andReturn($child->id);
+            ->andReturn($categoryId);
 
-        // Act
-        $result = $this->useCase->execute($dto);
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with($categoryId, 'test-document')
+            ->andReturn(null);
 
-        // Assert
-        $this->assertFalse($result['success']);
-        $this->assertArrayHasKey('error', $result);
-        $this->assertSame('ドキュメントが見つかりません', $result['error']);
-        $this->assertArrayNotHasKey('document', $result);
+        // Act & Assert
+        $this->expectException(DocumentNotFoundException::class);
+        $this->expectExceptionMessage('ドキュメントが見つかりません');
+
+        $this->useCase->execute($dto);
     }
 
     #[Test]
-    public function execute_returns_correct_document_when_multiple_documents_with_same_slug_exist(): void
+    public function executeReturnsCorrectDocumentWhenMultipleDocumentsWithSameSlugExist(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -229,41 +226,39 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'duplicate-slug'
         );
 
-        $targetCategory = DocumentCategory::factory()->create();
-        $otherCategory = DocumentCategory::factory()->create();
-
-        // 異なるカテゴリに同じスラッグのドキュメントを作成
-        DocumentVersion::factory()->create([
-            'category_id' => $otherCategory->id,
-            'slug' => 'duplicate-slug',
-            'sidebar_label' => 'Other Document',
-        ]);
-
-        $targetDocument = DocumentVersion::factory()->create([
-            'category_id' => $targetCategory->id,
+        $targetCategoryId = 1;
+        $targetDocument = new DocumentVersion([
+            'category_id' => $targetCategoryId,
             'slug' => 'duplicate-slug',
             'sidebar_label' => 'Target Document',
         ]);
+        $targetDocument->id = 2;
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('target-category')
-            ->andReturn($targetCategory->id);
+            ->andReturn($targetCategoryId);
+
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with($targetCategoryId, 'duplicate-slug')
+            ->andReturn($targetDocument);
 
         // Act
         $result = $this->useCase->execute($dto);
 
         // Assert
-        $this->assertTrue($result['success']);
-        $this->assertArrayHasKey('document', $result);
-        $this->assertSame($targetDocument->id, $result['document']->id);
-        $this->assertSame('Target Document', $result['document']->sidebar_label);
-        $this->assertSame($targetCategory->id, $result['document']->category_id);
+        $this->assertInstanceOf(DocumentVersion::class, $result);
+        $this->assertSame(2, $result->id);
+        $this->assertSame('Target Document', $result->sidebar_label);
+        $this->assertSame($targetCategoryId, $result->category_id);
+        $this->assertSame('duplicate-slug', $result->slug);
     }
 
     #[Test]
-    public function execute_handles_exception_and_returns_error(): void
+    public function executeLogsErrorAndThrowsExceptionWhenServiceThrowsException(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -271,11 +266,13 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'test-document'
         );
 
+        $serviceException = new \Exception('Service error');
+
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('some/path')
-            ->andThrow(new \Exception('Service error'));
+            ->andThrow($serviceException);
 
         // Logファサードをモック
         Log::shouldReceive('error')
@@ -289,18 +286,15 @@ class GetDocumentDetailUseCaseTest extends TestCase
                 ])
             );
 
-        // Act
-        $result = $this->useCase->execute($dto);
+        // Act & Assert
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Service error');
 
-        // Assert
-        $this->assertFalse($result['success']);
-        $this->assertArrayHasKey('error', $result);
-        $this->assertSame('ドキュメントの取得に失敗しました', $result['error']);
-        $this->assertArrayNotHasKey('document', $result);
+        $this->useCase->execute($dto);
     }
 
     #[Test]
-    public function execute_handles_service_exception_and_returns_error(): void
+    public function executeLogsErrorAndThrowsExceptionWhenRepositoryThrowsException(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -308,11 +302,19 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'test-document'
         );
 
+        $repositoryException = new \Exception('Repository error');
+
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('')
-            ->andThrow(new \Exception('Service error'));
+            ->andReturn(1);
+
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with(1, 'test-document')
+            ->andThrow($repositoryException);
 
         // Logファサードをモック
         Log::shouldReceive('error')
@@ -320,57 +322,21 @@ class GetDocumentDetailUseCaseTest extends TestCase
             ->with(
                 'GetDocumentDetailUseCase: エラー',
                 Mockery::subset([
-                    'error' => 'Service error',
+                    'error' => 'Repository error',
                     'category_path' => '',
                     'slug' => 'test-document',
                 ])
             );
 
-        // Act
-        $result = $this->useCase->execute($dto);
+        // Act & Assert
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Repository error');
 
-        // Assert
-        $this->assertFalse($result['success']);
-        $this->assertSame('ドキュメントの取得に失敗しました', $result['error']);
+        $this->useCase->execute($dto);
     }
 
     #[Test]
-    public function execute_logs_error_with_null_category_path(): void
-    {
-        // Arrange
-        $dto = new GetDocumentDetailDto(
-            category_path: null,
-            slug: 'test-document'
-        );
-
-        $this->documentCategoryService
-            ->shouldReceive('getIdFromPath')
-            ->once()
-            ->with('')
-            ->andThrow(new \Exception('Service error'));
-
-        // Logファサードをモック（category_pathがnullの場合のログ）
-        Log::shouldReceive('error')
-            ->once()
-            ->with(
-                'GetDocumentDetailUseCase: エラー',
-                Mockery::subset([
-                    'error' => 'Service error',
-                    'category_path' => null,
-                    'slug' => 'test-document',
-                ])
-            );
-
-        // Act
-        $result = $this->useCase->execute($dto);
-
-        // Assert
-        $this->assertFalse($result['success']);
-        $this->assertSame('ドキュメントの取得に失敗しました', $result['error']);
-    }
-
-    #[Test]
-    public function execute_with_special_characters_in_slug(): void
+    public function executeWithSpecialCharactersInSlugReturnsDocumentSuccessfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -378,26 +344,32 @@ class GetDocumentDetailUseCaseTest extends TestCase
             slug: 'document-with-special-chars_123'
         );
 
-        $category = DocumentCategory::factory()->create();
-        $document = DocumentVersion::factory()->create([
-            'category_id' => $category->id,
+        $categoryId = 1;
+        $document = new DocumentVersion([
+            'category_id' => $categoryId,
             'slug' => 'document-with-special-chars_123',
             'sidebar_label' => 'Document with Special Characters',
         ]);
+        $document->id = 1;
 
         $this->documentCategoryService
             ->shouldReceive('getIdFromPath')
             ->once()
             ->with('')
-            ->andReturn($category->id);
+            ->andReturn($categoryId);
+
+        $this->documentVersionRepository
+            ->shouldReceive('findByCategoryAndSlug')
+            ->once()
+            ->with($categoryId, 'document-with-special-chars_123')
+            ->andReturn($document);
 
         // Act
         $result = $this->useCase->execute($dto);
 
         // Assert
-        $this->assertTrue($result['success']);
-        $this->assertArrayHasKey('document', $result);
-        $this->assertSame('document-with-special-chars_123', $result['document']->slug);
-        $this->assertSame('Document with Special Characters', $result['document']->sidebar_label);
+        $this->assertInstanceOf(DocumentVersion::class, $result);
+        $this->assertSame('document-with-special-chars_123', $result->slug);
+        $this->assertSame('Document with Special Characters', $result->sidebar_label);
     }
 }
