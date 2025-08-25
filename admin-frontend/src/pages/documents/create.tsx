@@ -23,15 +23,9 @@ export default function CreateDocumentPage(): JSX.Element {
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');
-  const [folders, setFolders] = useState<string[]>([]);
-  const [foldersLoading, setFoldersLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
-  const [usersLoading, setUsersLoading] = useState(true);
   const [slug, setSlug] = useState('');
   const [fileOrder, setFileOrder] = useState('');
   const [invalidSlug, setInvalidSlug] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 予約語やルーティングで使用される特殊パターン
@@ -66,54 +60,6 @@ export default function CreateDocumentPage(): JSX.Element {
     setSlug(value);
     validateSlug(value);
   };
-
-  useEffect(() => {
-    // フォルダ一覧を取得
-    const fetchFolders = async () => {
-      try {
-        const response = await apiClient.get('/admin/documents/folders');
-        console.log('フォルダ取得レスポンス:', response);
-        if (response.folders) {
-          setFolders(response.folders);
-        }
-      } catch (err) {
-        console.error('フォルダ取得エラー:', err);
-      } finally {
-        setFoldersLoading(false);
-      }
-    };
-
-    fetchFolders();
-
-    // ユーザー一覧を取得
-    const fetchUsers = async () => {
-      try {
-        const response = await apiClient.get(API_CONFIG.ENDPOINTS.USERS.GET_ALL);
-        if (response.users) {
-          setUsers(response.users);
-          setFilteredUsers(response.users);
-        }
-      } catch (err) {
-        console.error('ユーザー取得エラー:', err);
-      } finally {
-        setUsersLoading(false);
-      }
-    };
-
-    fetchUsers();
-  }, []);
-
-  useEffect(() => {
-    // 検索クエリに基づいてユーザーをフィルタリング
-    if (searchQuery) {
-      const filtered = users.filter(user =>
-        user.email.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredUsers(filtered);
-    } else {
-      setFilteredUsers(users);
-    }
-  }, [searchQuery, users]);
 
   const handleEditorChange = (markdown: string) => {
     setContent(markdown);
