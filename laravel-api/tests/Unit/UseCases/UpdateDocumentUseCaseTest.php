@@ -20,6 +20,7 @@ use App\Services\DocumentCategoryService;
 use App\Services\DocumentDiffService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
+use App\Services\VersionEditPermissionService;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use InvalidArgumentException;
@@ -45,6 +46,9 @@ class UpdateDocumentUseCaseTest extends TestCase
     /** @var \Mockery\MockInterface&DocumentDiffService */
     private DocumentDiffService $documentDiffService;
 
+    /** @var \Mockery\MockInterface&VersionEditPermissionService */
+    private VersionEditPermissionService $versionEditPermissionService;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -53,6 +57,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->userBranchService = Mockery::mock(UserBranchService::class);
         $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
         $this->documentDiffService = Mockery::mock(DocumentDiffService::class);
+        $this->versionEditPermissionService = Mockery::mock(VersionEditPermissionService::class);
 
         // updateFileOrder は入力に応じてそのまま返す簡易モック
         $this->documentService
@@ -69,19 +74,23 @@ class UpdateDocumentUseCaseTest extends TestCase
         // DocumentDiffServiceのモックを追加（基本的に変更があると仮定）
         $this->documentDiffService
             ->shouldReceive('hasDocumentChanges')
-            ->andReturn(true)
-            ->byDefault();
+            ->andReturn(true);
 
-        $this->documentDiffService
-            ->shouldReceive('canEditDocument')
-            ->andReturn(true)
-            ->byDefault();
+        // VersionEditPermissionServiceのモックを追加（基本的に編集可能と仮定）
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => false,
+                'pull_request_edit_session_id' => null,
+            ]);
 
         $this->useCase = new UpdateDocumentUseCase(
             $this->documentService,
             $this->userBranchService,
             $this->documentCategoryService,
-            $this->documentDiffService
+            $this->documentDiffService,
+            $this->versionEditPermissionService
         );
     }
 
@@ -380,6 +389,23 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequestB->id)
             ->andReturn($newBranch->id);
 
+        // 編集セッション用の権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $draftCreatedDocumentOnEditSession->id),
+                $newBranch->id,
+                Mockery::on(fn ($u) => $u->id === $user->id),
+                $pullRequestB->id,
+                $pullRequestEditSession->token
+            )
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => true,
+                'pull_request_edit_session_id' => $pullRequestEditSession->id,
+            ]);
+
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $draftCreatedDocumentOnEditSession->id,
             'category_path' => '',
@@ -461,6 +487,23 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequestB->id)
             ->andReturn($newBranch->id);
 
+        // 編集セッション用の権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $pushedCreatedDocumentOnEditSession->id),
+                $newBranch->id,
+                Mockery::on(fn ($u) => $u->id === $user->id),
+                $pullRequestB->id,
+                $pullRequestEditSession->token
+            )
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => true,
+                'pull_request_edit_session_id' => $pullRequestEditSession->id,
+            ]);
+
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $pushedCreatedDocumentOnEditSession->id,
             'category_path' => '',
@@ -537,6 +580,23 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $pullRequestB->id)
             ->andReturn($newBranchB->id);
 
+        // 編集セッション用の権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $existingDocument->id),
+                $newBranchB->id,
+                Mockery::on(fn ($u) => $u->id === $user->id),
+                $pullRequestB->id,
+                $pullRequestEditSession->token
+            )
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => true,
+                'pull_request_edit_session_id' => $pullRequestEditSession->id,
+            ]);
+
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,
             'category_path' => '',
@@ -609,6 +669,23 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $userB->id), $pullRequestB->id)
             ->andReturn($branchB->id);
 
+        // 編集セッション用の権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $existingDocument->id),
+                $branchB->id,
+                Mockery::on(fn ($u) => $u->id === $userB->id),
+                $pullRequestB->id,
+                $pullRequestEditSession->token
+            )
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => true,
+                'pull_request_edit_session_id' => $pullRequestEditSession->id,
+            ]);
+
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,
             'category_path' => '',
@@ -680,6 +757,19 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with(Mockery::on(fn ($u) => $u->id === $user->id), $newPullRequest->id)
             ->andReturn($newBranch->id);
 
+        // 無効なセッションの権限チェックモック
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
+            ->once()
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $existingDocument->id),
+                $newBranch->id,
+                Mockery::on(fn ($u) => $u->id === $user->id),
+                $newPullRequest->id,
+                'invalid-token'
+            )
+            ->andThrow(new InvalidArgumentException('無効な編集セッションです'));
+
         // 無効なトークンでDTOを作成
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $existingDocument->id,
@@ -718,11 +808,17 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->andReturn($userBranchB->id);
 
         // 編集権限なしのモック設定
-        $this->documentDiffService
-            ->shouldReceive('canEditDocument')
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
             ->once()
-            ->with(Mockery::any(), $userBranchB->id, null)
-            ->andReturn(false);
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $createdDocumentByUserA->id),
+                $userBranchB->id,
+                Mockery::on(fn ($u) => $u->id === $userB->id),
+                null,
+                null
+            )
+            ->andThrow(new InvalidArgumentException('他のユーザーの未マージドキュメントは編集できません'));
 
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $createdDocumentByUserA->id,
@@ -762,11 +858,17 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->andReturn($userBranchB->id);
 
         // 編集権限なしのモック設定
-        $this->documentDiffService
-            ->shouldReceive('canEditDocument')
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
             ->once()
-            ->with(Mockery::any(), $userBranchB->id, null)
-            ->andReturn(false);
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $createdDocumentByUserA->id),
+                $userBranchB->id,
+                Mockery::on(fn ($u) => $u->id === $userB->id),
+                null,
+                null
+            )
+            ->andThrow(new InvalidArgumentException('他のユーザーの未マージドキュメントは編集できません'));
 
         $dto = $this->createUpdateDocumentDto([
             'current_document_id' => $createdDocumentByUserA->id,
@@ -821,10 +923,21 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         // 差分なしの場合のモック設定
-        $this->documentDiffService
-            ->shouldReceive('canEditDocument')
+        $this->versionEditPermissionService
+            ->shouldReceive('hasEditPermission')
             ->once()
-            ->andReturn(true);
+            ->with(
+                Mockery::on(fn ($doc) => $doc->id === $existing->id),
+                $userBranchB->id,
+                Mockery::on(fn ($u) => $u->id === $userB->id),
+                null,
+                null
+            )
+            ->andReturn([
+                'can_edit' => true,
+                'has_re_edit_session' => false,
+                'pull_request_edit_session_id' => null,
+            ]);
 
         $this->documentDiffService
             ->shouldReceive('hasDocumentChanges')
