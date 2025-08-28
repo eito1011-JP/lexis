@@ -15,9 +15,6 @@ fi
 
 php artisan key:generate --force --no-interaction || true
 
-# Run migrations (ignore failures in dev if DB is locked/not ready)
-php artisan migrate --force || true
-
 echo "Starting Laravel development server on 0.0.0.0:8000"
 exec php artisan serve --host=0.0.0.0 --port=8000
 
