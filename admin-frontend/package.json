@@ -59,9 +59,6 @@
     "rollup": "^3.29.5",
     "vite": "^5.4.19"
   },
-  "optionalDependencies": {
-    "@rollup/rollup-linux-x64-gnu": "4.21.0"
-  },
   "engines": {
     "node": "20.x"
   }
