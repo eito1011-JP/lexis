@@ -10,7 +10,7 @@
     "docker:logs": "docker compose logs -f laravel redis",
     "dev:api": "npx tsx api/admin/base.ts",
     "dev:admin-frontend": "cd admin-frontend && npm run dev",
-    "build": "docusaurus build && cd admin-frontend && npm run build",
+    "build": "docusaurus build && cd admin-frontend && npm ci && npm run build",
     "start": "docusaurus start",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\""
   },
