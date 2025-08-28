@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  laravel:
+    build: ./laravel-api
+    container_name: laravel-app
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=1
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/html/local.db
+      - SKIP_MIGRATIONS=1
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./laravel-api:/var/www/html
+      - ./local.db:/var/www/html/local.db
+      - ./local.db-wal:/var/www/html/local.db-wal
+      - ./local.db-shm:/var/www/html/local.db-shm
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
+
+

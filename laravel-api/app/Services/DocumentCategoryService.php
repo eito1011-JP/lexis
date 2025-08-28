@@ -41,7 +41,7 @@ class DocumentCategoryService
      * カテゴリパスからparentとなるcategory idを再帰的に取得
      *
      * @param  string|null  $categoryPath
-     *                                parent/child/grandchildのカテゴリパスの場合、'parent/child/grandchild'の文字列を期待
+     *                                     parent/child/grandchildのカテゴリパスの場合、'parent/child/grandchild'の文字列を期待
      * @return int カテゴリID
      *
      * @throws InvalidArgumentException 不正なパス形式または存在しないカテゴリの場合

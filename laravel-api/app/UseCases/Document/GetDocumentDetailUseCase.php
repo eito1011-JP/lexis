@@ -4,9 +4,9 @@ namespace App\UseCases\Document;
 
 use App\Dto\UseCase\Document\GetDocumentDetailDto;
 use App\Exceptions\DocumentNotFoundException;
+use App\Models\DocumentVersion;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\DocumentCategoryService;
-use App\Models\DocumentVersion;
 use Illuminate\Support\Facades\Log;
 
 class GetDocumentDetailUseCase
@@ -20,7 +20,6 @@ class GetDocumentDetailUseCase
      * スラッグでドキュメントを取得
      *
      * @param  GetDocumentDetailDto  $dto  リクエストデータ
-     * @return DocumentVersion
      */
     public function execute(GetDocumentDetailDto $dto): DocumentVersion
     {

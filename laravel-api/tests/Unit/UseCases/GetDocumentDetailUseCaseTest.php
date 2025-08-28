@@ -43,7 +43,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeWithEmptyCategoryPathReturnsDocumentSuccessfully(): void
+    public function execute_with_empty_category_path_returns_document_successfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -82,7 +82,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeWithCategoryPathReturnsDocumentSuccessfully(): void
+    public function execute_with_category_path_returns_document_successfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -122,7 +122,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeWithNullCategoryPathReturnsDocumentSuccessfully(): void
+    public function execute_with_null_category_path_returns_document_successfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -160,7 +160,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeThrowsDocumentNotFoundExceptionWhenDocumentNotFound(): void
+    public function execute_throws_document_not_found_exception_when_document_not_found(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -188,7 +188,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeThrowsDocumentNotFoundExceptionWhenDocumentNotFoundInSpecifiedCategory(): void
+    public function execute_throws_document_not_found_exception_when_document_not_found_in_specified_category(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -218,7 +218,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeReturnsCorrectDocumentWhenMultipleDocumentsWithSameSlugExist(): void
+    public function execute_returns_correct_document_when_multiple_documents_with_same_slug_exist(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -258,7 +258,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeLogsErrorAndThrowsExceptionWhenServiceThrowsException(): void
+    public function execute_logs_error_and_throws_exception_when_service_throws_exception(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -294,7 +294,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeLogsErrorAndThrowsExceptionWhenRepositoryThrowsException(): void
+    public function execute_logs_error_and_throws_exception_when_repository_throws_exception(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
@@ -336,7 +336,7 @@ class GetDocumentDetailUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function executeWithSpecialCharactersInSlugReturnsDocumentSuccessfully(): void
+    public function execute_with_special_characters_in_slug_returns_document_successfully(): void
     {
         // Arrange
         $dto = new GetDocumentDetailDto(
