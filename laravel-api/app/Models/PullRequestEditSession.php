@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PullRequestEditSession extends Model
 {
     use HasFactory;
+    use HasOrganizationScope;
 
     protected $table = 'pull_request_edit_sessions';
 
@@ -17,6 +19,7 @@ class PullRequestEditSession extends Model
         'token',
         'started_at',
         'finished_at',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -38,6 +41,14 @@ class PullRequestEditSession extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * 組織とのリレーション
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\HasOrganizationScope;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 class Comment extends Model
 {
     use HasFactory;
+    use HasOrganizationScope;
     use SoftDeletes;
 
     protected $fillable = [
@@ -16,6 +18,7 @@ class Comment extends Model
         'user_id',
         'content',
         'is_resolved',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -38,5 +41,13 @@ class Comment extends Model
     public function user()
     {
         return $this->belongsTo(User::class)->withTrashed();
+    }
+
+    /**
+     * 組織とのリレーション
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 }

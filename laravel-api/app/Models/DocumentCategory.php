@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\FixRequestStatus;
+use App\Traits\HasOrganizationScope;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 class DocumentCategory extends Model
 {
     use HasFactory;
+    use HasOrganizationScope;
     use SoftDeletes;
 
     protected $fillable = [
@@ -23,6 +25,7 @@ class DocumentCategory extends Model
         'user_branch_id',
         'pull_request_edit_session_id',
         'is_deleted',
+        'organization_id',
         'created_at',
         'updated_at',
         'deleted_at',
@@ -102,6 +105,14 @@ class DocumentCategory extends Model
     public function userBranch()
     {
         return $this->belongsTo(UserBranch::class, 'user_branch_id');
+    }
+
+    /**
+     * 組織とのリレーション
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

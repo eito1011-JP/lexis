@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PullRequestEditSessionDiff extends Model
 {
     use HasFactory;
+    use HasOrganizationScope;
 
     protected $table = 'pull_request_edit_session_diffs';
 
@@ -17,6 +19,7 @@ class PullRequestEditSessionDiff extends Model
         'diff_type',
         'original_version_id',
         'current_version_id',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -30,6 +33,14 @@ class PullRequestEditSessionDiff extends Model
     public function pullRequestEditSession()
     {
         return $this->belongsTo(PullRequestEditSession::class, 'pull_request_edit_session_id');
+    }
+
+    /**
+     * 組織とのリレーション
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

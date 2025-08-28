@@ -2,36 +2,22 @@
 
 namespace App\Models;
 
-use App\Enums\PullRequestReviewerActionStatus;
-use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PullRequestReviewer extends Model
+class OrganizationMember extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
 
     protected $fillable = [
-        'pull_request_id',
         'user_id',
-        'action_status',
         'organization_id',
+        'joined_at',
     ];
 
     protected $casts = [
-        'action_status' => PullRequestReviewerActionStatus::class,
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'joined_at' => 'datetime',
     ];
-
-    /**
-     * プルリクエストとのリレーション
-     */
-    public function pullRequest()
-    {
-        return $this->belongsTo(PullRequest::class);
-    }
 
     /**
      * ユーザーとのリレーション

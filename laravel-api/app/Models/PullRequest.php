@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PullRequest extends Model
 {
     use HasFactory;
+    use HasOrganizationScope;
 
     protected $fillable = [
         'user_branch_id',
@@ -16,6 +18,7 @@ class PullRequest extends Model
         'github_url',
         'pr_number',
         'status',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -29,6 +32,14 @@ class PullRequest extends Model
     public function userBranch()
     {
         return $this->belongsTo(UserBranch::class);
+    }
+
+    /**
+     * 組織とのリレーション
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**
