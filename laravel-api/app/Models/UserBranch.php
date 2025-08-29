@@ -3,12 +3,14 @@
 namespace App\Models;
 
 use App\Consts\Flag;
+use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserBranch extends Model
 {
     use HasFactory;
+    use HasOrganizationScope;
 
     protected $table = 'user_branches';
 
@@ -17,6 +19,7 @@ class UserBranch extends Model
         'branch_name',
         'snapshot_commit',
         'is_active',
+        'organization_id',
         'created_at',
         'updated_at',
     ];
@@ -57,6 +60,14 @@ class UserBranch extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * 組織とのリレーション
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**

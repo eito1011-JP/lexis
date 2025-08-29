@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class FixRequest extends Model
 {
     use HasFactory;
+    use HasOrganizationScope;
 
     protected $fillable = [
         'token',
@@ -18,6 +20,7 @@ class FixRequest extends Model
         'user_id',
         'pull_request_id',
         'status',
+        'organization_id',
     ];
 
     protected $casts = [
@@ -71,6 +74,14 @@ class FixRequest extends Model
     public function pullRequest()
     {
         return $this->belongsTo(PullRequest::class);
+    }
+
+    /**
+     * 組織とのリレーション
+     */
+    public function organization()
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     /**
