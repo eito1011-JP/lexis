@@ -9,7 +9,7 @@ const config: Config = {
   url: 'https://eito1011-jp.github.io',
   baseUrl: '/',
   organizationName: 'eito1011-JP',
-  projectName: 'Handbook',
+  projectName: 'lexis',
   trailingSlash: false,
   onBrokenLinks: 'warn',
   onBrokenMarkdownLinks: 'warn',
@@ -25,7 +25,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/eito1011-JP/Handbook/tree/main/',
+          editUrl: 'https://github.com/eito1011-JP/lexis/tree/main/',
           routeBasePath: 'docs',
           sidebarItemsGenerator: async function ({ defaultSidebarItemsGenerator, ...args }) {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
@@ -95,7 +95,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/eito1011-JP/Handbook',
+              href: 'https://github.com/eito1011-JP/lexis',
             },
           ],
         },

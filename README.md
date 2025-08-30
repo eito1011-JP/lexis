@@ -1,4 +1,4 @@
-# Handbook
+# lexis
 
 Docusaurusを使用したドキュメント管理システム
 

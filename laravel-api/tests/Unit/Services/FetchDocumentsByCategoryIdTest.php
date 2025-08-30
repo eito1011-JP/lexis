@@ -593,7 +593,7 @@ class FetchDocumentsByCategoryIdTest extends TestCase
 
         // 異なるスラッグで他のユーザーが作成したドラフト
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrExists();
-        $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'handbook', false);
+        $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'lexis', false);
 
         $result = $this->documentService->fetchDocumentsByCategoryId(
             1, // category_id
@@ -749,7 +749,7 @@ class FetchDocumentsByCategoryIdTest extends TestCase
 
         // 他のユーザーのドキュメントだけ存在する
         $setupForOtherUser = $this->setupBasicTestEnvironmentWhenPrDoesNotExist();
-        $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'handbook', false);
+        $otherUserDraft = $this->createOtherUserDocument($setupForOtherUser, 1, DocumentStatus::DRAFT->value, null, 'lexis', false);
 
         $result = $this->documentService->fetchDocumentsByCategoryId(
             1,
