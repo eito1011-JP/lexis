@@ -463,12 +463,12 @@ class PullRequestController extends ApiBaseController
                 ], 401);
             }
 
-            // 2. ログインユーザーのroleがowner or adminであることを確認
-            if (! UserRole::from($user->role)->isAdmin() && ! UserRole::from($user->role)->isOwner()) {
-                return response()->json([
-                    'error' => '権限がありません',
-                ], 403);
-            }
+            // // 2. ログインユーザーのroleがowner or adminであることを確認
+            // if (! UserRole::from($user->role)->isAdmin() && ! UserRole::from($user->role)->isOwner()) {
+            //     return response()->json([
+            //         'error' => '権限がありません',
+            //     ], 403);
+            // }
 
             // 3. プルリクエストを取得（status = opened）
             $pullRequest = PullRequest::where('id', $request->pull_request_id)
