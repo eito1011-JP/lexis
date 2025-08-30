@@ -24,6 +24,7 @@ services:
       - ./local.db-shm:/var/www/html/local.db-shm
     depends_on:
       - redis
+      - mysql
 
   redis:
     image: redis:7-alpine
@@ -33,7 +34,23 @@ services:
     volumes:
       - redis-data:/data
 
+  mysql:
+    image: mysql:8.0
+    platform: linux/arm64/v8
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+      - MYSQL_DATABASE=lexis
+      - MYSQL_USER=lexis
+      - MYSQL_PASSWORD=lexis
+      - TZ=Asia/Tokyo
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
 volumes:
   redis-data:
+  mysql-data:
 
 
