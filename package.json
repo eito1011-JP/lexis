@@ -3,20 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:laravel-api\" \"npm run dev:admin-frontend\" \"turso dev --db-file local.db\" \"npm run start\"",
+    "dev": "concurrently \"npm run dev:laravel-api\" \"npm run dev:admin-frontend\" \"turso dev --db-file local.db\"",
     "dev:laravel-api": "docker compose up -d && docker compose logs -f laravel",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down -v",
     "docker:logs": "docker compose logs -f laravel redis",
     "dev:api": "npx tsx api/admin/base.ts",
     "dev:admin-frontend": "cd admin-frontend && npm run dev",
-    "build": "docusaurus build && cd admin-frontend && npm ci && npm run build",
-    "start": "docusaurus start",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\""
   },
   "dependencies": {
-    "@docusaurus/core": "3.7.0",
-    "@docusaurus/preset-classic": "3.7.0",
     "@libsql/client": "^0.15.3",
     "@mdx-js/react": "^3.0.0",
     "@octokit/rest": "^21.1.1",
@@ -42,7 +38,6 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "3.7.0",
     "@types/cookie-parser": "^1.4.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
