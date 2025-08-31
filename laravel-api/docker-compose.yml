@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   laravel:
-    build: ./laravel-api
+    build: .
     container_name: laravel-app
     ports:
       - "8000:8000"
@@ -10,15 +10,19 @@ services:
       - APP_ENV=${APP_ENV}
       - APP_DEBUG=${APP_DEBUG}
       - DB_CONNECTION=${DB_CONNECTION}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
       - DB_DATABASE=${DB_DATABASE}
-      - SKIP_MIGRATIONS=${SKIP_MIGRATIONS}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - SKIP_MIGRATIONS=1
       - CACHE_DRIVER=${CACHE_DRIVER}
       - QUEUE_CONNECTION=${QUEUE_CONNECTION}
       - SESSION_DRIVER=${SESSION_DRIVER}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
     volumes:
-      - ./laravel-api:/var/www/html
+      - .:/var/www/html
     depends_on:
       - redis
       - mysql
@@ -46,5 +50,3 @@ services:
 volumes:
   redis-data:
   mysql-data:
-
-
