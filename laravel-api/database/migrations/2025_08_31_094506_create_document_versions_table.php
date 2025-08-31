@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('document_versions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id');
-            $table->foreignId('user_branch_id');
+            $table->foreignId('user_id')->nullable();
+            $table->foreignId('user_branch_id')->nullable();
             $table->foreignId('pull_request_edit_session_id')->nullable();
             $table->string('file_path');
             $table->string('status')->default('draft');
@@ -26,7 +26,6 @@ return new class extends Migration
             $table->integer('file_order');
             $table->string('last_edited_by')->nullable();
             $table->string('last_reviewed_by')->nullable();
-            $table->softDeletes();
             $table->boolean('is_public')->default(1);
             $table->softDeletes();
             $table->timestamps();

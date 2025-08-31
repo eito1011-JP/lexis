@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('document_category_id')->nullable();
             $table->foreignId('base_document_version_id')->nullable();
             $table->foreignId('base_category_version_id')->nullable();
-            $table->foreignId('user_id');
+            $table->foreignId('user_id')->nullable();
             $table->foreignId('pull_request_id');
             $table->string('status')->default('pending');
             $table->timestamps();

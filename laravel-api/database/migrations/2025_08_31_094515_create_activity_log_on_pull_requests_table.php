@@ -23,11 +23,17 @@ return new class extends Migration
             $table->string('old_pull_request_title')->nullable();
             $table->string('new_pull_request_title')->nullable();
             $table->timestamps();
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('pull_request_id')->references('id')->on('pull_requests')->onDelete('cascade');
-            $table->foreign('comment_id')->references('id')->on('comments')->onDelete('cascade');
-            $table->foreign('reviewer_id')->references('id')->on('pull_request_reviewers')->onDelete('cascade');
-            $table->foreign('pull_request_edit_session_id')->references('id')->on('pull_request_edit_sessions')->onDelete('cascade');
+            // 短い制約名を指定
+            $table->foreign('user_id', 'fk_activity_log_pr_user_id')
+            ->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('pull_request_id', 'fk_activity_log_pr_request_id')
+            ->references('id')->on('pull_requests')->onDelete('cascade');
+            $table->foreign('comment_id', 'fk_activity_log_pr_comment_id')
+            ->references('id')->on('comments')->onDelete('cascade');
+            $table->foreign('reviewer_id', 'fk_activity_log_pr_reviewer_id')
+            ->references('id')->on('pull_request_reviewers')->onDelete('cascade');
+            $table->foreign('pull_request_edit_session_id', 'fk_activity_log_pr_edit_session_id')
+            ->references('id')->on('pull_request_edit_sessions')->onDelete('cascade');
         });
     }
 

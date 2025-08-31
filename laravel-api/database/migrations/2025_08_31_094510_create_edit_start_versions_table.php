@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('edit_start_versions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_branch_id');
+            $table->foreignId('user_branch_id')->nullable();
             $table->string('target_type');
             $table->foreignId('original_version_id')->nullable();
             $table->foreignId('current_version_id');
