@@ -7,21 +7,18 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - APP_ENV=local
-      - APP_DEBUG=1
-      - DB_CONNECTION=sqlite
-      - DB_DATABASE=/var/www/html/local.db
-      - SKIP_MIGRATIONS=1
-      - CACHE_DRIVER=redis
-      - QUEUE_CONNECTION=redis
-      - SESSION_DRIVER=redis
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - APP_ENV=${APP_ENV}
+      - APP_DEBUG=${APP_DEBUG}
+      - DB_CONNECTION=${DB_CONNECTION}
+      - DB_DATABASE=${DB_DATABASE}
+      - SKIP_MIGRATIONS=${SKIP_MIGRATIONS}
+      - CACHE_DRIVER=${CACHE_DRIVER}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION}
+      - SESSION_DRIVER=${SESSION_DRIVER}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
     volumes:
       - ./laravel-api:/var/www/html
-      - ./local.db:/var/www/html/local.db
-      - ./local.db-wal:/var/www/html/local.db-wal
-      - ./local.db-shm:/var/www/html/local.db-shm
     depends_on:
       - redis
       - mysql
@@ -39,11 +36,8 @@ services:
     platform: linux/arm64/v8
     container_name: mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=secret
-      - MYSQL_DATABASE=lexis
-      - MYSQL_USER=lexis
-      - MYSQL_PASSWORD=lexis
-      - TZ=Asia/Tokyo
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=${DB_DATABASE}
     ports:
       - "3306:3306"
     volumes:
