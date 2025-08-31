@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreignId('parent_id')->nullable();
             $table->foreignId('user_branch_id')->nullable();
             $table->foreignId('pull_request_edit_session_id')->nullable();
+            $table->boolean('is_deleted')->default(0);
             $table->softDeletes();
             $table->timestamps();
             $table->foreign('parent_id')->references('id')->on('document_categories')->onDelete('cascade');

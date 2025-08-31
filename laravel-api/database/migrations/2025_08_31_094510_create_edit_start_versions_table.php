@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('target_type');
             $table->foreignId('original_version_id')->nullable();
             $table->foreignId('current_version_id');
+            $table->boolean('is_deleted')->default(0);
             $table->softDeletes();
             $table->timestamps();
             $table->foreign('user_branch_id')->references('id')->on('user_branches')->onDelete('set null');

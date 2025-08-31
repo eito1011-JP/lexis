@@ -26,6 +26,7 @@ return new class extends Migration
             $table->integer('file_order');
             $table->string('last_edited_by')->nullable();
             $table->string('last_reviewed_by')->nullable();
+            $table->boolean('is_deleted')->default(0);
             $table->boolean('is_public')->default(1);
             $table->softDeletes();
             $table->timestamps();
