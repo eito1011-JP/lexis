@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('sess');
             $table->timestamp('expired_at');
             $table->timestamps();
+            $table->boolean('is_deleted')->default(0);
+            $table->softDeletes();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
