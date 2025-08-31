@@ -154,30 +154,7 @@ export default function CreateDocumentPage(): JSX.Element {
           </div>
 
           <div className="mb-6">
-            <label className="block mb-2 font-bold">Slug</label>
-            <input
-              type="text"
-              value={slug}
-              onChange={handleSlugChange}
-              className={`w-full p-2.5 border ${invalidSlug ? 'border-red-500' : 'border-gray-700'} rounded bg-transparent text-white`}
-              placeholder="slugを入力してください"
-            />
-            {invalidSlug && <p className="mt-1 text-red-500 text-sm">{invalidSlug}</p>}
-          </div>
-
-          <div className="mb-6">
-            <label className="block mb-2 font-bold">表示順序</label>
-            <input
-              type="number"
-              value={fileOrder}
-              onChange={e => setFileOrder(e.target.value)}
-              className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
-              placeholder="表示順序を入力してください"
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block mb-2 font-bold">タイトル</label>
+          <label className="block mb-2 font-bold">タイトル</label>
             <input
               type="text"
               value={label}
@@ -185,36 +162,6 @@ export default function CreateDocumentPage(): JSX.Element {
               className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white"
               placeholder="タイトルを入力してください"
             />
-          </div>
-
-          <div className="mb-6">
-            <label className="block mb-2 font-bold">公開設定</label>
-            <div className="relative">
-              <select
-                value={publicOption}
-                onChange={e => setPublicOption(e.target.value)}
-                className="w-full p-2.5 border border-gray-700 rounded bg-transparent text-white appearance-none pr-10"
-              >
-                <option value="公開する">公開する</option>
-                <option value="公開しない">公開しない</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 9l-7 7-7-7"
-                  ></path>
-                </svg>
-              </div>
-            </div>
           </div>
 
           <div className="gap-6 mt-8">
@@ -232,6 +179,14 @@ export default function CreateDocumentPage(): JSX.Element {
           </div>
 
           <div className="flex flex-col items-center gap-4 mt-8">
+          <div className="flex gap-4">
+            <button
+              className="px-4 py-2 bg-[#b1b1b1] text-white rounded hover:bg-opacity-80 border-none w-45 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleSave}
+              disabled={!!invalidSlug || isSubmitting}
+            >
+              プレビュー
+            </button>
             <button
               className="px-4 py-2 bg-[#3832A5] text-white rounded hover:bg-opacity-80 border-none w-45 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleSave}
@@ -239,6 +194,7 @@ export default function CreateDocumentPage(): JSX.Element {
             >
               {isSubmitting ? '保存中...' : '保存'}
             </button>
+          </div>
           </div>
         </div>
       </div>
