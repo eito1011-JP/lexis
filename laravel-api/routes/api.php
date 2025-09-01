@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ActivityLogOnPullRequestController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EmailAuthnController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Route;
 
 // 認証関連のルート
 Route::prefix('auth')->group(function () {
+    Route::post('/pre-users', [EmailAuthnController::class, 'sendAuthnEmail']);
     Route::post('/signup', [AuthController::class, 'signup']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
