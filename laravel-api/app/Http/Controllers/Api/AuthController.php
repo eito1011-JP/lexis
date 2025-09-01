@@ -6,6 +6,7 @@ use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Requests\Api\Auth\SignupRequest;
 use App\Models\Session;
 use App\Models\User;
+use App\UseCases\Auth\SignupUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -13,40 +14,30 @@ use Illuminate\Support\Facades\Log;
 
 class AuthController extends ApiBaseController
 {
+    public function __construct(
+        private SignupUseCase $signupUseCase
+    ) {}
+
     /**
      * ユーザー登録
      */
     public function signup(SignupRequest $request): JsonResponse
     {
-        try {
-            // ユーザー作成
-            $user = User::create([
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
-            ]);
+        $result = $this->signupUseCase->execute($request->email, $request->password);
 
-            // セッション作成
-            $sessionId = $this->createSession($user->id, $user->email);
-
-            // クッキーにセッションIDを設定
-            $cookie = cookie('sid', $sessionId, config('session.lifetime'));
-
+        if (!$result['success']) {
             return response()->json([
-                'user' => [
-                    'id' => $user->id,
-                    'email' => $user->email,
-                    'createdAt' => $user->created_at,
-                ],
-                'isAuthenticated' => true,
-            ])->withCookie($cookie);
-
-        } catch (\Exception $e) {
-            Log::error($e);
-
-            return response()->json([
-                'error' => 'サーバーエラーが発生しました',
+                'error' => $result['error'],
             ], 500);
         }
+
+        // クッキーにセッションIDを設定
+        $cookie = cookie('sid', $result['sessionId'], config('session.lifetime'));
+
+        return response()->json([
+            'user' => $result['user'],
+            'isAuthenticated' => true,
+        ])->withCookie($cookie);
     }
 
     /**
