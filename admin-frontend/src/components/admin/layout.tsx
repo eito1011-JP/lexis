@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Header from './header/layout';
 import { DocumentDetailed } from '../icon/common/DocumentDetailed';
+import SettingsModal from './SettingsModal.tsx';
 
 /**
  * 管理画面用のレイアウトコンポーネント
@@ -17,6 +18,7 @@ export default function AdminLayout({
   sidebar = true,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -136,7 +138,13 @@ export default function AdminLayout({
                   <div
                     key={item.path}
                     className={`flex items-center px-4 py-3 cursor-pointer ${currentPath === item.path ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                    onClick={() => navigateTo(item.path)}
+                    onClick={() => {
+                      if (item.path === '/admin/settings') {
+                        setIsSettingsOpen(true);
+                        return;
+                      }
+                      navigateTo(item.path);
+                    }}
                   >
                     {item.icon}
                     <span className="ml-3">{item.label}</span>
@@ -152,6 +160,7 @@ export default function AdminLayout({
           </main>
         </div>
       </div>
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </>
   );
 }
