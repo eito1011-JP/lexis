@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { apiClient } from './api/client';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -8,6 +9,7 @@ interface SettingsModalProps {
 export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): React.ReactElement | null {
   const [nickname, setNickname] = useState<string>('Eito');
   const [role] = useState<string>('オーナー');
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const overlayRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -24,6 +26,21 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>): void => {
     if (e.target === overlayRef.current) onClose();
+  };
+
+  const handleLogOut = async (): Promise<void> => {
+    try {
+      setIsLoggingOut(true);
+      await apiClient.post('/api/auth/logout', {});
+      
+      // ログアウト成功後、ログインページにリダイレクト
+      window.location.href = '/admin/login';
+    } catch (error) {
+      console.error('ログアウトエラー:', error);
+      alert('ログアウトに失敗しました。もう一度お試しください。');
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -122,7 +139,13 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
             </div>
 
             <div className="mt-6 flex justify-end">
-              <button className="px-4 py-2 border border-[#3E3E3E] rounded-md text-sm hover:bg-[#171717]">ログアウト</button>
+              <button 
+                onClick={handleLogOut}
+                disabled={isLoggingOut}
+                className="px-4 py-2 border border-[#3E3E3E] rounded-md text-sm hover:bg-[#171717] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoggingOut ? 'ログアウト中...' : 'ログアウト'}
+              </button>
             </div>
           </div>
         </div>
