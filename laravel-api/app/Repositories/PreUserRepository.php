@@ -18,13 +18,13 @@ class PreUserRepository implements PreUserRepositoryInterface
             ]);
     }
 
-    public function registerPreUser(string $email, string $password, string $token, ?\DateTimeInterface $expiredAt = null): PreUser
+    public function registerPreUser(string $email, string $password, string $token): PreUser
     {
         return PreUser::create([
             'email' => $email,
             'password' => $password,
             'token' => $token,
-            'expired_at' => $expiredAt ? Carbon::instance(Carbon::parse($expiredAt->format('c'))) : Carbon::now()->addMinutes(30),
+            'expired_at' => Carbon::now()->addMinutes(30),
             'is_invalidated' => false,
         ]);
     }

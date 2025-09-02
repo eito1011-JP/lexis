@@ -5,12 +5,12 @@ namespace Tests\Unit\UseCases\Auth;
 use App\Models\Session;
 use App\Models\User;
 use App\UseCases\Auth\SignupUseCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class SignupUseCaseTest extends TestCase
 {
-    use RefreshDatabase;
+    use DatabaseTransactions;
 
     private SignupUseCase $signupUseCase;
 

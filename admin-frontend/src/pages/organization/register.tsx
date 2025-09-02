@@ -51,7 +51,7 @@ export default function OrganizationRegisterPage(): React.ReactElement {
         organization_name: organizationName,
         token,
       });
-      navigate('/admin/documents');
+      navigate('/documents');
     } catch (e) {
       alert('登録に失敗しました');
     } finally {
