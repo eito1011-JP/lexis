@@ -635,7 +635,7 @@ export default function DiffPage(): JSX.Element {
         setSubmitSuccess(successMessage);
         // 3秒後にドキュメント一覧に戻る
         setTimeout(() => {
-          window.location.href = '/admin/documents';
+          window.location.href = '/documents';
         }, 3000);
       } else {
         setSubmitError(response.message || '差分の提出に失敗しました');
@@ -736,7 +736,7 @@ export default function DiffPage(): JSX.Element {
           </div>
           <button
             className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-            onClick={() => (window.location.href = '/admin/documents')}
+            onClick={() => (window.location.href = '/documents')}
           >
             ドキュメント一覧に戻る
           </button>
@@ -756,7 +756,7 @@ export default function DiffPage(): JSX.Element {
           <p className="text-gray-400 mb-4">変更された内容はありません</p>
           <button
             className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
-            onClick={() => (window.location.href = '/admin/documents')}
+            onClick={() => (window.location.href = '/documents')}
           >
             ドキュメント一覧に戻る
           </button>
@@ -951,7 +951,7 @@ export default function DiffPage(): JSX.Element {
             <div className="flex gap-4 justify-end max-w-3xl">
               <button
                 className="px-6 py-2.5 bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none text-white font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => (window.location.href = '/admin/documents')}
+                onClick={() => (window.location.href = '/documents')}
                 disabled={isSubmitting}
               >
                 戻る

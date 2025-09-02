@@ -116,7 +116,7 @@ export default function LoginPage(): ReactElement {
             <div className="flex justify-center mt-4">
               <p className="text-white text-[0.8rem]">
                 アカウントをお持ちでない方
-                <a href="/admin/signup" className="text-white hover:underline ml-8">
+                <a href="/signup" className="text-white hover:underline ml-8">
                   新規登録
                 </a>
               </p>

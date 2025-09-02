@@ -310,7 +310,7 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
           <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
             {log.actor?.name || 'システム'}さんが
             <a
-              href={`/admin/change-suggestions/${pullRequestId}/pull_request_edit_sessions/${log.pull_request_edit_session.token}`}
+              href={`/change-suggestions/${pullRequestId}/pull_request_edit_sessions/${log.pull_request_edit_session.token}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mx-1 text-blue-400 hover:text-blue-300 underline cursor-pointer"
@@ -324,7 +324,7 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
           <div className="text-[#B1B1B1] text-sm mb-1 ml-[-0.7rem]">
             {log.actor?.name || 'システム'}さんが
             <a
-              href={`/admin/change-suggestions/${pullRequestId}/fix-request-detail?token=${log.fix_request_token}`}
+              href={`/change-suggestions/${pullRequestId}/fix-request-detail?token=${log.fix_request_token}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mx-1 text-blue-400 hover:text-blue-300 underline cursor-pointer"
@@ -794,7 +794,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   // 変更内容詳細を開く
   const handleViewChanges = () => {
-    window.open(`/admin/change-suggestions/${id}/diff`, '_blank');
+    window.open(`/change-suggestions/${id}/diff`, '_blank');
   };
 
   // コメント投稿のハンドラー
@@ -832,7 +832,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
       setToast({ message: 'プルリクエストをマージしました', type: 'success' });
       setTimeout(() => {
-        window.location.href = '/admin/change-suggestions';
+        window.location.href = '/change-suggestions';
       }, 1500);
     } catch (error) {
       console.error('マージエラー:', error);
@@ -898,7 +898,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
       setToast({ message: 'プルリクエストを取り下げました', type: 'success' });
       setTimeout(() => {
-        window.location.href = '/admin/change-suggestions';
+        window.location.href = '/change-suggestions';
       }, 1500);
     } catch (error) {
       console.error('クローズエラー:', error);
@@ -1128,7 +1128,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 key={tab.id}
                 onClick={() => {
                   if (tab.id === 'changes') {
-                    window.location.href = `/admin/change-suggestions/${id}/diff`;
+                    window.location.href = `/change-suggestions/${id}/diff`;
                   } else {
                     setActiveTab(tab.id);
                   }

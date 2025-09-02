@@ -30,12 +30,12 @@ export default function AdminLayout({
   const navItems = [
     {
       label: 'ドキュメント',
-      path: '/admin/documents',
+      path: '/documents',
       icon: <DocumentDetailed className="w-5 h-5" />,
     },
     {
       label: 'メディア',
-      path: '/admin/media',
+      path: '/media',
       icon: (
         <svg
           className="w-5 h-5"
@@ -55,7 +55,7 @@ export default function AdminLayout({
     },
     {
       label: '変更提案',
-      path: '/admin/change-suggestions',
+      path: '/change-suggestions',
       icon: (
         <svg
           className="w-5 h-5"
@@ -75,7 +75,7 @@ export default function AdminLayout({
     },
     {
       label: 'ユーザー管理',
-      path: '/admin/users',
+      path: '/users',
       icon: (
         <svg
           className="w-5 h-5"
@@ -95,7 +95,7 @@ export default function AdminLayout({
     },
     {
       label: '設定',
-      path: '/admin/settings',
+      path: '/settings',
       icon: (
         <svg
           className="w-5 h-5"
@@ -139,7 +139,7 @@ export default function AdminLayout({
                     key={item.path}
                     className={`flex items-center px-4 py-3 cursor-pointer ${currentPath === item.path ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
                     onClick={() => {
-                      if (item.path === '/admin/settings') {
+                      if (item.path === '/settings') {
                         setIsSettingsOpen(true);
                         return;
                       }

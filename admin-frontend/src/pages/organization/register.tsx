@@ -16,7 +16,7 @@ export default function OrganizationRegisterPage(): React.ReactElement {
     async function handleIdentifyToken() {
       if (!token) {
         alert('トークンが指定されていません');
-        navigate('/admin/signup');
+        navigate('/signup');
         return;
       }
   
@@ -34,7 +34,7 @@ export default function OrganizationRegisterPage(): React.ReactElement {
           alert(`エラーが発生しました (ステータス: ${error.response.status})`);
         }
 
-        navigate('/admin/signup');
+        navigate('/signup');
       }
     }
     

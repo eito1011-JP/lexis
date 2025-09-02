@@ -657,7 +657,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     switch (selectedConfirmationAction) {
       case 'create_correction_request':
         // 修正リクエスト作成画面に遷移
-        window.location.href = `/admin/change-suggestions/${id}/fix-request`;
+        window.location.href = `/change-suggestions/${id}/fix-request`;
         break;
       case 're_edit_proposal':
         try {
@@ -681,7 +681,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
           const result = await approvePullRequest(id);
           if (result.success) {
             // 承認成功時にアクティビティページに遷移
-            window.location.href = `/admin/change-suggestions/${id}`;
+            window.location.href = `/change-suggestions/${id}`;
           } else {
             setError(result.error || '変更の承認に失敗しました');
           }
@@ -729,7 +729,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                 key={tab.id}
                 onClick={() => {
                   if (tab.id === 'activity') {
-                    window.location.href = `/admin/change-suggestions/${id}`;
+                    window.location.href = `/change-suggestions/${id}`;
                   } else {
                     setActiveTab(tab.id);
                   }

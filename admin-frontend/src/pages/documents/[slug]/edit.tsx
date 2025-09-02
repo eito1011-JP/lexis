@@ -199,7 +199,7 @@ export default function EditDocumentPage(): JSX.Element {
 
       // トースト表示後にリダイレクト
       setTimeout(() => {
-        let redirectUrl = category ? `/admin/documents/${category}` : '/admin/documents';
+        let redirectUrl = category ? `/documents/${category}` : '/documents';
         if (editPullRequestId && pullRequestEditToken) {
           redirectUrl += `?edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
         }

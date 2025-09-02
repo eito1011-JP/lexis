@@ -40,23 +40,23 @@ app.use(cookieParser());
 middleware.forEach(mw => app.use(mw));
 
 // ルートの登録
-app.use('/api/admin', signupRouter);
-app.use('/api/admin', loginRouter);
-app.use('/api/admin/documents', createCategoryRouter);
-app.use('/api/admin/documents', updateCategoryRouter);
-app.use('/api/admin/documents', getCategoriesRouter);
-app.use('/api/admin/documents', createDocumentRouter);
-app.use('/api/admin/documents', getCategoryContentsRouter);
-app.use('/api/admin/documents', getDocumentsRouter);
-app.use('/api/admin/documents', getDocumentBySlugRouter);
-app.use('/api/admin/documents', updateDocumentRouter);
-app.use('/api/admin/documents', deleteDocumentRouter);
-app.use('/api/admin/documents', deleteCategoryRouter);
-app.use('/api/admin/users', usersRouter);
-app.use('/api/admin/documents/git/check-diff', documentGitCheckDiffRouter);
-app.use('/api/admin/documents/git/create-pr', documentGitCreatePrRouter);
-app.use('/api/admin/documents/git/diff', documentGitDiffRouter);
-app.use('/api/admin/documents', getCategoryBySlugRouter);
+app.use('/api', signupRouter);
+app.use('/api', loginRouter);
+app.use('/api/documents', createCategoryRouter);
+app.use('/api/documents', updateCategoryRouter);
+app.use('/api/documents', getCategoriesRouter);
+app.use('/api/documents', createDocumentRouter);
+app.use('/api/documents', getCategoryContentsRouter);
+app.use('/api/documents', getDocumentsRouter);
+app.use('/api/documents', getDocumentBySlugRouter);
+app.use('/api/documents', updateDocumentRouter);
+app.use('/api/documents', deleteDocumentRouter);
+app.use('/api/documents', deleteCategoryRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/documents/git/check-diff', documentGitCheckDiffRouter);
+app.use('/api/documents/git/create-pr', documentGitCreatePrRouter);
+app.use('/api/documents/git/diff', documentGitDiffRouter);
+app.use('/api/documents', getCategoryBySlugRouter);
 
 // セッション確認 - 既存のエンドポイント
 app.get('/api/auth/session', async (req, res) => {

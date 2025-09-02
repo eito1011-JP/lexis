@@ -464,7 +464,7 @@ export default function DocumentsPage(): JSX.Element {
               if (openCategoryMenuIndex !== null) {
                 return;
               }
-              window.location.href = `/admin/documents/${category.slug}`;
+              window.location.href = `/documents/${category.slug}`;
             }}
           >
             <div className="flex items-center">
@@ -622,7 +622,7 @@ export default function DocumentsPage(): JSX.Element {
                             <ul className="py-1">
                               <li>
                                 <a
-                                  href={`/admin/documents/${document.slug}/edit${searchParams.get('edit_pull_request_id') && localStorage.getItem('pullRequestEditToken') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}&pull_request_edit_token=${localStorage.getItem('pullRequestEditToken')}` : ''}`}
+                                  href={`/documents/${document.slug}/edit${searchParams.get('edit_pull_request_id') && localStorage.getItem('pullRequestEditToken') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}&pull_request_edit_token=${localStorage.getItem('pullRequestEditToken')}` : ''}`}
                                   className="block px-4 py-2 text-sm text-white hover:bg-gray-800 cursor-pointer text-left"
                                   style={{ textAlign: 'left' }}
                                 >
@@ -669,7 +669,7 @@ export default function DocumentsPage(): JSX.Element {
         <div className="mb-6">
           {/* パンくずリスト */}
           <div className="flex items-center text-sm text-gray-400 mb-4">
-            <a href="/admin/documents" className="hover:text-white">
+            <a href="/documents" className="hover:text-white">
               <Home className="w-4 h-4 mx-2" />
             </a>
           </div>
@@ -798,7 +798,7 @@ export default function DocumentsPage(): JSX.Element {
               <button
                 className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none"
                 onClick={() =>
-                  (window.location.href = `/admin/documents/create${searchParams.get('edit_pull_request_id') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}` : ''}`)
+                  (window.location.href = `/documents/create${searchParams.get('edit_pull_request_id') ? `?edit_pull_request_id=${searchParams.get('edit_pull_request_id')}` : ''}`)
                 }
               >
                 <svg
@@ -1022,7 +1022,7 @@ export default function DocumentsPage(): JSX.Element {
                 className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
                 onClick={() => {
                   if (userBranchId) {
-                    window.location.href = `/admin/documents/diff?user_branch_id=${userBranchId}`;
+                    window.location.href = `/documents/diff?user_branch_id=${userBranchId}`;
                   } else {
                     // user_branch_idが取得できない場合はエラーメッセージを表示
                     setSubmitError(
@@ -1154,7 +1154,7 @@ export default function DocumentsPage(): JSX.Element {
                       }
 
                       // 変更提案詳細画面に遷移
-                      window.location.href = `/admin/change-suggestions/${editPullRequestId}`;
+                      window.location.href = `/change-suggestions/${editPullRequestId}`;
                     } catch (error) {
                       console.error('編集終了エラー:', error);
                       setToastMessage('編集終了に失敗しました');

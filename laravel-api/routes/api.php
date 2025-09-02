@@ -39,19 +39,19 @@ Route::prefix('auth')->group(function () {
 // 認証が必要なルート
 Route::middleware('auth.session')->group(function () {
     // ユーザー関連
-    Route::prefix('admin/users')->group(function () {
+    Route::prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);
     });
 
     // プルリクエストレビュアー関連
-    Route::prefix('admin/pull-request-reviewers')->group(function () {
+    Route::prefix('pull-request-reviewers')->group(function () {
         Route::get('/', [PullRequestReviewerController::class, 'index']);
         Route::post('/', [PullRequestReviewerController::class, 'store']);
         Route::patch('/{reviewer_id}/resend', [PullRequestReviewerController::class, 'sendReviewRequestAgain']);
     });
 
     // プルリクエスト関連
-    Route::prefix('admin/pull-requests')->group(function () {
+    Route::prefix('pull-requests')->group(function () {
         Route::get('/', [PullRequestController::class, 'fetchPullRequests']);
         Route::get('/{id}', [PullRequestController::class, 'fetchPullRequestDetail']);
         Route::get('/{id}/conflict', [PullRequestController::class, 'detectConflict']);
@@ -68,14 +68,14 @@ Route::middleware('auth.session')->group(function () {
     });
 
     // プルリクエスト編集セッション関連
-    Route::prefix('admin/pull-request-edit-sessions')->group(function () {
+    Route::prefix('pull-request-edit-sessions')->group(function () {
         Route::get('/', [PullRequestEditSessionController::class, 'fetchEditDiff']);
         Route::post('/', [PullRequestEditSessionController::class, 'startEditingPullRequest']);
         Route::patch('/', [PullRequestEditSessionController::class, 'finishEditingPullRequest']);
     });
 
     // アクティビティログ関連
-    Route::prefix('admin/activity-logs')->group(function () {
+    Route::prefix('activity-logs')->group(function () {
         Route::post('/', [ActivityLogOnPullRequestController::class, 'create']);
     });
 
@@ -85,7 +85,7 @@ Route::middleware('auth.session')->group(function () {
     });
 
     // ドキュメント関連
-    Route::prefix('admin/documents')->group(function () {
+    Route::prefix('documents')->group(function () {
         // ドキュメント関連
         Route::get('/', [DocumentController::class, 'getDocuments']);
         Route::get('/detail', [DocumentController::class, 'getDocumentDetail']);
@@ -96,7 +96,7 @@ Route::middleware('auth.session')->group(function () {
     });
 
     // カテゴリ関連
-    Route::prefix('admin/document-categories')->group(function () {
+    Route::prefix('document-categories')->group(function () {
         Route::get('/', [DocumentCategoryController::class, 'getCategory']);
         Route::post('/create', [DocumentCategoryController::class, 'createCategory']);
         Route::put('/update', [DocumentCategoryController::class, 'updateCategory']);
@@ -105,13 +105,13 @@ Route::middleware('auth.session')->group(function () {
     });
 
     // ユーザーブランチ関連
-    Route::prefix('admin/user-branches')->group(function () {
+    Route::prefix('user-branches')->group(function () {
         Route::get('/has-changes', [UserBranchController::class, 'hasUserChanges']);
         Route::get('/diff', [UserBranchController::class, 'fetchDiff']);
     });
 
     // 修正リクエスト関連
-    Route::prefix('admin/fix-requests')->group(function () {
+    Route::prefix('fix-requests')->group(function () {
         Route::get('/{token}', [FixRequestController::class, 'fetchFixRequestDiff']);
         Route::post('/apply', [FixRequestController::class, 'applyFixRequest']);
     });

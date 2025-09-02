@@ -211,7 +211,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
             onClick={e => {
               // メニューボタンがクリックされた場合は詳細ページに遷移しない
               if (!(e.target as Element).closest('.menu-button')) {
-                window.location.href = `/admin/change-suggestions/${proposal.id}`;
+                window.location.href = `/change-suggestions/${proposal.id}`;
               }
             }}
           >
@@ -249,7 +249,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                     className="text-white font-medium text-sm hover:underline hover:text-blue-400 cursor-pointer transition-colors"
                     onClick={e => {
                       e.stopPropagation();
-                      window.location.href = `/admin/change-suggestions/${proposal.id}`;
+                      window.location.href = `/change-suggestions/${proposal.id}`;
                     }}
                   >
                     {proposal.title}
@@ -322,7 +322,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                 <div className="flex items-center space-x-2">
                   <Merge className="w-4 h-4 text-[#1FF258]" />
                   <a
-                    href="/admin/change-suggestions"
+                    href="/change-suggestions"
                     className={`text-bold hover:underline ${!isCompletedView ? 'text-white' : 'text-gray-400'}`}
                   >
                     {pendingCount} 未対応
@@ -331,7 +331,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
                 <div className="flex items-center space-x-2">
                   <Merged className="w-4 h-4 text-[#3832A5]" />
                   <a
-                    href="/admin/change-suggestions?status=merged&status=closed"
+                    href="/change-suggestions?status=merged&status=closed"
                     className={`text-bold hover:underline ${isCompletedView ? 'text-white' : 'text-gray-400'}`}
                   >
                     {completedCount} 完了済み

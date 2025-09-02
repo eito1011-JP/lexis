@@ -189,7 +189,7 @@ export default function FixRequestPage(): JSX.Element {
 
       // 少し待ってからアクティビティページに遷移
       setTimeout(() => {
-        window.location.href = `/admin/change-suggestions/${id}`;
+        window.location.href = `/change-suggestions/${id}`;
       }, 1500);
     } catch (err) {
       console.error('修正リクエスト送信エラー:', err);

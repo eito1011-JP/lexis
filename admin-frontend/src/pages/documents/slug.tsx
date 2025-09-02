@@ -56,7 +56,7 @@ export default function DocumentBySlugPage(): JSX.Element {
   } else if (location.pathname.endsWith('/diff')) {
     return <DiffDocumentPage />;
   }
-  // /admin/documentsより下のパスを取得（可変長に対応）
+  // /documentsより下のパスを取得（可変長に対応）
   const pathAfterDocuments = location.pathname.replace('/documents/', '');
   const { isLoading } = useSessionCheck('/login', false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -470,7 +470,7 @@ export default function DocumentBySlugPage(): JSX.Element {
               if (openCategoryMenuIndex !== null) {
                 return;
               }
-              window.location.href = `/admin/documents/${pathAfterDocuments}/${category.slug}`;
+              window.location.href = `/documents/${pathAfterDocuments}/${category.slug}`;
             }}
             className="flex items-center justify-between p-3 bg-gray-900 rounded-md border border-gray-800 hover:bg-gray-800 cursor-pointer"
           >
@@ -676,7 +676,7 @@ export default function DocumentBySlugPage(): JSX.Element {
       <div className="flex items-center text-sm text-gray-400 mb-4">
         <div
           onClick={() => {
-            window.location.href = '/admin/documents';
+            window.location.href = '/documents';
           }}
           className="hover:text-white"
         >
@@ -686,7 +686,7 @@ export default function DocumentBySlugPage(): JSX.Element {
         {slugParts.map((part, index) => {
           // パスを構築（現在までの部分）
           currentPath += (index === 0 ? '' : '/') + part;
-          const path = `/admin/documents/${currentPath}`;
+          const path = `/documents/${currentPath}`;
 
           return (
             <React.Fragment key={index}>

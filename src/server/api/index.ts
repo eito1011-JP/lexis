@@ -3,7 +3,7 @@ import userRouter from './routes/user';
 
 const router = Router();
 
-// 管理者用APIルートの設定
-router.use('/admin/user', userRouter);
+// ユーザー用APIルートの設定
+router.use('/user', userRouter);
 
 export default router;

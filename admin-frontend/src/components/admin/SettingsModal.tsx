@@ -34,7 +34,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
       await apiClient.post('/api/auth/logout', {});
       
       // ログアウト成功後、ログインページにリダイレクト
-      window.location.href = '/admin/login';
+      window.location.href = '/login';
     } catch (error) {
       console.error('ログアウトエラー:', error);
       alert('ログアウトに失敗しました。もう一度お試しください。');

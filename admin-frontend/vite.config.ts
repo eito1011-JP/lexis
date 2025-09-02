@@ -10,7 +10,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  base: '/admin/',
+  base: '/',
   server: {
     port: 3002, // 管理画面用に3002ポートを使用
     proxy: {

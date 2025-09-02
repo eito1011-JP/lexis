@@ -40,7 +40,7 @@ class ReviewRequestNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $pullRequestUrl = config('app.url').'/admin/change-suggestions/'.$this->pullRequest->id;
+        $pullRequestUrl = config('app.url').'/change-suggestions/'.$this->pullRequest->id;
 
         return (new MailMessage)
             ->subject('【ハンドブック】レビュー依頼のお知らせ')

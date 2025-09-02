@@ -1029,7 +1029,7 @@ const ConflictResolutionPage: React.FC = () => {
                 {files.length > 0 && files.every(f => checkedFiles[f.filename]) ? (
                   <button
                     className="px-6 py-2 bg-green-700 hover:bg-green-600 text-white rounded-md"
-                    onClick={() => navigate(`/admin/change-suggestions/${id}`)}
+                    onClick={() => navigate(`/change-suggestions/${id}`)}
                   >
                     修正を完了する
                   </button>

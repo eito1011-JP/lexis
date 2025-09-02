@@ -100,7 +100,7 @@ export default function CreateDocumentPage(): JSX.Element {
 
       alert('ドキュメントが作成されました');
       // 成功したら一覧ページに戻る
-      let redirectUrl = `/admin/documents/${category_path ?? ''}`;
+      let redirectUrl = `/documents/${category_path ?? ''}`;
       if (editPullRequestId && pullRequestEditToken) {
         redirectUrl += `?edit_pull_request_id=${editPullRequestId}&pull_request_edit_token=${pullRequestEditToken}`;
       }

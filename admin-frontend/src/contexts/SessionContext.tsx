@@ -88,7 +88,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       await apiClient.post(API_CONFIG.ENDPOINTS.LOGOUT, {});
       resetSession(setUser, setActiveBranch);
-      window.location.href = '/admin/login';
+      window.location.href = '/login';
     } catch (error) {
       console.error('ログアウトエラー:', error);
       throw error;

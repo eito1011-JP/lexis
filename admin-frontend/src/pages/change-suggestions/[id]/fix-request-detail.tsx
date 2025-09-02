@@ -314,7 +314,7 @@ export default function FixRequestDetailPage(): JSX.Element {
 
     try {
       setApplying(true);
-      await apiClient.post(`/api/admin/fix-requests/apply`, {
+      await apiClient.post(`/api/fix-requests/apply`, {
         token: token,
       });
       setToast({ message: '修正リクエストが正常に適用されました', type: 'success' });
