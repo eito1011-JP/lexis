@@ -31,7 +31,6 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('auth')->group(function () {
     Route::post('/pre-users', [EmailAuthnController::class, 'sendAuthnEmail']);
     Route::get('/pre-users', [EmailAuthnController::class, 'identifyToken']);
-    Route::post('/signup', [AuthController::class, 'signup']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/session', [AuthController::class, 'session']);

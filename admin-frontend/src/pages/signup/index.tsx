@@ -23,7 +23,7 @@ export default function AdminPage(): ReactElement {
     setLoading(true);
 
     try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNUP, {
+      const response = await apiClient.post(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, {
         email,
         password,
       });
