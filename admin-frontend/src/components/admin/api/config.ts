@@ -14,6 +14,8 @@ export const API_CONFIG = {
     LOGIN: '/api/auth/login',
     SESSION: '/api/auth/session',
     LOGOUT: '/api/auth/logout',
+    PRE_USERS_IDENTIFY: '/api/auth/pre-users',
+    ORGANIZATIONS_CREATE: '/api/organizations',
     DOCUMENTS: {
       CREATE: '/api/admin/documents/create',
       UPDATE: '/api/admin/documents/update',

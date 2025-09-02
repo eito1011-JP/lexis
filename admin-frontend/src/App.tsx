@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import DocumentsPage from './pages/documents';
+import OrganizationRegisterPage from './pages/organization/register';
+import OrganizationJoinPage from './pages/organization/join.tsx';
 import DocumentBySlugPage from './pages/documents/slug';
 import LoginPage from './pages/login';
 import SignupPage from './pages/signup';
@@ -22,6 +24,8 @@ function App() {
         <Route path={ROUTE_PATHS.home} element={<DocumentsPage />} />
         <Route path={ROUTE_PATHS.login} element={<LoginPage />} />
         <Route path={ROUTE_PATHS.signup} element={<SignupPage />} />
+        <Route path={ROUTE_PATHS['organization-register']} element={<OrganizationRegisterPage />} />
+        <Route path={ROUTE_PATHS['organization-join']} element={<OrganizationJoinPage />} />
         <Route path={ROUTE_PATHS['change-suggestions']} element={<ChangeSuggestionsPage />} />
         <Route
           path={ROUTE_PATHS['change-suggestion-detail']}
