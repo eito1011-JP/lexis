@@ -37,7 +37,7 @@ class EmailAuthentication extends Mailable
     public function build(): self
     {
         $frontendUrl = config('app.frontend_url');
-        $verifyUrl = rtrim($frontendUrl, '/').'/signup?token='.$this->token;
+        $verifyUrl = rtrim($frontendUrl, '/').'/organization/register?token='.$this->token;
 
         return $this->subject('【Lexis】メール認証のご案内')
             ->view('emails.email_authentication')

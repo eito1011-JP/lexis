@@ -14,5 +14,3 @@ export default function VerifyEmailPage(): React.ReactElement {
     </AdminLayout>
   );
 }
-
-
