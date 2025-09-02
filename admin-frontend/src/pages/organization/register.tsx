@@ -14,14 +14,30 @@ export default function OrganizationRegisterPage(): React.ReactElement {
 
   useEffect(() => {
     async function handleIdentifyToken() {
-      if (!token) return;
+      if (!token) {
+        alert('トークンが指定されていません');
+        navigate('/admin/signup');
+        return;
+      }
+  
       try {
         await apiClient.get(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, { params: { token } });
-      } catch (e) {
-        alert('無効なトークンです');
-        navigate('/login');
+        // トークンが有効な場合、何もしない（フォームを表示する）
+      } catch (error: any) {
+        console.error('Token validation error:', error);
+        
+        // レスポンスが存在し、ステータスコードが取得できる場合
+        if (error.response?.status === 401) {
+          alert('無効なトークンです');
+        } else {
+          // 401以外のHTTPエラーレスポンス
+          alert(`エラーが発生しました (ステータス: ${error.response.status})`);
+        }
+
+        navigate('/admin/signup');
       }
     }
+    
     handleIdentifyToken();
   }, [token, navigate]);
 
@@ -35,7 +51,7 @@ export default function OrganizationRegisterPage(): React.ReactElement {
         organization_name: organizationName,
         token,
       });
-      navigate('/login');
+      navigate('/admin/documents');
     } catch (e) {
       alert('登録に失敗しました');
     } finally {

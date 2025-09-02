@@ -2,10 +2,12 @@
 
 namespace App\UseCases\Organization;
 
+use App\Consts\Flag;
 use App\Enums\ErrorType;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
 use App\Models\Organization;
+use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
 
@@ -46,12 +48,22 @@ class CreateOrganizationUseCase
         $user = User::create([
             'email' => $preUser->email,
             'password' => $preUser->password,
-            'name' => null,
+            'nickname' => null,
         ]);
 
         $organization = Organization::create([
             'uuid' => $organizationUuid,
             'name' => $organizationName,
+        ]);
+
+        OrganizationMember::create([
+            'organization_id' => $organization->id,
+            'user_id' => $user->id,
+            'joined_at' => now(),
+        ]);
+
+        $preUser->update([
+            'is_invalidated' => Flag::TRUE,
         ]);
 
         return ['organization' => $organization, 'user' => $user];
