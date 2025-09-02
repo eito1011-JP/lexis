@@ -4,10 +4,12 @@ namespace App\UseCases\Organization;
 
 use App\Consts\Flag;
 use App\Enums\ErrorType;
+use App\Enums\OrganizationRoleBindingRole;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
+use App\Models\OrganizationRoleBinding;
 use App\Models\User;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
 
@@ -60,6 +62,12 @@ class CreateOrganizationUseCase
             'organization_id' => $organization->id,
             'user_id' => $user->id,
             'joined_at' => now(),
+        ]);
+
+        OrganizationRoleBinding::create([
+            'organization_id' => $organization->id,
+            'user_id' => $user->id,
+            'role' => OrganizationRoleBindingRole::OWNER->value,
         ]);
 
         $preUser->update([

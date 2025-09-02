@@ -13,13 +13,13 @@ export default function AdminPage(): ReactElement {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const { checkSession } = useSession();
 
   // すでにログインしている場合はダッシュボードにリダイレクト
   useSessionCheck('/documents', true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
     setLoading(true);
 
     try {
@@ -28,16 +28,13 @@ export default function AdminPage(): ReactElement {
         password,
       });
 
-      setToastMessage(response.message || '登録が完了しました');
+      setToastMessage('入力されたメールアドレスにメールを送信しました');
       setToastType('success');
       setShowToast(true);
 
       // フォームをリセット
       setEmail('');
       setPassword('');
-
-      // セッション状態を更新
-      await checkSession();
 
       // 状態の更新を待ってからリダイレクト
       setTimeout(() => {

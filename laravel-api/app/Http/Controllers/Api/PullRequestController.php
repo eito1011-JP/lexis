@@ -9,7 +9,6 @@ use App\Enums\DocumentStatus;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestReviewerActionStatus;
 use App\Enums\PullRequestStatus;
-use App\Enums\UserRole;
 use App\Http\Requests\Api\PullRequest\ApprovePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\ClosePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
