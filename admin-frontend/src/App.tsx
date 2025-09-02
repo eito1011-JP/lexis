@@ -14,6 +14,7 @@ import FixRequestDetailPage from './pages/change-suggestions/[id]/fix-request';
 import FixRequestDetailPageWithToken from './pages/change-suggestions/[id]/fix-request-detail';
 import PullRequestEditSessionDetailPage from './pages/change-suggestions/[id]/pull_request_edit_sessions/[token]';
 import ConflictResolutionPage from './pages/change-suggestions/[id]/conflicts';
+import VerifyEmailPage from './pages/verify-email';
 import { ROUTE_PATHS } from './routes';
 import { SessionProvider } from './contexts/SessionContext';
 
@@ -24,6 +25,7 @@ function App() {
         <Route path={ROUTE_PATHS.home} element={<DocumentsPage />} />
         <Route path={ROUTE_PATHS.login} element={<LoginPage />} />
         <Route path={ROUTE_PATHS.signup} element={<SignupPage />} />
+        <Route path={ROUTE_PATHS['verify-email']} element={<VerifyEmailPage />} />
         <Route path={ROUTE_PATHS['organization-register']} element={<OrganizationRegisterPage />} />
         <Route path={ROUTE_PATHS['organization-join']} element={<OrganizationJoinPage />} />
         <Route path={ROUTE_PATHS['change-suggestions']} element={<ChangeSuggestionsPage />} />

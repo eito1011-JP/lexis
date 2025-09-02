@@ -41,7 +41,7 @@ export default function AdminPage(): ReactElement {
 
       // 状態の更新を待ってからリダイレクト
       setTimeout(() => {
-        window.location.href = '/admin/documents';
+        window.location.href = '/admin/verify-email';
       }, 1000);
     } catch (err) {
       console.error('Error:', err);
