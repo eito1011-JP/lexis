@@ -171,4 +171,6 @@ return [
         ],
     ],
     'unique_slug_in_same_parent' => ':slugは既に同じカテゴリ内で使われています',
+    'invalid_token' => 'トークンが無効です',
+    'organization_duplicate' => 'この組織は既に登録されています',
 ];

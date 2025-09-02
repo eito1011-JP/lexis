@@ -36,6 +36,18 @@ class PreUser extends Model
     {
         return $query->where('is_invalidated', $isInvalidated);
     }
+
+    public function scopeByToken(Builder $query, string $token): Builder
+    {
+        return $query->where('token', $token);
+    }
+
+    public function scopeWhereExpiredAt(Builder $query): Builder
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('expired_at')->orWhere('expired_at', '>', now());
+        });
+    }
 }
 
 

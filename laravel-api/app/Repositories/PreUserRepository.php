@@ -35,6 +35,14 @@ class PreUserRepository implements PreUserRepositoryInterface
             ->isInvalidated(false)
             ->first();
     }
+
+    public function findActiveByToken(string $token): ?PreUser
+    {
+        return PreUser::byToken($token)
+            ->isInvalidated(false)
+            ->whereExpiredAt()
+            ->first();
+    }
 }
 
 

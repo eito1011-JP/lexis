@@ -11,6 +11,8 @@ interface PreUserRepositoryInterface
     public function registerPreUser(string $email, string $password, string $token, ?\DateTimeInterface $expiredAt = null): PreUser;
 
     public function findActiveByEmail(string $email): ?PreUser;
+
+    public function findActiveByToken(string $token): ?PreUser;
 }
 
 

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\FixRequestController;
 use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\PullRequestEditSessionController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
+use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\UserBranchController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
@@ -29,6 +30,7 @@ use Illuminate\Support\Facades\Route;
 // 認証関連のルート
 Route::prefix('auth')->group(function () {
     Route::post('/pre-users', [EmailAuthnController::class, 'sendAuthnEmail']);
+    Route::get('/pre-users', [EmailAuthnController::class, 'identifyToken']);
     Route::post('/signup', [AuthController::class, 'signup']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -115,6 +117,9 @@ Route::middleware('auth.session')->group(function () {
         Route::post('/apply', [FixRequestController::class, 'applyFixRequest']);
     });
 });
+
+// 組織登録（プリサインアップフロー）
+Route::post('/organizations', [OrganizationController::class, 'create']);
 
 // 認証不要なルート（テスト用）
 Route::get('/user', function (Request $request) {
