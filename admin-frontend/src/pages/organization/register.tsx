@@ -62,8 +62,8 @@ export default function OrganizationRegisterPage(): React.ReactElement {
   return (
     <AdminLayout title="組織登録" sidebar={false}>
       <div className="bg-black min-h-screen flex items-center justify-center">
-        <div className="w-full max-w-[600px] bg-[#0A0A0A] border-[1px] border-[#B1B1B1] rounded-xl p-12">
-          <h2 className="text-white text-3xl font-bold text-center mb-10">組織名を入力してください</h2>
+        <div className="w-full max-w-[500px] bg-[#0A0A0A] border-[1px] border-[#B1B1B1] rounded-xl p-12">
+          <h2 className="text-white text-2xl font-bold text-center mb-10">組織名を入力してください</h2>
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
               <label className="block text-white mb-2 font-bold">組織ID</label>
