@@ -16,6 +16,7 @@ class ErrorType
     public const CODE_DOCUMENT_NOT_FOUND = 'DOCUMENT_NOT_FOUND';
     public const CODE_DUPLICATE_EXECUTION = 'DUPLICATE_EXECUTION';
     public const CODE_TARGET_DOCUMENT_NOT_FOUND = 'TARGET_DOCUMENT_NOT_FOUND';
+    public const CODE_DATABASE_ERROR = 'DATABASE_ERROR';
 
     // HTTP status codes
     public const STATUS_TOO_MANY_REQUESTS = 429;
@@ -24,5 +25,6 @@ class ErrorType
     public const STATUS_DOCUMENT_NOT_FOUND = 404;
     public const STATUS_DUPLICATE_EXECUTION = 409;
     public const STATUS_TARGET_DOCUMENT_NOT_FOUND = 409;
+    public const STATUS_DATABASE_ERROR = 500;
     public const STATUS_INTERNAL_ERROR = 500;
 }
