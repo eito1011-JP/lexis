@@ -36,7 +36,6 @@ class CreateOrganizationUseCase
 
         $exists = Organization::query()
             ->where('uuid', $organizationUuid)
-            ->orWhere('name', $organizationName)
             ->exists();
 
         if ($exists) {
