@@ -1,27 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exceptions;
 
-use Exception;
+use App\Consts\ErrorType;
 use Illuminate\Http\JsonResponse;
 
-class DuplicateExecutionException extends Exception
+class DuplicateExecutionException extends BaseException
 {
-    public function __construct(
-        public string $codeString,
-        string $message,
-        public string $statusString
-    ) {
-        parent::__construct($message);
-    }
-
-    public function render($request): JsonResponse
+    public function toResponse($request): JsonResponse
     {
-        return response()->json([
-            'error' => [
-                'code' => $this->codeString,
-                'message' => $this->getMessage(),
-            ],
-        ], 409);
+        $this->setErrorCode(ErrorType::CODE_DUPLICATE_EXECUTION);
+        $this->setErrorMessage(__('errors.MSG_DUPLICATE_EXECUTION'));
+        $this->setStatusCode(ErrorType::STATUS_DUPLICATE_EXECUTION);
+
+        return parent::toResponse($request);
     }
 }

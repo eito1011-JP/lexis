@@ -1,41 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exceptions;
 
-use Exception;
+use App\Consts\ErrorType;
 use Illuminate\Http\JsonResponse;
 
 /**
  * ドキュメントが見つからない場合の例外
  */
-class DocumentNotFoundException extends Exception
+class DocumentNotFoundException extends BaseException
 {
-    /**
-     * コンストラクタ
-     *
-     * @param  string  $message  エラーメッセージ
-     * @param  int  $code  エラーコード
-     * @param  Exception|null  $previous  前の例外
-     */
-    public function __construct(
-        string $message = 'ドキュメントが見つかりません',
-        int $code = 0,
-        ?Exception $previous = null
-    ) {
-        parent::__construct($message, $code, $previous);
-    }
-
-    /**
-     * 例外をHTTPレスポンスに変換
-     *
-     * @param  \Illuminate\Http\Request  $request
-     */
-    public function render($request): JsonResponse
+    public function toResponse($request): JsonResponse
     {
-        return response()->json([
-            'result' => 'document_not_found',
-            'message' => $this->getMessage(),
-        ], 404);
+        $this->setErrorCode(ErrorType::CODE_DOCUMENT_NOT_FOUND);
+        $this->setErrorMessage(__('errors.MSG_DOCUMENT_NOT_FOUND'));
+        $this->setStatusCode(ErrorType::STATUS_DOCUMENT_NOT_FOUND);
+
+        return parent::toResponse($request);
     }
 
     /**

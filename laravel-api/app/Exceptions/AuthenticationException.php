@@ -1,31 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Exceptions;
 
-use Exception;
+use App\Consts\ErrorType;
 use Illuminate\Http\JsonResponse;
 
 /**
  * 認証系エラーの例外
  */
-class AuthenticationException extends Exception
+class AuthenticationException extends BaseException
 {
-    public function __construct(
-        public string $codeString,
-        string $message,
-        public string $statusString
-    ) {
-        parent::__construct($message);
-    }
-
-    public function render($request): JsonResponse
+    public function toResponse($request): JsonResponse
     {
-        return response()->json([
-            'error' => [
-                'code' => $this->codeString,
-                'message' => $this->getMessage(),
-            ],
-        ], 401);
+        $this->setErrorCode(ErrorType::CODE_AUTHENTICATION_FAILED);
+        $this->setErrorMessage(__('errors.MSG_AUTHENTICATION_FAILED'));
+        $this->setStatusCode(ErrorType::STATUS_AUTHENTICATION_FAILED);
+
+        return parent::toResponse($request);
     }
 }
 
