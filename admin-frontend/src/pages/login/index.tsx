@@ -24,12 +24,12 @@ export default function LoginPage(): ReactElement {
     setLoading(true);
 
     try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.LOGIN, {
+      await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
         email,
         password,
       });
 
-      setToastMessage(response.message || 'ログインに成功しました');
+      setToastMessage('ログインに成功しました');
       setToastType('success');
       setShowToast(true);
 

@@ -23,7 +23,7 @@ export default function AdminPage(): ReactElement {
     setLoading(true);
 
     try {
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, {
+      await apiClient.post(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, {
         email,
         password,
       });
@@ -98,6 +98,14 @@ export default function AdminPage(): ReactElement {
             >
               {loading ? '処理中...' : '登録する'}
             </button>
+            <div className="flex justify-center mt-4">
+              <p className="text-white text-[0.8rem]">
+                アカウントをお持ちの方
+                <a href="/login" className="text-white hover:underline ml-8">
+                  ログイン
+                </a>
+              </p>
+            </div>
           </form>
         </div>
       </div>
