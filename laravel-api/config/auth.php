@@ -116,4 +116,22 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Login Attempts Configuration
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options specify the behavior of login attempt
+    | throttling to prevent brute force attacks. The max_attempts setting
+    | defines how many failed login attempts are allowed before lockout.
+    | The lockout_decay_minutes setting defines how long a user is locked
+    | out after exceeding the maximum attempts.
+    |
+    */
+
+    'login_attempts' => [
+        'max_attempts' => env('AUTH_MAX_LOGIN_ATTEMPTS', 5),
+        'lockout_decay_minutes' => env('AUTH_LOCKOUT_DECAY_MINUTES', 15),
+    ],
+
 ];

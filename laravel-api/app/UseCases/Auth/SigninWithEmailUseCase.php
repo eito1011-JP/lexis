@@ -17,9 +17,6 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class SigninWithEmailUseCase
 {
-    private const MAX_LOGIN_ATTEMPTS = 5;
-    private const LOCKOUT_DECAY_MINUTES = 15;
-
     public function __construct(
         private JwtService $jwtService
     ) {}
@@ -40,7 +37,7 @@ class SigninWithEmailUseCase
         $key = 'signin-with-email.' . $request->ip() . '.' . $email;
 
         // ログイン試行回数チェック
-        if (RateLimiter::tooManyAttempts($key, self::MAX_LOGIN_ATTEMPTS)) {
+        if (RateLimiter::tooManyAttempts($key, config('auth.login_attempts.max_attempts'))) {
             throw new TooManyRequestsException();
         }
 
@@ -52,8 +49,8 @@ class SigninWithEmailUseCase
 
         // パスワード検証
         if (!Hash::check($password, $user->password)) {
-            RateLimiter::hit($key, self::LOCKOUT_DECAY_MINUTES * 60);
-            if (RateLimiter::tooManyAttempts($key, self::MAX_LOGIN_ATTEMPTS)) {
+            RateLimiter::hit($key, config('auth.login_attempts.lockout_decay_minutes') * 60);
+            if (RateLimiter::tooManyAttempts($key, config('auth.login_attempts.max_attempts'))) {
                 throw new TooManyRequestsException();
             }
 
