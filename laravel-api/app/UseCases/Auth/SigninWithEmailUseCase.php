@@ -37,7 +37,7 @@ class SigninWithEmailUseCase
      */
     public function execute(string $email, string $password, Request $request): array
     {
-        $key = 'login.' . $request->ip() . '.' . $email;
+        $key = 'signin-with-email.' . $request->ip() . '.' . $email;
 
         // ログイン試行回数チェック
         if (RateLimiter::tooManyAttempts($key, self::MAX_LOGIN_ATTEMPTS)) {
