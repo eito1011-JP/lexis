@@ -25,37 +25,8 @@ class UserFactory extends Factory
         return [
             'email' => fake()->unique()->safeEmail(),
             'password' => static::$password ??= Hash::make('password'),
-            'role' => 'editor',
+            'nickname' => fake()->name(),
+            'last_login' => fake()->now(),
         ];
-    }
-
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
-    }
-
-    /**
-     * 管理者ロールのユーザーを作成
-     */
-    public function admin(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'role' => 'admin',
-        ]);
-    }
-
-    /**
-     * オーナーロールのユーザーを作成
-     */
-    public function owner(): static
-    {
-        return $this->state(fn (array $attributes) => [
-            'role' => 'owner',
-        ]);
     }
 }
