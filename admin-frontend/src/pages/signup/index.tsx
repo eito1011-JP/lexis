@@ -1,10 +1,11 @@
-import React, { useState, FormEvent, ReactElement } from 'react';
+import  { useState, FormEvent, ReactElement } from 'react';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import AdminLayout from '@/components/admin/layout';
 import { Toast } from '@/components/admin/Toast';
-import { useSession } from '@/contexts/SessionContext';
+import FormError from '@/components/FormError';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
+import { DUPLICATE_EXECUTION, VALIDATION_ERROR, ERROR } from '@/const/ErrorMessage';
 
 export default function AdminPage(): ReactElement {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ export default function AdminPage(): ReactElement {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
 
   // すでにログインしている場合はダッシュボードにリダイレクト
   useSessionCheck('/documents', true);
@@ -21,6 +23,7 @@ export default function AdminPage(): ReactElement {
     e.preventDefault();
 
     setLoading(true);
+    setValidationErrors({}); // エラーをクリア
 
     try {
       await apiClient.post(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, {
@@ -40,11 +43,20 @@ export default function AdminPage(): ReactElement {
       setTimeout(() => {
         window.location.href = '/verify-email';
       }, 1000);
-    } catch (err) {
-      console.error('Error:', err);
-      setToastMessage(err instanceof Error ? err.message : '通信エラーが発生しました');
-      setToastType('error');
-      setShowToast(true);
+    } catch (error: any) {
+      console.log(error);
+      if (error.response?.status === 422 && error.response?.data?.errors) {
+        // バリデーションエラーを設定
+        setValidationErrors(error.response.data.errors);
+      } else if (error.response?.status === 409) {
+        setToastMessage(DUPLICATE_EXECUTION);
+        setToastType('error');
+        setShowToast(true);
+      } else {
+        setToastMessage(ERROR);
+        setToastType('error');
+        setShowToast(true);
+      };
     } finally {
       setLoading(false);
     }
@@ -73,6 +85,13 @@ export default function AdminPage(): ReactElement {
                 onChange={e => setEmail(e.target.value)}
                 required
               />
+              {validationErrors.email && (
+                <FormError className="mt-2">
+                  {validationErrors.email.map((error, index) => (
+                    <div key={index}>{error}</div>
+                  ))}
+                </FormError>
+              )}
             </div>
 
             <div className="mb-8">
@@ -89,6 +108,13 @@ export default function AdminPage(): ReactElement {
                 required
                 minLength={8}
               />
+              {validationErrors.password && (
+                <FormError className="mt-2">
+                  {validationErrors.password.map((error, index) => (
+                    <div key={index}>{error}</div>
+                  ))}
+                </FormError>
+              )}
             </div>
 
             <button
