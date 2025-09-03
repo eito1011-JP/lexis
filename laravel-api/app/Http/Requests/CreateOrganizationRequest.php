@@ -14,7 +14,7 @@ class CreateOrganizationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'organization_uuid' => ['required', 'string', 'max:64'],
+            'organization_uuid' => ['required', 'string', 'max:64', 'regex:/^[a-zA-Z]+$/'],
             'organization_name' => ['required', 'string', 'max:255'],
             'token' => ['required', 'string', 'max:64'],
         ];

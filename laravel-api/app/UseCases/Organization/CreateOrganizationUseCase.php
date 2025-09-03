@@ -3,7 +3,7 @@
 namespace App\UseCases\Organization;
 
 use App\Consts\Flag;
-use App\Enums\ErrorType;
+use App\Consts\ErrorType;
 use App\Enums\OrganizationRoleBindingRole;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
@@ -28,9 +28,9 @@ class CreateOrganizationUseCase
 
         if (!$preUser) {
             throw new AuthenticationException(
-                ErrorType::CODE_INVALID_TOKEN->value,
+                ErrorType::CODE_INVALID_TOKEN,
                 __('errors.MSG_INVALID_TOKEN'),
-                ErrorType::STATUS_INVALID_TOKEN->value,
+                ErrorType::STATUS_INVALID_TOKEN,
             );
         }
 
@@ -40,9 +40,9 @@ class CreateOrganizationUseCase
 
         if ($exists) {
             throw new DuplicateExecutionException(
-                'CODE_ORGANIZATION_ALREADY_EXISTS',
-                __('errors.MSG_ORGANIZATION_ALREADY_EXISTS'),
-                'STATUS_ORGANIZATION_ALREADY_EXISTS',
+                ErrorType::CODE_DUPLICATE_EXECUTION,
+                __('errors.MSG_DUPLICATE_EXECUTION'),
+                ErrorType::STATUS_DUPLICATE_EXECUTION,
             );
         }
 

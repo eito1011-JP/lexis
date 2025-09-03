@@ -3,7 +3,7 @@
 namespace Tests\Unit\UseCases\Organization;
 
 use App\Consts\Flag;
-use App\Enums\ErrorType;
+use App\Consts\ErrorType;
 use App\Enums\OrganizationRoleBindingRole;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
@@ -121,8 +121,8 @@ class CreateOrganizationUseCaseTest extends TestCase
             $this->useCase->execute('org-uuid', 'Acme', 'bad-token');
             $this->fail('AuthenticationException was not thrown');
         } catch (AuthenticationException $e) {
-            $this->assertSame(ErrorType::CODE_INVALID_TOKEN->value, $e->codeString);
-            $this->assertSame(ErrorType::STATUS_INVALID_TOKEN->value, $e->statusString);
+            $this->assertSame(ErrorType::CODE_INVALID_TOKEN, $e->getCode());
+            $this->assertSame(ErrorType::STATUS_INVALID_TOKEN, $e->getStatusCode());
         }
     }
 
@@ -153,8 +153,8 @@ class CreateOrganizationUseCaseTest extends TestCase
             $this->useCase->execute('dup-uuid', 'Another Name', 'valid-token');
             $this->fail('DuplicateExecutionException was not thrown with duplicated uuid');
         } catch (DuplicateExecutionException $e) {
-            $this->assertSame('CODE_ORGANIZATION_ALREADY_EXISTS', $e->codeString);
-            $this->assertSame('STATUS_ORGANIZATION_ALREADY_EXISTS', $e->statusString);
+            $this->assertSame(ErrorType::CODE_DUPLICATE_EXECUTION, $e->getCode());
+            $this->assertSame(ErrorType::STATUS_DUPLICATE_EXECUTION, $e->getStatusCode());
         }
     }
 }

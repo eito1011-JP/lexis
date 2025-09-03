@@ -3,7 +3,7 @@
 namespace App\UseCases\Auth;
 
 use App\Constants\AppConst;
-use App\Enums\ErrorType;
+use App\Consts\ErrorType;
 use App\Events\PreUserCreated;
 use App\Exceptions\DuplicateExecutionException;
 use App\Models\User;
@@ -29,9 +29,9 @@ class SendAuthnEmailUseCase
 
         if ($user) {
             throw new DuplicateExecutionException(
-                ErrorType::CODE_ACCOUNT_CANNOT_BE_REGISTERED->value,
+                ErrorType::CODE_ACCOUNT_CANNOT_BE_REGISTERED,
                 __('errors.MSG_ACCOUNT_CANNOT_BE_REGISTERED'),
-                ErrorType::STATUS_ACCOUNT_CANNOT_BE_REGISTERED->value,
+                ErrorType::STATUS_ACCOUNT_CANNOT_BE_REGISTERED,
             );
         }
 

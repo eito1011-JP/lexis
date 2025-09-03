@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\UseCases\Auth;
 
-use App\Enums\ErrorType;
+use App\Consts\ErrorType;
 use App\Exceptions\AuthenticationException;
 use App\Models\PreUser;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
@@ -68,8 +68,8 @@ class IdentifyTokenUseCaseTest extends TestCase
             $this->useCase->execute($token);
             $this->fail('AuthenticationException was not thrown');
         } catch (AuthenticationException $e) {
-            $this->assertSame(ErrorType::CODE_INVALID_TOKEN->value, $e->codeString);
-            $this->assertSame(ErrorType::STATUS_INVALID_TOKEN->value, $e->statusString);
+            $this->assertSame(ErrorType::CODE_INVALID_TOKEN, $e->getCode());
+            $this->assertSame(ErrorType::STATUS_INVALID_TOKEN, $e->getStatusCode());
         }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace App\UseCases\Auth;
 
-use App\Enums\ErrorType;
+use App\Consts\ErrorType;
 use App\Exceptions\AuthenticationException;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
 
@@ -21,9 +21,9 @@ class IdentifyTokenUseCase
 
         if (!$preUser) {
             throw new AuthenticationException(
-                ErrorType::CODE_INVALID_TOKEN->value,
+                ErrorType::CODE_INVALID_TOKEN,
                 __('errors.MSG_INVALID_TOKEN'),
-                ErrorType::STATUS_INVALID_TOKEN->value,
+                ErrorType::STATUS_INVALID_TOKEN,
             );
         }
 

@@ -3,7 +3,7 @@
 namespace Tests\Unit\UseCases\Auth;
 
 use App\Constants\AppConst;
-use App\Enums\ErrorType;
+use App\Consts\ErrorType;
 use App\Events\PreUserCreated;
 use App\Exceptions\DuplicateExecutionException;
 use App\Models\PreUser;
@@ -112,8 +112,8 @@ class SendAuthnEmailUseCaseTest extends TestCase
             $this->useCase->execute($email, $password);
             $this->fail('DuplicateExecutionException was not thrown');
         } catch (DuplicateExecutionException $e) {
-            $this->assertSame(ErrorType::CODE_ACCOUNT_CANNOT_BE_REGISTERED->value, $e->codeString);
-            $this->assertSame(ErrorType::STATUS_ACCOUNT_CANNOT_BE_REGISTERED->value, $e->statusString);
+            $this->assertSame(ErrorType::CODE_ACCOUNT_CANNOT_BE_REGISTERED, $e->getCode());
+            $this->assertSame(ErrorType::STATUS_ACCOUNT_CANNOT_BE_REGISTERED, $e->getStatusCode());
         }
     }
 }
