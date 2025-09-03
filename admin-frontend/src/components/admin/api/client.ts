@@ -9,6 +9,7 @@ export const apiClient = {
 
     const defaultHeaders = {
       'Content-Type': 'application/json',
+      Accept: 'application/json',
     };
 
     const config = {
@@ -26,17 +27,27 @@ export const apiClient = {
       // レスポンスの内容タイプをチェック
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        if (!response.ok) {
-          throw new Error(`サーバーエラー: ${response.status} ${response.statusText}`);
-        }
-        return { success: false, error: 'JSONではないレスポンスを受信しました' };
+        // APIは常にJSONを返す前提。非JSONはエラーとして扱う
+        const error = new Error(
+          `Unexpected non-JSON response: ${response.status} ${response.statusText}`
+        );
+        (error as any).response = {
+          status: response.status,
+          data: { message: 'Non-JSON response received from server' },
+        };
+        throw error;
       }
 
       // レスポンスをJSONとしてパース
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || `Error: ${response.status}`);
+        const error = new Error(data.error || `Error: ${response.status}`);
+        (error as any).response = {
+          status: response.status,
+          data: data
+        };
+        throw error;
       }
 
       return data;
