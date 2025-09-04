@@ -1,7 +1,6 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useSearchParams } from 'react-router-dom';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
@@ -34,7 +33,7 @@ type DocumentItem = {
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);

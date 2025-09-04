@@ -1,7 +1,6 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useParams } from 'react-router-dom';
 import { fetchPullRequestDetail, type PullRequestDetailResponse } from '@/api/pullRequest';
 import { apiClient } from '@/components/admin/api/client';
@@ -111,7 +110,7 @@ const StatusBanner: React.FC<{
 };
 
 export default function FixRequestPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
   const { id } = useParams<{ id: string }>();
 
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);

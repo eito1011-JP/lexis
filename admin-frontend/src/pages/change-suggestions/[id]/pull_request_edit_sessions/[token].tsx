@@ -1,7 +1,6 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Toast } from '@/components/admin/Toast';
@@ -361,7 +360,7 @@ const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
 };
 
 export default function PullRequestEditSessionDetailPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
   const { token } = useParams<{ token: string }>();
 
   const [diffData, setDiffData] = useState<EditSessionResponse | null>(null);

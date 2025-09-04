@@ -2,7 +2,6 @@ import AdminLayout from '@/components/admin/layout';
 import React, { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { MultipleFolder } from '@/components/icon/common/MultipleFolder';
 import { Folder } from '@/components/icon/common/Folder';
@@ -58,7 +57,7 @@ export default function DocumentBySlugPage(): JSX.Element {
   }
   // /documentsより下のパスを取得（可変長に対応）
   const pathAfterDocuments = location.pathname.replace('/documents/', '');
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categorySlug, setCategorySlug] = useState('');
   const [label, setLabel] = useState('');

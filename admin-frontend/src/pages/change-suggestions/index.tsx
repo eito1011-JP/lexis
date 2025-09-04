@@ -1,7 +1,6 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
@@ -46,7 +45,7 @@ type ChangeProposal = {
  * 変更提案一覧ページコンポーネント
  */
 export default function ChangeSuggestionsPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
   const [changeProposals, setChangeProposals] = useState<ChangeProposal[]>([]);
   const [changeProposalsLoading, setChangeProposalsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);

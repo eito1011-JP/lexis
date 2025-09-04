@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/layout';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import {
   fetchConflictDiffs,
   handleFixConflictTemporary,
@@ -572,7 +571,7 @@ const buildConflictMarkedContent = (baseBody: string, headBody: string) => {
 const ConflictResolutionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

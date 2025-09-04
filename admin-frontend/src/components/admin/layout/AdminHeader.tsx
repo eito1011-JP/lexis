@@ -1,8 +1,10 @@
 import React from 'react';
-import { useSession } from '../../../contexts/SessionContext';
 
 export default function AdminHeader(): React.JSX.Element {
-  const { user, activeBranch } = useSession();
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') || '' : '';
+  const isAuthenticated = !!token;
+  const activeBranch = null;
 
   return (
     <header className="border-b border-gray-800 py-4 px-6 flex justify-between items-center">
@@ -20,9 +22,9 @@ export default function AdminHeader(): React.JSX.Element {
         {/* ユーザー情報 */}
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-white">
-            {user ? user.email.charAt(0).toUpperCase() : '?'}
+            {isAuthenticated && email ? email.charAt(0).toUpperCase() : '?'}
           </div>
-          <div className="text-sm text-gray-300">{user ? user.email : '未ログイン'}</div>
+          <div className="text-sm text-gray-300">{isAuthenticated && email ? email : '未ログイン'}</div>
         </div>
       </div>
     </header>

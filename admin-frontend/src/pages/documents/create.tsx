@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/layout';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
@@ -18,7 +17,7 @@ interface ApiError {
 }
 
 export default function CreateDocumentPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');

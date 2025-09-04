@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import AdminLayout from '@/components/admin/layout';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
@@ -33,7 +32,7 @@ interface DocumentData {
 
 export default function EditDocumentPage(): JSX.Element {
   const location = useLocation();
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
   const [label, setLabel] = useState('');
   const [content, setContent] = useState('');
   const [publicOption, setPublicOption] = useState('公開する');

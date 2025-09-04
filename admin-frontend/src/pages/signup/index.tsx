@@ -5,7 +5,6 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import AdminLayout from '@/components/admin/layout';
 import { useToast } from '@/contexts/ToastContext';
 import FormError from '@/components/FormError';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { DUPLICATE_EXECUTION, ERROR } from '@/const/ErrorMessage';
 
 export default function AdminPage(): ReactElement {
@@ -16,8 +15,6 @@ export default function AdminPage(): ReactElement {
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const { show } = useToast();
 
-  // すでにログインしている場合はダッシュボードにリダイレクト
-  useSessionCheck('/documents', true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

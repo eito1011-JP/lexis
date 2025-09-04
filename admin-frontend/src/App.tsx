@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import DocumentsPage from './pages/documents';
 import OrganizationRegisterPage from './pages/organization/register';
 import OrganizationJoinPage from './pages/organization/join.tsx';
@@ -18,45 +18,61 @@ import VerifyEmailPage from './pages/verify-email';
 import { ROUTE_PATHS } from './routes';
 import { ToastProvider } from './contexts/ToastContext';
 
+function ProtectedRoute({ children }: { children: JSX.Element }) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+function PublicRoute({ children }: { children: JSX.Element }) {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  if (token) {
+    return <Navigate to="/documents" replace />;
+  }
+  return children;
+}
+
 function App() {
   return (
       <ToastProvider>
       <Routes>
-        <Route path={ROUTE_PATHS.home} element={<DocumentsPage />} />
-        <Route path={ROUTE_PATHS.login} element={<LoginPage />} />
-        <Route path={ROUTE_PATHS.signup} element={<SignupPage />} />
-        <Route path={ROUTE_PATHS['verify-email']} element={<VerifyEmailPage />} />
-        <Route path={ROUTE_PATHS['organization-register']} element={<OrganizationRegisterPage />} />
-        <Route path={ROUTE_PATHS['organization-join']} element={<OrganizationJoinPage />} />
-        <Route path={ROUTE_PATHS['change-suggestions']} element={<ChangeSuggestionsPage />} />
+        <Route path={ROUTE_PATHS.home} element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS.login} element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path={ROUTE_PATHS.signup} element={<PublicRoute><SignupPage /></PublicRoute>} />
+        <Route path={ROUTE_PATHS['verify-email']} element={<PublicRoute><VerifyEmailPage /></PublicRoute>} />
+        <Route path={ROUTE_PATHS['organization-register']} element={<PublicRoute><OrganizationRegisterPage /></PublicRoute>} />
+        <Route path={ROUTE_PATHS['organization-join']} element={<PublicRoute><OrganizationJoinPage /></PublicRoute>} />
+        <Route path={ROUTE_PATHS['change-suggestions']} element={<ProtectedRoute><ChangeSuggestionsPage /></ProtectedRoute>} />
         <Route
           path={ROUTE_PATHS['change-suggestion-detail']}
-          element={<ChangeSuggestionDetailPage />}
+          element={<ProtectedRoute><ChangeSuggestionDetailPage /></ProtectedRoute>}
         />
         <Route
           path={ROUTE_PATHS['change-suggestion-diff']}
-          element={<ChangeSuggestionDiffPage />}
+          element={<ProtectedRoute><ChangeSuggestionDiffPage /></ProtectedRoute>}
         />
         <Route
           path={ROUTE_PATHS['change-suggestion-conflicts']}
-          element={<ConflictResolutionPage />}
+          element={<ProtectedRoute><ConflictResolutionPage /></ProtectedRoute>}
         />
         <Route
           path={ROUTE_PATHS['change-suggestion-fix-request']}
-          element={<FixRequestDetailPage />}
+          element={<ProtectedRoute><FixRequestDetailPage /></ProtectedRoute>}
         />
         <Route
           path="/change-suggestions/:id/fix-request-detail"
-          element={<FixRequestDetailPageWithToken />}
+          element={<ProtectedRoute><FixRequestDetailPageWithToken /></ProtectedRoute>}
         />
         <Route
           path="/change-suggestions/:id/pull_request_edit_sessions/:token"
-          element={<PullRequestEditSessionDetailPage />}
+          element={<ProtectedRoute><PullRequestEditSessionDetailPage /></ProtectedRoute>}
         />
-        <Route path={ROUTE_PATHS.documents} element={<DocumentsPage />} />
-        <Route path={ROUTE_PATHS['create-document']} element={<CreateDocumentPage />} />
-        <Route path={ROUTE_PATHS['edit-document']} element={<EditDocumentPage />} />
-        <Route path={ROUTE_PATHS['document-by-slug']} element={<DocumentBySlugPage />} />
+        <Route path={ROUTE_PATHS.documents} element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS['create-document']} element={<ProtectedRoute><CreateDocumentPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS['edit-document']} element={<ProtectedRoute><EditDocumentPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS['document-by-slug']} element={<ProtectedRoute><DocumentBySlugPage /></ProtectedRoute>} />
       </Routes>
       </ToastProvider>
   );

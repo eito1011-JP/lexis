@@ -1,7 +1,6 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect, useRef } from 'react';
 import type { JSX } from 'react';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { Folder } from '@/components/icon/common/Folder';
@@ -468,7 +467,7 @@ const SlugBreadcrumb = ({ slug }: { slug: string }) => {
  * 差分確認画面コンポーネント
  */
 export default function DiffPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [diffData, setDiffData] = useState<DiffResponse | null>(null);
   const [loading, setLoading] = useState(true);

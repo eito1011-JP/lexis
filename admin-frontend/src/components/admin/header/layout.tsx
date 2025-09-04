@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useSession } from '../../../contexts/SessionContext';
 import { API_CONFIG } from '../api/config';
 
 const PATHS = {
@@ -38,8 +37,9 @@ const NavigationButtons: React.FC<{ isAuthenticated: boolean }> = ({ isAuthentic
  * 管理画面用のヘッダーコンポーネント
  */
 function Header(): React.ReactElement {
-  const { user } = useSession();
-  const isAuthenticated = !!user;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') || '' : '';
+  const isAuthenticated = !!token;
 
   return (
     <header className={STYLES.header}>
@@ -48,7 +48,7 @@ function Header(): React.ReactElement {
         <div className={STYLES.navContainer}>
           {isAuthenticated ? (
             <>
-              <UserInfo email={user.email} />
+              <UserInfo email={email} />
               <NavigationButtons isAuthenticated={isAuthenticated} />
             </>
           ) : (

@@ -1,7 +1,6 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   fetchPullRequestDetail,
@@ -505,7 +504,7 @@ const SlugBreadcrumb = ({ slug }: { slug: string }) => {
 };
 
 export default function ChangeSuggestionDiffPage(): JSX.Element {
-  const { isLoading } = useSessionCheck('/login', false);
+  const [isLoading, setIsLoading] = useState(true);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
