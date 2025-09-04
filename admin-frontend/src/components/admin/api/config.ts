@@ -11,7 +11,6 @@ export const API_CONFIG = {
 
   ENDPOINTS: {
     SIGNIN_WITH_EMAIL: '/api/auth/signin-with-email',
-    SESSION: '/api/auth/session',
     LOGOUT: '/api/auth/logout',
     PRE_USERS_IDENTIFY: '/api/auth/pre-users',
     ORGANIZATIONS_CREATE: '/api/organizations',

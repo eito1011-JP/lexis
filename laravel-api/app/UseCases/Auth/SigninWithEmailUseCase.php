@@ -68,6 +68,6 @@ class SigninWithEmailUseCase
         $user->update(['last_login' => now()]);
 
         // JWTトークンを生成
-        return $this->jwtService->issueJwt($user, Flag::TRUE);
+        return $this->jwtService->issueJwt($user);
     }
 }

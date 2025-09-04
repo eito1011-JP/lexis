@@ -19,18 +19,19 @@ class JwtService extends BaseService
      */
     public function issueJwt(User $user): array
     {
-        // Generate a refresh token and store in database
+        // アクセストークン（Sanctum Personal Access Token）を発行
+        $tokenResult = $user->createToken('access');
+        $accessToken = $tokenResult->plainTextToken;
+
+        // RefreshTokenは既存仕様に合わせて継続生成
         $refreshToken = $this->generateRefreshToken($user->id);
 
-        // Generate JWT (仮実装 - 実際のJWTライブラリの実装に依存)
-        $jwtResponse = [
-            'token' => 'jwt_token_placeholder', // JWTAuth::fromUser($user) の代替
+        return [
+            'token' => $accessToken,
             'token_type' => 'bearer',
             'expires_at' => config('jwt.ttl', 60) * 60,
             'refresh_token' => $refreshToken,
         ];
-
-        return $jwtResponse;
     }
 
     /**

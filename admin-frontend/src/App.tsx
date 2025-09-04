@@ -16,12 +16,10 @@ import PullRequestEditSessionDetailPage from './pages/change-suggestions/[id]/pu
 import ConflictResolutionPage from './pages/change-suggestions/[id]/conflicts';
 import VerifyEmailPage from './pages/verify-email';
 import { ROUTE_PATHS } from './routes';
-import { SessionProvider } from './contexts/SessionContext';
 import { ToastProvider } from './contexts/ToastContext';
 
 function App() {
   return (
-    <SessionProvider>
       <ToastProvider>
       <Routes>
         <Route path={ROUTE_PATHS.home} element={<DocumentsPage />} />
@@ -61,7 +59,6 @@ function App() {
         <Route path={ROUTE_PATHS['document-by-slug']} element={<DocumentBySlugPage />} />
       </Routes>
       </ToastProvider>
-    </SessionProvider>
   );
 }
 
