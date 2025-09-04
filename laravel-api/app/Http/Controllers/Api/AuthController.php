@@ -2,13 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\Api\Auth\LoginRequest;
-use App\Http\Requests\Api\Auth\SignupRequest;
-use App\Models\User;
-use App\UseCases\Auth\SignupUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cookie;
 
 class AuthController extends ApiBaseController
 {
@@ -18,10 +15,8 @@ class AuthController extends ApiBaseController
     public function logout(Request $request): JsonResponse
     {
         try {
-            $token = $request->user()?->currentAccessToken();
-            if ($token) {
-                $token->delete();
-            }
+            // クッキーを無効化
+            Cookie::queue(Cookie::forget('sid'));
 
             return response()->json([
                 'success' => true,
@@ -33,5 +28,10 @@ class AuthController extends ApiBaseController
                 'error' => 'サーバーエラーが発生しました',
             ], 500);
         }
+    }
+
+    public function me(): JsonResponse
+    {
+        return response()->json($this->user());
     }
 }
