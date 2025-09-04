@@ -18,3 +18,6 @@ export const MAX_FILE_LENGTH = '%sファイルまで添付できます。';
 export const DUPLICATE_EXECUTION = 'このユーザーはすでに登録されています';
 export const VALIDATION_ERROR = '入力内容に問題があります';
 export const ERROR = 'エラーが発生しました';
+export const DUPLICATE_ORGANIZATION = 'この組織はすでに登録しています';
+export const AUTHENTICATION_FAILED = '認証に失敗しました';
+export const INVALID_AUTHENTICATION_TOKEN = '認証トークンが無効です';

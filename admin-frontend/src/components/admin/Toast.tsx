@@ -9,11 +9,13 @@ interface ToastProps {
 export const Toast: React.FC<ToastProps> = ({ message, type, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
 
+  const duration = 3000;
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
       onClose();
-    }, 3000);
+    }, duration);
 
     return () => clearTimeout(timer);
   }, [onClose]);
