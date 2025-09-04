@@ -1,20 +1,20 @@
 import  { useState, FormEvent, ReactElement } from 'react';
+import { useLocation } from 'react-router-dom';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import AdminLayout from '@/components/admin/layout';
-import { Toast } from '@/components/admin/Toast';
+import { useToast } from '@/contexts/ToastContext';
 import FormError from '@/components/FormError';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { DUPLICATE_EXECUTION, VALIDATION_ERROR, ERROR } from '@/const/ErrorMessage';
+import { DUPLICATE_EXECUTION, ERROR } from '@/const/ErrorMessage';
 
 export default function AdminPage(): ReactElement {
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
+  const { show } = useToast();
 
   // すでにログインしている場合はダッシュボードにリダイレクト
   useSessionCheck('/documents', true);
@@ -31,9 +31,7 @@ export default function AdminPage(): ReactElement {
         password,
       });
 
-      setToastMessage('入力されたメールアドレスにメールを送信しました');
-      setToastType('success');
-      setShowToast(true);
+      show({ message: '入力されたメールアドレスにメールを送信しました', type: 'success' });
 
       // フォームをリセット
       setEmail('');
@@ -44,18 +42,13 @@ export default function AdminPage(): ReactElement {
         window.location.href = '/verify-email';
       }, 1000);
     } catch (error: any) {
-      console.log(error);
       if (error.response?.status === 422 && error.response?.data?.errors) {
         // バリデーションエラーを設定
         setValidationErrors(error.response.data.errors);
       } else if (error.response?.status === 409) {
-        setToastMessage(DUPLICATE_EXECUTION);
-        setToastType('error');
-        setShowToast(true);
+        show({ message: DUPLICATE_EXECUTION, type: 'error' });
       } else {
-        setToastMessage(ERROR);
-        setToastType('error');
-        setShowToast(true);
+        show({ message: ERROR, type: 'error' });
       };
     } finally {
       setLoading(false);
@@ -135,9 +128,6 @@ export default function AdminPage(): ReactElement {
           </form>
         </div>
       </div>
-      {showToast && (
-        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
-      )}
     </AdminLayout>
   );
 }

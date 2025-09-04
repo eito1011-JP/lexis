@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
+use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
 use App\Http\Requests\Api\Auth\SendAuthnEmailRequest;
 use App\Http\Requests\Api\Auth\IdentifyTokenRequest;
@@ -13,6 +14,7 @@ use App\UseCases\Auth\SigninWithEmailUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Psr\Log\LogLevel;
 
 class EmailAuthnController extends ApiBaseController
 {
@@ -52,7 +54,22 @@ class EmailAuthnController extends ApiBaseController
      */
     public function identifyToken(IdentifyTokenRequest $request): JsonResponse
     {
-        $result = $this->identifyTokenUseCase->execute($request->token);
+        try {
+            $result = $this->identifyTokenUseCase->execute($request->token);   
+        } catch (AuthenticationException) {
+            return $this->sendError(
+                ErrorType::CODE_INVALID_TOKEN,
+                __('errors.MSG_INVALID_TOKEN'),
+                ErrorType::STATUS_INVALID_TOKEN,
+            );
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
+        }
 
         return response()->json($result);
     }

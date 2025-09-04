@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
+use App\Exceptions\AuthenticationException;
+use App\Exceptions\DuplicateExecutionException;
 use App\Http\Requests\CreateOrganizationRequest;
 use App\UseCases\Organization\CreateOrganizationUseCase;
+use Exception;
 use Illuminate\Http\JsonResponse;
+use Psr\Log\LogLevel;
 
 class OrganizationController extends ApiBaseController
 {
@@ -26,29 +30,26 @@ class OrganizationController extends ApiBaseController
                 'organization' => $result['organization'],
                 'user' => $result['user']
             ]);
-        } catch (\App\Exceptions\AuthenticationException $e) {
-            return $this->sendError(
-                $e->getCode(),
-                $e->getMessage(),
-                $e->getStatusCode(),
-                \Psr\Log\LogLevel::WARNING
+        } catch (AuthenticationException) {
+            return $this->sendError(    
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
             );
-        } catch (\App\Exceptions\DuplicateExecutionException $e) {
+        } catch (DuplicateExecutionException) {
             return $this->sendError(
-                $e->getCode(),
-                $e->getMessage(),
-                $e->getStatusCode(),
-                \Psr\Log\LogLevel::WARNING
+                ErrorType::CODE_DUPLICATE_EXECUTION,
+                __('errors.MSG_DUPLICATE_EXECUTION'),
+                ErrorType::STATUS_DUPLICATE_EXECUTION,
             );
-        } catch (\Exception $e) {
+        } catch (Exception) {
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
-                $e->getMessage(),
+                __('errors.MSG_INTERNAL_ERROR'),
                 ErrorType::STATUS_INTERNAL_ERROR,
-                \Psr\Log\LogLevel::WARNING
+                LogLevel::ERROR,
             );
         }
-
     }
 }
 
