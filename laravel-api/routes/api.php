@@ -32,13 +32,11 @@ Route::prefix('auth')->group(function () {
     Route::post('/pre-users', [EmailAuthnController::class, 'sendAuthnEmail']);
     Route::get('/pre-users', [EmailAuthnController::class, 'identifyToken']);
     Route::post('/signin-with-email', [EmailAuthnController::class, 'signinWithEmail']);
-    Route::post('/login', [AuthController::class, 'login']);
     Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/session', [AuthController::class, 'session']);
 });
 
-// 認証が必要なルート
-Route::middleware('auth.session')->group(function () {
+// 認証が必要なルート（JWT/Sanctum）
+Route::middleware('auth:api')->group(function () {
     // ユーザー関連
     Route::prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);

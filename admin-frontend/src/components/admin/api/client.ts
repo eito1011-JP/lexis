@@ -12,11 +12,14 @@ export const apiClient = {
       Accept: 'application/json',
     };
 
+    const token = localStorage.getItem('access_token');
+
     const config = {
       ...options,
-      credentials: 'include' as const,
+      credentials: 'omit' as const,
       headers: {
         ...defaultHeaders,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
     };

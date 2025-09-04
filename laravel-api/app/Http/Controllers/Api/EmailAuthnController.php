@@ -82,7 +82,7 @@ class EmailAuthnController extends ApiBaseController
     public function signinWithEmail(SigninWithEmailRequest $request): JsonResponse
     {
         try {
-        $this->signinWithEmailUseCase->execute(
+        $result = $this->signinWithEmailUseCase->execute(
                 $request->email,
                 $request->password,
                 $request
@@ -118,7 +118,7 @@ class EmailAuthnController extends ApiBaseController
             );
         }
 
-        return response()->json();
+        return response()->json($result);
     }
 }
 

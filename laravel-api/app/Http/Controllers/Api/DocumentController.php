@@ -89,7 +89,6 @@ class DocumentController extends ApiBaseController
      */
     public function getDocuments(GetDocumentsRequest $request): JsonResponse
     {
-        // 認証チェック（新しいメソッドを使用）
         $user = $this->user();
 
         if (! $user) {
