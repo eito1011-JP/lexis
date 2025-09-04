@@ -3,8 +3,6 @@ import { API_CONFIG } from '@/components/admin/api/config';
 import AdminLayout from '@/components/admin/layout';
 import { useState, FormEvent, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { useSession } from '@/contexts/SessionContext';
 import { useToast } from '@/contexts/ToastContext';
 import { VALIDATION_ERROR, WRONG_EMAIL_OR_PASSWORD, NO_ACCOUNT, ERROR, TOO_MANY_REQUESTS } from '@/const/ErrorMessage';
 
@@ -14,9 +12,7 @@ export default function LoginPage(): ReactElement {
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
-  const { checkSession } = useSession();
   const { show } = useToast();
-  const { isLoading } = useSessionCheck('/documents', true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -24,18 +20,17 @@ export default function LoginPage(): ReactElement {
     setValidationErrors({});
 
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
+      const signin = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
         email,
         password,
       });
 
+      localStorage.setItem('access_token', signin.token);
       show({ message: 'ログインに成功しました', type: 'success' });
       // フォームをリセット
       setEmail('');
       setPassword('');
 
-      // セッション状態を更新
-      await checkSession();
 
       // 状態の更新を待ってからリダイレクト
       setTimeout(() => {
@@ -61,7 +56,7 @@ export default function LoginPage(): ReactElement {
   };
 
   // セッション確認中はローディング表示
-  if (isLoading) {
+  if (loading) {
     return (
       <AdminLayout title="読み込み中..." sidebar={false}>
         <div className="bg-black min-h-screen flex items-center justify-center">

@@ -109,7 +109,9 @@ class EmailAuthnController extends ApiBaseController
                 ErrorType::STATUS_AUTHENTICATION_FAILED,
             );
         }
-        catch (Exception) {
+        catch (Exception $e) {
+            // 例外の詳細をログに出す（stack と single に出力される）
+            Log::error($e);
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),

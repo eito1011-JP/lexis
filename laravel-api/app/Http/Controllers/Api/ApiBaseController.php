@@ -95,13 +95,13 @@ class ApiBaseController extends Controller
         if ($code) {
             return $context = [
                 'code' => $code,
-                'user_id' => Auth::check() ? $this->user()->user_id : null,
+                'user_id' => Auth::guard('api')->check() ? Auth::guard('api')->id() : null,
                 'input' => request()->all(),
             ];
         }
 
         return $context = [
-            'user_id' => Auth::check() ? $this->user()->user_id : null,
+            'user_id' => Auth::guard('api')->check() ? Auth::guard('api')->id() : null,
             'input' => request()->all(),
         ];
     }

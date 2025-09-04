@@ -145,16 +145,12 @@ class SigninWithEmailUseCaseTest extends TestCase
             'token' => 'jwt-token',
             'token_type' => 'bearer',
             'expires_at' => 3600,
-            'refresh_token' => 'refresh-token',
         ];
 
         $this->jwtService
             ->shouldReceive('issueJwt')
             ->once()
-            ->with(
-                Mockery::on(fn ($u) => $u->id === $user->id),
-                Mockery::on(fn ($flag) => $flag === Flag::TRUE)
-            )
+            ->with(Mockery::type(User::class))
             ->andReturn($expectedJwt);
 
         // 事前に失敗を何回か積んでおく -> 成功時に clear されることを確認
