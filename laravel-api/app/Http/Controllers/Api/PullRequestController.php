@@ -76,7 +76,7 @@ class PullRequestController extends ApiBaseController
 
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -307,7 +307,7 @@ class PullRequestController extends ApiBaseController
     public function fetchPullRequests(FetchPullRequestsRequest $request): JsonResponse
     {
         try {
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -384,7 +384,7 @@ class PullRequestController extends ApiBaseController
     {
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -454,7 +454,7 @@ class PullRequestController extends ApiBaseController
     {
         try {
             // 1. ログイン認証
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -499,7 +499,7 @@ class PullRequestController extends ApiBaseController
     {
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -546,7 +546,7 @@ class PullRequestController extends ApiBaseController
 
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -597,7 +597,7 @@ class PullRequestController extends ApiBaseController
     {
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -658,7 +658,7 @@ class PullRequestController extends ApiBaseController
     {
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -739,7 +739,7 @@ class PullRequestController extends ApiBaseController
 
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -792,7 +792,7 @@ class PullRequestController extends ApiBaseController
     public function fetchConflictDiff(DetectConflictRequest $request, int $id): JsonResponse
     {
         try {
-            $user = $this->getUserFromSession();
+            $user = $this->user();
             if (! $user) {
                 return response()->json(['error' => '認証されていません'], 401);
             }
@@ -824,7 +824,7 @@ class PullRequestController extends ApiBaseController
     public function isConflictResolved(Request $request, int $id): JsonResponse
     {
         try {
-            $user = $this->getUserFromSession();
+            $user = $this->user();
             if (! $user) {
                 return response()->json(['error' => '認証されていません'], 401);
             }

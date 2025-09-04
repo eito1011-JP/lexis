@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Session;
 use App\Models\User;
 use App\Traits\BaseEncoding;
 use Illuminate\Http\JsonResponse;
@@ -23,27 +22,6 @@ class ApiBaseController extends Controller
     protected function user(): ?User
     {
         return Auth::guard('api')->user();
-    }
-
-    /**
-     * Cookieセッションからユーザー情報を取得
-     */
-    protected function getUserFromSession(): ?User
-    {
-        $request = request();
-        $sessionId = $request->cookie('sid');
-
-        if (! $sessionId) {
-            return null;
-        }
-
-        $user = Session::getUserFromSession($sessionId);
-
-        if (! $user) {
-            return null;
-        }
-
-        return $user;
     }
 
     protected function sendError($code, $message, $status, $logLevel = null): JsonResponse

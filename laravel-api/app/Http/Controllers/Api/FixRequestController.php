@@ -30,7 +30,7 @@ class FixRequestController extends ApiBaseController
     public function fetchFixRequestDiff(GetFixRequestDiffRequest $request): JsonResponse
     {
         // 認証ユーザーかチェック
-        $user = $this->getUserFromSession();
+        $user = $this->user();
 
         if (! $user) {
             return response()->json([
@@ -147,7 +147,7 @@ class FixRequestController extends ApiBaseController
 
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -347,7 +347,7 @@ class FixRequestController extends ApiBaseController
 
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([

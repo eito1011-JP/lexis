@@ -17,7 +17,7 @@ class ActivityLogOnPullRequestController extends ApiBaseController
     {
         try {
             // 1. 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([

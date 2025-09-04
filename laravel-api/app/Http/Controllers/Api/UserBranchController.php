@@ -25,7 +25,7 @@ class UserBranchController extends ApiBaseController
     {
         try {
             // Cookieセッションからユーザー情報を取得
-            $loginUser = $this->getUserFromSession();
+            $loginUser = $this->user();
 
             if (! $loginUser) {
                 return response()->json([
@@ -58,7 +58,7 @@ class UserBranchController extends ApiBaseController
     public function fetchDiff(FetchDiffRequest $request): JsonResponse
     {
         try {
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([

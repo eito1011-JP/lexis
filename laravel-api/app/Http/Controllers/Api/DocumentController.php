@@ -90,7 +90,7 @@ class DocumentController extends ApiBaseController
     public function getDocuments(GetDocumentsRequest $request): JsonResponse
     {
         // 認証チェック（新しいメソッドを使用）
-        $user = $this->getUserFromSession();
+        $user = $this->user();
 
         if (! $user) {
             return response()->json([
@@ -120,7 +120,7 @@ class DocumentController extends ApiBaseController
     public function createDocument(CreateDocumentRequest $request): JsonResponse
     {
         // 認証チェック
-        $user = $this->getUserFromSession();
+        $user = $this->user();
 
         if (! $user) {
             return response()->json([
@@ -149,7 +149,7 @@ class DocumentController extends ApiBaseController
     {
         try {
             // 認証チェック
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -177,7 +177,7 @@ class DocumentController extends ApiBaseController
     public function updateDocument(UpdateDocumentRequest $request): JsonResponse
     {
         // 認証チェック
-        $user = $this->getUserFromSession();
+        $user = $this->user();
 
         if (! $user) {
             return response()->json([
@@ -209,7 +209,7 @@ class DocumentController extends ApiBaseController
     public function deleteDocument(DeleteDocumentRequest $request): JsonResponse
     {
         // 認証チェック
-        $user = $this->getUserFromSession();
+        $user = $this->user();
 
         if (! $user) {
             return response()->json([

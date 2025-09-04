@@ -23,7 +23,7 @@ class PullRequestReviewerController extends ApiBaseController
     {
         try {
             // 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -67,7 +67,7 @@ class PullRequestReviewerController extends ApiBaseController
     {
         try {
             // 認証ユーザーか確認
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -124,7 +124,7 @@ class PullRequestReviewerController extends ApiBaseController
     {
         try {
             // 認証ユーザーか確認
-            $requester = $this->getUserFromSession();
+            $requester = $this->user();
 
             if (! $requester) {
                 return response()->json([

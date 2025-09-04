@@ -75,7 +75,7 @@ class DocumentCategoryController extends ApiBaseController
 
         try {
             // 認証チェック
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -158,7 +158,7 @@ class DocumentCategoryController extends ApiBaseController
         DB::beginTransaction();
 
         try {
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
@@ -254,7 +254,7 @@ class DocumentCategoryController extends ApiBaseController
 
         try {
             // 認証チェック
-            $user = $this->getUserFromSession();
+            $user = $this->user();
 
             if (! $user) {
                 return response()->json([
