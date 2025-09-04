@@ -41,62 +41,6 @@ class AuthController extends ApiBaseController
     }
 
     /**
-     * ログイン
-     */
-    public function login(LoginRequest $request): JsonResponse
-    {
-        try {
-            // ユーザーの存在確認
-            $user = User::where('email', $request->email)->first();
-            Log::info($user);
-            if (! $user) {
-                return response()->json([
-                    'error' => 'メールアドレスまたはパスワードが正しくありません',
-                ], 401);
-            }
-
-            // パスワードの検証
-            if (! Hash::check($request->password, $user->password)) {
-                return response()->json([
-                    'error' => 'メールアドレスまたはパスワードが正しくありません',
-                ], 401);
-            }
-
-            // 既存のセッションを確認し、期限を更新
-            $existingSession = Session::where('user_id', $user->id)->first();
-            if ($existingSession) {
-                // 既存のセッションがある場合は期限を更新
-                $expireAt = now()->addMinutes(config('session.lifetime'));
-                $existingSession->update([
-                    'expired_at' => $expireAt,
-                ]);
-                $sessionId = (string) $existingSession->id;
-            } else {
-                // 新規セッションの作成
-                $sessionId = $this->createSession($user->id, $user->email);
-            }
-
-            // クッキーにセッションIDを設定
-            $cookie = cookie('sid', $sessionId, config('session.lifetime'));
-
-            return response()->json([
-                'user' => [
-                    'id' => $user->id,
-                    'email' => $user->email,
-                ],
-                'isAuthenticated' => true,
-            ])->withCookie($cookie);
-
-        } catch (\Exception $e) {
-            Log::error($e);
-
-            return response()->json([
-                'error' => 'サーバーエラーが発生しました',
-            ], 500);
-        }
-    }
-
-    /**
      * セッション確認
      */
     public function session(Request $request): JsonResponse

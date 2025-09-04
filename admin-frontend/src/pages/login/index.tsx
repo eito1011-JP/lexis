@@ -4,24 +4,24 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, FormEvent, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSessionCheck } from '@/hooks/useSessionCheck';
-import { Toast } from '@/components/admin/Toast';
 import { useSession } from '@/contexts/SessionContext';
+import { useToast } from '@/contexts/ToastContext';
+import { VALIDATION_ERROR, WRONG_EMAIL_OR_PASSWORD, NO_ACCOUNT, ERROR, TOO_MANY_REQUESTS } from '@/const/ErrorMessage';
 
 export default function LoginPage(): ReactElement {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
   const { checkSession } = useSession();
-
+  const { show } = useToast();
   const { isLoading } = useSessionCheck('/documents', true);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setValidationErrors({});
 
     try {
       await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
@@ -29,10 +29,7 @@ export default function LoginPage(): ReactElement {
         password,
       });
 
-      setToastMessage('ログインに成功しました');
-      setToastType('success');
-      setShowToast(true);
-
+      show({ message: 'ログインに成功しました', type: 'success' });
       // フォームをリセット
       setEmail('');
       setPassword('');
@@ -44,11 +41,20 @@ export default function LoginPage(): ReactElement {
       setTimeout(() => {
         navigate('/documents');
       }, 1000);
-    } catch (err) {
-      console.error('Error:', err);
-      setToastMessage(err instanceof Error ? err.message : 'ログインに失敗しました');
-      setToastType('error');
-      setShowToast(true);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 422) {
+        setValidationErrors(error.response?.data?.errors ?? {});
+        show({ message: VALIDATION_ERROR, type: 'error' });
+      } else if (status === 401) {
+        show({ message: WRONG_EMAIL_OR_PASSWORD, type: 'error' });
+      } else if (status === 404) {
+        show({ message: NO_ACCOUNT, type: 'error' });
+      } else if (status === 429) {
+        show({ message: TOO_MANY_REQUESTS, type: 'error' });
+      } else {
+        show({ message: ERROR, type: 'error' });
+      }
     } finally {
       setLoading(false);
     }
@@ -90,6 +96,9 @@ export default function LoginPage(): ReactElement {
                 onChange={e => setEmail(e.target.value)}
                 required
               />
+              {validationErrors.email && (
+                <p className="text-red-400 text-sm mt-1">{validationErrors.email[0]}</p>
+              )}
             </div>
 
             <div className="mb-8">
@@ -105,6 +114,9 @@ export default function LoginPage(): ReactElement {
                 onChange={e => setPassword(e.target.value)}
                 required
               />
+              {validationErrors.password && (
+                <p className="text-red-400 text-sm mt-1">{validationErrors.password[0]}</p>
+              )}
             </div>
             <button
               type="submit"
@@ -124,9 +136,6 @@ export default function LoginPage(): ReactElement {
           </form>
         </div>
       </div>
-      {showToast && (
-        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
-      )}
     </AdminLayout>
   );
 }

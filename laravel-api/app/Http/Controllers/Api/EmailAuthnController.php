@@ -8,6 +8,8 @@ use App\Exceptions\DuplicateExecutionException;
 use App\Http\Requests\Api\Auth\SendAuthnEmailRequest;
 use App\Http\Requests\Api\Auth\IdentifyTokenRequest;
 use App\Http\Requests\Api\Auth\SigninWithEmailRequest;
+use App\Exceptions\TooManyRequestsException;
+use App\Exceptions\NoAccountException;
 use App\UseCases\Auth\SendAuthnEmailUseCase;
 use App\UseCases\Auth\IdentifyTokenUseCase;
 use App\UseCases\Auth\SigninWithEmailUseCase;
@@ -79,13 +81,44 @@ class EmailAuthnController extends ApiBaseController
      */
     public function signinWithEmail(SigninWithEmailRequest $request): JsonResponse
     {
-        $result = $this->signinWithEmailUseCase->execute(
-            $request->email,
-            $request->password,
-            $request
-        );
+        try {
+        $this->signinWithEmailUseCase->execute(
+                $request->email,
+                $request->password,
+                $request
+            );
 
-        return response()->json($result);
+        } catch (TooManyRequestsException) {
+            return $this->sendError(
+                ErrorType::CODE_TOO_MANY_REQUESTS,
+                __('errors.MSG_TOO_MANY_REQUESTS'),
+                ErrorType::STATUS_TOO_MANY_REQUESTS,
+            );
+        }
+        catch (NoAccountException) {
+            return $this->sendError(
+                ErrorType::CODE_NO_ACCOUNT,
+                __('errors.MSG_NO_ACCOUNT'),
+                ErrorType::STATUS_NO_ACCOUNT,
+            );
+        }
+        catch (AuthenticationException) {
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
+        }
+        catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
+        }
+
+        return response()->json();
     }
 }
 

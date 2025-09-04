@@ -10,7 +10,7 @@ export const API_CONFIG = {
   TIMEOUT: 10000,
 
   ENDPOINTS: {
-    SIGNIN_WITH_EMAIL: '/api/auth/login',
+    SIGNIN_WITH_EMAIL: '/api/auth/signin-with-email',
     SESSION: '/api/auth/session',
     LOGOUT: '/api/auth/logout',
     PRE_USERS_IDENTIFY: '/api/auth/pre-users',
