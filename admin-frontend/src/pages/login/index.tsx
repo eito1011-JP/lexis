@@ -1,9 +1,8 @@
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
 import AdminLayout from '@/components/admin/layout';
 import { useState, FormEvent, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { VALIDATION_ERROR, WRONG_EMAIL_OR_PASSWORD, NO_ACCOUNT, ERROR, TOO_MANY_REQUESTS } from '@/const/ErrorMessage';
 
 export default function LoginPage(): ReactElement {
@@ -13,6 +12,7 @@ export default function LoginPage(): ReactElement {
   const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
   const { show } = useToast();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -20,18 +20,14 @@ export default function LoginPage(): ReactElement {
     setValidationErrors({});
 
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
-        email,
-        password,
-      });
+      await login(email, password);
 
       show({ message: 'ログインに成功しました', type: 'success' });
       // フォームをリセット
       setEmail('');
       setPassword('');
 
-
-      // 状態の更新を待ってからリダイレクト
+      // 認証状態が更新されるのを待ってからリダイレクト
       setTimeout(() => {
         navigate('/documents');
       }, 1000);

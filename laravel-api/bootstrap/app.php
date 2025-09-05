@@ -13,8 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'auth.session' => \App\Http\Middleware\AuthenticateSession::class,
-            'org.resolve' => \App\Http\Middleware\ResolveOrganizationFromSubdomain::class,
+            'stateful' => \Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

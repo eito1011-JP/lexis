@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { API_CONFIG } from '../api/config';
+import { useAuth } from '@/contexts/AuthContext';
 
 const PATHS = {
   ADMIN_LOGIN: '/login',
@@ -37,18 +38,16 @@ const NavigationButtons: React.FC<{ isAuthenticated: boolean }> = ({ isAuthentic
  * 管理画面用のヘッダーコンポーネント
  */
 function Header(): React.ReactElement {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-  const email = typeof window !== 'undefined' ? localStorage.getItem('user_email') || '' : '';
-  const isAuthenticated = !!token;
+  const { user, isAuthenticated } = useAuth();
 
   return (
     <header className={STYLES.header}>
       <div className={STYLES.container}>
         <div className={STYLES.logo}>Lexis</div>
         <div className={STYLES.navContainer}>
-          {isAuthenticated ? (
+          {isAuthenticated && user ? (
             <>
-              <UserInfo email={email} />
+              <UserInfo email={user.email} />
               <NavigationButtons isAuthenticated={isAuthenticated} />
             </>
           ) : (

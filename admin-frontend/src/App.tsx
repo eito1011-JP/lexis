@@ -17,18 +17,43 @@ import ConflictResolutionPage from './pages/change-suggestions/[id]/conflicts';
 import VerifyEmailPage from './pages/verify-email';
 import { ROUTE_PATHS } from './routes';
 import { ToastProvider } from './contexts/ToastContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-  if (!token) {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
+          <p className="text-white">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
   return children;
 }
 
 function PublicRoute({ children }: { children: JSX.Element }) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-  if (token) {
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
+          <p className="text-white">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
     return <Navigate to="/documents" replace />;
   }
   return children;
@@ -36,8 +61,9 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 
 function App() {
   return (
+    <AuthProvider>
       <ToastProvider>
-      <Routes>
+        <Routes>
         <Route path={ROUTE_PATHS.home} element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS.login} element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path={ROUTE_PATHS.signup} element={<PublicRoute><SignupPage /></PublicRoute>} />
@@ -73,8 +99,9 @@ function App() {
         <Route path={ROUTE_PATHS['create-document']} element={<ProtectedRoute><CreateDocumentPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['edit-document']} element={<ProtectedRoute><EditDocumentPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['document-by-slug']} element={<ProtectedRoute><DocumentBySlugPage /></ProtectedRoute>} />
-      </Routes>
+        </Routes>
       </ToastProvider>
+    </AuthProvider>
   );
 }
 
