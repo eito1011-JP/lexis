@@ -62,119 +62,15 @@ jobs:
             echo "Waiting for MySQL..."
             sleep 2
           done
-          echo "MySQL is ready!"
-
-      - name: Debug environment
-        run: |
-          echo "=== PHP Version ==="
-          php --version
-          echo "=== PHP Extensions ==="
-          php -m | grep -E "(mysql|pdo)"
-          echo "=== Laravel Version ==="
-          php artisan --version
-          echo "=== Environment Variables ==="
-          env | grep -E "(APP_|DB_)" | sort
-
-      - name: Test database connection
-        run: |
-          echo "=== Testing direct MySQL connection ==="
-          mysql -h127.0.0.1 -P3306 -uroot -psecret -e "SELECT 'MySQL connection successful';"
-          echo "=== Testing Laravel database connection ==="
-          php artisan tinker --execute="
-            try {
-              \$pdo = DB::connection()->getPdo();
-              echo 'Laravel DB connection successful' . PHP_EOL;
-              echo 'Connection info: ' . \$pdo->getAttribute(PDO::ATTR_CONNECTION_STATUS) . PHP_EOL;
-            } catch (Exception \$e) {
-              echo 'Laravel DB connection failed: ' . \$e->getMessage() . PHP_EOL;
-              exit(1);
-            }
-          "
-
-      - name: Check PHPUnit configuration
-        run: |
-          echo "=== PHPUnit Configuration ==="
-          if [ -f phpunit.xml ]; then
-            echo "phpunit.xml exists:"
-            cat phpunit.xml
-          elif [ -f phpunit.xml.dist ]; then
-            echo "phpunit.xml.dist exists:"
-            cat phpunit.xml.dist
-          else
-            echo "No phpunit.xml or phpunit.xml.dist found"
-          fi
-          
-          echo "=== Available test files ==="
-          find tests/ -name "*.php" -type f | head -10
 
       - name: Initialize database schema
-        run: |
-          echo "=== Running migrations ==="
-          php artisan migrate:fresh --force
-          echo "=== Checking tables created ==="
-          mysql -h127.0.0.1 -P3306 -uroot -psecret lexis-test -e "SHOW TABLES;"
+        run: php artisan migrate:fresh --force
 
       - name: Clear config cache
         run: php artisan config:clear
 
-      - name: Show database configuration
-        run: |
-          echo "=== Database Configuration ==="
-          php artisan config:show database.connections.mysql
-
       - name: Seed master data
-        run: |
-          echo "=== Running database seeders ==="
-          php artisan db:seed --force -n
-          echo "=== Checking seeded data ==="
-          mysql -h127.0.0.1 -P3306 -uroot -psecret lexis-test -e "SELECT COUNT(*) as total_records FROM information_schema.tables WHERE table_schema = 'lexis-test';"
+        run: php artisan db:seed --force -n
 
-      - name: Run tests with debug output
-        env:
-          # PHPUnit設定をオーバーライド
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: lexis-test
-          DB_USERNAME: root
-          DB_PASSWORD: secret
-        run: |
-          echo "=== Final environment check before tests ==="
-          env | grep -E "(APP_|DB_)" | sort
-          
-          echo "=== Running tests with verbose output ==="
-          php artisan test --verbose --stop-on-failure 2>&1 | tee test_output.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          echo "=== Test exit code: $EXIT_CODE ==="
-          
-          echo "=== Checking for warnings/errors in output ==="
-          if grep -iE "warning|error|fatal|exception|deprecated" test_output.log; then
-            echo "Found warnings/errors in test output"
-          else
-            echo "No obvious warnings/errors found"
-          fi
-          
-          echo "=== PHP Error Log ==="
-          if [ -f /var/log/php_errors.log ]; then
-            echo "PHP error log found:"
-            tail -20 /var/log/php_errors.log
-          else
-            echo "No PHP error log found"
-          fi
-          
-          echo "=== Laravel Log ==="
-          if [ -f storage/logs/laravel.log ]; then
-            echo "Laravel log found - last 20 lines:"
-            tail -20 storage/logs/laravel.log
-          else
-            echo "No Laravel log found"
-          fi
-          
-          echo "=== Test Summary ==="
-          if [ $EXIT_CODE -eq 0 ]; then
-            echo "✅ Tests completed successfully"
-          else
-            echo "❌ Tests failed with exit code $EXIT_CODE"
-          fi
-          
-          exit $EXIT_CODE
+      - name: Run tests
+        run: php artisan test --colors=never
