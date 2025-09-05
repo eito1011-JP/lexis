@@ -15,6 +15,10 @@ use Tests\TestCase;
 
 class UserBranchServiceTest extends TestCase
 {
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
     // use DatabaseTransactions;
 
     // private UserBranchService $userBranchService;

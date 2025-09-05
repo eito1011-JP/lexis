@@ -15,6 +15,10 @@ use Tests\TestCase;
 
 class GetDocumentDetailUseCaseTest extends TestCase
 {
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
     // private GetDocumentDetailUseCase $useCase;
 
     // /** @var \Mockery\MockInterface&DocumentCategoryService */

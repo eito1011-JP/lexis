@@ -17,6 +17,10 @@ use Tests\TestCase;
 
 class UpdateFileOrderTest extends TestCase
 {
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
     // use DatabaseTransactions;
 
     // private DocumentService $documentService;

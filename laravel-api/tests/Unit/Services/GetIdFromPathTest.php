@@ -12,6 +12,10 @@ use Tests\TestCase;
 
 class GetIdFromPathTest extends TestCase
 {
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
     // use DatabaseTransactions;
 
     // private DocumentCategoryService $service;

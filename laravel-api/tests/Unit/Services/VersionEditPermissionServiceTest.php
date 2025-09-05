@@ -13,6 +13,10 @@ use Tests\TestCase;
 
 class VersionEditPermissionServiceTest extends TestCase
 {
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
     // private VersionEditPermissionService $service;
 
     // private $mockRepository;

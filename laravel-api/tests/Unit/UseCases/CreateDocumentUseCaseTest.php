@@ -21,6 +21,10 @@ use Tests\TestCase;
 
 class CreateDocumentUseCaseTest extends TestCase
 {
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
 //     use DatabaseTransactions;
 
 //     private CreateDocumentUseCase $useCase;

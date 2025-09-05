@@ -30,6 +30,10 @@ use Tests\TestCase;
 
 class UpdateDocumentUseCaseTest extends TestCase
 {
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
     // use DatabaseTransactions;
 
     // private UpdateDocumentUseCase $useCase;

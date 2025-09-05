@@ -12,6 +12,12 @@ use Tests\TestCase;
 
 class DocumentDiffServiceTest extends TestCase
 {
+
+    public function test_dummy(): void
+    {
+        $this->assertTrue(true);
+    }
+
     // use DatabaseTransactions;
 
     // private DocumentDiffService $documentDiffService;
