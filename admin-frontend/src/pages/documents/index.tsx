@@ -75,9 +75,6 @@ export default function DocumentsPage(): JSX.Element {
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
-  console.log('showSubmitModal', showSubmitModal);
-  console.log('showDiffConfirmModal', showDiffConfirmModal);
-  console.log('showPrSubmitButton', showPrSubmitButton);
   // slugのバリデーション関数
   const validateSlug = (value: string) => {
     // 予約語チェック

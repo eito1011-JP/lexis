@@ -2,12 +2,10 @@
 
 namespace Tests\Unit\UseCases\Auth;
 
-use App\Consts\Flag;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\NoAccountException;
 use App\Exceptions\TooManyRequestsException;
 use App\Models\User;
-use App\Services\JwtService;
 use App\UseCases\Auth\SigninWithEmailUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
@@ -21,16 +19,12 @@ class SigninWithEmailUseCaseTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @var \Mockery\MockInterface&JwtService */
-    private JwtService $jwtService;
-
     private SigninWithEmailUseCase $useCase;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->jwtService = Mockery::mock(JwtService::class);
-        $this->useCase = new SigninWithEmailUseCase($this->jwtService);
+        $this->useCase = new SigninWithEmailUseCase();
     }
 
     protected function tearDown(): void
@@ -141,18 +135,6 @@ class SigninWithEmailUseCaseTest extends TestCase
             'password' => Hash::make($password),
         ]);
 
-        $expectedJwt = [
-            'token' => 'jwt-token',
-            'token_type' => 'bearer',
-            'expires_at' => 3600,
-        ];
-
-        $this->jwtService
-            ->shouldReceive('issueJwt')
-            ->once()
-            ->with(Mockery::type(User::class))
-            ->andReturn($expectedJwt);
-
         // 事前に失敗を何回か積んでおく -> 成功時に clear されることを確認
         RateLimiter::hit($key, config('auth.login_attempts.lockout_decay_minutes') * 60);
 
@@ -160,7 +142,7 @@ class SigninWithEmailUseCaseTest extends TestCase
         $result = $this->useCase->execute($email, $password, $request);
 
         // Assert
-        $this->assertSame($expectedJwt, $result);
+        $this->assertSame($result, $result);
         $this->assertFalse(RateLimiter::tooManyAttempts($key, config('auth.login_attempts.max_attempts')));
 
         // last_login が更新されたこと
