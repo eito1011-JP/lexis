@@ -20,12 +20,11 @@ export default function LoginPage(): ReactElement {
     setValidationErrors({});
 
     try {
-      const signin = await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
+      await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
         email,
         password,
       });
 
-      localStorage.setItem('access_token', signin.token);
       show({ message: 'ログインに成功しました', type: 'success' });
       // フォームをリセット
       setEmail('');

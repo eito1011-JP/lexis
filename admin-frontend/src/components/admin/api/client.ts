@@ -16,7 +16,7 @@ export const apiClient = {
 
     const config = {
       ...options,
-      credentials: 'omit' as const,
+      credentials: 'include' as const, // クッキーを送信するため'include'に変更
       headers: {
         ...defaultHeaders,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -27,19 +27,19 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// 認証関連のルート
+// 認証関連のルート（認証不要）
 Route::prefix('auth')->group(function () {
     Route::post('/pre-users', [EmailAuthnController::class, 'sendAuthnEmail']);
     Route::get('/pre-users', [EmailAuthnController::class, 'identifyToken']);
     Route::post('/signin-with-email', [EmailAuthnController::class, 'signinWithEmail']);
-    // ログインユーザー情報取得（セッション）
-    Route::get('/me', [AuthController::class, 'me'])->middleware(['auth.session']);
 });
 
-// 認証が必要なルート（カスタムセッションミドルウェア）
+// 認証が必要なルート
 Route::middleware('auth:api')->group(function () {
     // 認証関連
     Route::prefix('auth')->group(function () {
+        // ログインユーザー情報取得
+        Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
     });
     // ユーザー関連

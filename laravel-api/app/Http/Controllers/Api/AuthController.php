@@ -32,6 +32,16 @@ class AuthController extends ApiBaseController
 
     public function me(): JsonResponse
     {
-        return response()->json($this->user());
+        $user = $this->user();
+        
+        if (!$user) {
+            return response()->json([
+                'error' => 'Unauthenticated'
+            ], 401);
+        }
+
+        return response()->json([
+            'user' => $user
+        ]);
     }
 }
