@@ -106,11 +106,22 @@ else
   WEB_USER="nginx"
 fi
 
+# Laravel の重要なディレクトリを事前に作成
+sudo mkdir -p "${NEW_RELEASE}/api/storage/framework/views"
+sudo mkdir -p "${NEW_RELEASE}/api/storage/framework/cache"
+sudo mkdir -p "${NEW_RELEASE}/api/storage/framework/sessions"
+sudo mkdir -p "${NEW_RELEASE}/api/storage/logs"
+sudo mkdir -p "${NEW_RELEASE}/api/storage/app"
+
+# 所有者を設定
 sudo chown -R "${WEB_USER}:${WEB_USER}" "${NEW_RELEASE}"
 
 # Laravel の重要なディレクトリに書き込み権限を付与
+# storage ディレクトリ全体の権限設定（ディレクトリは775、ファイルは664）
 sudo find "${NEW_RELEASE}/api/storage" -type d -exec chmod 775 {} \;
 sudo find "${NEW_RELEASE}/api/storage" -type f -exec chmod 664 {} \;
+
+# bootstrap/cache ディレクトリの権限設定
 sudo find "${NEW_RELEASE}/api/bootstrap/cache" -type d -exec chmod 775 {} \;
 sudo find "${NEW_RELEASE}/api/bootstrap/cache" -type f -exec chmod 664 {} \;
 

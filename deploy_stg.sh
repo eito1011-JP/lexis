@@ -74,6 +74,15 @@ npm run build
 echo "== Prepare remote release dir =="
 ssh "${SSH_OPTS[@]}" "${USER}@${HOST}" "mkdir -p '${REMOTE_RELEASE}/api' '${REMOTE_RELEASE}/admin'"
 
+echo "== Upload lexis-deploy script =="
+scp "${SSH_OPTS[@]}" "${APP_ROOT}/lexis-deploy" "${USER}@${HOST}:/tmp/lexis-deploy"
+
+# サーバー側で配置＆実行権限付与
+ssh "${SSH_OPTS[@]}" "${USER}@${HOST}" "
+  sudo mv /tmp/lexis-deploy /usr/local/bin/lexis-deploy &&
+  sudo chmod +x /usr/local/bin/lexis-deploy
+"
+
 echo "== Rsync backend (Laravelソース) =="
 rsync -avz --delete \
   --exclude=node_modules \
