@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+NEW_RELEASE="$1"                       # ex) /var/www/lexis/releases/20250906-083000
+BASE="/var/www/lexis"
+CURRENT="${BASE}/current"
+PREVIOUS="${BASE}/previous"
+
+echo "[deploy] start: ${NEW_RELEASE}"
+
+# 引数チェック
+if [[ -z "${NEW_RELEASE}" ]]; then
+  echo "[deploy] エラー: リリースディレクトリパスが指定されていません" >&2
+  exit 1
+fi
+
+if [[ ! -d "${NEW_RELEASE}" ]]; then
+  echo "[deploy] エラー: リリースディレクトリが存在しません: ${NEW_RELEASE}" >&2
+  exit 1
+fi
+
+# エラーハンドリング関数
+rollback_on_error() {
+  echo "[deploy] エラーが発生しました。ロールバックを実行します..." >&2
+  if [[ -L "${PREVIOUS}" ]] && [[ -d "$(readlink "${PREVIOUS}")" ]]; then
+    echo "[deploy] 前のリリースにロールバック中..."
+    ln -sfn "$(readlink "${PREVIOUS}")" "${CURRENT}"
+    sudo systemctl reload nginx || true
+    echo "[deploy] ロールバック完了"
+  else
+    echo "[deploy] 警告: ロールバック可能な前のリリースが見つかりません" >&2
+  fi
+  exit 1
+}
+trap rollback_on_error ERR
+
+# Composer の確認とインストール
+if ! command -v composer >/dev/null 2>&1; then
+  echo "[deploy] Composerをインストール中..."
+  curl -sS https://getcomposer.org/installer | php
+  sudo mv composer.phar /usr/local/bin/composer
+  sudo chmod +x /usr/local/bin/composer
+fi
+
+# Laravel 本体のセットアップ
+echo "[deploy] Laravel プロジェクトのセットアップ開始"
+cd "${NEW_RELEASE}/api"
+
+# .env ファイルの確認
+if [[ ! -f ".env" ]]; then
+  echo "[deploy] エラー: .env ファイルが見つかりません" >&2
+  exit 1
+fi
+
+# Composer 依存関係のインストール
+echo "[deploy] Composer 依存関係をインストール中..."
+composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
+
+# APP_KEY の生成（存在しない場合のみ）
+if ! grep -q "^APP_KEY=.\+" .env; then
+  echo "[deploy] APP_KEY を生成中..."
+  php artisan key:generate --force
+else
+  echo "[deploy] APP_KEY は既に設定済みです"
+fi
+
+# データベース接続テスト
+echo "[deploy] データベース接続をテスト中..."
+if ! php artisan migrate:status >/dev/null 2>&1; then
+  echo "[deploy] 警告: データベース接続に問題がある可能性があります" >&2
+  echo "[deploy] マイグレーションをスキップします"
+else
+  # マイグレーション実行
+  echo "[deploy] データベースマイグレーションを実行中..."
+  php artisan migrate --force
+fi
+
+# キャッシュクリア
+echo "[deploy] キャッシュをクリア中..."
+php artisan config:clear || echo "[deploy] 警告: config:clear に失敗しました"
+php artisan cache:clear || echo "[deploy] 警告: cache:clear に失敗しました"
+php artisan route:clear || echo "[deploy] 警告: route:clear に失敗しました"
+php artisan view:clear || echo "[deploy] 警告: view:clear に失敗しました"
+
+# 最適化（本番環境向け）
+echo "[deploy] アプリケーションを最適化中..."
+php artisan config:cache || echo "[deploy] 警告: config:cache に失敗しました"
+php artisan route:cache || echo "[deploy] 警告: route:cache に失敗しました"
+php artisan view:cache || echo "[deploy] 警告: view:cache に失敗しました"
+
+# ストレージリンクの作成
+echo "[deploy] ストレージリンクを作成中..."
+php artisan storage:link || echo "[deploy] 警告: storage:link に失敗しました（既に存在する可能性があります）"
+
+# 権限設定
+echo "[deploy] ファイル権限を設定中..."
+# nginx ユーザー存在確認
+if id nginx >/dev/null 2>&1; then
+  WEB_USER="nginx"
+elif id www-data >/dev/null 2>&1; then
+  WEB_USER="www-data"
+elif id apache >/dev/null 2>&1; then
+  WEB_USER="apache"
+else
+  echo "[deploy] 警告: Webサーバーユーザーが見つかりません。nginxユーザーを想定します"
+  WEB_USER="nginx"
+fi
+
+sudo chown -R "${WEB_USER}:${WEB_USER}" "${NEW_RELEASE}"
+
+# Laravel の重要なディレクトリに書き込み権限を付与
+sudo find "${NEW_RELEASE}/api/storage" -type d -exec chmod 775 {} \;
+sudo find "${NEW_RELEASE}/api/storage" -type f -exec chmod 664 {} \;
+sudo find "${NEW_RELEASE}/api/bootstrap/cache" -type d -exec chmod 775 {} \;
+sudo find "${NEW_RELEASE}/api/bootstrap/cache" -type f -exec chmod 664 {} \;
+
+# 実行権限の復元
+sudo chmod +x "${NEW_RELEASE}/api/artisan"
+
+# 前のリリースをバックアップ
+if [[ -L "${CURRENT}" ]] && [[ -d "$(readlink "${CURRENT}")" ]]; then
+  echo "[deploy] 前のリリースをバックアップ中..."
+  ln -sfn "$(readlink "${CURRENT}")" "${PREVIOUS}"
+fi
+
+# current を原子的に切り替え
+echo "[deploy] current シンボリックリンクを更新中..."
+ln -sfn "${NEW_RELEASE}" "${CURRENT}"
+
+# Nginx/Apache の設定テストとリロード
+echo "[deploy] Webサーバーを再読み込み中..."
+if command -v nginx >/dev/null 2>&1; then
+  sudo nginx -t && sudo systemctl reload nginx
+elif command -v apache2 >/dev/null 2>&1; then
+  sudo apache2ctl configtest && sudo systemctl reload apache2
+elif command -v httpd >/dev/null 2>&1; then
+  sudo httpd -t && sudo systemctl reload httpd
+else
+  echo "[deploy] 警告: Webサーバーが見つかりません"
+fi
+
+# キューワーカーの再起動（存在する場合）
+if systemctl is-active --quiet laravel-queue-worker 2>/dev/null; then
+  echo "[deploy] Laravel キューワーカーを再起動中..."
+  sudo systemctl restart laravel-queue-worker
+fi
+
+# 古いリリースの削除（最新5つを保持）
+echo "[deploy] 古いリリースをクリーンアップ中..."
+RELEASES_TO_KEEP=5
+if [[ -d "${BASE}/releases" ]]; then
+  cd "${BASE}/releases"
+  # 日付順でソートし、古いものから削除
+  OLD_RELEASES=$(ls -1t | tail -n +$((RELEASES_TO_KEEP + 1)))
+  if [[ -n "${OLD_RELEASES}" ]]; then
+    echo "[deploy] 削除するリリース: ${OLD_RELEASES}"
+    echo "${OLD_RELEASES}" | xargs rm -rf
+  else
+    echo "[deploy] 削除する古いリリースはありません"
+  fi
+fi
+
+# デプロイ後の動作確認
+echo "[deploy] デプロイ後の動作確認中..."
+cd "${CURRENT}/api"
+if php artisan --version >/dev/null 2>&1; then
+  echo "[deploy] ✓ Laravel アプリケーションが正常に動作しています"
+  php artisan --version
+else
+  echo "[deploy] ✗ Laravel アプリケーションに問題があります" >&2
+  exit 1
+fi
+
+echo "[deploy] done: ${NEW_RELEASE}"
+echo "[deploy] 🎉 デプロイが正常に完了しました！"
