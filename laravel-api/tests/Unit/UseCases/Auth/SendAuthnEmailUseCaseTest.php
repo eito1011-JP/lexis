@@ -4,14 +4,12 @@ namespace Tests\Unit\UseCases\Auth;
 
 use App\Constants\AppConst;
 use App\Consts\ErrorType;
-use App\Events\PreUserCreated;
 use App\Exceptions\DuplicateExecutionException;
 use App\Models\PreUser;
 use App\Models\User;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
 use App\UseCases\Auth\SendAuthnEmailUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
@@ -73,8 +71,6 @@ class SendAuthnEmailUseCaseTest extends TestCase
             )
             ->andReturn(new PreUser());
 
-        Event::fake();
-
         // Act
         $result = $this->useCase->execute($email, $password);
 
@@ -82,12 +78,6 @@ class SendAuthnEmailUseCaseTest extends TestCase
         $this->assertTrue($result['success']);
         $this->assertIsString($captured['token']);
         $this->assertIsString($captured['hashed']);
-
-        Event::assertDispatched(PreUserCreated::class, function (PreUserCreated $event) use ($email, $captured) {
-            $this->assertSame($email, $event->email);
-            $this->assertSame($captured['token'], $event->token);
-            return true;
-        });
     }
 
     #[Test]

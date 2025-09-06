@@ -6,11 +6,13 @@ use App\Constants\AppConst;
 use App\Consts\ErrorType;
 use App\Events\PreUserCreated;
 use App\Exceptions\DuplicateExecutionException;
+use App\Mail\EmailAuthentication;
 use App\Models\User;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
 use App\Traits\BaseEncoding;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class SendAuthnEmailUseCase
 {
@@ -47,8 +49,8 @@ class SendAuthnEmailUseCase
         // pre-user登録
         $this->preUserRepository->registerPreUser($email, $hashedPassword, $token);
 
-        // メール送信イベント
-        Event::dispatch(new PreUserCreated($email, $token));
+        // メール送信
+        Mail::to($email)->send(new EmailAuthentication($email, $token));
 
         return ['success' => true];
     }

@@ -27,7 +27,7 @@ Docusaurusを使用したドキュメント管理システム
 1. 依存関係をインストール:
 ```bash
 npm install
-cd admin-frontend && npm install
+cd frontend && npm install
 cd ../laravel-api && composer install
 ```
 
