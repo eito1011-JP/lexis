@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:laravel-api\" \"npm run dev:admin-frontend\" \"turso dev --db-file local.db\"",
+    "dev": "concurrently \"npm run dev:laravel-api\" \"npm run dev:frontend\" \"turso dev --db-file local.db\"",
     "dev:laravel-api": "docker compose up -d && docker compose logs -f laravel",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down -v",
     "docker:logs": "docker compose logs -f laravel redis",
     "dev:api": "npx tsx api/admin/base.ts",
-    "dev:admin-frontend": "cd admin-frontend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\""
   },
   "dependencies": {

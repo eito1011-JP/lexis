@@ -94,7 +94,7 @@ Document rootを`/var/www/lexis/current/admin`および`/var/www/lexis/current/a
 
 ### 2. デプロイの流れ
 
-1. **フロントエンドビルド**: admin-frontend の npm run build
+1. **フロントエンドビルド**: frontend の npm run build
 2. **Laravel検証**: composer.json と .env.staging の存在確認
 3. **ファイル同期**: rsync でソースコードを転送
 4. **リモート処理**: EC2上で lexis-deploy スクリプト実行

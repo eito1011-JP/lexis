@@ -41,7 +41,7 @@ trap cleanup_on_error ERR
 
 # ディレクトリ設定
 BACKEND_DIR="${APP_ROOT}/laravel-api"
-FRONT_DIR="${APP_ROOT}/admin-frontend"
+FRONT_DIR="${APP_ROOT}/frontend"
 ENV_FILE="${APP_ROOT}/laravel-api/.env.staging"
 
 REMOTE_BASE="/var/www/lexis"
