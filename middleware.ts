@@ -1,7 +1,7 @@
 import { next } from '@vercel/edge';
 
 export const config = {
-  matcher: ['/(.*)', '/api/:path*'],
+  matcher: ['/(.*)',
 };
 
 export default function middleware(request) {
