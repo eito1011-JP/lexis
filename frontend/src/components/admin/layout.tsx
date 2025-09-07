@@ -19,8 +19,8 @@ interface AdminLayoutProps {
 export default function AdminLayout({
   children,
   title,
-  sidebar = true,
-  showDocumentSideContent = true,
+  sidebar = false,
+  showDocumentSideContent = false,
   onCategorySelect,
   selectedCategoryId,
 }: AdminLayoutProps): React.ReactElement {

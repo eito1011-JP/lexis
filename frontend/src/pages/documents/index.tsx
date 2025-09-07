@@ -33,7 +33,6 @@ type DocumentItem = {
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
-  const [isLoading, setIsLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
@@ -430,18 +429,6 @@ export default function DocumentsPage(): JSX.Element {
     setSelectedSideContentCategory(categoryId);
     console.log('Selected side content category:', categoryId);
   };
-
-  // セッション確認中はローディング表示
-  if (isLoading) {
-    return (
-      <AdminLayout title="読み込み中...">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
   // カテゴリセクション
   const renderCategorySection = () => {
     if (categoriesLoading) {
@@ -669,6 +656,7 @@ export default function DocumentsPage(): JSX.Element {
   return (
     <AdminLayout 
       title="ドキュメント管理"
+      sidebar={true}
       showDocumentSideContent={true}
       onCategorySelect={handleSideContentCategorySelect}
       selectedCategoryId={selectedSideContentCategory}
