@@ -2,11 +2,6 @@ export const API_CONFIG = {
   // 環境に基づいたベースURLの設定
   BASE_URL: '', // プロキシを使用するため空文字列に設定
 
-  // フロントエンドURL設定
-  FRONTEND_URLS: {
-    USER_FRONTEND: 'http://localhost:3000',
-  },
-
   TIMEOUT: 10000,
 
   ENDPOINTS: {

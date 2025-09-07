@@ -18,21 +18,6 @@ const STYLES = {
 
 const UserInfo: React.FC<{ email: string }> = ({ email }) => <span>{email}でログイン中</span>;
 
-const NavigationButtons: React.FC<{ isAuthenticated: boolean }> = ({ isAuthenticated }) => (
-  <div className="flex gap-2 rounded-lg">
-    <Link
-      to={`${API_CONFIG.FRONTEND_URLS.USER_FRONTEND}/docs/category/tutorial---basics`}
-      className={STYLES.button}
-    >
-      ユーザー画面へ
-    </Link>
-    {!isAuthenticated && (
-      <Link to={PATHS.ADMIN_LOGIN} className={STYLES.button}>
-        ログイン
-      </Link>
-    )}
-  </div>
-);
 
 /**
  * 管理画面用のヘッダーコンポーネント
@@ -48,10 +33,9 @@ function Header(): React.ReactElement {
           {isAuthenticated && user ? (
             <>
               <UserInfo email={user.email} />
-              <NavigationButtons isAuthenticated={isAuthenticated} />
             </>
           ) : (
-            <NavigationButtons isAuthenticated={isAuthenticated} />
+            <></>
           )}
         </div>
       </div>

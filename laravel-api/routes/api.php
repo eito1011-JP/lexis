@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\FixRequestController;
+use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\PullRequestEditSessionController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
@@ -26,6 +27,20 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+// EC2でのヘルスチェック用
+// Route::any('__ping', function () {
+//     return response()->json([
+//         'ok'     => true,
+//         'method' => request()->method(),
+//         'path'   => request()->path(),
+//         'routes_cache_exists' => file_exists(base_path('bootstrap/cache/routes-v7.php')),
+//         'app_env' => config('app.env'),
+//         'release_path' => base_path(), // 実行中リリースの実パス確認
+//     ]);
+// });
+
+// Route::get('/health-check', [HealthCheckController::class, 'healthCheck']);
 
 // 認証関連のルート（認証不要）
 Route::prefix('auth')->group(function () {
