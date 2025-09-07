@@ -1,14 +1,23 @@
 import React, { useState } from 'react';
-import { ChevronDown } from '@/components/icon/common/ChevronDown';
-import { ChevronRight } from '@/components/icon/common/ChevronRight';
+import { ArrowDown } from '@/components/icon/common/ArrowDown';
 import { Folder } from '@/components/icon/common/Folder';
+import { ThreeDots } from '@/components/icon/common/ThreeDots';
+import { Plus } from '@/components/icon/common/Plus';
+import { Edit } from '@/components/icon/common/Edit';
 
 // カテゴリの型定義
 interface CategoryItem {
   id: string;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
-  children?: CategoryItem[];
+  children?: DocumentItem[];
+}
+
+// ドキュメントの型定義
+interface DocumentItem {
+  id: string;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
 }
 
 // サイドコンテンツのプロパティ
@@ -24,6 +33,8 @@ interface DocumentSideContentProps {
 export default function DocumentSideContent({ onCategorySelect, selectedCategoryId }: DocumentSideContentProps) {
   // デフォルトで人事制度カテゴリを展開
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['hr-system']));
+  // ホバー状態を管理
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   // 株式会社Nexis配下のカテゴリ構造
   const companyCategories: CategoryItem[] = [
@@ -50,12 +61,10 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
         {
           id: 'benefits-method',
           label: '有給の取得方法に...',
-          icon: Folder,
         },
         {
           id: 'promotion-criteria',
           label: '昇進基準について',
-          icon: Folder,
         },
       ],
     },
@@ -79,50 +88,132 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     }
   };
 
+  // ドキュメントアイテムをレンダリング
+  const renderDocumentItem = (document: DocumentItem, level: number = 0) => {
+    const isSelected = selectedCategoryId === document.id;
+    const isHovered = hoveredItem === document.id;
+
+    return (
+      <div key={document.id} className="select-none">
+        <div
+          className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors group ${
+            isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
+          }`}
+          style={{ paddingLeft: `${level * 4}px` }}
+          onClick={() => handleCategoryClick(document.id)}
+          onMouseEnter={() => setHoveredItem(document.id)}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
+          {/* ドキュメントには矢印なし、スペースのみ */}
+          <div className="flex-shrink-0 w-6 h-6"></div>
+          
+          {/* ドキュメントラベル */}
+          <span className="text-sm truncate flex-1">{document.label}</span>
+          
+          {/* 編集アイコン（ホバー時または選択時に表示） */}
+          {(isHovered || isSelected) && (
+            <div className="flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                className="p-1 hover:bg-gray-700 rounded transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // 編集アクションをここに実装
+                }}
+              >
+                <Edit className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // カテゴリアイテムを再帰的にレンダリング
   const renderCategoryItem = (item: CategoryItem, level: number = 0) => {
     const isExpanded = expandedItems.has(item.id);
     const hasChildren = item.children && item.children.length > 0;
     const isSelected = selectedCategoryId === item.id;
+    const isHovered = hoveredItem === item.id;
     const IconComponent = item.icon || Folder;
 
     return (
       <div key={item.id} className="select-none">
         <div
-          className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors ${
+          className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors group ${
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
           style={{ paddingLeft: `${8 + level * 20}px` }}
           onClick={() => handleCategoryClick(item.id)}
+          onMouseEnter={() => setHoveredItem(item.id)}
+          onMouseLeave={() => setHoveredItem(null)}
         >
-          {/* 展開/折りたたみアイコン */}
-          {hasChildren && (
+          {/* 左端の矢印アイコン（全てのカテゴリに表示） */}
+          {hasChildren ? (
             <button
-              className="mr-1 p-1 hover:bg-gray-700 rounded"
+              className="mr-0.5 flex-shrink-0 p-1 hover:bg-gray-700 rounded transition-transform"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleExpanded(item.id);
               }}
             >
-              {isExpanded ? (
-                <ChevronDown className="w-3 h-3" />
-              ) : (
-                <ChevronRight className="w-3 h-3" />
-              )}
+              <ArrowDown 
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  isExpanded ? 'rotate-0' : '-rotate-90'
+                }`} 
+              />
+            </button>
+          ) : (
+            <button
+              className="mr-0.5 flex-shrink-0 p-1 hover:bg-gray-700 rounded transition-transform"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleExpanded(item.id);
+              }}
+            >
+              <ArrowDown 
+                className={`w-4 h-4 transition-transform duration-200 ${
+                  isExpanded ? 'rotate-0' : '-rotate-90'
+                }`} 
+              />
             </button>
           )}
           
           {/* カテゴリアイコン */}
-          <IconComponent className="w-4 h-4 mr-2 flex-shrink-0" />
+          <IconComponent className="w-5 h-5 mr-1 flex-shrink-0" />
           
           {/* カテゴリラベル */}
-          <span className="text-sm truncate">{item.label}</span>
+          <span className="text-sm truncate flex-1">{item.label}</span>
+          
+          {/* 三点マークとプラスボタン（ホバー時または選択時に表示） */}
+          {(isHovered || isSelected) && (
+            <div className="flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                className="p-1 hover:bg-gray-700 rounded transition-colors mr-1"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // 三点メニューアクションをここに実装
+                }}
+              >
+                <ThreeDots className="w-4 h-4" />
+              </button>
+              <button
+                className="p-1 hover:bg-gray-700 rounded transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // 新規追加アクションをここに実装
+                }}
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* 子カテゴリ */}
+        {/* 子ドキュメント */}
         {hasChildren && isExpanded && (
           <div className="ml-2">
-            {item.children!.map((child) => renderCategoryItem(child, level + 1))}
+            {item.children!.map((document) => renderDocumentItem(document, level + 1))}
           </div>
         )}
       </div>
@@ -137,7 +228,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
       </div>
 
       {/* カテゴリリスト */}
-      <div className="p-2">
+      <div className="">
         {companyCategories.map((category) => renderCategoryItem(category))}
       </div>
     </div>

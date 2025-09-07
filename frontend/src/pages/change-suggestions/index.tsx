@@ -7,7 +7,6 @@ import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
 import { formatDateTime } from '@/utils/date';
 import { Comment } from '@/components/icon/common/Comment';
-import { ChevronDown } from '@/components/icon/common/ChevronDown';
 import { Merged } from '@/components/icon/common/Merged';
 import { Merge } from '@/components/icon/common/Merge';
 
@@ -343,12 +342,10 @@ export default function ChangeSuggestionsPage(): JSX.Element {
             <div className="flex items-center space-x-4 mr-25">
               <button className="text-sm text-gray-400 hover:text-white flex items-center space-x-1">
                 <span>提案者</span>
-                <ChevronDown className="w-2 h-2" />
               </button>
 
               <button className="text-sm text-gray-400 hover:text-white flex items-center space-x-1">
                 <span>確認対応者</span>
-                <ChevronDown className="w-2 h-2" />
               </button>
             </div>
           </div>
