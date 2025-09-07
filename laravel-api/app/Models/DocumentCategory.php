@@ -16,8 +16,7 @@ class DocumentCategory extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'slug',
-        'sidebar_label',
+        'title',
         'position',
         'description',
         'status',
@@ -41,7 +40,7 @@ class DocumentCategory extends Model
      */
     public static function getSubCategories(int $parentId, ?int $userBranchId = null, ?int $editPullRequestId = null): \Illuminate\Database\Eloquent\Collection
     {
-        $query = self::select('slug', 'sidebar_label', 'position')
+        $query = self::select('title', 'position')
             ->where('parent_id', $parentId)
             ->where(function ($q) use ($userBranchId) {
                 $q->where('status', 'merged')
@@ -139,23 +138,23 @@ class DocumentCategory extends Model
         return $this->hasMany(EditStartVersion::class, 'current_version_id');
     }
 
-    /**
-     * 親カテゴリのパスを取得
-     */
-    public function getParentPathAttribute(): ?string
-    {
-        if (! $this->parent_id) {
-            return null;
-        }
+    // /**
+    //  * 親カテゴリのパスを取得
+    //  */
+    // public function getParentPathAttribute(): ?string
+    // {
+    //     if (! $this->parent_id) {
+    //         return null;
+    //     }
 
-        $path = [];
-        $current = $this->parent;
+    //     $path = [];
+    //     $current = $this->parent;
 
-        while ($current) {
-            array_unshift($path, $current->slug);
-            $current = $current->parent;
-        }
+    //     while ($current) {
+    //         array_unshift($path, $current->slug);
+    //         $current = $current->parent;
+    //     }
 
-        return implode('/', $path);
-    }
+    //     return implode('/', $path);
+    // }
 }

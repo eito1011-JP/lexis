@@ -26,8 +26,7 @@ class DocumentCategoryFactory extends Factory
     public function definition(): array
     {
         return [
-            'slug' => $this->faker->slug(),
-            'sidebar_label' => $this->faker->words(2, true),
+            'title' => $this->faker->words(2, true),
             'position' => $this->faker->numberBetween(1, 100),
             'description' => $this->faker->sentence(),
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -45,7 +44,6 @@ class DocumentCategoryFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'parent_id' => $parent->id,
-            'parent_path' => $parent->parent_path ? $parent->parent_path.'/'.$parent->slug : $parent->slug,
         ]);
     }
 

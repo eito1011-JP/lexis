@@ -10,6 +10,8 @@ use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
 use App\Http\Requests\GetDocumentCategoryRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
+use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
+use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -37,31 +39,29 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリ一覧を取得
      */
-    public function getCategory(GetDocumentCategoryRequest $request): JsonResponse
+    public function fetchCategories(FetchCategoriesRequest $request, FetchCategoriesUseCase $useCase): JsonResponse
     {
         try {
-            // カテゴリパスの取得と処理
-            $pathParts = array_filter(explode('/', $request->category_path));
+            // 認証チェック
+            $user = $this->user();
 
-            // 最後の値をslugとして取得、それ以外をcategoryPathとして取得
-            $slug = array_pop($pathParts);
-            $categoryPath = implode('/', $pathParts);
+            if (! $user) {
+                return response()->json([
+                    'error' => '認証が必要です',
+                ], 401);
+            }
 
-            $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
-
-            $documentCategory = DocumentCategory::where('parent_id', $parentCategoryId)
-                ->where('slug', $slug)
-                ->first();
+            $categories = $useCase->execute($user->id, $request->parent_id);
 
             return response()->json([
-                'categories' => $documentCategory,
+                'categories' => $categories,
             ]);
 
         } catch (\Exception $e) {
-            Log::error('カテゴリ詳細の取得に失敗しました', ['error' => $e->getMessage()]);
+            Log::error('カテゴリ一覧の取得に失敗しました', ['error' => $e->getMessage()]);
 
             return response()->json([
-                'error' => 'カテゴリ詳細の取得に失敗しました',
+                'error' => 'カテゴリ一覧の取得に失敗しました',
             ], 500);
         }
     }
