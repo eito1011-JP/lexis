@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Header from './header/layout';
 import { DocumentDetailed } from '../icon/common/DocumentDetailed';
 import SettingsModal from './SettingsModal.tsx';
+import DocumentSideContent from '../sidebar/DocumentSideContent';
 
 /**
  * 管理画面用のレイアウトコンポーネント
@@ -10,12 +11,18 @@ interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
   sidebar?: boolean;
+  showDocumentSideContent?: boolean;
+  onCategorySelect?: (categoryId: string) => void;
+  selectedCategoryId?: string;
 }
 
 export default function AdminLayout({
   children,
   title,
   sidebar = true,
+  showDocumentSideContent = true,
+  onCategorySelect,
+  selectedCategoryId,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -133,7 +140,7 @@ export default function AdminLayout({
         <div className="flex flex-1">
           {sidebar && (
             <div className="w-60 min-h-screen bg-[#0A0A0A] border-r border-[#B1B1B1] flex flex-col">
-              <nav className="flex-1 py-4">
+              <nav className="py-4">
                 {navItems.map(item => (
                   <div
                     key={item.path}
@@ -151,6 +158,16 @@ export default function AdminLayout({
                   </div>
                 ))}
               </nav>
+              
+              {/* ドキュメントページでのみ表示されるサイドコンテンツ */}
+              {showDocumentSideContent && (
+                <div className="border-t border-gray-700">
+                  <DocumentSideContent
+                    onCategorySelect={onCategorySelect}
+                    selectedCategoryId={selectedCategoryId}
+                  />
+                </div>
+              )}
             </div>
           )}
 

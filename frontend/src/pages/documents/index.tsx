@@ -72,6 +72,7 @@ export default function DocumentsPage(): JSX.Element {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [showEditFinishModal, setShowEditFinishModal] = useState(false);
+  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string>('hr-system');
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -424,6 +425,12 @@ export default function DocumentsPage(): JSX.Element {
     setCategoryDeleteError(null);
   };
 
+  // サイドコンテンツのカテゴリ選択ハンドラ
+  const handleSideContentCategorySelect = (categoryId: string) => {
+    setSelectedSideContentCategory(categoryId);
+    console.log('Selected side content category:', categoryId);
+  };
+
   // セッション確認中はローディング表示
   if (isLoading) {
     return (
@@ -660,8 +667,12 @@ export default function DocumentsPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title="ドキュメント管理">
-      <div className="flex flex-col h-full">
+    <AdminLayout 
+      title="ドキュメント管理"
+      showDocumentSideContent={true}
+      onCategorySelect={handleSideContentCategorySelect}
+      selectedCategoryId={selectedSideContentCategory}
+    >
         <div className="mb-6">
           {/* パンくずリスト */}
           <div className="flex items-center text-sm text-gray-400 mb-4">
@@ -833,7 +844,6 @@ export default function DocumentsPage(): JSX.Element {
             {renderCategorySection()}
           </div>
         </div>
-      </div>
 
       {/* カテゴリ作成モーダル */}
       {showCategoryModal && (
