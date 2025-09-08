@@ -88,6 +88,13 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     }
   };
 
+  // 新規カテゴリ作成のハンドラ
+  const handleCreateCategory = (parentCategoryId: string) => {
+    // カテゴリ作成ページに遷移
+    const url = `/categories/create?parent_id=${parentCategoryId}&parent_path=${parentCategoryId}`;
+    window.location.href = url;
+  };
+
   // ドキュメントアイテムをレンダリング
   const renderDocumentItem = (document: DocumentItem, level: number = 0) => {
     const isSelected = selectedCategoryId === document.id;
@@ -201,7 +208,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // 新規追加アクションをここに実装
+                  handleCreateCategory(item.id);
                 }}
               >
                 <Plus className="w-3 h-3" />
@@ -216,6 +223,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
             {item.children!.map((document) => renderDocumentItem(document, level + 1))}
           </div>
         )}
+
       </div>
     );
   };

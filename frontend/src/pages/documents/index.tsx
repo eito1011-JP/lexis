@@ -10,6 +10,7 @@ import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
 import { finishPullRequestEditSession } from '@/api/pullRequest';
+import { useLocation } from 'react-router-dom';
 // カテゴリの型定義
 type Category = {
   id: number;
@@ -34,6 +35,7 @@ type DocumentItem = {
  */
 export default function DocumentsPage(): JSX.Element {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -72,6 +74,17 @@ export default function DocumentsPage(): JSX.Element {
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [showEditFinishModal, setShowEditFinishModal] = useState(false);
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string>('hr-system');
+
+  // カテゴリ作成成功メッセージの表示
+  useEffect(() => {
+    if (location.state?.message) {
+      setToastMessage(location.state.message);
+      setToastType(location.state.type || 'success');
+      setShowToast(true);
+      // ブラウザの履歴からstateを削除
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -429,6 +442,7 @@ export default function DocumentsPage(): JSX.Element {
     setSelectedSideContentCategory(categoryId);
     console.log('Selected side content category:', categoryId);
   };
+
   // カテゴリセクション
   const renderCategorySection = () => {
     if (categoriesLoading) {
@@ -1171,6 +1185,7 @@ export default function DocumentsPage(): JSX.Element {
       {showToast && (
         <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
+
     </AdminLayout>
   );
 }
