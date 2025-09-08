@@ -11,10 +11,9 @@ import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
 export default function CreateCategoryPage(): JSX.Element {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string>('hr-system');
+  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number>(4);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  const parentCategoryId = searchParams.get('parent_id') || '';
   const parentCategoryPath = searchParams.get('parent_path') || '';
 
   // 未保存変更ハンドラーを使用
@@ -41,7 +40,7 @@ export default function CreateCategoryPage(): JSX.Element {
   };
 
   // サイドバーのカテゴリ選択時に未保存変更をチェック
-  const handleSideContentCategorySelect = (categoryId: string) => {
+  const handleSideContentCategorySelect = (categoryId: number) => {
     handleNavigationRequest(() => {
       setSelectedSideContentCategory(categoryId);
     });
@@ -64,8 +63,7 @@ export default function CreateCategoryPage(): JSX.Element {
       onNavigationRequest={handleControlledNavigation}
     >
       <CategoryCreationForm
-        parentCategoryId={parentCategoryId}
-        parentCategoryPath={parentCategoryPath}
+        parentCategoryId={selectedSideContentCategory}
         onSuccess={handleSuccess}
         onCancel={handleCancel}
         onUnsavedChangesChange={setHasUnsavedChanges}

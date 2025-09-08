@@ -12,8 +12,8 @@ interface AdminLayoutProps {
   title: string;
   sidebar?: boolean;
   showDocumentSideContent?: boolean;
-  onCategorySelect?: (categoryId: string) => void;
-  selectedCategoryId?: string;
+  onCategorySelect?: (categoryId: number) => void;
+  selectedCategoryId?: number;
   onNavigationRequest?: (path: string) => void;
 }
 

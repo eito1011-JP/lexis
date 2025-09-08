@@ -2,11 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
-import UnsavedChangesModal from './UnsavedChangesModal';
 
 interface CategoryCreationFormProps {
-  parentCategoryId?: string;
-  parentCategoryPath?: string;
+  parentCategoryId?: number;
   onSuccess?: (newCategory: any) => void;
   onCancel?: () => void;
   onNavigateAway?: () => void;
@@ -19,7 +17,6 @@ interface CategoryCreationFormProps {
  */
 export default function CategoryCreationForm({ 
   parentCategoryId, 
-  parentCategoryPath,
   onSuccess, 
   onCancel,
   onNavigateAway,
@@ -70,17 +67,13 @@ export default function CategoryCreationForm({
     setError(null);
 
     try {
-      // slugを自動生成（タイトルから）
-      const slug = title.toLowerCase()
-        .replace(/[^\w\s-]/g, '') // 特殊文字を削除
-        .replace(/\s+/g, '-') // スペースをハイフンに
-        .trim();
-
+        console.log('parentCategoryId', parentCategoryId);
       const payload = {
-        category_path: parentCategoryPath || null,
-        slug: slug,
-        sidebar_label: title,
+        title: title,
         description: description,
+        parent_id: parentCategoryId || null,
+        edit_pull_request_id: null,
+        pull_request_edit_token: null,
       };
 
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);

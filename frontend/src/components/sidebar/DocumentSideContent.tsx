@@ -7,7 +7,7 @@ import { Edit } from '@/components/icon/common/Edit';
 
 // カテゴリの型定義
 interface CategoryItem {
-  id: string;
+  id: number;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   children?: DocumentItem[];
@@ -15,15 +15,15 @@ interface CategoryItem {
 
 // ドキュメントの型定義
 interface DocumentItem {
-  id: string;
+  id: number;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
 }
 
 // サイドコンテンツのプロパティ
 interface DocumentSideContentProps {
-  onCategorySelect?: (categoryId: string) => void;
-  selectedCategoryId?: string;
+  onCategorySelect?: (categoryId: number) => void;
+  selectedCategoryId?: number;
 }
 
 /**
@@ -32,38 +32,39 @@ interface DocumentSideContentProps {
  */
 export default function DocumentSideContent({ onCategorySelect, selectedCategoryId }: DocumentSideContentProps) {
   // デフォルトで人事制度カテゴリを展開
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['hr-system']));
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<number | null>(null);
 
   // 株式会社Nexis配下のカテゴリ構造
+  // 実際のdocument_categoriesを想定した数値IDを使用
   const companyCategories: CategoryItem[] = [
     {
-      id: 'vision-mission',
+      id: 1,
       label: 'ビジョン・ミッション',
       icon: Folder,
     },
     {
-      id: 'company-system',
+      id: 2,
       label: '会社制度',
       icon: Folder,
     },
     {
-      id: 'business-content',
+      id: 3,
       label: '事業内容',
       icon: Folder,
     },
     {
-      id: 'hr-system',
+      id: 4,
       label: '人事制度',
       icon: Folder,
       children: [
         {
-          id: 'benefits-method',
+          id: 1,
           label: '有給の取得方法に...',
         },
         {
-          id: 'promotion-criteria',
+          id: 2,
           label: '昇進基準について',
         },
       ],
@@ -71,7 +72,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   ];
 
   // カテゴリの展開/折りたたみを切り替え
-  const toggleExpanded = (categoryId: string) => {
+  const toggleExpanded = (categoryId: number) => {
     const newExpanded = new Set(expandedItems);
     if (newExpanded.has(categoryId)) {
       newExpanded.delete(categoryId);
@@ -82,16 +83,18 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   };
 
   // カテゴリ選択のハンドラ
-  const handleCategoryClick = (categoryId: string) => {
+  const handleCategoryClick = (categoryId: number) => {
     if (onCategorySelect) {
       onCategorySelect(categoryId);
     }
   };
 
   // 新規カテゴリ作成のハンドラ
-  const handleCreateCategory = (parentCategoryId: string) => {
-    // カテゴリ作成ページに遷移
-    const url = `/categories/create?parent_id=${parentCategoryId}&parent_path=${parentCategoryId}`;
+  const handleCreateCategory = (parentCategoryId: number) => {
+    // カテゴリ作成ページに遷移（parent_pathは親カテゴリのラベルを使用）
+    const parentCategory = companyCategories.find(cat => cat.id === parentCategoryId);
+    const parentPath = parentCategory ? parentCategory.label : parentCategoryId.toString();
+    const url = `/categories/create?parent_id=${parentCategoryId}&parent_path=${encodeURIComponent(parentPath)}`;
     window.location.href = url;
   };
 
