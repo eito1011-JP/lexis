@@ -14,6 +14,7 @@ interface AdminLayoutProps {
   showDocumentSideContent?: boolean;
   onCategorySelect?: (categoryId: string) => void;
   selectedCategoryId?: string;
+  onNavigationRequest?: (path: string) => void;
 }
 
 export default function AdminLayout({
@@ -23,6 +24,7 @@ export default function AdminLayout({
   showDocumentSideContent = false,
   onCategorySelect,
   selectedCategoryId,
+  onNavigationRequest,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -129,7 +131,11 @@ export default function AdminLayout({
   ];
 
   const navigateTo = (path: string): void => {
-    window.location.href = path;
+    if (onNavigationRequest) {
+      onNavigationRequest(path);
+    } else {
+      window.location.href = path;
+    }
   };
 
   return (

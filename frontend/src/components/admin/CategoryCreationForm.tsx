@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
+import UnsavedChangesModal from './UnsavedChangesModal';
 
 interface CategoryCreationFormProps {
   parentCategoryId?: string;
   parentCategoryPath?: string;
   onSuccess?: (newCategory: any) => void;
   onCancel?: () => void;
+  onNavigateAway?: () => void;
+  onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
 }
 
 /**
@@ -18,16 +21,42 @@ export default function CategoryCreationForm({
   parentCategoryId, 
   parentCategoryPath,
   onSuccess, 
-  onCancel 
+  onCancel,
+  onNavigateAway,
+  onUnsavedChangesChange
 }: CategoryCreationFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // 未保存の変更を追跡
+  useEffect(() => {
+    const hasChanges = title.trim() !== '' || description.trim() !== '';
+    setHasUnsavedChanges(hasChanges);
+    if (onUnsavedChangesChange) {
+      onUnsavedChangesChange(hasChanges);
+    }
+  }, [title, description, onUnsavedChangesChange]);
+
+  // ブラウザタブ/ウィンドウを閉じる際の保護
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const handleEditorChange = (markdown: string) => {
     setDescription(markdown);
   };
+
 
   const handleSave = async () => {
     if (isCreating) return;
@@ -55,6 +84,12 @@ export default function CategoryCreationForm({
       };
 
       const response = await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
+      
+      // 保存成功時は未保存状態をリセット
+      setHasUnsavedChanges(false);
+      if (onUnsavedChangesChange) {
+        onUnsavedChangesChange(false);
+      }
       
       if (onSuccess) {
         onSuccess(response);
@@ -141,3 +176,38 @@ export default function CategoryCreationForm({
     </div>
   );
 }
+
+// ナビゲーション制御関数をエクスポート（親コンポーネントで使用するため）
+export const useUnsavedChangesHandler = (hasUnsavedChanges: boolean) => {
+  const [showModal, setShowModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
+
+  const handleNavigationRequest = useCallback((navigationFn: () => void) => {
+    if (hasUnsavedChanges) {
+      setPendingNavigation(() => navigationFn);
+      setShowModal(true);
+    } else {
+      navigationFn();
+    }
+  }, [hasUnsavedChanges]);
+
+  const handleConfirm = () => {
+    setShowModal(false);
+    if (pendingNavigation) {
+      pendingNavigation();
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancel = () => {
+    setShowModal(false);
+    setPendingNavigation(null);
+  };
+
+  return {
+    showModal,
+    handleNavigationRequest,
+    handleConfirm,
+    handleCancel
+  };
+};
