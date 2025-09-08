@@ -27,7 +27,7 @@ export const ROUTE_PATHS = {
   [ROUTES.ORGANIZATION_JOIN]: '/organization/join',
   [ROUTES.DOCUMENTS]: '/documents',
   [ROUTES.CREATE_DOCUMENT]: '/documents/create',
-  [ROUTES.CREATE_CATEGORY]: '/categories/create',
+  [ROUTES.CREATE_CATEGORY]: '/categories/:categoryId/create',
   [ROUTES.EDIT_DOCUMENT]: '/documents/**/edit',
   [ROUTES.DOCUMENT_BY_SLUG]: '/documents/:paths/*',
   [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
@@ -53,6 +53,8 @@ export const generatePath = (
     return `/documents/${params.slug}/edit`;
   } else if (routeName === ROUTES.DOCUMENT_BY_SLUG && params?.slug) {
     return `/documents/${params.slug}`;
+  } else if (routeName === ROUTES.CREATE_CATEGORY && params?.categoryId) {
+    return `/categories/${params.categoryId}/create`;
   }
 
   if (params) {

@@ -9,12 +9,9 @@ import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
  * /documents/categories/create?parent_id=xxx でアクセス
  */
 export default function CreateCategoryPage(): JSX.Element {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number>(4);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
-  const parentCategoryPath = searchParams.get('parent_path') || '';
 
   // 未保存変更ハンドラーを使用
   const {

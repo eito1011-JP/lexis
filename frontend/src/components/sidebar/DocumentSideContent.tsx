@@ -91,10 +91,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
 
   // 新規カテゴリ作成のハンドラ
   const handleCreateCategory = (parentCategoryId: number) => {
-    // カテゴリ作成ページに遷移（parent_pathは親カテゴリのラベルを使用）
-    const parentCategory = companyCategories.find(cat => cat.id === parentCategoryId);
-    const parentPath = parentCategory ? parentCategory.label : parentCategoryId.toString();
-    const url = `/categories/create?parent_id=${parentCategoryId}&parent_path=${encodeURIComponent(parentPath)}`;
+    const url = `/categories/${parentCategoryId}/create`;
     window.location.href = url;
   };
 
