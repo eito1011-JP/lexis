@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\FixRequestStatus;
-use App\Traits\HasOrganizationScope;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +11,6 @@ use Illuminate\Database\Eloquent\Model;
 class DocumentCategory extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
     use SoftDeletes;
 
     protected $fillable = [

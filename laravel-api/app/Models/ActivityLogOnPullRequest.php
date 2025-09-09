@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ActivityLogOnPullRequest extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
 
     protected $fillable = [
         'user_id',
@@ -21,7 +19,6 @@ class ActivityLogOnPullRequest extends Model
         'old_pull_request_title',
         'new_pull_request_title',
         'fix_request_token',
-        'organization_id',
     ];
 
     protected $casts = [

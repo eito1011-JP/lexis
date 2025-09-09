@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Traits\HasOrganizationScope;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 class EditStartVersion extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
     use SoftDeletes;
 
     protected $table = 'edit_start_versions';
@@ -20,7 +18,6 @@ class EditStartVersion extends Model
         'target_type',
         'original_version_id',
         'current_version_id',
-        'organization_id',
         'created_at',
         'updated_at',
     ];
@@ -36,14 +33,6 @@ class EditStartVersion extends Model
     public function userBranch()
     {
         return $this->belongsTo(UserBranch::class, 'user_branch_id');
-    }
-
-    /**
-     * 組織とのリレーション
-     */
-    public function organization()
-    {
-        return $this->belongsTo(Organization::class);
     }
 
     /**

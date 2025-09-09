@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PullRequestEditSession extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
 
     protected $table = 'pull_request_edit_sessions';
 

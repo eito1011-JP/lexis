@@ -3,14 +3,12 @@
 namespace App\Models;
 
 use App\Consts\Flag;
-use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class UserBranch extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
 
     protected $table = 'user_branches';
 
