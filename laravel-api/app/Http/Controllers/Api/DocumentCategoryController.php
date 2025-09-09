@@ -96,12 +96,9 @@ class DocumentCategoryController extends ApiBaseController
             $dto = CreateDocumentCategoryDto::fromRequest($request->validated());
 
             // UseCaseを実行
-            $result = $useCase->execute($dto, $user);
+            $useCase->execute($dto, $user);
 
-            return response()->json([
-                'success' => true,
-                'category' => $result,
-            ]);  
+            return response()->json();  
         } catch (AuthenticationException) {
             return $this->sendError(
                 ErrorType::CODE_AUTHENTICATION_FAILED,

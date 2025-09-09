@@ -6,9 +6,11 @@ use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
 use App\Models\EditStartVersion;
+use App\Models\Organization;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\UserBranchService;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
 
 class CreateDocumentCategoryUseCase
@@ -28,6 +30,13 @@ class CreateDocumentCategoryUseCase
     {
         try {
             DB::beginTransaction();
+
+            $organizationId = $user->organization_id;
+            $organization = Organization::find($organizationId);
+            if (! $organization) {
+                throw new NotFoundException();
+            }
+
             // ユーザーブランチIDを取得または作成
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
@@ -44,6 +53,7 @@ class CreateDocumentCategoryUseCase
                 'user_branch_id' => $userBranchId,
                 'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'parent_id' => $dto->parentId,
+                'organization_id' => $organizationId,
             ]);
 
             // EditStartVersionを作成
