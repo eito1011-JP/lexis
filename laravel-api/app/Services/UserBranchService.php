@@ -25,13 +25,13 @@ class UserBranchService
     {
         // プルリクエストが指定されている場合は、そのプルリクエストのブランチを使用
         if ($editPullRequestId) {
-            $pullRequest = PullRequest::findOrFail($editPullRequestId);
+            $pullRequest = PullRequest::organization($user->organization_id)->findOrFail($editPullRequestId);
 
             return $pullRequest->user_branch_id;
         }
 
         // アクティブなユーザーブランチを確認
-        $activeBranch = $user->userBranches()->active()->orderByCreatedAtDesc()->first();
+        $activeBranch = $user->userBranches()->organization($user->organization_id)->active()->orderByCreatedAtDesc()->first();
 
         // アクティブなブランチが存在する場合はそのIDを返す
         if ($activeBranch) {
@@ -39,38 +39,22 @@ class UserBranchService
         }
 
         // アクティブなブランチが存在しない場合は新しいブランチを作成
-        return $this->initBranchSnapshot($user->id)->id;
+        return $this->initBranchSnapshot($user->id, $user->organization_id)->id;
     }
 
     /**
      * ブランチスナップショットを初期化する
      */
-    private function initBranchSnapshot(int $userId): UserBranch
+    private function initBranchSnapshot(int $userId, int $organizationId): UserBranch
     {
-        $snapshotCommit = $this->findLatestCommit();
-
         // 新しいブランチを作成
         $branchName = 'branch_'.$userId.'_'.time();
 
         return UserBranch::create([
             'user_id' => $userId,
             'branch_name' => $branchName,
-            'snapshot_commit' => $snapshotCommit,
             'is_active' => Flag::TRUE,
+            'organization_id' => $organizationId,
         ]);
-    }
-
-    /**
-     * 最新のコミットハッシュを取得
-     */
-    private function findLatestCommit(): string
-    {
-        $response = $this->githubClient->gitData()->references()->show(
-            config('services.github.owner'),
-            config('services.github.repo'),
-            'heads/main'
-        );
-
-        return $response['object']['sha'];
     }
 }

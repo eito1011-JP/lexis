@@ -14,6 +14,9 @@ use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
+use App\Exceptions\AuthenticationException;
+use Http\Discovery\Exception\NotFoundException;
+use App\Exceptions\DuplicateExecutionException;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -21,6 +24,7 @@ use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
+use Exception;
 use Illuminate\Http\Request;
 use Psr\Log\LogLevel;
 use Illuminate\Support\Facades\DB;
@@ -98,8 +102,26 @@ class DocumentCategoryController extends ApiBaseController
                 'success' => true,
                 'category' => $result,
             ]);  
-        } catch (\Exception) {
-            $this->sendError(
+        } catch (AuthenticationException) {
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+            );
+        } catch (DuplicateExecutionException) {
+            return $this->sendError(
+                ErrorType::CODE_DUPLICATE_EXECUTION,
+                __('errors.MSG_DUPLICATE_EXECUTION'),
+                ErrorType::STATUS_DUPLICATE_EXECUTION,
+            );
+        } catch (Exception) {
+            return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),
                 ErrorType::STATUS_INTERNAL_ERROR,
