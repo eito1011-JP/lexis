@@ -21,7 +21,7 @@ export default function CreateCategoryPage(): JSX.Element {
     handleCancel: handleModalCancel
   } = useUnsavedChangesHandler(hasUnsavedChanges);
 
-  const handleSuccess = (newCategory: any) => {
+  const handleSuccess = () => {
     // 成功時はドキュメント一覧ページに戻る
     navigate('/documents', { 
       state: { 

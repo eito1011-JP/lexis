@@ -5,7 +5,7 @@ import SlateEditor from '@/components/admin/editor/SlateEditor';
 
 interface CategoryCreationFormProps {
   parentCategoryId?: number;
-  onSuccess?: (newCategory: any) => void;
+  onSuccess?: () => void;
   onCancel?: () => void;
   onNavigateAway?: () => void;
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
@@ -67,7 +67,6 @@ export default function CategoryCreationForm({
     setError(null);
 
     try {
-        console.log('parentCategoryId', parentCategoryId);
       const payload = {
         title: title,
         description: description,
@@ -76,20 +75,31 @@ export default function CategoryCreationForm({
         pull_request_edit_token: null,
       };
 
-      const response = await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
-      
+      await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
+
       // 保存成功時は未保存状態をリセット
       setHasUnsavedChanges(false);
       if (onUnsavedChangesChange) {
         onUnsavedChangesChange(false);
       }
-      
-      if (onSuccess) {
-        onSuccess(response);
+
+      onSuccess?.();
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        setError(error.response?.message);
+      } 
+      else if (error.response?.status === 409) {
+        setError(error.response?.message);
       }
-    } catch (err) {
-      console.error('カテゴリ作成エラー:', err);
-      setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      else if (error.response?.status === 422) {
+        setError(error.response?.message);
+      }
+      else if (error.response?.status === 500) {
+        setError(error.response?.message);
+      }
+      else {
+        setError(error.response?.message);
+      }
     } finally {
       setIsCreating(false);
     }
