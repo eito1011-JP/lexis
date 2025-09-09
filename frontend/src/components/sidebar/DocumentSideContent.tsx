@@ -231,13 +231,13 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   return (
     <div className="bg-[#0A0A0A] overflow-y-auto">
       {/* サイドコンテンツヘッダー */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="px-4 py-1">
         <h3 className="text-sm font-semibold text-white">株式会社Nexis (main)</h3>
       </div>
 
       {/* カテゴリリスト */}
       <div className="">
-        {companyCategories.map((category) => renderCategoryItem(category))}
+      {companyCategories.map((category) => renderCategoryItem(category))}
       </div>
     </div>
   );
