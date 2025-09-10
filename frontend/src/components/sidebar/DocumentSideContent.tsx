@@ -95,6 +95,12 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     window.location.href = url;
   };
 
+  // ルートカテゴリ作成のハンドラ（parent_id = null）
+  const handleCreateRootCategory = () => {
+    const url = `/categories/create`;
+    window.location.href = url;
+  };
+
   // ドキュメントアイテムをレンダリング
   const renderDocumentItem = (document: DocumentItem, level: number = 0) => {
     const isSelected = selectedCategoryId === document.id;
@@ -231,8 +237,18 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   return (
     <div className="bg-[#0A0A0A] overflow-y-auto">
       {/* サイドコンテンツヘッダー */}
-      <div className="px-4 py-1">
-        <h3 className="text-sm font-semibold text-white">株式会社Nexis (main)</h3>
+      <div className="px-4 py-1 group">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-white">株式会社Nexis (main)</h3>
+          {/* 会社名横のプラスボタン */}
+          <button
+            className="p-1 hover:bg-gray-700 rounded transition-colors opacity-0 group-hover:opacity-100"
+            onClick={handleCreateRootCategory}
+            title="新しいカテゴリを作成"
+          >
+            <Plus className="w-3 h-3 text-gray-300 hover:text-white" />
+          </button>
+        </div>
       </div>
 
       {/* カテゴリリスト */}
