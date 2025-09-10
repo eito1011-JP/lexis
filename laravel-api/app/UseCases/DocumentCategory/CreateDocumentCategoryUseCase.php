@@ -9,9 +9,11 @@ use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
+use App\Models\User;
 use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CreateDocumentCategoryUseCase
 {
@@ -23,15 +25,17 @@ class CreateDocumentCategoryUseCase
      * ドキュメントカテゴリを作成
      *
      * @param CreateDocumentCategoryDto $dto カテゴリ作成DTO
-     * @param object $user 認証済みユーザー
-     * @return object 作成されたカテゴリ
+     * @param User $user 認証済みユーザー
+     * @return DocumentCategory 作成されたカテゴリ
      */
-    public function execute(CreateDocumentCategoryDto $dto, object $user): object
+    public function execute(CreateDocumentCategoryDto $dto, User $user): DocumentCategory
     {
         try {
             DB::beginTransaction();
+            Log::info('user'. json_encode($user->organizationMember));
 
-            $organizationId = $user->organization_id;
+            $organizationId = $user->organizationMember->organization_id;
+
             $organization = Organization::find($organizationId);
             if (! $organization) {
                 throw new NotFoundException();
@@ -40,6 +44,7 @@ class CreateDocumentCategoryUseCase
             // ユーザーブランチIDを取得または作成
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
+                $organizationId,
                 $dto->editPullRequestId
             );
 
@@ -86,6 +91,7 @@ class CreateDocumentCategoryUseCase
         } catch (\Exception $e) {
             DB::rollBack();
 
+            Log::error($e);
             throw $e;
         }
     }

@@ -41,6 +41,14 @@ class PullRequest extends Model
     }
 
     /**
+     * 組織でフィルターするスコープ
+     */
+    public function scopeOrganization($query, int $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
+    }
+
+    /**
      * レビュアーとのリレーション
      */
     public function reviewers()

@@ -108,4 +108,9 @@ class User extends Authenticatable
     {
         return $query->where('email', $email);
     }
+
+    public function organizationMember()
+    {
+        return $this->hasOne(OrganizationMember::class);
+    }
 }

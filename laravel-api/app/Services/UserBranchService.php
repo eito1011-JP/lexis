@@ -7,6 +7,7 @@ use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use Github\Client;
+use Illuminate\Support\Facades\Log;
 
 class UserBranchService
 {
@@ -21,17 +22,22 @@ class UserBranchService
      * @param  int|null  $editPullRequestId  編集対象のプルリクエストID
      * @return int ユーザーブランチID
      */
-    public function fetchOrCreateActiveBranch(User $user, ?int $editPullRequestId = null): int
+    public function fetchOrCreateActiveBranch(User $user, int $organizationId, ?int $editPullRequestId = null): int
     {
         // プルリクエストが指定されている場合は、そのプルリクエストのブランチを使用
         if ($editPullRequestId) {
-            $pullRequest = PullRequest::organization($user->organization_id)->findOrFail($editPullRequestId);
+            $pullRequest = PullRequest::organization($organizationId)->findOrFail($editPullRequestId);
 
             return $pullRequest->user_branch_id;
         }
 
-        // アクティブなユーザーブランチを確認
-        $activeBranch = $user->userBranches()->organization($user->organization_id)->active()->orderByCreatedAtDesc()->first();
+        // アクティブなユーザーブランチを確認（リレーション経由）
+        $activeBranch = $user->userBranches()
+            ->where('organization_id', $organizationId)
+            ->with('organization')
+            ->active()
+            ->orderByCreatedAtDesc()
+            ->first();
 
         // アクティブなブランチが存在する場合はそのIDを返す
         if ($activeBranch) {
@@ -39,7 +45,7 @@ class UserBranchService
         }
 
         // アクティブなブランチが存在しない場合は新しいブランチを作成
-        return $this->initBranchSnapshot($user->id, $user->organization_id)->id;
+        return $this->initBranchSnapshot($user->id, $organizationId)->id;
     }
 
     /**

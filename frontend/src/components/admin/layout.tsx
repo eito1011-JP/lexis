@@ -145,7 +145,7 @@ export default function AdminLayout({
         <Header />
         <div className="flex flex-1">
           {sidebar && (
-            <div className="w-60 min-h-screen bg-[#0A0A0A] border-r border-[#B1B1B1] flex flex-col">
+            <div className="w-60 min-h-screen bg-[#0A0A0A] flex flex-col">
               <nav className="py-4">
                 {navItems.map(item => (
                   <div
@@ -167,12 +167,10 @@ export default function AdminLayout({
               
               {/* ドキュメントページでのみ表示されるサイドコンテンツ */}
               {showDocumentSideContent && (
-                <div className="border-t border-gray-700">
                   <DocumentSideContent
                     onCategorySelect={onCategorySelect}
                     selectedCategoryId={selectedCategoryId}
                   />
-                </div>
               )}
             </div>
           )}

@@ -15,7 +15,6 @@ class DocumentCategory extends Model
 
     protected $fillable = [
         'title',
-        'position',
         'description',
         'status',
         'parent_id',
