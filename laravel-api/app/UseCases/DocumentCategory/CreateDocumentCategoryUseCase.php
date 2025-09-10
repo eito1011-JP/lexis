@@ -32,8 +32,6 @@ class CreateDocumentCategoryUseCase
     {
         try {
             DB::beginTransaction();
-            Log::info('user'. json_encode($user->organizationMember));
-
             $organizationId = $user->organizationMember->organization_id;
 
             $organization = Organization::find($organizationId);

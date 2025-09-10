@@ -9,7 +9,7 @@ class CreateDocumentCategoryDto extends UseCaseDto
     public function __construct(
         public readonly string $title,
         public readonly string $description,
-        public readonly int $parentId,
+        public readonly ?int $parentId,
         public readonly ?int $editPullRequestId,
         public readonly ?string $pullRequestEditToken
     ) {}
@@ -22,7 +22,7 @@ class CreateDocumentCategoryDto extends UseCaseDto
         return new self(
             title: $requestData['title'],
             description: $requestData['description'],
-            parentId: $requestData['parent_id'],
+            parentId: $requestData['parent_id'] ?? null,
             editPullRequestId: $requestData['edit_pull_request_id'],
             pullRequestEditToken: $requestData['pull_request_edit_token'] ?? null
         );
