@@ -4,15 +4,14 @@ namespace App\UseCases\Auth;
 
 use App\Constants\AppConst;
 use App\Consts\ErrorType;
-use App\Events\PreUserCreated;
 use App\Exceptions\DuplicateExecutionException;
 use App\Mail\EmailAuthentication;
 use App\Models\User;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
 use App\Traits\BaseEncoding;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class SendAuthnEmailUseCase
 {
@@ -26,6 +25,7 @@ class SendAuthnEmailUseCase
      */
     public function execute(string $email, string $password): array
     {
+        try {
         // 既存ユーザの重複チェック
         $user = User::byEmail($email)->first();
 
@@ -52,7 +52,11 @@ class SendAuthnEmailUseCase
         // メール送信
         Mail::to($email)->send(new EmailAuthentication($email, $token));
 
-        return ['success' => true];
+            return ['success' => true];
+        } catch (\Exception $e) {
+            Log::error($e);
+            throw $e;
+        }
     }
 }
 

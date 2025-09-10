@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Log;
 
 class SigninWithEmailUseCase
 {
@@ -33,6 +34,7 @@ class SigninWithEmailUseCase
      */
     public function execute(string $email, string $password, Request $request): array
     {
+        try {
         $key = 'signin-with-email.' . $request->ip() . '.' . $email;
 
         // ログイン試行回数チェック
@@ -95,6 +97,10 @@ class SigninWithEmailUseCase
         return [
             'user' => $user,
             'cookie' => $cookie,
-        ];
+            ];
+        } catch (\Exception $e) {
+            Log::error($e);
+            throw $e;
+        }
     }
 }
