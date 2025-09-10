@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\UseCases\Auth;
 
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Log;
+use Exception;
 
 class LogoutUseCase
 {
@@ -17,11 +19,16 @@ class LogoutUseCase
      */
     public function execute(): array
     {
+        try {
         // クッキーを無効化
         $cookie = Cookie::forget('sid');
 
-        return [
-            'cookie' => $cookie,
-        ];
+            return [
+                'cookie' => $cookie,
+            ];
+        } catch (\Exception $e) {
+            Log::error($e);
+            throw $e;
+        }
     }
 }

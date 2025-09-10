@@ -10,6 +10,7 @@ import { Home } from '@/components/icon/common/Home';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
 import { finishPullRequestEditSession } from '@/api/pullRequest';
+import { useLocation } from 'react-router-dom';
 // カテゴリの型定義
 type Category = {
   id: number;
@@ -33,8 +34,8 @@ type DocumentItem = {
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
-  const [isLoading, setIsLoading] = useState(true);
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showCategoryEditModal, setShowCategoryEditModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -72,6 +73,18 @@ export default function DocumentsPage(): JSX.Element {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [showEditFinishModal, setShowEditFinishModal] = useState(false);
+  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string>('hr-system');
+
+  // カテゴリ作成成功メッセージの表示
+  useEffect(() => {
+    if (location.state?.message) {
+      setToastMessage(location.state.message);
+      setToastType(location.state.type || 'success');
+      setShowToast(true);
+      // ブラウザの履歴からstateを削除
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // 予約語やルーティングで使用される特殊パターン
   const reservedSlugs = ['create', 'edit', 'new', 'delete', 'update'];
@@ -424,16 +437,11 @@ export default function DocumentsPage(): JSX.Element {
     setCategoryDeleteError(null);
   };
 
-  // セッション確認中はローディング表示
-  if (isLoading) {
-    return (
-      <AdminLayout title="読み込み中...">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
+  // サイドコンテンツのカテゴリ選択ハンドラ
+  const handleSideContentCategorySelect = (categoryId: string) => {
+    setSelectedSideContentCategory(categoryId);
+    console.log('Selected side content category:', categoryId);
+  };
 
   // カテゴリセクション
   const renderCategorySection = () => {
@@ -660,8 +668,13 @@ export default function DocumentsPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title="ドキュメント管理">
-      <div className="flex flex-col h-full">
+    <AdminLayout 
+      title="ドキュメント管理"
+      sidebar={true}
+      showDocumentSideContent={true}
+      onCategorySelect={handleSideContentCategorySelect}
+      selectedCategoryId={selectedSideContentCategory}
+    >
         <div className="mb-6">
           {/* パンくずリスト */}
           <div className="flex items-center text-sm text-gray-400 mb-4">
@@ -833,7 +846,6 @@ export default function DocumentsPage(): JSX.Element {
             {renderCategorySection()}
           </div>
         </div>
-      </div>
 
       {/* カテゴリ作成モーダル */}
       {showCategoryModal && (
@@ -1173,6 +1185,7 @@ export default function DocumentsPage(): JSX.Element {
       {showToast && (
         <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
+
     </AdminLayout>
   );
 }

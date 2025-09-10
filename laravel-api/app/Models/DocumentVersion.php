@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\DocumentStatus;
-use App\Traits\HasOrganizationScope;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +10,6 @@ use Illuminate\Database\Eloquent\Model;
 class DocumentVersion extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
     use SoftDeletes;
 
     protected $table = 'document_versions';

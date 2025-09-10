@@ -7,6 +7,7 @@ use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use Github\Client;
+use Illuminate\Support\Facades\Log;
 
 class UserBranchService
 {
@@ -21,17 +22,22 @@ class UserBranchService
      * @param  int|null  $editPullRequestId  編集対象のプルリクエストID
      * @return int ユーザーブランチID
      */
-    public function fetchOrCreateActiveBranch(User $user, ?int $editPullRequestId = null): int
+    public function fetchOrCreateActiveBranch(User $user, int $organizationId, ?int $editPullRequestId = null): int
     {
         // プルリクエストが指定されている場合は、そのプルリクエストのブランチを使用
         if ($editPullRequestId) {
-            $pullRequest = PullRequest::findOrFail($editPullRequestId);
+            $pullRequest = PullRequest::organization($organizationId)->findOrFail($editPullRequestId);
 
             return $pullRequest->user_branch_id;
         }
 
-        // アクティブなユーザーブランチを確認
-        $activeBranch = $user->userBranches()->active()->orderByCreatedAtDesc()->first();
+        // アクティブなユーザーブランチを確認（リレーション経由）
+        $activeBranch = $user->userBranches()
+            ->where('organization_id', $organizationId)
+            ->with('organization')
+            ->active()
+            ->orderByCreatedAtDesc()
+            ->first();
 
         // アクティブなブランチが存在する場合はそのIDを返す
         if ($activeBranch) {
@@ -39,38 +45,22 @@ class UserBranchService
         }
 
         // アクティブなブランチが存在しない場合は新しいブランチを作成
-        return $this->initBranchSnapshot($user->id)->id;
+        return $this->initBranchSnapshot($user->id, $organizationId)->id;
     }
 
     /**
      * ブランチスナップショットを初期化する
      */
-    private function initBranchSnapshot(int $userId): UserBranch
+    private function initBranchSnapshot(int $userId, int $organizationId): UserBranch
     {
-        $snapshotCommit = $this->findLatestCommit();
-
         // 新しいブランチを作成
         $branchName = 'branch_'.$userId.'_'.time();
 
         return UserBranch::create([
             'user_id' => $userId,
             'branch_name' => $branchName,
-            'snapshot_commit' => $snapshotCommit,
             'is_active' => Flag::TRUE,
+            'organization_id' => $organizationId,
         ]);
-    }
-
-    /**
-     * 最新のコミットハッシュを取得
-     */
-    private function findLatestCommit(): string
-    {
-        $response = $this->githubClient->gitData()->references()->show(
-            config('services.github.owner'),
-            config('services.github.repo'),
-            'heads/main'
-        );
-
-        return $response['object']['sha'];
     }
 }

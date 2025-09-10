@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { ChevronDown } from '@/components/icon/common/ChevronDown';
 import type { ConfirmationAction } from '@/types/diff';
 import { CONFIRMATION_ACTIONS } from '@/types/diff';
 
@@ -24,7 +23,6 @@ export const ConfirmationActionDropdown: React.FC<ConfirmationActionDropdownProp
         className="flex items-center px-4 py-2 bg-gray-800 border border-gray-600 rounded-md text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <span>アクション</span>
-        <ChevronDown className="w-4 h-4 ml-2" />
       </button>
 
       {isOpen && (

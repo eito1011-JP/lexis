@@ -3,14 +3,12 @@
 namespace App\Models;
 
 use App\Enums\PullRequestReviewerActionStatus;
-use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PullRequestReviewer extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
 
     protected $fillable = [
         'pull_request_id',

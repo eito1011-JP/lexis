@@ -116,10 +116,10 @@ Route::middleware('auth:api')->group(function () {
 
     // カテゴリ関連
     Route::prefix('document-categories')->group(function () {
-        Route::get('/', [DocumentCategoryController::class, 'getCategory']);
-        Route::post('/create', [DocumentCategoryController::class, 'createCategory']);
-        Route::put('/update', [DocumentCategoryController::class, 'updateCategory']);
-        Route::delete('/delete', [DocumentCategoryController::class, 'deleteCategory']);
+        Route::get('/', [DocumentCategoryController::class, 'fetchCategories']);
+        Route::post('/', [DocumentCategoryController::class, 'createCategory']);
+        Route::put('/', [DocumentCategoryController::class, 'updateCategory']);
+        Route::delete('/', [DocumentCategoryController::class, 'deleteCategory']);
         Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
     });
 

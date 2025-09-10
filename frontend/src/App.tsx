@@ -6,6 +6,8 @@ import DocumentBySlugPage from './pages/documents/slug';
 import LoginPage from './pages/login';
 import SignupPage from './pages/signup';
 import CreateDocumentPage from './pages/documents/create';
+import CreateCategoryPage from './pages/documents/categories/create';
+import CreateRootCategoryPage from './pages/categories/create';
 import EditDocumentPage from './pages/documents/[slug]/edit';
 import ChangeSuggestionsPage from './pages/change-suggestions';
 import ChangeSuggestionDetailPage from './pages/change-suggestions/[id]';
@@ -97,6 +99,8 @@ function App() {
         />
         <Route path={ROUTE_PATHS.documents} element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['create-document']} element={<ProtectedRoute><CreateDocumentPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS['create-category']} element={<ProtectedRoute><CreateCategoryPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS['create-root-category']} element={<ProtectedRoute><CreateRootCategoryPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['edit-document']} element={<ProtectedRoute><EditDocumentPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['document-by-slug']} element={<ProtectedRoute><DocumentBySlugPage /></ProtectedRoute>} />
         </Routes>

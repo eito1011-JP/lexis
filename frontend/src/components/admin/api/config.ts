@@ -19,9 +19,9 @@ export const API_CONFIG = {
     },
     CATEGORIES: {
       GET: '/api/document-categories',
-      CREATE: '/api/document-categories/create',
-      UPDATE: '/api/document-categories/update',
-      DELETE: '/api/document-categories/delete',
+      CREATE: '/api/document-categories',
+      UPDATE: '/api/document-categories',
+      DELETE: '/api/document-categories',
     },
     USERS: {
       GET_ALL: '/api/users',

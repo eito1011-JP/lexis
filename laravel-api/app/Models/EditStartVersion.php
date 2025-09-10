@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Traits\HasOrganizationScope;
 use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 class EditStartVersion extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
     use SoftDeletes;
 
     protected $table = 'edit_start_versions';
@@ -18,14 +16,15 @@ class EditStartVersion extends Model
     protected $fillable = [
         'user_branch_id',
         'target_type',
+        'organization_id',
         'original_version_id',
         'current_version_id',
-        'organization_id',
         'created_at',
         'updated_at',
     ];
 
     protected $casts = [
+        'organization_id' => 'integer',
         'original_version_id' => 'integer',
         'current_version_id' => 'integer',
     ];

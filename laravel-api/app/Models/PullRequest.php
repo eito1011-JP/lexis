@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PullRequest extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
 
     protected $fillable = [
         'user_branch_id',
@@ -40,6 +38,14 @@ class PullRequest extends Model
     public function organization()
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    /**
+     * 組織でフィルターするスコープ
+     */
+    public function scopeOrganization($query, int $organizationId)
+    {
+        return $query->where('organization_id', $organizationId);
     }
 
     /**

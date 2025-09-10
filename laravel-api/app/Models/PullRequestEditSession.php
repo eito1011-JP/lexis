@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Traits\HasOrganizationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PullRequestEditSession extends Model
 {
     use HasFactory;
-    use HasOrganizationScope;
 
     protected $table = 'pull_request_edit_sessions';
 
@@ -81,7 +79,7 @@ class PullRequestEditSession extends Model
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeByPullRequest($query, int $pull_request_id)
+    public function scopeByPullRequest($query, ?int $pull_request_id)
     {
         return $query->where('pull_request_id', $pull_request_id);
     }
@@ -92,7 +90,7 @@ class PullRequestEditSession extends Model
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeByToken($query, string $token)
+    public function scopeByToken($query, ?string $token)
     {
         return $query->where('token', $token);
     }
@@ -122,12 +120,12 @@ class PullRequestEditSession extends Model
     /**
      * プルリクエスト編集セッションIDを取得
      *
-     * @param  int  $pull_request_id  プルリクエストID
-     * @param  string  $token  編集トークン
+     * @param  int|null  $pull_request_id  プルリクエストID
+     * @param  string|null  $token  編集トークン
      * @param  int  $user_id  ユーザーID
      * @return int|null 編集セッションID
      */
-    public static function findEditSessionId(int $pull_request_id, string $token, int $user_id): ?int
+    public static function findEditSessionId(?int $pull_request_id, ?string $token, int $user_id): ?int
     {
         return self::byPullRequest($pull_request_id)
             ->byToken($token)

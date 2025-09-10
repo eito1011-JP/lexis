@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Consts\ErrorType;
 use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
-use App\Http\Requests\GetDocumentCategoryRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
+use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
+use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
+use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
+use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
+use App\Exceptions\AuthenticationException;
+use Http\Discovery\Exception\NotFoundException;
+use App\Exceptions\DuplicateExecutionException;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -17,10 +24,12 @@ use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
-use Illuminate\Http\JsonResponse;
+use Exception;
 use Illuminate\Http\Request;
+use Psr\Log\LogLevel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\JsonResponse;
 
 class DocumentCategoryController extends ApiBaseController
 {
@@ -28,8 +37,10 @@ class DocumentCategoryController extends ApiBaseController
 
     protected $userBranchService;
 
-    public function __construct(DocumentCategoryService $documentCategoryService, UserBranchService $userBranchService)
-    {
+    public function __construct(
+        DocumentCategoryService $documentCategoryService, 
+        UserBranchService $userBranchService
+    ) {
         $this->documentCategoryService = $documentCategoryService;
         $this->userBranchService = $userBranchService;
     }
@@ -37,42 +48,8 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリ一覧を取得
      */
-    public function getCategory(GetDocumentCategoryRequest $request): JsonResponse
+    public function fetchCategories(FetchCategoriesRequest $request, FetchCategoriesUseCase $useCase): JsonResponse
     {
-        try {
-            // カテゴリパスの取得と処理
-            $pathParts = array_filter(explode('/', $request->category_path));
-
-            // 最後の値をslugとして取得、それ以外をcategoryPathとして取得
-            $slug = array_pop($pathParts);
-            $categoryPath = implode('/', $pathParts);
-
-            $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
-
-            $documentCategory = DocumentCategory::where('parent_id', $parentCategoryId)
-                ->where('slug', $slug)
-                ->first();
-
-            return response()->json([
-                'categories' => $documentCategory,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('カテゴリ詳細の取得に失敗しました', ['error' => $e->getMessage()]);
-
-            return response()->json([
-                'error' => 'カテゴリ詳細の取得に失敗しました',
-            ], 500);
-        }
-    }
-
-    /**
-     * カテゴリを作成
-     */
-    public function createCategory(CreateDocumentCategoryRequest $request): JsonResponse
-    {
-        DB::beginTransaction();
-
         try {
             // 認証チェック
             $user = $this->user();
@@ -83,70 +60,70 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
+            $categories = $useCase->execute($user->id, $request->parent_id);
 
-            // 編集セッションIDを取得
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
-
-            // カテゴリパスの取得と処理
-            $categoryPath = array_filter(explode('/', $request->category_path));
-
-            // カテゴリIDを取得（パスから）
-            $currentParentCategoryId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
-
-            $position = $this->documentCategoryService->normalizePosition(
-                $request->position,
-                $currentParentCategoryId
-            );
-
-            $category = DocumentCategory::create([
-                'slug' => $request->slug,
-                'sidebar_label' => $request->sidebar_label,
-                'position' => $position,
-                'description' => $request->description,
-                'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                'parent_id' => $currentParentCategoryId,
+            return response()->json([
+                'categories' => $categories,
             ]);
 
-            EditStartVersion::create([
-                'user_branch_id' => $userBranchId,
-                'target_type' => 'category',
-                'original_version_id' => $category->id,
-                'current_version_id' => $category->id,
-            ]);
+        } catch (\Exception $e) {
+            Log::error('カテゴリ一覧の取得に失敗しました', ['error' => $e->getMessage()]);
 
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                        'current_version_id' => $category->id,
-                    ],
-                    [
-                        'current_version_id' => $category->id,
-                        'diff_type' => 'created',
-                    ]
+            return response()->json([
+                'error' => 'カテゴリ一覧の取得に失敗しました',
+            ], 500);
+        }
+    }
+
+    /**
+     * カテゴリを作成
+     */
+    public function createCategory(CreateDocumentCategoryRequest $request, CreateDocumentCategoryUseCase $useCase): JsonResponse
+    {
+        try {
+            // 認証チェック
+            $user = $this->user();
+
+            if (! $user) {
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
                 );
             }
 
-            DB::commit();
+            // DTOを作成
+            $dto = CreateDocumentCategoryDto::fromRequest($request->validated());
 
-            return response()->json([
-                'id' => $category->id,
-                'slug' => $category->slug,
-                'label' => $category->sidebar_label,
-                'position' => $category->position,
-                'description' => $category->description,
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('カテゴリ作成エラー', ['error' => $e->getMessage()]);
+            // UseCaseを実行
+            $useCase->execute($dto, $user);
 
-            return response()->json([
-                'error' => 'Failed to create category',
-            ], 500);
+            return response()->json();  
+        } catch (AuthenticationException) {
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+            );
+        } catch (DuplicateExecutionException) {
+            return $this->sendError(
+                ErrorType::CODE_DUPLICATE_EXECUTION,
+                __('errors.MSG_DUPLICATE_EXECUTION'),
+                ErrorType::STATUS_DUPLICATE_EXECUTION,
+            );
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 

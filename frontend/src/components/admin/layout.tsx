@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Header from './header/layout';
 import { DocumentDetailed } from '../icon/common/DocumentDetailed';
 import SettingsModal from './SettingsModal.tsx';
+import DocumentSideContent from '../sidebar/DocumentSideContent';
 
 /**
  * 管理画面用のレイアウトコンポーネント
@@ -10,12 +11,20 @@ interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
   sidebar?: boolean;
+  showDocumentSideContent?: boolean;
+  onCategorySelect?: (categoryId: number) => void;
+  selectedCategoryId?: number;
+  onNavigationRequest?: (path: string) => void;
 }
 
 export default function AdminLayout({
   children,
   title,
-  sidebar = true,
+  sidebar = false,
+  showDocumentSideContent = false,
+  onCategorySelect,
+  selectedCategoryId,
+  onNavigationRequest,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -122,7 +131,11 @@ export default function AdminLayout({
   ];
 
   const navigateTo = (path: string): void => {
-    window.location.href = path;
+    if (onNavigationRequest) {
+      onNavigationRequest(path);
+    } else {
+      window.location.href = path;
+    }
   };
 
   return (
@@ -132,8 +145,8 @@ export default function AdminLayout({
         <Header />
         <div className="flex flex-1">
           {sidebar && (
-            <div className="w-60 min-h-screen bg-[#0A0A0A] border-r border-[#B1B1B1] flex flex-col">
-              <nav className="flex-1 py-4">
+            <div className="w-60 min-h-screen bg-[#0A0A0A] flex flex-col">
+              <nav className="py-4">
                 {navItems.map(item => (
                   <div
                     key={item.path}
@@ -151,6 +164,14 @@ export default function AdminLayout({
                   </div>
                 ))}
               </nav>
+              
+              {/* ドキュメントページでのみ表示されるサイドコンテンツ */}
+              {showDocumentSideContent && (
+                  <DocumentSideContent
+                    onCategorySelect={onCategorySelect}
+                    selectedCategoryId={selectedCategoryId}
+                  />
+              )}
             </div>
           )}
 
