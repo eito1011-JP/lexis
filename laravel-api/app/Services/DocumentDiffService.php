@@ -189,10 +189,8 @@ class DocumentDiffService
         if ($isNewCreation) {
             // 新規作成時は全フィールドが変更対象（緑色で表示）
             return [
-                'sidebar_label' => ['status' => 'added', 'current' => $currentCategory->sidebar_label, 'original' => null],
-                'slug' => ['status' => 'added', 'current' => $currentCategory->slug, 'original' => null],
+                'title' => ['status' => 'added', 'current' => $currentCategory->title, 'original' => null],
                 'description' => ['status' => 'added', 'current' => $currentCategory->description, 'original' => null],
-                'position' => ['status' => 'added', 'current' => $currentCategory->position, 'original' => null],
                 'parent_id' => ['status' => 'added', 'current' => $currentCategory->parent_id, 'original' => null],
             ];
         }
@@ -200,17 +198,15 @@ class DocumentDiffService
         if ($currentCategory && property_exists($currentCategory, 'is_deleted') && $currentCategory->is_deleted) {
             // 削除時は全フィールドが削除対象
             return [
-                'sidebar_label' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->sidebar_label],
-                'slug' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->slug],
+                'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->title],
                 'description' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->description],
-                'position' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->position],
                 'parent_id' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->parent_id],
             ];
         }
 
         // 編集時は変更されたフィールドのみを検出
         $changedFields = [];
-        $fieldsToCheck = ['sidebar_label', 'slug', 'description', 'position', 'parent_id'];
+        $fieldsToCheck = ['title', 'description', 'parent_id'];
 
         foreach ($fieldsToCheck as $field) {
             if ($currentCategory->{$field} !== $originalCategory->{$field}) {
