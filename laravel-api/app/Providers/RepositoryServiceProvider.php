@@ -4,10 +4,10 @@ namespace App\Providers;
 
 use App\Repositories\DocumentVersionRepository;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
-use App\Repositories\Interfaces\PullRequestEditSessionRepositoryInterface;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
-use App\Repositories\PullRequestEditSessionRepository;
+use App\Repositories\Interfaces\PullRequestEditSessionRepositoryInterface;
 use App\Repositories\PreUserRepository;
+use App\Repositories\PullRequestEditSessionRepository;
 use Illuminate\Support\ServiceProvider;
 
 /**

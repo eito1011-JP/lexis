@@ -21,6 +21,3 @@ return new class extends Migration
         // 再作成はしない（JWTへ完全移行）
     }
 };
-
-
-

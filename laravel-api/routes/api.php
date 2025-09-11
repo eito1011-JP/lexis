@@ -2,16 +2,16 @@
 
 use App\Http\Controllers\Api\ActivityLogOnPullRequestController;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\EmailAuthnController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\EmailAuthnController;
 use App\Http\Controllers\Api\FixRequestController;
 use App\Http\Controllers\Api\HealthCheckController;
+use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\PullRequestEditSessionController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
-use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\UserBranchController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;

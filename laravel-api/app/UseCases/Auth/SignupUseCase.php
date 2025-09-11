@@ -12,8 +12,8 @@ class SignupUseCase
     /**
      * ユーザー登録を実行
      *
-     * @param string $email メールアドレス
-     * @param string $password パスワード
+     * @param  string  $email  メールアドレス
+     * @param  string  $password  パスワード
      * @return array{success: bool, user?: array, sessionId?: string, error?: string}
      */
     public function execute(string $email, string $password): array

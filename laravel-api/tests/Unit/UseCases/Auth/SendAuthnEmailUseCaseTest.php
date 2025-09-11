@@ -60,16 +60,18 @@ class SendAuthnEmailUseCaseTest extends TestCase
                 Mockery::on(fn ($v) => $v === $email),
                 Mockery::on(function ($hashed) use (&$captured, $password) {
                     $captured['hashed'] = $hashed;
+
                     return Hash::check($password, $hashed);
                 }),
                 Mockery::on(function ($token) use (&$captured) {
                     $captured['token'] = $token;
                     $this->assertSame(AppConst::EMAIL_AUTHN_TOKEN_LENGTH, strlen($token));
                     $this->assertMatchesRegularExpression('/^[0-9a-zA-Z]+$/', $token);
+
                     return true;
                 })
             )
-            ->andReturn(new PreUser());
+            ->andReturn(new PreUser);
 
         // Act
         $result = $this->useCase->execute($email, $password);
@@ -107,5 +109,3 @@ class SendAuthnEmailUseCaseTest extends TestCase
         }
     }
 }
-
-

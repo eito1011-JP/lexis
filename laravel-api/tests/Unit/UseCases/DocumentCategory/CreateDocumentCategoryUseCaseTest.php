@@ -12,8 +12,8 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
-use Mockery;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Mockery;
 use Tests\TestCase;
 
 class CreateDocumentCategoryUseCaseTest extends TestCase
@@ -21,24 +21,28 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     use DatabaseTransactions;
 
     private CreateDocumentCategoryUseCase $useCase;
+
     private User $user;
+
     private Organization $organization;
+
     private OrganizationMember $organizationMember;
+
     private $userBranchService;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->userBranchService = Mockery::mock(UserBranchService::class);
-        
+
         $this->useCase = new CreateDocumentCategoryUseCase(
             $this->userBranchService
         );
-        
+
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
-        
+
         // OrganizationMemberにはidカラムがないため、複合主キーで作成
         $this->organizationMember = OrganizationMember::create([
             'user_id' => $this->user->id,
@@ -56,7 +60,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategorySuccessfully(): void
+    public function test_create_category_successfully(): void
     {
         // Arrange
         // 実際のUserBranchレコードを作成
@@ -64,7 +68,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
@@ -103,7 +107,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategoryWithPullRequestEditSession(): void
+    public function test_create_category_with_pull_request_edit_session(): void
     {
         // Arrange
         // 実際のUserBranchレコードを作成
@@ -111,15 +115,15 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         // PullRequestを作成
         $pullRequest = PullRequest::factory()->create([
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $pullRequestEditToken = 'test-token';
-        
+
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
@@ -165,7 +169,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategoryWithParentId(): void
+    public function test_create_category_with_parent_id(): void
     {
         // Arrange
         // 実際のUserBranchレコードを作成
@@ -173,13 +177,13 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         // 親カテゴリを実際に作成
         $parentCategory = DocumentCategory::factory()->create([
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
@@ -209,7 +213,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategoryThrowsExceptionWhenOrganizationMemberNotExists(): void
+    public function test_create_category_throws_exception_when_organization_member_not_exists(): void
     {
         // Arrange
         // organizationMemberを削除して組織メンバーが存在しない状況を作る
@@ -217,7 +221,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         OrganizationMember::where('user_id', $this->user->id)
             ->where('organization_id', $this->organization->id)
             ->delete();
-        
+
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
@@ -234,12 +238,12 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategoryThrowsExceptionWhenOrganizationNotFound(): void
+    public function test_create_category_throws_exception_when_organization_not_found(): void
     {
         // Arrange
         // 組織を削除して組織が見つからない状況を作る
         $this->organization->delete();
-        
+
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
@@ -256,7 +260,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategoryWithPullRequestIdSpecified(): void
+    public function test_create_category_with_pull_request_id_specified(): void
     {
         // Arrange
         // PullRequestとUserBranchを作成
@@ -264,12 +268,12 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $pullRequest = PullRequest::factory()->create([
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
@@ -298,7 +302,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategoryWithPullRequestEditSessionNotFound(): void
+    public function test_create_category_with_pull_request_edit_session_not_found(): void
     {
         // Arrange
         // 実際のUserBranchレコードを作成
@@ -306,10 +310,10 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $editPullRequestId = 1;
         $pullRequestEditToken = 'invalid-token';
-        
+
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
@@ -339,7 +343,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function testCreateCategoryHandlesException(): void
+    public function test_create_category_handles_exception(): void
     {
         // Arrange
         $dto = new CreateDocumentCategoryDto(

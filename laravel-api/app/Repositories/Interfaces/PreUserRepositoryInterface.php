@@ -14,5 +14,3 @@ interface PreUserRepositoryInterface
 
     public function findActiveByToken(string $token): ?PreUser;
 }
-
-

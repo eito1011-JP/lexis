@@ -10,12 +10,13 @@ use App\Models\User;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
 use App\Traits\BaseEncoding;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class SendAuthnEmailUseCase
 {
     use BaseEncoding;
+
     public function __construct(
         private PreUserRepositoryInterface $preUserRepository
     ) {}
@@ -26,38 +27,37 @@ class SendAuthnEmailUseCase
     public function execute(string $email, string $password): array
     {
         try {
-        // 既存ユーザの重複チェック
-        $user = User::byEmail($email)->first();
+            // 既存ユーザの重複チェック
+            $user = User::byEmail($email)->first();
 
-        if ($user) {
-            throw new DuplicateExecutionException(
-                ErrorType::CODE_ACCOUNT_CANNOT_BE_REGISTERED,
-                __('errors.MSG_ACCOUNT_CANNOT_BE_REGISTERED'),
-                ErrorType::STATUS_ACCOUNT_CANNOT_BE_REGISTERED,
-            );
-        }
+            if ($user) {
+                throw new DuplicateExecutionException(
+                    ErrorType::CODE_ACCOUNT_CANNOT_BE_REGISTERED,
+                    __('errors.MSG_ACCOUNT_CANNOT_BE_REGISTERED'),
+                    ErrorType::STATUS_ACCOUNT_CANNOT_BE_REGISTERED,
+                );
+            }
 
-        // 既存のpre_userを無効化
-        $this->preUserRepository->updateInvalidated($email);
+            // 既存のpre_userを無効化
+            $this->preUserRepository->updateInvalidated($email);
 
-        // パスワードハッシュ
-        $hashedPassword = Hash::make($password);
+            // パスワードハッシュ
+            $hashedPassword = Hash::make($password);
 
-        // トークン生成（Base62）
-        $token = $this->base62(AppConst::EMAIL_AUTHN_TOKEN_LENGTH);
+            // トークン生成（Base62）
+            $token = $this->base62(AppConst::EMAIL_AUTHN_TOKEN_LENGTH);
 
-        // pre-user登録
-        $this->preUserRepository->registerPreUser($email, $hashedPassword, $token);
+            // pre-user登録
+            $this->preUserRepository->registerPreUser($email, $hashedPassword, $token);
 
-        // メール送信
-        Mail::to($email)->send(new EmailAuthentication($email, $token));
+            // メール送信
+            Mail::to($email)->send(new EmailAuthentication($email, $token));
 
             return ['success' => true];
         } catch (\Exception $e) {
             Log::error($e);
+
             throw $e;
         }
     }
 }
-
-

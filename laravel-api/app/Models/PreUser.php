@@ -49,5 +49,3 @@ class PreUser extends Model
         });
     }
 }
-
-

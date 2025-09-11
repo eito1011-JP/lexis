@@ -20,11 +20,11 @@ return new class extends Migration
             $table->foreignId('current_version_id')->nullable();
             $table->timestamps();
             $table->foreign('pull_request_edit_session_id', 'fk_pr_edit_session_diffs_session_id')
-                  ->references('id')->on('pull_request_edit_sessions')->onDelete('cascade');
+                ->references('id')->on('pull_request_edit_sessions')->onDelete('cascade');
             $table->foreign('original_version_id', 'fk_pr_edit_session_diffs_original_ver')
-                  ->references('id')->on('document_versions')->onDelete('set null');
+                ->references('id')->on('document_versions')->onDelete('set null');
             $table->foreign('current_version_id', 'fk_pr_edit_session_diffs_current_ver')
-                  ->references('id')->on('document_versions')->onDelete('set null');
+                ->references('id')->on('document_versions')->onDelete('set null');
         });
     }
 

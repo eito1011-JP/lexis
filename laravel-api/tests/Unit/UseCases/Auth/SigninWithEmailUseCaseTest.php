@@ -24,7 +24,7 @@ class SigninWithEmailUseCaseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->useCase = new SigninWithEmailUseCase();
+        $this->useCase = new SigninWithEmailUseCase;
     }
 
     protected function tearDown(): void
@@ -36,12 +36,13 @@ class SigninWithEmailUseCaseTest extends TestCase
     private function makeRequest(string $ip): Request
     {
         $request = Request::create('/api/signin', 'POST', [], [], [], ['REMOTE_ADDR' => $ip]);
+
         return $request;
     }
 
     private function rateLimiterKey(string $ip, string $email): string
     {
-        return 'signin-with-email.' . $ip . '.' . $email;
+        return 'signin-with-email.'.$ip.'.'.$email;
     }
 
     #[Test]
@@ -150,5 +151,3 @@ class SigninWithEmailUseCaseTest extends TestCase
         $this->assertNotNull($user->last_login);
     }
 }
-
-

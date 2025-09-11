@@ -19,22 +19,21 @@ class IdentifyTokenUseCase
     public function execute(string $token): array
     {
         try {
-        $preUser = $this->preUserRepository->findActiveByToken($token);
+            $preUser = $this->preUserRepository->findActiveByToken($token);
 
-        if (!$preUser) {
-            throw new AuthenticationException(
-                ErrorType::CODE_INVALID_TOKEN,
-                __('errors.MSG_INVALID_TOKEN'),
-                ErrorType::STATUS_INVALID_TOKEN,
-            );
-        }
+            if (! $preUser) {
+                throw new AuthenticationException(
+                    ErrorType::CODE_INVALID_TOKEN,
+                    __('errors.MSG_INVALID_TOKEN'),
+                    ErrorType::STATUS_INVALID_TOKEN,
+                );
+            }
         } catch (AuthenticationException $e) {
             Log::error($e);
+
             throw $e;
         }
 
         return ['valid' => true];
     }
 }
-
-

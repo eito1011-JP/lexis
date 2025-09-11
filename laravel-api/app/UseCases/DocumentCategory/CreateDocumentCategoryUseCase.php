@@ -24,8 +24,8 @@ class CreateDocumentCategoryUseCase
     /**
      * ドキュメントカテゴリを作成
      *
-     * @param CreateDocumentCategoryDto $dto カテゴリ作成DTO
-     * @param User $user 認証済みユーザー
+     * @param  CreateDocumentCategoryDto  $dto  カテゴリ作成DTO
+     * @param  User  $user  認証済みユーザー
      * @return DocumentCategory 作成されたカテゴリ
      */
     public function execute(CreateDocumentCategoryDto $dto, User $user): DocumentCategory
@@ -36,7 +36,7 @@ class CreateDocumentCategoryUseCase
 
             $organization = Organization::find($organizationId);
             if (! $organization) {
-                throw new NotFoundException();
+                throw new NotFoundException;
             }
 
             // ユーザーブランチIDを取得または作成
@@ -90,6 +90,7 @@ class CreateDocumentCategoryUseCase
             DB::rollBack();
 
             Log::error($e);
+
             throw $e;
         }
     }

@@ -9,8 +9,8 @@ use Carbon\Carbon;
 class PreUserRepository implements PreUserRepositoryInterface
 {
     public function updateInvalidated(string $email): int
-        {
-            return PreUser::byEmail($email)
+    {
+        return PreUser::byEmail($email)
             ->isInvalidated(false)
             ->update([
                 'is_invalidated' => true,
@@ -44,5 +44,3 @@ class PreUserRepository implements PreUserRepositoryInterface
             ->first();
     }
 }
-
-

@@ -7,7 +7,6 @@ use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use Github\Client;
-use Illuminate\Support\Facades\Log;
 
 class UserBranchService
 {
