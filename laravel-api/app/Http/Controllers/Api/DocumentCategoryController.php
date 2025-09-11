@@ -63,7 +63,7 @@ class DocumentCategoryController extends ApiBaseController
 
             // DTOを作成してUseCaseを実行
             $dto = FetchCategoriesDto::fromArray($request->validated());
-            $categories = $useCase->execute($dto, $user->id);
+            $categories = $useCase->execute($dto, $user);
 
             return response()->json([
                 'categories' => $categories,
