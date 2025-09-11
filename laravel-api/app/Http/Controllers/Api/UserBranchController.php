@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Dto\UseCase\UserBranch\FetchDiffDto;
-use App\Http\Requests\FetchDiffRequest;
+use App\Consts\ErrorType;
 use App\Services\DocumentDiffService;
 use App\UseCases\UserBranch\FetchDiffUseCase;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Psr\Log\LogLevel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -67,9 +68,11 @@ class UserBranchController extends ApiBaseController
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証されていません',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
             // UseCaseを実行
@@ -77,12 +80,13 @@ class UserBranchController extends ApiBaseController
 
             return response()->json($diffResult);
 
-        } catch (\Exception $e) {
-            Log::error('Git差分の取得に失敗しました: '.$e->getMessage());
-
-            return response()->json([
-                'error' => 'Git差分の取得に失敗しました',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 
