@@ -79,18 +79,22 @@ class DocumentController extends ApiBaseController
 
         // DTOを作成してUseCaseを実行
         $dto = GetDocumentsDto::fromArray($request->validated());
-        $result = $this->getDocumentsUseCase->execute($dto, $user);
-
-        if (! $result['success']) {
-            return response()->json([
-                'error' => $result['error'],
-            ], 500);
-        }
+        // $result = $this->getDocumentsUseCase->execute($dto, $user);
 
         return response()->json([
-            'documents' => $result['documents'],
-            'categories' => $result['categories'],
+            'documents' => [],
+            'categories' => [],
         ]);
+        // if (! $result['success']) {
+        //     return response()->json([
+        //         'error' => $result['error'],
+        //     ], 500);
+        // }
+
+        // return response()->json([
+        //     'documents' => $result['documents'],
+        //     'categories' => $result['categories'],
+        // ]);
     }
 
     /**
