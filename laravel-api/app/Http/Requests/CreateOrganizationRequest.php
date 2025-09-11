@@ -20,5 +20,3 @@ class CreateOrganizationRequest extends FormRequest
         ];
     }
 }
-
-

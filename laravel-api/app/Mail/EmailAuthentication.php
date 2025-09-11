@@ -11,19 +11,18 @@ use Illuminate\Queue\SerializesModels;
  */
 class EmailAuthentication extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
+    use SerializesModels;
 
-    /** @var string */
     public string $email;
 
-    /** @var string */
     public string $token;
 
     /**
      * コンストラクタ
      *
-     * @param string $email 宛先メールアドレス
-     * @param string $token 認証トークン
+     * @param  string  $email  宛先メールアドレス
+     * @param  string  $token  認証トークン
      */
     public function __construct(string $email, string $token)
     {
@@ -47,5 +46,3 @@ class EmailAuthentication extends Mailable
             ]);
     }
 }
-
-

@@ -63,7 +63,6 @@ class DocumentController extends ApiBaseController
         $this->documentCategoryService = $documentCategoryService;
     }
 
-
     /**
      * ドキュメント一覧を取得
      */

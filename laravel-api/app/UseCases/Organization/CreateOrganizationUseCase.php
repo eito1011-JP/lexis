@@ -2,8 +2,8 @@
 
 namespace App\UseCases\Organization;
 
-use App\Consts\Flag;
 use App\Consts\ErrorType;
+use App\Consts\Flag;
 use App\Enums\OrganizationRoleBindingRole;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
@@ -26,7 +26,7 @@ class CreateOrganizationUseCase
     {
         $preUser = $this->preUserRepository->findActiveByToken($token);
 
-        if (!$preUser) {
+        if (! $preUser) {
             throw new AuthenticationException(
                 ErrorType::CODE_INVALID_TOKEN,
                 __('errors.MSG_INVALID_TOKEN'),
@@ -76,5 +76,3 @@ class CreateOrganizationUseCase
         return ['organization' => $organization, 'user' => $user];
     }
 }
-
-

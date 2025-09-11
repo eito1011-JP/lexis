@@ -9,9 +9,7 @@ class FetchCategoriesDto extends UseCaseDto
     public function __construct(
         public readonly ?int $parentId = null,
         public readonly ?string $pullRequestEditSessionToken = null,
-    ) {
-    }
-
+    ) {}
 
     /**
      * リクエストデータからDTOを作成

@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('document_categories', function (Blueprint $table) {
             // slugカラムを削除
             $table->dropColumn('slug');
-            
+
             // sidebar_labelをtitleに変更
             $table->renameColumn('sidebar_label', 'title');
         });
@@ -28,7 +28,7 @@ return new class extends Migration
         Schema::table('document_categories', function (Blueprint $table) {
             // titleをsidebar_labelに戻す
             $table->renameColumn('title', 'sidebar_label');
-            
+
             // slugカラムを追加
             $table->string('slug')->after('id');
         });

@@ -4,11 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\UseCases\Auth\LogoutUseCase;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Psr\Log\LogLevel;
 use Exception;
+use Illuminate\Http\JsonResponse;
+use Psr\Log\LogLevel;
 
 class AuthController extends ApiBaseController
 {
@@ -23,7 +21,7 @@ class AuthController extends ApiBaseController
     {
         try {
             $result = $this->logoutUseCase->execute();
-            
+
             return response()
                 ->json()
                 ->withCookie($result['cookie']);
@@ -40,15 +38,15 @@ class AuthController extends ApiBaseController
     public function me(): JsonResponse
     {
         $user = $this->user();
-        
-        if (!$user) {
+
+        if (! $user) {
             return response()->json([
-                'error' => 'Unauthenticated'
+                'error' => 'Unauthenticated',
             ], 401);
         }
 
         return response()->json([
-            'user' => $user
+            'user' => $user,
         ]);
     }
 }

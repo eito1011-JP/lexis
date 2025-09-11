@@ -22,5 +22,3 @@ class SendAuthnEmailRequest extends FormRequest
         ];
     }
 }
-
-

@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\Log;
 
 class BaseService
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     /**
      * Write debug log.
@@ -71,9 +69,9 @@ class BaseService
     private function getLogCallerInfo()
     {
         return [
-            'call' => debug_backtrace()[1]['file'] . '->' . debug_backtrace()[2]['function'] . ':' . debug_backtrace()[1]['line'],
+            'call' => debug_backtrace()[1]['file'].'->'.debug_backtrace()[2]['function'].':'.debug_backtrace()[1]['line'],
             'called_arg' => debug_backtrace()[2]['args'],
-            'parent_call' => debug_backtrace()[2]['file'] . '->' . debug_backtrace()[3]['function'] . ':' . debug_backtrace()[2]['line'],
+            'parent_call' => debug_backtrace()[2]['file'].'->'.debug_backtrace()[3]['function'].':'.debug_backtrace()[2]['line'],
             'parent_called_arg' => debug_backtrace()[3]['args'],
         ];
     }

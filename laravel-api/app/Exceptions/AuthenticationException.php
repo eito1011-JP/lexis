@@ -21,5 +21,3 @@ class AuthenticationException extends BaseException
         return parent::toResponse($request);
     }
 }
-
-

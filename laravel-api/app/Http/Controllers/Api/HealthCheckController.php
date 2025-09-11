@@ -16,8 +16,6 @@ class HealthCheckController extends ApiBaseController
 {
     /**
      * ヘルスチェックエンドポイント
-     * 
-     * @return JsonResponse
      */
     public function healthCheck(): JsonResponse
     {

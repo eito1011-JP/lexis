@@ -4,20 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Consts\Flag;
+use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
+use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
+use App\Exceptions\AuthenticationException;
+use App\Exceptions\DuplicateExecutionException;
+use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
-use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
-use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
-use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
-use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
-use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
-use App\Exceptions\AuthenticationException;
-use Http\Discovery\Exception\NotFoundException;
-use App\Exceptions\DuplicateExecutionException;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -25,12 +22,15 @@ use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
+use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
+use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
 use Exception;
+use Http\Discovery\Exception\NotFoundException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Psr\Log\LogLevel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Http\JsonResponse;
+use Psr\Log\LogLevel;
 
 class DocumentCategoryController extends ApiBaseController
 {
@@ -39,7 +39,7 @@ class DocumentCategoryController extends ApiBaseController
     protected $userBranchService;
 
     public function __construct(
-        DocumentCategoryService $documentCategoryService, 
+        DocumentCategoryService $documentCategoryService,
         UserBranchService $userBranchService
     ) {
         $this->documentCategoryService = $documentCategoryService;
@@ -101,7 +101,7 @@ class DocumentCategoryController extends ApiBaseController
             // UseCaseを実行
             $useCase->execute($dto, $user);
 
-            return response()->json();  
+            return response()->json();
         } catch (AuthenticationException) {
             return $this->sendError(
                 ErrorType::CODE_AUTHENTICATION_FAILED,

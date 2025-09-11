@@ -28,10 +28,10 @@ class OrganizationController extends ApiBaseController
 
             return response()->json([
                 'organization' => $result['organization'],
-                'user' => $result['user']
+                'user' => $result['user'],
             ]);
         } catch (AuthenticationException) {
-            return $this->sendError(    
+            return $this->sendError(
                 ErrorType::CODE_AUTHENTICATION_FAILED,
                 __('errors.MSG_AUTHENTICATION_FAILED'),
                 ErrorType::STATUS_AUTHENTICATION_FAILED,
@@ -52,5 +52,3 @@ class OrganizationController extends ApiBaseController
         }
     }
 }
-
-

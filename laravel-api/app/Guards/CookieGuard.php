@@ -14,7 +14,9 @@ use Illuminate\Support\Facades\Log;
 class CookieGuard implements Guard
 {
     protected UserProvider $provider;
+
     protected Request $request;
+
     protected ?User $user = null;
 
     public function __construct(UserProvider $provider, Request $request)
@@ -28,7 +30,7 @@ class CookieGuard implements Guard
      */
     public function check(): bool
     {
-        return !is_null($this->user());
+        return ! is_null($this->user());
     }
 
     /**
@@ -36,7 +38,7 @@ class CookieGuard implements Guard
      */
     public function guest(): bool
     {
-        return !$this->check();
+        return ! $this->check();
     }
 
     /**
@@ -49,8 +51,9 @@ class CookieGuard implements Guard
         }
 
         $token = $this->request->cookie('sid');
-        if (!$token) {
+        if (! $token) {
             Log::debug('Cookie authentication: no sid cookie found');
+
             return null;
         }
 
@@ -59,32 +62,35 @@ class CookieGuard implements Guard
             $payload = Crypt::decryptString($token);
             $data = json_decode($payload, true);
 
-            if (!$data || !isset($data['uid']) || !isset($data['exp'])) {
+            if (! $data || ! isset($data['uid']) || ! isset($data['exp'])) {
                 Log::debug('Cookie authentication: invalid payload structure', ['data' => $data]);
+
                 return null;
             }
 
             // トークンの有効期限をチェック
             if (time() > $data['exp']) {
                 Log::debug('Cookie authentication: token expired');
+
                 return null;
             }
 
             // ユーザーを取得
             $this->user = $this->provider->retrieveById($data['uid']);
-            
+
             if ($this->user) {
                 Log::debug('Cookie authentication: user authenticated', ['user_id' => $this->user->id]);
             } else {
                 Log::debug('Cookie authentication: user not found', ['uid' => $data['uid']]);
             }
-            
+
             return $this->user;
         } catch (\Exception $e) {
             Log::warning('Cookie authentication failed', [
                 'error' => $e->getMessage(),
-                'cookie_exists' => !empty($token)
+                'cookie_exists' => ! empty($token),
             ]);
+
             return null;
         }
     }
@@ -95,6 +101,7 @@ class CookieGuard implements Guard
     public function id(): ?int
     {
         $user = $this->user();
+
         return $user?->getKey();
     }
 
@@ -136,6 +143,6 @@ class CookieGuard implements Guard
      */
     public function hasUser(): bool
     {
-        return !is_null($this->user);
+        return ! is_null($this->user);
     }
 }

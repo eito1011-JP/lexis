@@ -43,7 +43,7 @@ class IdentifyTokenUseCaseTest extends TestCase
             ->shouldReceive('findActiveByToken')
             ->once()
             ->with($token)
-            ->andReturn(new PreUser());
+            ->andReturn(new PreUser);
 
         // Act
         $result = $this->useCase->execute($token);
@@ -73,5 +73,3 @@ class IdentifyTokenUseCaseTest extends TestCase
         }
     }
 }
-
-

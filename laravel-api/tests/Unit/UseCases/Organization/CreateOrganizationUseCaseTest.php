@@ -2,8 +2,8 @@
 
 namespace Tests\Unit\UseCases\Organization;
 
-use App\Consts\Flag;
 use App\Consts\ErrorType;
+use App\Consts\Flag;
 use App\Enums\OrganizationRoleBindingRole;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
@@ -158,5 +158,3 @@ class CreateOrganizationUseCaseTest extends TestCase
         }
     }
 }
-
-

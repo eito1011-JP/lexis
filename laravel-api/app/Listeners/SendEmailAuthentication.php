@@ -20,5 +20,3 @@ class SendEmailAuthentication implements ShouldQueue
         Mail::to($event->email)->send(new EmailAuthentication($event->email, $event->token));
     }
 }
-
-

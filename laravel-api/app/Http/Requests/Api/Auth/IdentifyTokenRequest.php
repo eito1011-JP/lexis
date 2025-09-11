@@ -18,5 +18,3 @@ class IdentifyTokenRequest extends FormRequest
         ];
     }
 }
-
-

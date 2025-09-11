@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Consts\ErrorType;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
-use App\Http\Requests\Api\Auth\SendAuthnEmailRequest;
-use App\Http\Requests\Api\Auth\IdentifyTokenRequest;
-use App\Http\Requests\Api\Auth\SigninWithEmailRequest;
-use App\Exceptions\TooManyRequestsException;
 use App\Exceptions\NoAccountException;
-use App\UseCases\Auth\SendAuthnEmailUseCase;
+use App\Exceptions\TooManyRequestsException;
+use App\Http\Requests\Api\Auth\IdentifyTokenRequest;
+use App\Http\Requests\Api\Auth\SendAuthnEmailRequest;
+use App\Http\Requests\Api\Auth\SigninWithEmailRequest;
 use App\UseCases\Auth\IdentifyTokenUseCase;
+use App\UseCases\Auth\SendAuthnEmailUseCase;
 use App\UseCases\Auth\SigninWithEmailUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -41,6 +41,7 @@ class EmailAuthnController extends ApiBaseController
             );
         } catch (Exception $e) {
             Log::error($e);
+
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),
@@ -57,7 +58,7 @@ class EmailAuthnController extends ApiBaseController
     public function identifyToken(IdentifyTokenRequest $request): JsonResponse
     {
         try {
-            $result = $this->identifyTokenUseCase->execute($request->token);   
+            $result = $this->identifyTokenUseCase->execute($request->token);
         } catch (AuthenticationException) {
             return $this->sendError(
                 ErrorType::CODE_INVALID_TOKEN,
@@ -94,24 +95,22 @@ class EmailAuthnController extends ApiBaseController
                 __('errors.MSG_TOO_MANY_REQUESTS'),
                 ErrorType::STATUS_TOO_MANY_REQUESTS,
             );
-        }
-        catch (NoAccountException) {
+        } catch (NoAccountException) {
             return $this->sendError(
                 ErrorType::CODE_NO_ACCOUNT,
                 __('errors.MSG_NO_ACCOUNT'),
                 ErrorType::STATUS_NO_ACCOUNT,
             );
-        }
-        catch (AuthenticationException) {
+        } catch (AuthenticationException) {
             return $this->sendError(
                 ErrorType::CODE_AUTHENTICATION_FAILED,
                 __('errors.MSG_AUTHENTICATION_FAILED'),
                 ErrorType::STATUS_AUTHENTICATION_FAILED,
             );
-        }
-        catch (Exception $e) {
+        } catch (Exception $e) {
             // 例外の詳細をログに出す（stack と single に出力される）
             Log::error($e);
+
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),
@@ -123,4 +122,3 @@ class EmailAuthnController extends ApiBaseController
         return response()->json($result['user'])->withCookie($result['cookie']);
     }
 }
-

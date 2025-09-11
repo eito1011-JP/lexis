@@ -44,5 +44,3 @@ class ResolveOrganizationFromSubdomain
         return $parts[0] ?: null;
     }
 }
-
-

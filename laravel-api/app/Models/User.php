@@ -12,8 +12,8 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-
     use HasFactory;
+
     use Notifiable;
     use SoftDeletes;
 
@@ -102,7 +102,6 @@ class User extends Authenticatable
     {
         return $this->hasMany(Comment::class);
     }
-
 
     public function scopeByEmail(Builder $query, string $email): Builder
     {
