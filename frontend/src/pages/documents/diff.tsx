@@ -417,7 +417,20 @@ const SmartDiffValue = ({
 };
 
 // 階層パンくずリストコンポーネント
-const SlugBreadcrumb = ({ slug }: { slug: string }) => {
+const SlugBreadcrumb = ({ slug }: { slug: string | undefined }) => {
+  // slugがundefinedまたはnullの場合の処理を追加
+  if (!slug) {
+    return (
+      <div className="mb-6">
+        <div className="flex items-center text-sm text-gray-400 mb-3">
+          <span className="text-gray-500">/</span>
+          <span className="text-gray-400">(slug not available)</span>
+        </div>
+        <div className="border-b border-gray-700/50"></div>
+      </div>
+    );
+  }
+
   const slugParts = slug.split('/').filter(part => part.length > 0);
   let currentPath = '';
 
@@ -470,7 +483,6 @@ export default function DiffPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
 
   const [diffData, setDiffData] = useState<DiffResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -523,18 +535,9 @@ export default function DiffPage(): JSX.Element {
   useEffect(() => {
     const fetchDiff = async () => {
       try {
-        // URLパラメータからuser_branch_idを取得
-        const urlParams = new URLSearchParams(window.location.search);
-        const userBranchId = urlParams.get('user_branch_id');
-
-        if (!userBranchId) {
-          setError('user_branch_idパラメータが必要です');
-          setLoading(false);
-          return;
-        }
 
         const response = await apiClient.get(
-          `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}?user_branch_id=${userBranchId}`
+          `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}`
         );
 
         setDiffData(response);
@@ -542,7 +545,7 @@ export default function DiffPage(): JSX.Element {
         console.error('差分取得エラー:', err);
         setError('差分データの取得に失敗しました');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -693,18 +696,6 @@ export default function DiffPage(): JSX.Element {
       <AdminLayout title="読み込み中...">
         <div className="flex flex-col items-center justify-center h-full">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  // データ読み込み中
-  if (loading) {
-    return (
-      <AdminLayout title="差分確認">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-          <p className="text-gray-400">差分データを読み込み中...</p>
         </div>
       </AdminLayout>
     );
