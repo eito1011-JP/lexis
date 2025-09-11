@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Dto\UseCase\UserBranch\FetchDiffDto;
 use App\Http\Requests\FetchDiffRequest;
 use App\Services\DocumentDiffService;
+use App\UseCases\UserBranch\FetchDiffUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,10 +14,14 @@ use Illuminate\Support\Facades\Log;
 class UserBranchController extends ApiBaseController
 {
     protected DocumentDiffService $documentDiffService;
+    protected FetchDiffUseCase $fetchDiffUseCase;
 
-    public function __construct(DocumentDiffService $documentDiffService)
-    {
+    public function __construct(
+        DocumentDiffService $documentDiffService,
+        FetchDiffUseCase $fetchDiffUseCase
+    ) {
         $this->documentDiffService = $documentDiffService;
+        $this->fetchDiffUseCase = $fetchDiffUseCase;
     }
 
     /**
@@ -55,7 +61,7 @@ class UserBranchController extends ApiBaseController
     /**
      * Git差分取得
      */
-    public function fetchDiff(FetchDiffRequest $request): JsonResponse
+    public function fetchDiff(): JsonResponse
     {
         try {
             $user = $this->user();
@@ -66,18 +72,8 @@ class UserBranchController extends ApiBaseController
                 ], 401);
             }
 
-            // ユーザーブランチと関連データを一括取得
-            $userBranch = $user->userBranches()->active()
-                ->with([
-                    'editStartVersions',
-                    'editStartVersions.originalDocumentVersion',
-                    'editStartVersions.currentDocumentVersion',
-                    'editStartVersions.originalCategory',
-                    'editStartVersions.currentCategory',
-                ])
-                ->first();
-
-            $diffResult = $this->documentDiffService->generateDiffData($userBranch->editStartVersions);
+            // UseCaseを実行
+            $diffResult = $this->fetchDiffUseCase->execute($user);
 
             return response()->json($diffResult);
 
