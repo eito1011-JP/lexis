@@ -43,16 +43,6 @@ class UserBranch extends Model
     }
 
     /**
-     * ユーザーのアクティブなブランチを取得
-     */
-    public static function getActiveBranch(int $userId): ?self
-    {
-        return self::where('user_id', $userId)
-            ->active()
-            ->first();
-    }
-
-    /**
      * ユーザーとのリレーション
      */
     public function user()

@@ -63,26 +63,6 @@ class DocumentController extends ApiBaseController
         $this->documentCategoryService = $documentCategoryService;
     }
 
-    /**
-     * カテゴリ一覧を取得
-     */
-    public function getCategories(Request $request): JsonResponse
-    {
-        try {
-            $categories = DocumentCategory::select('id', 'name', 'slug', 'sidebar_label', 'position', 'description')
-                ->orderBy('position')
-                ->get();
-
-            return response()->json([
-                'categories' => $categories,
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'カテゴリ一覧の取得に失敗しました',
-            ], 500);
-        }
-    }
 
     /**
      * ドキュメント一覧を取得
