@@ -12,14 +12,15 @@ class FetchCategoriesDto extends UseCaseDto
     ) {
     }
 
+
     /**
-     * リクエストからDTOを生成
+     * リクエストデータからDTOを作成
      */
-    public static function fromArray(array $data): self
+    public static function fromRequest(array $requestData): self
     {
         return new self(
-            parentId: $data['parent_id'] ?? null,
-            pullRequestEditSessionToken: $data['pull_request_edit_session_token'] ?? null,
+            parentId: $requestData['parent_id'] ?? null,
+            pullRequestEditSessionToken: $requestData['pull_request_edit_session_token'] ?? null,
         );
     }
 }
