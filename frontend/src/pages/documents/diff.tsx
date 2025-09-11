@@ -15,11 +15,10 @@ import { markdownStyles } from '@/styles/markdownContent';
 type DiffItem = {
   id: number;
   slug: string;
-  sidebar_label: string;
+  sidebar_label?: string; // ドキュメント用
+  title?: string; // カテゴリ用
   description?: string;
-  title?: string;
   content?: string;
-  position?: number;
   file_order?: number;
   parent_id?: number;
   category_id?: number;
@@ -983,30 +982,12 @@ export default function DiffPage(): JSX.Element {
                   >
                     <SlugBreadcrumb slug={category.slug} />
                     <SmartDiffValue
-                      label="Slug"
+                      label="タイトル"
                       fieldInfo={getFieldInfo(
                         diffInfo,
-                        'slug',
-                        category.slug,
-                        originalCategory?.slug
-                      )}
-                    />
-                    <SmartDiffValue
-                      label="カテゴリ名"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'sidebar_label',
-                        category.sidebar_label,
-                        originalCategory?.sidebar_label
-                      )}
-                    />
-                    <SmartDiffValue
-                      label="表示順"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'position',
-                        category.position,
-                        originalCategory?.position
+                        'title',
+                        category.title,
+                        originalCategory?.title
                       )}
                     />
                     <SmartDiffValue
