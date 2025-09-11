@@ -7,7 +7,7 @@ use Illuminate\Foundation\Http\FormRequest;
 class FetchCategoriesRequest extends FormRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
+     * リクエストのauthorizationを処理
      */
     public function authorize(): bool
     {
@@ -15,27 +15,26 @@ class FetchCategoriesRequest extends FormRequest
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * リクエストのvalidationルールを取得
      */
     public function rules(): array
     {
         return [
             'parent_id' => 'nullable|integer|exists:document_categories,id',
+            'pull_request_edit_session_token' => 'nullable|string|size:32',
         ];
     }
 
     /**
-     * Get custom error messages for validator errors.
-     *
-     * @return array<string, string>
+     * validationエラーメッセージをカスタマイズ
      */
     public function messages(): array
     {
         return [
-            'parent_id.integer' => trans('validation.category.parent_id.integer'),
-            'parent_id.exists' => trans('validation.category.parent_id.exists'),
+            'parent_id.integer' => __('validation.category.parent_id.integer'),
+            'parent_id.exists' => __('validation.category.parent_id.exists'),
+            'pull_request_edit_session_token.string' => __('validation.token.string'),
+            'pull_request_edit_session_token.size' => __('validation.token.size'),
         ];
     }
 }

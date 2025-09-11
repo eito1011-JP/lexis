@@ -63,26 +63,6 @@ class DocumentController extends ApiBaseController
         $this->documentCategoryService = $documentCategoryService;
     }
 
-    /**
-     * カテゴリ一覧を取得
-     */
-    public function getCategories(Request $request): JsonResponse
-    {
-        try {
-            $categories = DocumentCategory::select('id', 'name', 'slug', 'sidebar_label', 'position', 'description')
-                ->orderBy('position')
-                ->get();
-
-            return response()->json([
-                'categories' => $categories,
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'カテゴリ一覧の取得に失敗しました',
-            ], 500);
-        }
-    }
 
     /**
      * ドキュメント一覧を取得
@@ -99,18 +79,22 @@ class DocumentController extends ApiBaseController
 
         // DTOを作成してUseCaseを実行
         $dto = GetDocumentsDto::fromArray($request->validated());
-        $result = $this->getDocumentsUseCase->execute($dto, $user);
-
-        if (! $result['success']) {
-            return response()->json([
-                'error' => $result['error'],
-            ], 500);
-        }
+        // $result = $this->getDocumentsUseCase->execute($dto, $user);
 
         return response()->json([
-            'documents' => $result['documents'],
-            'categories' => $result['categories'],
+            'documents' => [],
+            'categories' => [],
         ]);
+        // if (! $result['success']) {
+        //     return response()->json([
+        //         'error' => $result['error'],
+        //     ], 500);
+        // }
+
+        // return response()->json([
+        //     'documents' => $result['documents'],
+        //     'categories' => $result['categories'],
+        // ]);
     }
 
     /**

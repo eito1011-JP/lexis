@@ -14,6 +14,7 @@ use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
+use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Exceptions\AuthenticationException;
 use Http\Discovery\Exception\NotFoundException;
 use App\Exceptions\DuplicateExecutionException;
@@ -60,7 +61,9 @@ class DocumentCategoryController extends ApiBaseController
                 ], 401);
             }
 
-            $categories = $useCase->execute($user->id, $request->parent_id);
+            // DTOを作成してUseCaseを実行
+            $dto = FetchCategoriesDto::fromRequest($request->validated());
+            $categories = $useCase->execute($dto, $user);
 
             return response()->json([
                 'categories' => $categories,

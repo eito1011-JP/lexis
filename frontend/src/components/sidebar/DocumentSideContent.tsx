@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowDown } from '@/components/icon/common/ArrowDown';
 import { Folder } from '@/components/icon/common/Folder';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Plus } from '@/components/icon/common/Plus';
 import { Edit } from '@/components/icon/common/Edit';
+import { apiClient } from '@/components/admin/api/client';
 
-// カテゴリの型定義
+// APIから取得するカテゴリデータの型定義
+interface ApiCategoryData {
+  id: number;
+  title: string;
+}
+
+// フロントエンドで使用するカテゴリの型定義
 interface CategoryItem {
   id: number;
   label: string;
@@ -26,6 +33,24 @@ interface DocumentSideContentProps {
   selectedCategoryId?: number;
 }
 
+// カテゴリデータを取得するサービス関数
+const fetchCategories = async (parentId: number | null = null): Promise<ApiCategoryData[]> => {
+  try {
+    const params = new URLSearchParams();
+    if (parentId !== null) {
+      params.append('parent_id', parentId.toString());
+    }
+    
+    const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await apiClient.get(endpoint);
+    
+    return response.categories || [];
+  } catch (error) {
+    console.error('カテゴリの取得に失敗しました:', error);
+    throw error;
+  }
+};
+
 /**
  * ドキュメント用サイドコンテンツコンポーネント
  * 株式会社Nexis配下の階層構造のみを表示
@@ -35,10 +60,50 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
+  // カテゴリデータの状態管理
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  // ローディング状態
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // エラー状態
+  const [error, setError] = useState<string | null>(null);
 
-  // 株式会社Nexis配下のカテゴリ構造
-  // 実際のdocument_categoriesを想定した数値IDを使用
-  const companyCategories: CategoryItem[] = [
+  // APIデータをCategoryItem形式に変換する関数
+  const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
+    return apiData.map(item => ({
+      id: item.id,
+      label: item.title,
+      icon: Folder,
+      children: [] // 現時点ではドキュメント子要素は取得しない
+    }));
+  };
+
+  // カテゴリデータを取得するuseEffect
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // parent_id=nullでルートカテゴリを取得
+        const apiCategories = await fetchCategories(null);
+        const transformedCategories = transformApiDataToCategories(apiCategories);
+        
+        setCategories(transformedCategories);
+      } catch (err) {
+        console.error('カテゴリの取得に失敗しました:', err);
+        setError('カテゴリの取得に失敗しました');
+        // エラー時はハードコーディングされたデータをフォールバックとして使用
+        setCategories(fallbackCategories);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  // フォールバック用のハードコーディングされたカテゴリ構造
+  const fallbackCategories: CategoryItem[] = [
     {
       id: 1,
       label: 'ビジョン・ミッション',
@@ -253,7 +318,17 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
 
       {/* カテゴリリスト */}
       <div className="">
-      {companyCategories.map((category) => renderCategoryItem(category))}
+        {isLoading ? (
+          <div className="px-4 py-2 text-gray-400 text-sm">
+            カテゴリを読み込み中...
+          </div>
+        ) : error ? (
+          <div className="px-4 py-2 text-red-400 text-sm">
+            {error}
+          </div>
+        ) : (
+          categories.map((category) => renderCategoryItem(category))
+        )}
       </div>
     </div>
   );

@@ -37,46 +37,46 @@ class DocumentCategoryService
         }
     }
 
-    /**
-     * カテゴリパスからparentとなるcategory idを再帰的に取得
-     *
-     * @param  string|null  $categoryPath
-     *                                     parent/child/grandchildのカテゴリパスの場合、'parent/child/grandchild'の文字列を期待
-     * @return int カテゴリID
-     *
-     * @throws InvalidArgumentException 不正なパス形式または存在しないカテゴリの場合
-     */
-    public function getIdFromPath(?string $categoryPath): int
-    {
-        if (empty($categoryPath)) {
-            return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-        }
+    // /**
+    //  * カテゴリパスからparentとなるcategory idを再帰的に取得
+    //  *
+    //  * @param  string|null  $categoryPath
+    //  *                                     parent/child/grandchildのカテゴリパスの場合、'parent/child/grandchild'の文字列を期待
+    //  * @return int カテゴリID
+    //  *
+    //  * @throws InvalidArgumentException 不正なパス形式または存在しないカテゴリの場合
+    //  */
+    // public function getIdFromPath(?string $categoryPath): int
+    // {
+    //     if (empty($categoryPath)) {
+    //         return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
+    //     }
 
-        // 正しいパス形式（英数字、ハイフン、アンダースコアのセグメントをスラッシュで区切った形式）以外は無効
-        if (! preg_match('/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/', $categoryPath)) {
-            throw new InvalidArgumentException('Invalid path format: path must contain only alphanumeric characters, hyphens, and underscores separated by single slashes');
-        }
+    //     // 正しいパス形式（英数字、ハイフン、アンダースコアのセグメントをスラッシュで区切った形式）以外は無効
+    //     if (! preg_match('/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/', $categoryPath)) {
+    //         throw new InvalidArgumentException('Invalid path format: path must contain only alphanumeric characters, hyphens, and underscores separated by single slashes');
+    //     }
 
-        // スラッシュでパスを分割
-        $pathSegments = explode('/', $categoryPath);
+    //     // スラッシュでパスを分割
+    //     $pathSegments = explode('/', $categoryPath);
 
-        // デフォルトカテゴリ（uncategorized）から開始
-        $currentParentCategoryId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
+    //     // デフォルトカテゴリ（uncategorized）から開始
+    //     $currentParentCategoryId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
 
-        foreach ($pathSegments as $slug) {
-            $category = DocumentCategory::where('slug', $slug)
-                ->where('parent_id', $currentParentCategoryId)
-                ->first();
+    //     foreach ($pathSegments as $slug) {
+    //         $category = DocumentCategory::where('slug', $slug)
+    //             ->where('parent_id', $currentParentCategoryId)
+    //             ->first();
 
-            if (! $category) {
-                throw new InvalidArgumentException("Category not found: {$slug}");
-            }
+    //         if (! $category) {
+    //             throw new InvalidArgumentException("Category not found: {$slug}");
+    //         }
 
-            $currentParentCategoryId = $category->id;
-        }
+    //         $currentParentCategoryId = $category->id;
+    //     }
 
-        return $currentParentCategoryId;
-    }
+    //     return $currentParentCategoryId;
+    // }
 
     /**
      * サブカテゴリを取得（ブランチ別）
@@ -86,7 +86,7 @@ class DocumentCategoryService
         ?int $userBranchId = null,
         ?int $editPullRequestId = null
     ): Collection {
-        $query = DocumentCategory::select('slug', 'sidebar_label', 'position')
+        $query = DocumentCategory::select('sidebar_label', 'position')
             ->where('parent_id', $parentId)
             ->where(function ($q) use ($userBranchId) {
                 $q->where('status', 'merged')
