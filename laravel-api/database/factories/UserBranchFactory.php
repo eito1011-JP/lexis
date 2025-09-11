@@ -28,7 +28,6 @@ class UserBranchFactory extends Factory
         return [
             'user_id' => User::factory(),
             'branch_name' => $this->faker->word(),
-            'snapshot_commit' => $this->faker->sha1(),
             'is_active' => true,
         ];
     }

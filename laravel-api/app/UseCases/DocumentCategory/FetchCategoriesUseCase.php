@@ -45,6 +45,6 @@ class FetchCategoriesUseCase
                   ->where('organization_id', $user->organizationMember->organization_id);
         }
 
-        return $query->orderBy('position', 'asc')->get();
+        return $query->orderBy('created_at', 'asc')->get();
     }
 }

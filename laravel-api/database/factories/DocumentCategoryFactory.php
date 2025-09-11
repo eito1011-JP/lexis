@@ -27,7 +27,6 @@ class DocumentCategoryFactory extends Factory
     {
         return [
             'title' => $this->faker->words(2, true),
-            'position' => $this->faker->numberBetween(1, 100),
             'description' => $this->faker->sentence(),
             'status' => DocumentCategoryStatus::MERGED->value,
             'parent_id' => null,
