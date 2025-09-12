@@ -9,6 +9,7 @@ export interface DiffItem {
 
 // プルリクエスト作成リクエストの型定義
 export interface CreatePullRequestRequest {
+  organization_id: number;
   user_branch_id: number;
   title: string;
   description?: string;

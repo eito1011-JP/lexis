@@ -48,6 +48,8 @@ type DiffResponse = {
   original_document_versions?: DiffItem[];
   original_document_categories?: DiffItem[];
   diff_data: DiffDataInfo[];
+  user_branch_id: number;
+  organization_id: number;
 };
 
 // テーブル形式のdiff表示コンポーネント
@@ -567,12 +569,9 @@ export default function DiffPage(): JSX.Element {
     setSubmitSuccess(null);
 
     try {
-      // URLパラメータからuser_branch_idを取得
-      const urlParams = new URLSearchParams(window.location.search);
-      const userBranchId = urlParams.get('user_branch_id');
-
-      if (!userBranchId) {
-        setSubmitError('user_branch_idパラメータが必要です');
+      // 差分データからuser_branch_idとorganization_idを取得
+      if (!diffData?.user_branch_id || !diffData?.organization_id || !prTitle) {
+        setSubmitError('必要なパラメータが不足しています');
         return;
       }
 
@@ -607,8 +606,9 @@ export default function DiffPage(): JSX.Element {
 
       // デバッグログ
       console.log('送信データ:', {
-        user_branch_id: parseInt(userBranchId),
-        title: prTitle || '更新内容の提出',
+        organization_id: diffData.organization_id,
+        user_branch_id: diffData.user_branch_id,
+        title: prTitle,
         description: prDescription || 'このPRはハンドブックの更新を含みます。',
         reviewers: reviewerEmails,
         selectedReviewers,
@@ -617,8 +617,9 @@ export default function DiffPage(): JSX.Element {
 
       // PRタイトル・説明をAPIに渡す
       const response = await createPullRequest({
-        user_branch_id: parseInt(userBranchId),
-        title: prTitle || '更新内容の提出',
+        organization_id: diffData.organization_id,
+        user_branch_id: diffData.user_branch_id,
+        title: prTitle,
         description: prDescription || 'このPRはハンドブックの更新を含みます。',
         reviewers: reviewerEmails,
       });

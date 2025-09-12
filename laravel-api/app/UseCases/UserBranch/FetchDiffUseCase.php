@@ -45,6 +45,9 @@ class FetchDiffUseCase
             // 差分データを生成
             $diffResult = $this->documentDiffService->generateDiffData($userBranch->editStartVersions);
 
+            $diffResult['user_branch_id'] = $userBranch->id;
+            $diffResult['organization_id'] = $userBranch->organization->id;
+
             return $diffResult;
 
         } catch (TargetDocumentNotFoundException $e) {
