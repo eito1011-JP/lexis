@@ -12,14 +12,16 @@ use App\Dto\UseCase\UseCaseDto;
 class CreatePullRequestDto extends UseCaseDto
 {
     /**
+     * @param int $userBranchId ユーザーブランチID
+     * @param int $organizationId 組織ID
      * @param string $title プルリクエストのタイトル
-     * @param array $diffItems 差分アイテム配列 [['id' => int, 'type' => 'document'|'category'], ...]
      * @param string|null $description プルリクエストの説明
      * @param array|null $reviewers レビュアーのメールアドレス配列
      */
     public function __construct(
+        public readonly int $userBranchId,
+        public readonly int $organizationId,
         public readonly string $title,
-        public readonly array $diffItems,
         public readonly ?string $description = null,
         public readonly ?array $reviewers = null,
     ) {}

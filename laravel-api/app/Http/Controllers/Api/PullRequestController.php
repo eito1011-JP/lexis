@@ -93,8 +93,9 @@ class PullRequestController extends ApiBaseController
 
             // 2. DTOを作成
             $dto = CreatePullRequestDto::fromArray([
+                'userBranchId' => $request->user_branch_id,
+                'organizationId' => $request->organization_id,
                 'title' => $request->title,
-                'diffItems' => $request->diff_items,
                 'description' => $request->description,
                 'reviewers' => $request->reviewers,
             ]);
@@ -104,7 +105,7 @@ class PullRequestController extends ApiBaseController
 
             return response()->json($result);
 
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),

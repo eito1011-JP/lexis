@@ -2,8 +2,6 @@
 
 namespace App\UseCases\PullRequest;
 
-use App\Constants\DocumentCategoryConstants;
-use App\Consts\Flag;
 use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
@@ -13,9 +11,7 @@ use App\Models\DocumentVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
-use App\Services\CategoryFolderService;
-use App\Services\GitService;
-use App\Services\MdFileService;
+use App\Models\UserBranch;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -24,12 +20,6 @@ use Illuminate\Support\Facades\Log;
  */
 class CreatePullRequestUseCase
 {
-    public function __construct(
-        private GitService $gitService,
-        private MdFileService $mdFileService,
-        private CategoryFolderService $categoryFolderService,
-    ) {}
-
     /**
      * プルリクエストを作成
      *
@@ -45,82 +35,35 @@ class CreatePullRequestUseCase
         DB::beginTransaction();
 
         try {
-            // 1. アクティブなユーザーブランチを取得
-            $userBranch = $user->userBranches()
-                ->active()
-                ->orderBy('id', 'desc')
-                ->first();
+            // 1. ユーザーが組織に所属しているか確認
+            $this->validateUserBelongsToOrganization($user, $dto->organizationId);
 
-            if (!$userBranch) {
-                throw new \Exception('ユーザーブランチが見つかりません');
+            // 2. user_branch_idがactiveか確認
+            $userBranch = $this->validateUserBranchIsActive($dto->userBranchId);
+
+            // 3. document_versionsをactiveなuser_branch_idで絞り込んでstatus = pushedにupdate
+            $this->updateDocumentVersionsStatus($dto->userBranchId);
+
+            // 4. document_categoriesをactiveなuser_branch_idで絞り込んでstatus = pushedにupdate
+            $this->updateDocumentCategoriesStatus($dto->userBranchId);
+
+            // 5. pull_requestテーブルにレコードを作成（status = opened）
+            $pullRequest = $this->createPullRequest($dto, $userBranch);
+
+            // 6. レビュアーのuser_idを取得してpull_request_reviewersテーブルに一括insert
+            if (!empty($dto->reviewers)) {
+                $this->createPullRequestReviewers($pullRequest->id, $dto->reviewers);
             }
-
-            // 2. 差分アイテムを処理
-            $result = $this->processDiffItems($dto->diffItems, $userBranch->id);
-            $documentVersions = $result['documentVersions'];
-            $documentCategories = $result['documentCategories'];
-
-            // 3. GitHubツリー用のアイテムを作成
-            $treeItems = $this->createTreeItems($documentVersions, $documentCategories);
-
-            // 4. GitHubでリモートブランチ作成
-            $this->gitService->createRemoteBranch(
-                $userBranch->branch_name,
-                $userBranch->snapshot_commit
-            );
-
-            // 5. ツリー作成
-            $treeResult = $this->gitService->createTree(
-                $userBranch->snapshot_commit,
-                $treeItems
-            );
-
-            // 6. コミット作成
-            $commitResult = $this->gitService->createCommit(
-                $dto->title,
-                $treeResult['sha'],
-                [$userBranch->snapshot_commit]
-            );
-
-            // 7. ブランチ参照更新
-            $this->gitService->updateBranchReference(
-                $userBranch->branch_name,
-                $commitResult['sha']
-            );
-
-            // 8. プルリクエスト作成
-            $prResult = $this->gitService->createPullRequest(
-                $userBranch->branch_name,
-                $dto->title,
-                $dto->description ?? ''
-            );
-
-            // 9. レビュアー設定
-            $reviewerUserIds = $this->processReviewers($dto->reviewers, $prResult['pr_number']);
-
-            // 10. プルリクエストをDBに保存
-            $pullRequest = $this->savePullRequest($userBranch, $dto, $prResult);
-
-            // 11. レビュアーをDBに保存
-            if (!empty($reviewerUserIds)) {
-                $this->savePullRequestReviewers($pullRequest->id, $reviewerUserIds);
-            }
-
-            // 12. ユーザーブランチを非アクティブ化
-            $userBranch->update(['is_active' => Flag::FALSE]);
 
             DB::commit();
 
             Log::info('CreatePullRequestUseCase completed successfully', [
                 'pull_request_id' => $pullRequest->id,
-                'pr_number' => $prResult['pr_number']
             ]);
 
             return [
                 'success' => true,
                 'message' => 'プルリクエストを作成しました',
-                'pr_url' => $prResult['pr_url'],
-                'pr_number' => $prResult['pr_number'],
                 'pull_request_id' => $pullRequest->id,
             ];
 
@@ -132,173 +75,64 @@ class CreatePullRequestUseCase
     }
 
     /**
-     * 差分アイテムを処理し、ステータスを更新
+     * ユーザーが組織に所属しているか確認
      */
-    private function processDiffItems(array $diffItems, int $userBranchId): array
+    private function validateUserBelongsToOrganization(User $user, int $organizationId): void
     {
-        Log::info('Processing diff items', ['diffItems' => $diffItems]);
-
-        $documentIds = [];
-        $categoryIds = [];
-
-        // IDを分別
-        foreach ($diffItems as $item) {
-            if ($item['type'] === 'document') {
-                $documentIds[] = $item['id'];
-            } elseif ($item['type'] === 'category') {
-                $categoryIds[] = $item['id'];
-            }
+        // OrganizationMemberリレーションを使って確認
+        $organizationMember = $user->organizationMember;
+        
+        if (!$organizationMember || $organizationMember->organization_id !== $organizationId) {
+            throw new \Exception('ユーザーは指定された組織に所属していません');
         }
-
-        $documentVersions = collect();
-        $documentCategories = collect();
-
-        // ドキュメントバージョンを処理
-        if (!empty($documentIds)) {
-            $documentVersions = DocumentVersion::where('user_branch_id', $userBranchId)
-                ->withTrashed()
-                ->whereIn('id', $documentIds)
-                ->get();
-
-            DocumentVersion::where('user_branch_id', $userBranchId)
-                ->whereIn('id', $documentIds)
-                ->withTrashed()
-                ->update(['status' => DocumentStatus::PUSHED->value]);
-        }
-
-        // ドキュメントカテゴリを処理
-        if (!empty($categoryIds)) {
-            $documentCategories = DocumentCategory::where('user_branch_id', $userBranchId)
-                ->whereIn('id', $categoryIds)
-                ->withTrashed()
-                ->get();
-
-            DocumentCategory::where('user_branch_id', $userBranchId)
-                ->whereIn('id', $categoryIds)
-                ->withTrashed()
-                ->update(['status' => DocumentCategoryStatus::PUSHED->value]);
-        }
-
-        return [
-            'documentVersions' => $documentVersions,
-            'documentCategories' => $documentCategories,
-        ];
     }
 
     /**
-     * GitHubツリー用のアイテムを作成
+     * user_branch_idがactiveか確認
      */
-    private function createTreeItems($documentVersions, $documentCategories): array
+    private function validateUserBranchIsActive(int $userBranchId): UserBranch
     {
-        $treeItems = [];
+        $userBranch = UserBranch::find($userBranchId);
 
-        // ドキュメント用のツリーアイテム
-        foreach ($documentVersions as $documentVersion) {
-            $filePath = $this->mdFileService->generateFilePath(
-                $documentVersion->slug,
-                $documentVersion->category_path
-            );
-
-            Log::info('Processing document version', [
-                'id' => $documentVersion->id,
-                'is_deleted' => $documentVersion->is_deleted
-            ]);
-
-            if (!$documentVersion->is_deleted) {
-                $markdownContent = $this->mdFileService->createMdFileContent($documentVersion);
-                $treeItems[] = [
-                    'path' => $filePath,
-                    'mode' => '100644',
-                    'type' => 'blob',
-                    'content' => $markdownContent,
-                ];
-            } else {
-                $treeItems[] = [
-                    'path' => $filePath,
-                    'mode' => '100644',
-                    'type' => 'blob',
-                    'sha' => null,
-                ];
-            }
+        if (!$userBranch) {
+            throw new \Exception('ユーザーブランチが見つかりません');
         }
 
-        // カテゴリ用のツリーアイテム
-        foreach ($documentCategories as $documentCategory) {
-            $categoryJsonData = [
-                'label' => $documentCategory->sidebar_label,
-                'position' => $documentCategory->position,
-                'link' => [
-                    'type' => 'generated-index',
-                    'description' => $documentCategory->description,
-                ],
-            ];
-            $categoryJsonContent = json_encode($categoryJsonData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-
-            $categoryFolderPath = $this->categoryFolderService->generateCategoryFilePath(
-                $documentCategory->slug,
-                $documentCategory->parent_id && $documentCategory->parent_id !== DocumentCategoryConstants::DEFAULT_CATEGORY_ID
-                    ? $documentCategory->parent_id
-                    : null
-            );
-
-            Log::info('Processing category', ['categoryFolderPath' => $categoryFolderPath]);
-
-            // _category_.jsonファイル
-            $treeItems[] = [
-                'path' => $categoryFolderPath . '/_category_.json',
-                'mode' => '100644',
-                'type' => 'blob',
-                'content' => $categoryJsonContent,
-            ];
-
-            // .gitkeepファイル
-            $treeItems[] = [
-                'path' => $categoryFolderPath . '/.gitkeep',
-                'mode' => '100644',
-                'type' => 'blob',
-                'content' => '',
-            ];
+        if (!$userBranch->is_active) {
+            throw new \Exception('指定されたユーザーブランチはアクティブではありません');
         }
 
-        return $treeItems;
+        return $userBranch;
     }
 
     /**
-     * レビュアーを処理
+     * document_versionsのステータスをpushedに更新
      */
-    private function processReviewers(?array $reviewers, int $prNumber): array
+    private function updateDocumentVersionsStatus(int $userBranchId): void
     {
-        if (empty($reviewers)) {
-            return [];
-        }
+        DocumentVersion::where('user_branch_id', $userBranchId)
+            ->update(['status' => DocumentStatus::PUSHED->value]);
+    }
 
-        $reviewerUsers = User::whereIn('email', $reviewers)->get();
-        $reviewerUserIds = [];
-        $reviewerUsernames = [];
-
-        foreach ($reviewerUsers as $reviewerUser) {
-            $reviewerUserIds[] = $reviewerUser->id;
-            // GitHubユーザー名（仮でemailのローカル部分を使用）
-            $reviewerUsernames[] = explode('@', $reviewerUser->email)[0];
-        }
-
-        // GitHubでレビュアーを設定
-        $this->gitService->addReviewersToPullRequest($prNumber, $reviewerUsernames);
-
-        return $reviewerUserIds;
+    /**
+     * document_categoriesのステータスをpushedに更新
+     */
+    private function updateDocumentCategoriesStatus(int $userBranchId): void
+    {
+        DocumentCategory::where('user_branch_id', $userBranchId)
+            ->update(['status' => DocumentCategoryStatus::PUSHED->value]);
     }
 
     /**
      * プルリクエストをDBに保存
      */
-    private function savePullRequest($userBranch, CreatePullRequestDto $dto, array $prResult): PullRequest
+    private function createPullRequest(CreatePullRequestDto $dto, UserBranch $userBranch): PullRequest
     {
         return PullRequest::create([
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $dto->organizationId,
             'title' => $dto->title,
             'description' => $dto->description,
-            'github_url' => $prResult['pr_url'],
-            'pr_number' => $prResult['pr_number'],
             'status' => PullRequestStatus::OPENED->value,
         ]);
     }
@@ -306,14 +140,23 @@ class CreatePullRequestUseCase
     /**
      * プルリクエストレビュアーをDBに保存
      */
-    private function savePullRequestReviewers(int $pullRequestId, array $reviewerUserIds): void
+    private function createPullRequestReviewers(int $pullRequestId, array $reviewerEmails): void
     {
-        $reviewerData = array_map(function ($reviewerUserId) use ($pullRequestId) {
+        // メールアドレスからuser_idを取得
+        $reviewerUsers = User::whereIn('email', $reviewerEmails)->get();
+
+        if ($reviewerUsers->count() !== count($reviewerEmails)) {
+            throw new \Exception('一部のレビュアーが見つかりません');
+        }
+
+        $reviewerData = $reviewerUsers->map(function ($user) use ($pullRequestId) {
             return [
                 'pull_request_id' => $pullRequestId,
-                'user_id' => $reviewerUserId,
+                'user_id' => $user->id,
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
-        }, $reviewerUserIds);
+        })->toArray();
 
         PullRequestReviewer::insert($reviewerData);
     }

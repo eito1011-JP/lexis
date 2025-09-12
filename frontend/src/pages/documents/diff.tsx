@@ -610,7 +610,6 @@ export default function DiffPage(): JSX.Element {
         user_branch_id: parseInt(userBranchId),
         title: prTitle || '更新内容の提出',
         description: prDescription || 'このPRはハンドブックの更新を含みます。',
-        diff_items: diffItems,
         reviewers: reviewerEmails,
         selectedReviewers,
         users: users.map(u => ({ id: u.id, email: u.email })),
@@ -621,7 +620,6 @@ export default function DiffPage(): JSX.Element {
         user_branch_id: parseInt(userBranchId),
         title: prTitle || '更新内容の提出',
         description: prDescription || 'このPRはハンドブックの更新を含みます。',
-        diff_items: diffItems,
         reviewers: reviewerEmails,
       });
 

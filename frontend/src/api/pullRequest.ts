@@ -12,7 +12,6 @@ export interface CreatePullRequestRequest {
   user_branch_id: number;
   title: string;
   description?: string;
-  diff_items: DiffItem[];
   reviewers?: string[];
 }
 
