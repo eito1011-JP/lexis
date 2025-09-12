@@ -119,4 +119,24 @@ class DocumentCategoryService
 
         return $query->orderBy('position', 'asc')->get();
     }
+
+        /**
+     * 親カテゴリのパスを取得
+     */
+    public function createCategoryPath(DocumentCategory $documentCategory): ?string
+    {
+        if (! $documentCategory->parent_id) {
+            return null;
+        }
+
+        $path = [];
+        $parentCategory = DocumentCategory::find($documentCategory->parent_id);
+
+        while ($parentCategory) {
+            array_unshift($path, $parentCategory->title);
+            $parentCategory = $parentCategory->parent_id ? DocumentCategory::find($parentCategory->parent_id) : null;
+        }
+
+        return implode('/', $path);
+    }
 }
