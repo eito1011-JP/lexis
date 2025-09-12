@@ -36,8 +36,6 @@ class CreatePullRequestUseCase
      */
     public function execute(CreatePullRequestDto $dto, User $user): array
     {
-        Log::info('CreatePullRequestUseCase start', ['dto' => $dto->toArray(), 'user_id' => $user->id]);
-
         DB::beginTransaction();
 
         try {
@@ -56,20 +54,17 @@ class CreatePullRequestUseCase
             // 5. pull_requestテーブルにレコードを作成（status = opened）
             $pullRequest = $this->createPullRequest($dto, $userBranch);
 
-            // 6. レビュアーのuser_idを取得してpull_request_reviewersテーブルに一括insert
+            // 6. user_branchを非アクティブにする
+            $this->userBranchService->deactivateUserBranch($dto->userBranchId);
+
+            // 7. レビュアーのuser_idを取得してpull_request_reviewersテーブルに一括insert
             if (!empty($dto->reviewers)) {
                 $this->createPullRequestReviewers($pullRequest->id, $dto->reviewers);
             }
 
             DB::commit();
 
-            Log::info('CreatePullRequestUseCase completed successfully', [
-                'pull_request_id' => $pullRequest->id,
-            ]);
-
             return [
-                'success' => true,
-                'message' => 'プルリクエストを作成しました',
                 'pull_request_id' => $pullRequest->id,
             ];
 

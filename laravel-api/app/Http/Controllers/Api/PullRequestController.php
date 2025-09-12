@@ -101,9 +101,9 @@ class PullRequestController extends ApiBaseController
             ]);
 
             // 3. UseCaseを実行
-            $result = $this->createPullRequestUseCase->execute($dto, $user);
+            $this->createPullRequestUseCase->execute($dto, $user);
 
-            return response()->json($result);
+            return response()->json();
 
         } catch (\Exception) {
             return $this->sendError(
