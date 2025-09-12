@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Log;
 
 class DocumentDiffService
 {
+    public function __construct(
+        private DocumentCategoryService $documentCategoryService
+    ) {}
+
     /**
      * 差分データを生成
      */
@@ -39,6 +43,8 @@ class DocumentDiffService
                 if ($isDocument) {
                     $documentVersions->push($currentObject);
                 } else {
+                    // parent_idから階層構造を取得して、document_categoriesに追加
+                    $currentObject->category_path = $this->documentCategoryService->createCategoryPath($currentObject);
                     $documentCategories->push($currentObject);
                 }
             }
@@ -48,6 +54,7 @@ class DocumentDiffService
                 if ($isDocument) {
                     $originalDocumentVersions->push($originalObject);
                 } else {
+                    $originalObject->category_path = $this->documentCategoryService->createCategoryPath($originalObject);
                     $originalDocumentCategories->push($originalObject);
                 }
             }
@@ -115,8 +122,6 @@ class DocumentDiffService
             return 'created';
         }
 
-        Log::info('currentObject: '.json_encode($currentObject));
-        Log::info('is_deleted: '.json_encode($currentObject->is_deleted));
         if ($currentObject && $currentObject->is_deleted) {
             return 'deleted';
         }
@@ -191,7 +196,6 @@ class DocumentDiffService
             return [
                 'title' => ['status' => 'added', 'current' => $currentCategory->title, 'original' => null],
                 'description' => ['status' => 'added', 'current' => $currentCategory->description, 'original' => null],
-                'parent_id' => ['status' => 'added', 'current' => $currentCategory->parent_id, 'original' => null],
             ];
         }
 
@@ -200,13 +204,12 @@ class DocumentDiffService
             return [
                 'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->title],
                 'description' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->description],
-                'parent_id' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->parent_id],
             ];
         }
 
         // 編集時は変更されたフィールドのみを検出
         $changedFields = [];
-        $fieldsToCheck = ['title', 'description', 'parent_id'];
+        $fieldsToCheck = ['title', 'description'];
 
         foreach ($fieldsToCheck as $field) {
             if ($currentCategory->{$field} !== $originalCategory->{$field}) {
