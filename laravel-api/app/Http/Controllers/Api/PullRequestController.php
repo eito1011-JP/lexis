@@ -2,11 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Constants\DocumentCategoryConstants;
-use App\Consts\Flag;
 use App\Consts\ErrorType;
-use App\Enums\DocumentCategoryStatus;
-use App\Enums\DocumentStatus;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestReviewerActionStatus;
 use App\Enums\PullRequestStatus;
@@ -23,17 +19,16 @@ use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
 use App\Jobs\PullRequestMergeJob;
 use App\Models\ActivityLogOnPullRequest;
-use App\Models\DocumentCategory;
-use App\Models\DocumentVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
-use App\Models\User;
 use App\Services\CategoryFolderService;
 use App\Services\DocumentDiffService;
 use App\Services\GitService;
 use App\Services\MdFileService;
 use App\Services\PullRequestConflictService;
 use App\UseCases\PullRequest\IsConflictResolvedUseCase;
+use Exception;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -105,7 +100,14 @@ class PullRequestController extends ApiBaseController
 
             return response()->json();
 
-        } catch (\Exception) {
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+            );
+        }
+        catch (Exception) {
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),

@@ -16,6 +16,7 @@ use App\Services\OrganizationService;
 use App\Services\UserBranchService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Http\Discovery\Exception\NotFoundException;
 
 /**
  * プルリクエスト作成UseCase
@@ -117,7 +118,7 @@ class CreatePullRequestUseCase
         $reviewerUsers = User::whereIn('email', $reviewerEmails)->get();
 
         if ($reviewerUsers->count() !== count($reviewerEmails)) {
-            throw new \Exception('一部のレビュアーが見つかりません');
+            throw new NotFoundException();
         }
 
         $reviewerData = $reviewerUsers->map(function ($user) use ($pullRequestId) {
