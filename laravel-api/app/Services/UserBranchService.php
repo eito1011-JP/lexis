@@ -7,8 +7,9 @@ use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use Github\Client;
+use Http\Discovery\Exception\NotFoundException;
 
-class UserBranchService
+class UserBranchService extends BaseService
 {
     public function __construct(
         private Client $githubClient
@@ -61,5 +62,40 @@ class UserBranchService
             'is_active' => Flag::TRUE,
             'organization_id' => $organizationId,
         ]);
+    }
+
+    /**
+     * ユーザーブランチを取得し、アクティブでない場合は例外をスロー
+     *
+     * @param int $userBranchId ユーザーブランチID
+     * @return UserBranch アクティブなユーザーブランチ
+     * @throws \Exception ユーザーブランチが見つからない、またはアクティブでない場合
+     */
+    public function fetchActiveUserBranch(int $userBranchId): UserBranch
+    {
+        $userBranch = UserBranch::query()->active()->find($userBranchId);
+
+        if (!$userBranch) {
+            throw new NotFoundException();
+        }
+
+        return $userBranch;
+    }
+
+    /**
+     * ユーザーブランチを非アクティブにする
+     *
+     * @param int $userBranchId ユーザーブランチID
+     * @return bool 更新が成功した場合はtrue
+     */
+    public function deactivateUserBranch(int $userBranchId): bool
+    {
+        $userBranch = UserBranch::query()->active()->find($userBranchId);
+        
+        if (!$userBranch) {
+            throw new NotFoundException();
+        }
+
+        return $userBranch->update(['is_active' => Flag::FALSE]);
     }
 }
