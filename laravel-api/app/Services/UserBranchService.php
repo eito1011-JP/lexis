@@ -6,15 +6,10 @@ use App\Consts\Flag;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
-use Github\Client;
 use Http\Discovery\Exception\NotFoundException;
 
 class UserBranchService extends BaseService
 {
-    public function __construct(
-        private Client $githubClient
-    ) {}
-
     /**
      * ユーザーのアクティブなブランチを取得または作成する
      *
