@@ -71,7 +71,7 @@ class UserBranchService extends BaseService
      * @return UserBranch アクティブなユーザーブランチ
      * @throws \Exception ユーザーブランチが見つからない、またはアクティブでない場合
      */
-    public function fetchActiveUserBranch(int $userBranchId): UserBranch
+    public function findActiveUserBranch(int $userBranchId): UserBranch
     {
         $userBranch = UserBranch::query()->active()->find($userBranchId);
 

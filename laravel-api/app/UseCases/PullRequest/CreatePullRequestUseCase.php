@@ -12,6 +12,8 @@ use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Services\OrganizationService;
+use App\Services\UserBranchService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -20,6 +22,10 @@ use Illuminate\Support\Facades\Log;
  */
 class CreatePullRequestUseCase
 {
+    public function __construct(
+        private OrganizationService $organizationService,
+        private UserBranchService $userBranchService,
+    ) {}
     /**
      * プルリクエストを作成
      *
@@ -36,10 +42,10 @@ class CreatePullRequestUseCase
 
         try {
             // 1. ユーザーが組織に所属しているか確認
-            $this->validateUserBelongsToOrganization($user, $dto->organizationId);
+            $this->organizationService->validateUserBelongsToOrganization($user->id, $dto->organizationId);
 
             // 2. user_branch_idがactiveか確認
-            $userBranch = $this->validateUserBranchIsActive($dto->userBranchId);
+            $userBranch = $this->userBranchService->findActiveUserBranch($dto->userBranchId);
 
             // 3. document_versionsをactiveなuser_branch_idで絞り込んでstatus = pushedにupdate
             $this->updateDocumentVersionsStatus($dto->userBranchId);
@@ -74,36 +80,6 @@ class CreatePullRequestUseCase
         }
     }
 
-    /**
-     * ユーザーが組織に所属しているか確認
-     */
-    private function validateUserBelongsToOrganization(User $user, int $organizationId): void
-    {
-        // OrganizationMemberリレーションを使って確認
-        $organizationMember = $user->organizationMember;
-        
-        if (!$organizationMember || $organizationMember->organization_id !== $organizationId) {
-            throw new \Exception('ユーザーは指定された組織に所属していません');
-        }
-    }
-
-    /**
-     * user_branch_idがactiveか確認
-     */
-    private function validateUserBranchIsActive(int $userBranchId): UserBranch
-    {
-        $userBranch = UserBranch::find($userBranchId);
-
-        if (!$userBranch) {
-            throw new \Exception('ユーザーブランチが見つかりません');
-        }
-
-        if (!$userBranch->is_active) {
-            throw new \Exception('指定されたユーザーブランチはアクティブではありません');
-        }
-
-        return $userBranch;
-    }
 
     /**
      * document_versionsのステータスをpushedに更新
