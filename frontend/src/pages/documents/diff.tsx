@@ -22,6 +22,7 @@ type DiffItem = {
   file_order?: number;
   parent_id?: number;
   category_id?: number;
+  category_path?: string; // カテゴリ階層パス
   status: string;
   user_branch_id: number;
   created_at: string;
@@ -416,59 +417,54 @@ const SmartDiffValue = ({
 };
 
 // 階層パンくずリストコンポーネント
-const SlugBreadcrumb = ({ slug }: { slug: string | undefined }) => {
-  // slugがundefinedまたはnullの場合の処理を追加
-  if (!slug) {
+const CategoryPathBreadcrumb = ({ categoryPath }: { categoryPath: string | null | undefined }) => {
+  // categoryPathがnullまたはundefinedの場合は"/"を表示
+  if (!categoryPath) {
     return (
       <div className="mb-6">
         <div className="flex items-center text-sm text-gray-400 mb-3">
           <span className="text-gray-500">/</span>
-          <span className="text-gray-400">(slug not available)</span>
         </div>
         <div className="border-b border-gray-700/50"></div>
       </div>
     );
   }
 
-  const slugParts = slug.split('/').filter(part => part.length > 0);
-  let currentPath = '';
+  // category_pathをそのまま表示し、階層構造をパンくずリストとして表示
+  const pathParts = categoryPath.split('/').filter(part => part.length > 0);
 
   return (
     <div className="mb-6">
       <div className="flex items-center text-sm text-gray-400 mb-3">
-        {slugParts.map((part, index) => {
-          // パスを構築（現在までの部分）
-          currentPath += (index === 0 ? '' : '/') + part;
-
-          return (
-            <React.Fragment key={index}>
-              <span className="text-gray-500">/</span>
-              {index > 0 && (
-                <span className="mx-2">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 5l7 7-7 7"
-                    ></path>
-                  </svg>
-                </span>
-              )}
-              {index === slugParts.length - 1 ? (
-                <span className="text-blue-400 font-medium">{part}</span>
-              ) : (
-                <span className="text-gray-400 hover:text-gray-300">{part}</span>
-              )}
-            </React.Fragment>
-          );
-        })}
+        <span className="text-gray-500">/</span>
+        {pathParts.map((part, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && (
+              <span className="mx-2">
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5l7 7-7 7"
+                  ></path>
+                </svg>
+              </span>
+            )}
+            {index === pathParts.length - 1 ? (
+              <span className="text-blue-400 font-medium">{part}</span>
+            ) : (
+              <span className="text-gray-400 hover:text-gray-300">{part}</span>
+            )}
+            {index < pathParts.length - 1 && <span className="mx-1">/</span>}
+          </React.Fragment>
+        ))}
       </div>
       <div className="border-b border-gray-700/50"></div>
     </div>
@@ -980,7 +976,7 @@ export default function DiffPage(): JSX.Element {
                     key={category.id}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
-                    <SlugBreadcrumb slug={category.slug} />
+                    <CategoryPathBreadcrumb categoryPath={category.category_path} />
                     <SmartDiffValue
                       label="タイトル"
                       fieldInfo={getFieldInfo(
@@ -1019,13 +1015,17 @@ export default function DiffPage(): JSX.Element {
               {diffData.document_versions.map(document => {
                 const diffInfo = getDiffInfoById(document.id, 'document');
                 const originalDocument = originalDocs[document.slug];
+                
+                // ドキュメントのカテゴリのcategory_pathを取得
+                const documentCategory = diffData.document_categories.find(cat => cat.id === document.category_id);
+                const documentCategoryPath = documentCategory?.category_path;
 
                 return (
                   <div
                     key={document.id}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
-                    <SlugBreadcrumb slug={document.slug} />
+                    <CategoryPathBreadcrumb categoryPath={documentCategoryPath} />
                     <SmartDiffValue
                       label="Slug"
                       fieldInfo={getFieldInfo(
