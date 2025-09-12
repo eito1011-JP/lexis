@@ -10,6 +10,8 @@ import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Settings } from '@/components/icon/common/Settings';
 import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequest';
 import { markdownStyles } from '@/styles/markdownContent';
+import { useToast } from '@/contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
 
 // 差分データの型定義
 type DiffItem = {
@@ -478,12 +480,11 @@ const CategoryPathBreadcrumb = ({ categoryPath }: { categoryPath: string | null 
  */
 export default function DiffPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
-
+  const navigate = useNavigate();
   const [diffData, setDiffData] = useState<DiffResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string[]}>({});
   const [prTitle, setPrTitle] = useState('');
   const [prDescription, setPrDescription] = useState('');
   const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
@@ -492,7 +493,7 @@ export default function DiffPage(): JSX.Element {
   const reviewerModalRef = useRef<HTMLDivElement | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
-
+  const { show } = useToast();
   // ユーザー一覧を取得する関数
   const handleFetchUser = async (searchEmail?: string) => {
     setLoadingUsers(true);
@@ -532,10 +533,15 @@ export default function DiffPage(): JSX.Element {
   useEffect(() => {
     const fetchDiff = async () => {
       try {
-
         const response = await apiClient.get(
           `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}`
         );
+
+        // 差分データが存在しない、または変更がない場合はドキュメント一覧にリダイレクト
+        if (!response || (response.document_categories.length === 0 && response.document_versions.length === 0)) {
+          navigate('/documents');
+          return;
+        }
 
         setDiffData(response);
       } catch (err) {
@@ -547,7 +553,7 @@ export default function DiffPage(): JSX.Element {
     };
 
     fetchDiff();
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!showReviewerModal) return;
@@ -565,16 +571,9 @@ export default function DiffPage(): JSX.Element {
   // PR作成のハンドラー
   const handleSubmitPR = async () => {
     setIsSubmitting(true);
-    setSubmitError(null);
-    setSubmitSuccess(null);
+    setValidationErrors({});
 
     try {
-      // 差分データからuser_branch_idとorganization_idを取得
-      if (!diffData?.user_branch_id || !diffData?.organization_id || !prTitle) {
-        setSubmitError('必要なパラメータが不足しています');
-        return;
-      }
-
       // diffアイテムを構築
       const diffItems: ApiDiffItem[] = [];
 
@@ -604,6 +603,12 @@ export default function DiffPage(): JSX.Element {
           ? users.filter(user => selectedReviewers.includes(user.id)).map(user => user.email)
           : undefined;
 
+      if (!diffData) {
+        show({ message: '差分データが見つかりません', type: 'error' });
+        navigate('/documents');
+        return;
+      }
+
       // デバッグログ
       console.log('送信データ:', {
         organization_id: diffData.organization_id,
@@ -616,7 +621,7 @@ export default function DiffPage(): JSX.Element {
       });
 
       // PRタイトル・説明をAPIに渡す
-      const response = await createPullRequest({
+      await createPullRequest({
         organization_id: diffData.organization_id,
         user_branch_id: diffData.user_branch_id,
         title: prTitle,
@@ -624,21 +629,23 @@ export default function DiffPage(): JSX.Element {
         reviewers: reviewerEmails,
       });
 
-      if (response.success) {
-        const successMessage = response.pr_url
-          ? `差分の提出が完了しました。PR: ${response.pr_url}`
-          : '差分の提出が完了しました';
-        setSubmitSuccess(successMessage);
-        // 3秒後にドキュメント一覧に戻る
-        setTimeout(() => {
-          window.location.href = '/documents';
-        }, 3000);
-      } else {
-        setSubmitError(response.message || '差分の提出に失敗しました');
-      }
-    } catch (err) {
+      show({ message: '差分の提出が完了しました', type: 'success' });
+
+      // 成功時のみ画面遷移
+      navigate('/documents');
+
+
+    } catch (err: any) {
       console.error('差分提出エラー:', err);
-      setSubmitError('差分の提出中にエラーが発生しました');
+      
+      // バリデーションエラーの場合
+      if (err.response && err.response.status === 422) {
+        const errors = err.response.data.errors || {};
+        setValidationErrors(errors);
+        show({ message: '入力内容に不備があります。各項目を確認してください。', type: 'error' });
+      } else {
+        show({ message: '差分の提出中にエラーが発生しました', type: 'error' });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -759,62 +766,6 @@ export default function DiffPage(): JSX.Element {
     <AdminLayout title="差分確認">
       <style>{markdownStyles}</style>
       <div className="flex flex-col h-full">
-        {/* 成功メッセージ */}
-        {submitSuccess && (
-          <div className="mb-4 p-3 bg-green-900/50 border border-green-800 rounded-md text-green-200">
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2 text-green-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-              <span>{submitSuccess}</span>
-            </div>
-            <p className="text-sm mt-2">3秒後にドキュメント一覧に戻ります...</p>
-            {submitSuccess.includes('PR:') && (
-              <p className="text-sm mt-1">
-                <a
-                  href={submitSuccess.split('PR: ')[1]}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-300 hover:text-blue-200 underline"
-                >
-                  PRを開く
-                </a>
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* エラーメッセージ */}
-        {submitError && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2 text-red-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              <span>{submitError}</span>
-            </div>
-          </div>
-        )}
 
         {/* PR作成セクション（画像のようなデザイン） */}
         <div className="mb-20 w-full rounded-lg relative">
@@ -824,12 +775,35 @@ export default function DiffPage(): JSX.Element {
               <label className="block text-white text-base font-medium mb-3">タイトル</label>
               <input
                 type="text"
-                className="w-full px-4 py-3 pr-40 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className={`w-full px-4 py-3 pr-40 rounded-lg border ${validationErrors.title ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
                 placeholder=""
                 value={prTitle}
                 onChange={e => setPrTitle(e.target.value)}
                 disabled={isSubmitting}
               />
+              {/* タイトルのバリデーションエラー */}
+              {validationErrors.title && validationErrors.title.length > 0 && (
+                <div className="mt-2 text-red-400 text-sm">
+                  {validationErrors.title.map((error, index) => (
+                    <div key={index} className="flex items-center">
+                      <svg
+                        className="w-4 h-4 mr-1 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span>{error}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="absolute right-0 top-0 flex flex-col items-start mr-20">

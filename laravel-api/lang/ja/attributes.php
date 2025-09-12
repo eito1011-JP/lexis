@@ -23,4 +23,12 @@ return [
         'description' => '説明',
         'categoryPath' => 'カテゴリパス',
     ],
+    
+    // プルリクエスト作成用の属性名
+    'organization_id' => '組織ID',
+    'user_branch_id' => 'ユーザーブランチID',
+    'title' => 'タイトル',
+    'description' => '説明',
+    'reviewers' => 'レビュアー',
+    'reviewers.*' => 'レビュアーのメールアドレス',
 ];
