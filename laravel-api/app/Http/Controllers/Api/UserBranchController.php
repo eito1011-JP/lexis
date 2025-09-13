@@ -2,20 +2,27 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Requests\FetchDiffRequest;
+use App\Consts\ErrorType;
 use App\Services\DocumentDiffService;
+use App\UseCases\UserBranch\FetchDiffUseCase;
+use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Psr\Log\LogLevel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class UserBranchController extends ApiBaseController
 {
     protected DocumentDiffService $documentDiffService;
+    protected FetchDiffUseCase $fetchDiffUseCase;
 
-    public function __construct(DocumentDiffService $documentDiffService)
-    {
+    public function __construct(
+        DocumentDiffService $documentDiffService,
+        FetchDiffUseCase $fetchDiffUseCase
+    ) {
         $this->documentDiffService = $documentDiffService;
+        $this->fetchDiffUseCase = $fetchDiffUseCase;
     }
 
     /**
@@ -55,38 +62,31 @@ class UserBranchController extends ApiBaseController
     /**
      * Git差分取得
      */
-    public function fetchDiff(FetchDiffRequest $request): JsonResponse
+    public function fetchDiff(): JsonResponse
     {
         try {
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証されていません',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
-            // ユーザーブランチと関連データを一括取得
-            $userBranch = $user->userBranches()->active()
-                ->with([
-                    'editStartVersions',
-                    'editStartVersions.originalDocumentVersion',
-                    'editStartVersions.currentDocumentVersion',
-                    'editStartVersions.originalCategory',
-                    'editStartVersions.currentCategory',
-                ])
-                ->first();
-
-            $diffResult = $this->documentDiffService->generateDiffData($userBranch->editStartVersions);
+            // UseCaseを実行
+            $diffResult = $this->fetchDiffUseCase->execute($user);
 
             return response()->json($diffResult);
 
-        } catch (\Exception $e) {
-            Log::error('Git差分の取得に失敗しました: '.$e->getMessage());
-
-            return response()->json([
-                'error' => 'Git差分の取得に失敗しました',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 

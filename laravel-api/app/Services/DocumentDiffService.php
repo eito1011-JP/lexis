@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Log;
 
 class DocumentDiffService
 {
+    public function __construct(
+        private DocumentCategoryService $documentCategoryService
+    ) {}
+
     /**
      * 差分データを生成
      */
@@ -39,6 +43,8 @@ class DocumentDiffService
                 if ($isDocument) {
                     $documentVersions->push($currentObject);
                 } else {
+                    // parent_idから階層構造を取得して、document_categoriesに追加
+                    $currentObject->category_path = $this->documentCategoryService->createCategoryPath($currentObject);
                     $documentCategories->push($currentObject);
                 }
             }
@@ -48,6 +54,7 @@ class DocumentDiffService
                 if ($isDocument) {
                     $originalDocumentVersions->push($originalObject);
                 } else {
+                    $originalObject->category_path = $this->documentCategoryService->createCategoryPath($originalObject);
                     $originalDocumentCategories->push($originalObject);
                 }
             }
@@ -115,8 +122,6 @@ class DocumentDiffService
             return 'created';
         }
 
-        Log::info('currentObject: '.json_encode($currentObject));
-        Log::info('is_deleted: '.json_encode($currentObject->is_deleted));
         if ($currentObject && $currentObject->is_deleted) {
             return 'deleted';
         }
@@ -189,28 +194,22 @@ class DocumentDiffService
         if ($isNewCreation) {
             // 新規作成時は全フィールドが変更対象（緑色で表示）
             return [
-                'sidebar_label' => ['status' => 'added', 'current' => $currentCategory->sidebar_label, 'original' => null],
-                'slug' => ['status' => 'added', 'current' => $currentCategory->slug, 'original' => null],
+                'title' => ['status' => 'added', 'current' => $currentCategory->title, 'original' => null],
                 'description' => ['status' => 'added', 'current' => $currentCategory->description, 'original' => null],
-                'position' => ['status' => 'added', 'current' => $currentCategory->position, 'original' => null],
-                'parent_id' => ['status' => 'added', 'current' => $currentCategory->parent_id, 'original' => null],
             ];
         }
 
         if ($currentCategory && property_exists($currentCategory, 'is_deleted') && $currentCategory->is_deleted) {
             // 削除時は全フィールドが削除対象
             return [
-                'sidebar_label' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->sidebar_label],
-                'slug' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->slug],
+                'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->title],
                 'description' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->description],
-                'position' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->position],
-                'parent_id' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->parent_id],
             ];
         }
 
         // 編集時は変更されたフィールドのみを検出
         $changedFields = [];
-        $fieldsToCheck = ['sidebar_label', 'slug', 'description', 'position', 'parent_id'];
+        $fieldsToCheck = ['title', 'description'];
 
         foreach ($fieldsToCheck as $field) {
             if ($currentCategory->{$field} !== $originalCategory->{$field}) {

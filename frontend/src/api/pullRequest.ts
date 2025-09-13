@@ -9,10 +9,10 @@ export interface DiffItem {
 
 // プルリクエスト作成リクエストの型定義
 export interface CreatePullRequestRequest {
+  organization_id: number;
   user_branch_id: number;
   title: string;
   description?: string;
-  diff_items: DiffItem[];
   reviewers?: string[];
 }
 
@@ -102,21 +102,7 @@ export const createPullRequest = async (
     return response;
   } catch (error: any) {
     console.error('プルリクエスト作成エラー:', error);
-
-    // エラーレスポンスの処理
-    if (error.response?.data?.error) {
-      return {
-        success: false,
-        message: error.response.data.error,
-        error: error.response.data.error,
-      };
-    }
-
-    return {
-      success: false,
-      message: 'プルリクエストの作成に失敗しました',
-      error: error.message || 'Unknown error',
-    };
+    throw error;
   }
 };
 

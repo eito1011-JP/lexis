@@ -22,12 +22,10 @@ class CreatePullRequestRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_branch_id' => 'required|integer|exists:user_branches,id',
+            'organization_id' => 'required|integer|exists:organizations,id',
+            'user_branch_id' => 'required|integer|exists:user_branches,id,is_active,1',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'diff_items' => 'required|array',
-            'diff_items.*.id' => 'required|integer',
-            'diff_items.*.type' => 'required|string|in:document,category',
             'reviewers' => 'nullable|array|max:15',
             'reviewers.*' => 'required|string|email|exists:users,email',
         ];
