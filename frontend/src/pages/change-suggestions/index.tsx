@@ -44,7 +44,6 @@ type ChangeProposal = {
  * 変更提案一覧ページコンポーネント
  */
 export default function ChangeSuggestionsPage(): JSX.Element {
-  const [isLoading, setIsLoading] = useState(true);
   const [changeProposals, setChangeProposals] = useState<ChangeProposal[]>([]);
   const [changeProposalsLoading, setChangeProposalsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -59,6 +58,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [pendingCount, setPendingCount] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>(undefined);
 
   // URLパラメータから完了済み表示フラグを取得
   const isCompletedView =
@@ -157,17 +157,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
     setDocumentToDelete(null);
     setDeleteError(null);
   };
-
-  // セッション確認中はローディング表示
-  if (isLoading) {
-    return (
-      <AdminLayout title="読み込み中...">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
 
   // フィルタリング機能
   const filteredProposals = changeProposals.filter(proposal => {
@@ -309,7 +298,13 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title={isCompletedView ? '変更提案 - 完了済み' : '変更提案'}>
+    <AdminLayout 
+      title={isCompletedView ? '変更提案 - 完了済み' : '変更提案'}
+      sidebar={true}
+      showDocumentSideContent={false}
+      onCategorySelect={setSelectedCategoryId}
+      selectedCategoryId={selectedCategoryId}
+    >
       <div className="flex flex-col h-full">
         {/* ヘッダー部分 */}
         <div className="mb-6">
