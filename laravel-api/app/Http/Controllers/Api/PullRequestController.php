@@ -14,10 +14,10 @@ use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\UpdatePullRequestTitleRequest;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
+use App\Dto\UseCase\PullRequest\MergePullRequestDto;
 use App\UseCases\PullRequest\CreatePullRequestUseCase;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
-use App\Jobs\PullRequestMergeJob;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
@@ -26,6 +26,7 @@ use App\Services\DocumentDiffService;
 use App\Services\GitService;
 use App\Services\MdFileService;
 use App\Services\PullRequestConflictService;
+use App\UseCases\PullRequest\MergePullRequestUseCase;
 use App\UseCases\PullRequest\IsConflictResolvedUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
@@ -266,45 +267,37 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエストをマージ
      */
-    public function merge(MergePullRequestRequest $request): JsonResponse
+    public function merge(MergePullRequestRequest $request, MergePullRequestUseCase $mergePullRequestUseCase): JsonResponse
     {
         try {
             // 1. ログイン認証
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証されていません',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
-            // // 2. ログインユーザーのroleがowner or adminであることを確認
-            // if (! UserRole::from($user->role)->isAdmin() && ! UserRole::from($user->role)->isOwner()) {
-            //     return response()->json([
-            //         'error' => '権限がありません',
-            //     ], 403);
-            // }
+            // 3. マージ処理を実行
+            $dto = new MergePullRequestDto(
+                $request->pull_request_id,
+                $user->id
+            );
 
-            // 3. プルリクエストを取得（status = opened）
-            $pullRequest = PullRequest::where('id', $request->pull_request_id)
-                ->where('status', PullRequestStatus::OPENED->value)
-                ->firstOrFail();
-
-            // 4. マージジョブをキューに追加
-            PullRequestMergeJob::dispatch($pullRequest->id, $user->id);
+            $mergePullRequestUseCase->execute($dto);
 
             return response()->json();
 
-        } catch (\Exception $e) {
-            Log::error('プルリクエストマージジョブ追加エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-                'pull_request_id' => $request->pull_request_id,
-            ]);
-
-            return response()->json([
-                'error' => 'マージ処理の開始に失敗しました',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 
