@@ -342,8 +342,7 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->with($this->userBranch->id);
 
         // Act & Assert
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('一部のレビュアーが見つかりません');
+        $this->expectException(NotFoundException::class);
         $this->useCase->execute($dto, $this->user);
 
         // トランザクションがロールバックされていることを確認
