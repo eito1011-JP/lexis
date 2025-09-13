@@ -566,40 +566,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
-    if (!id || isCheckingConflict || conflictStatus.mergeable !== null) return;
-
-    setIsCheckingConflict(true);
-    try {
-      const response = await apiClient.get(
-        `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${id}/conflict`
-      );
-      setConflictStatus({
-        mergeable: response.mergeable,
-        mergeable_state: response.mergeable_state,
-      });
-
-      // コンフリクトが検出された場合はトーストで通知
-      if (response.mergeable === false) {
-        setToast({
-          message: 'コンフリクトが検出されました。マージできません。',
-          type: 'error',
-        });
-
-        // 先行取得: コンフリクト差分をキャッシュしておく
-        try {
-          setPrefetchingConflict(true);
-          await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${id}/conflict/diff`);
-        } catch (e) {
-          // 失敗しても致命的ではない
-        } finally {
-          setPrefetchingConflict(false);
-        }
-      }
-    } catch (error) {
-      console.error('コンフリクト検知エラー:', error);
-    } finally {
-      setIsCheckingConflict(false);
-    }
   }, [id, isCheckingConflict, conflictStatus.mergeable]);
 
   // ユーザー一覧を取得する関数

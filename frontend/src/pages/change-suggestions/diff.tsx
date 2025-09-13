@@ -456,53 +456,6 @@ const SmartDiffValue = ({
   );
 };
 
-// 階層パンくずリストコンポーネント
-const SlugBreadcrumb = ({ slug }: { slug: string }) => {
-  const slugParts = slug.split('/').filter(part => part.length > 0);
-  let currentPath = '';
-
-  return (
-    <div className="mb-6">
-      <div className="flex items-center text-sm text-gray-400 mb-3">
-        {slugParts.map((part, index) => {
-          // パスを構築（現在までの部分）
-          currentPath += (index === 0 ? '' : '/') + part;
-
-          return (
-            <React.Fragment key={index}>
-              <span className="text-gray-500">/</span>
-              {index > 0 && (
-                <span className="mx-2">
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 5l7 7-7 7"
-                    ></path>
-                  </svg>
-                </span>
-              )}
-              {index === slugParts.length - 1 ? (
-                <span className="text-blue-400 font-medium">{part}</span>
-              ) : (
-                <span className="text-gray-400 hover:text-gray-300">{part}</span>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-      <div className="border-b border-gray-700/50"></div>
-    </div>
-  );
-};
-
 export default function ChangeSuggestionDiffPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -759,32 +712,13 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                               key={category.id}
                               className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                             >
-                              <SlugBreadcrumb slug={category.slug} />
-                              <SmartDiffValue
-                                label="Slug"
-                                fieldInfo={getFieldInfo(
-                                  diffInfo,
-                                  'slug',
-                                  category.slug,
-                                  originalCategory?.slug
-                                )}
-                              />
                               <SmartDiffValue
                                 label="カテゴリ名"
                                 fieldInfo={getFieldInfo(
                                   diffInfo,
-                                  'sidebar_label',
-                                  category.sidebar_label,
-                                  originalCategory?.sidebar_label
-                                )}
-                              />
-                              <SmartDiffValue
-                                label="表示順"
-                                fieldInfo={getFieldInfo(
-                                  diffInfo,
-                                  'position',
-                                  category.position,
-                                  originalCategory?.position
+                                  'title',
+                                  category.title,
+                                  originalCategory?.title
                                 )}
                               />
                               <SmartDiffValue
@@ -822,7 +756,6 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                               key={document.id}
                               className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                             >
-                              <SlugBreadcrumb slug={document.slug} />
                               <SmartDiffValue
                                 label="Slug"
                                 fieldInfo={getFieldInfo(
