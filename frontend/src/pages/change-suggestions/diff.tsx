@@ -504,12 +504,10 @@ const SlugBreadcrumb = ({ slug }: { slug: string }) => {
 };
 
 export default function ChangeSuggestionDiffPage(): JSX.Element {
-  const [isLoading, setIsLoading] = useState(true);
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('changes');
   const [conflictStatus] = useState<{
@@ -568,12 +566,10 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     const fetchData = async () => {
       if (!id) {
         setError('プルリクエストIDが指定されていません');
-        setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
         const data = await fetchPullRequestDetail(id);
         console.log('data', data);
         setPullRequestData(data);
@@ -581,40 +577,20 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
         console.error('プルリクエスト詳細取得エラー:', err);
         setError('プルリクエスト詳細の取得に失敗しました');
       } finally {
-        setLoading(false);
       }
     };
 
     fetchData();
   }, [id]);
 
-  // セッション確認中はローディング表示
-  if (isLoading) {
-    return (
-      <AdminLayout title="読み込み中...">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  // データ読み込み中
-  if (loading) {
-    return (
-      <AdminLayout title="更内容詳細">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-          <p className="text-gray-400">データを読み込み中...</p>
-        </div>
-      </AdminLayout>
-    );
-  }
-
   // エラー表示
   if (error) {
     return (
-      <AdminLayout title="エラー">
+      <AdminLayout 
+        title="エラー"
+        sidebar={true}
+        showDocumentSideContent={false}
+      >
         <div className="flex flex-col items-center justify-center h-full">
           <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
             <div className="flex items-center">
@@ -641,7 +617,11 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
 
   if (!pullRequestData) {
     return (
-      <AdminLayout title="変更内容詳細">
+      <AdminLayout 
+        title="変更内容詳細"
+        sidebar={true}
+        showDocumentSideContent={true}
+      >
         <div className="flex flex-col items-center justify-center h-full">
           <p className="text-gray-400">データが見つかりません</p>
         </div>
@@ -693,7 +673,11 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout title="変更内容詳細">
+    <AdminLayout 
+      title="変更内容詳細"
+      sidebar={true}
+      showDocumentSideContent={true}
+    >
       <style>{markdownStyles}</style>
       <style>{diffStyles}</style>
       <div className="mb-20 w-full rounded-lg relative">

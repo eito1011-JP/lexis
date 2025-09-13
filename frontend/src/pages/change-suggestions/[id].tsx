@@ -437,7 +437,6 @@ const StatusBanner: React.FC<{
 };
 
 export default function ChangeSuggestionDetailPage(): JSX.Element {
-  const [isLoading, setIsLoading] = useState(true);
   const { id } = useParams<{ id: string }>();
 
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);
@@ -939,33 +938,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   };
 
-  // セッション確認中はローディング表示
-  if (isLoading) {
-    return (
-      <AdminLayout title="読み込み中...">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-        </div>
-      </AdminLayout>
-    );
-  }
-
-  // データ読み込み中
-  if (loading) {
-    return (
-      <AdminLayout title="変更提案詳細">
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
-          <p className="text-gray-400">データを読み込み中...</p>
-        </div>
-      </AdminLayout>
-    );
-  }
-
   // エラー表示
   if (error) {
     return (
-      <AdminLayout title="エラー">
+      <AdminLayout 
+        title="エラー"
+        sidebar={true}
+        showDocumentSideContent={false}
+      >
         <div className="flex flex-col items-center justify-center h-full">
           <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
             <div className="flex items-center">
@@ -992,7 +972,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
   if (!pullRequestData) {
     return (
-      <AdminLayout title="変更提案詳細">
+      <AdminLayout 
+        title="変更提案詳細"
+        sidebar={true}
+        showDocumentSideContent={false}
+      >
         <div className="flex flex-col items-center justify-center h-full">
           <p className="text-gray-400">データが見つかりません</p>
         </div>
@@ -1001,7 +985,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   }
 
   return (
-    <AdminLayout title={pullRequestData.title}>
+    <AdminLayout 
+      title={pullRequestData.title}
+      sidebar={true}
+      showDocumentSideContent={false}
+    >
       <style>{markdownStyles}</style>
       <style>{`
         .timeline-container {
