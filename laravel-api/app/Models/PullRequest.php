@@ -13,8 +13,6 @@ class PullRequest extends Model
         'user_branch_id',
         'title',
         'description',
-        'github_url',
-        'pr_number',
         'status',
         'organization_id',
     ];

@@ -25,14 +25,4 @@ class MergePullRequestRequest extends FormRequest
             'pull_request_id' => 'required|integer|exists:pull_requests,id',
         ];
     }
-
-    /**
-     * Get custom messages for validator errors.
-     */
-    public function messages(): array
-    {
-        return [
-            // カスタムメッセージを追加
-        ];
-    }
 }

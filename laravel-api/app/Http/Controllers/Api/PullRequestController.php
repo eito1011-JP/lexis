@@ -35,6 +35,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
+use Illuminate\Auth\Access\AuthorizationException;
 
 class PullRequestController extends ApiBaseController
 {
@@ -270,10 +271,10 @@ class PullRequestController extends ApiBaseController
     public function merge(MergePullRequestRequest $request, MergePullRequestUseCase $mergePullRequestUseCase): JsonResponse
     {
         try {
-            // 1. ログイン認証
+            // 1. 認証ユーザーか確認
             $user = $this->user();
 
-            if (! $user) {
+            if (!$user) {
                 return $this->sendError(
                     ErrorType::CODE_AUTHENTICATION_FAILED,
                     __('errors.MSG_AUTHENTICATION_FAILED'),
@@ -281,7 +282,7 @@ class PullRequestController extends ApiBaseController
                 );
             }
 
-            // 3. マージ処理を実行
+            // 2. DTOを作成してマージ処理を実行
             $dto = new MergePullRequestDto(
                 $request->pull_request_id,
                 $user->id
@@ -290,7 +291,21 @@ class PullRequestController extends ApiBaseController
             $mergePullRequestUseCase->execute($dto);
 
             return response()->json();
-
+            
+        } catch (AuthorizationException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_AUTHORIZED,
+                __('errors.MSG_FORBIDDEN'),
+                ErrorType::STATUS_NOT_AUTHORIZED,
+                LogLevel::ERROR,
+            );
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+                LogLevel::ERROR,
+            );
         } catch (Exception) {
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
