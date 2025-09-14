@@ -30,7 +30,6 @@ class PullRequestFactory extends Factory
             'user_branch_id' => UserBranch::factory(),
             'title' => $this->faker->sentence(),
             'description' => $this->faker->paragraph(),
-            'github_url' => $this->faker->url(),
             'status' => PullRequestStatus::OPENED->value,
         ];
     }

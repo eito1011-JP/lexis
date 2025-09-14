@@ -22,6 +22,7 @@ export const API_CONFIG = {
       CREATE: '/api/document-categories',
       UPDATE: '/api/document-categories',
       DELETE: '/api/document-categories',
+      GET_DETAIL: '/api/document-categories',
     },
     USERS: {
       GET_ALL: '/api/users',

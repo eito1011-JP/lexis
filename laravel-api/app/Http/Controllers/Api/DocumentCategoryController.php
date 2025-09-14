@@ -6,12 +6,14 @@ use App\Consts\ErrorType;
 use App\Consts\Flag;
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
+use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
 use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
+use App\Http\Requests\Api\DocumentCategory\GetCategoryRequest;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
 use App\Http\Requests\UpdateDocumentCategoryRequest;
@@ -24,6 +26,7 @@ use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
+use App\UseCases\DocumentCategory\GetCategoryUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -75,6 +78,55 @@ class DocumentCategoryController extends ApiBaseController
             return response()->json([
                 'error' => 'カテゴリ一覧の取得に失敗しました',
             ], 500);
+        }
+    }
+
+    /**
+     * カテゴリ詳細を取得
+     */
+    public function detail(GetCategoryRequest $request, GetCategoryUseCase $useCase): JsonResponse
+    {
+        try {
+            // 認証チェック
+            $user = $this->user();
+
+            if (!$user) {
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
+            }
+
+            // DTOを作成してUseCaseを実行
+            $data = $request->validated();
+            $data['user'] = $user;
+            $dto = GetCategoryDto::fromRequest($data);
+            $category = $useCase->execute($dto);
+
+            return response()->json([
+                'category' => $category,
+            ]);
+
+        } catch (AuthenticationException) {
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+            );
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 
