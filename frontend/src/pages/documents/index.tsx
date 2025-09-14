@@ -1,22 +1,28 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Home } from '@/components/icon/common/Home';
 import { Toast } from '@/components/admin/Toast';
 import { fetchCategoryDetail, type ApiCategoryDetailResponse } from '@/api/category';
 import { apiClient } from '@/components/admin/api/client';
+import { API_CONFIG } from '@/components/admin/api/config';
 
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
+  const [searchParams] = useSearchParams();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string | null>(null);
   const [categoryDetail, setCategoryDetail] = useState<ApiCategoryDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
+  const [userBranchId, setUserBranchId] = useState<string | null>(null);
+  const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
 
   // カテゴリリストを取得する関数
   const fetchCategories = async (parentId: number | null = null): Promise<any[]> => {
@@ -60,7 +66,7 @@ export default function DocumentsPage(): JSX.Element {
     loadCategoryDetail(categoryId);
   };
 
-  // 初期表示時に最小IDのカテゴリを自動選択
+  // 初期表示時に最小IDのカテゴリを自動選択とユーザー変更チェック
   useEffect(() => {
     const loadInitialCategory = async () => {
       try {
@@ -77,6 +83,15 @@ export default function DocumentsPage(): JSX.Element {
           }
         } else {
           await loadCategoryDetail(selectedSideContentCategory);
+        }
+
+        // ユーザー変更があるかチェック
+        const hasUserChanges = await apiClient.get(
+          API_CONFIG.ENDPOINTS.USER_BRANCHES.HAS_USER_CHANGES
+        );
+        if (hasUserChanges && hasUserChanges.has_user_changes) {
+          setShowPrSubmitButton(true);
+          setUserBranchId(hasUserChanges.user_branch_id);
         }
       } catch (error) {
         console.error('初期カテゴリの読み込みに失敗しました:', error);
@@ -97,18 +112,47 @@ export default function DocumentsPage(): JSX.Element {
       onCategorySelect={handleSideContentCategorySelect}
       selectedCategoryId={selectedSideContentCategory ? parseInt(selectedSideContentCategory) : undefined}
     >
-        <div className="mb-6">
-          {/* パンくずリスト */}
-          <div className="flex items-center text-sm text-gray-400 mb-4">
-            <a href="/documents" className="hover:text-white">
-              <Home className="w-4 h-4 mx-2" />
-            </a>
-            {categoryDetail && (
-              <>
-                <span className="mx-2">{'>'}</span>
-                <span className="text-white">{categoryDetail.title}</span>
-              </>
-            )}
+         <div className="mb-6 align-left">
+           {/* パンくずリストと差分提出ボタン */}
+           <div className="flex items-center justify-between mb-6 mx-6 mx-auto">
+             <div className="flex items-center text-sm text-gray-400">
+               <a href="/documents" className="hover:text-white">
+                 <Home className="w-4 h-4 ml-0 mr-2" />
+               </a>
+              
+              {categoryDetail && (
+                <>
+                  <span className="mx-2">{'>'}</span>
+                  <span className="text-white">{categoryDetail.title}</span>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4 mr-9">
+              <button
+                className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  setShowDiffConfirmModal(true);
+                }}
+                disabled={!showPrSubmitButton}
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
+                  ></path>
+                </svg>
+                <span>差分提出</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -136,6 +180,46 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           )}
         </div>
+
+      {/* 差分提出確認モーダル */}
+      {showDiffConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">変更内容を提出</h2>
+
+            <p className="mb-4 text-gray-300">
+              作成した変更内容をレビュー用に提出します。よろしいですか？
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={() => setShowDiffConfirmModal(false)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
+                onClick={() => {
+                  if (userBranchId) {
+                    window.location.href = `/documents/diff?user_branch_id=${userBranchId}`;
+                  } else {
+                    // user_branch_idが取得できない場合はエラーメッセージを表示
+                    setToastMessage(
+                      '差分データの取得に失敗しました。ページを再読み込みしてください。'
+                    );
+                    setToastType('error');
+                    setShowToast(true);
+                    setShowDiffConfirmModal(false);
+                  }
+                }}
+              >
+                差分確認画面へ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* トーストメッセージ */}
       {showToast && (
