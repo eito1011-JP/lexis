@@ -72,7 +72,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
       title: proposal.title,
       status: proposal.status,
       email: proposal.email,
-      github_url: proposal.github_url,
       created_at: proposal.created_at,
       comments_count: 5, // 仮の値として5を設定
     }));
