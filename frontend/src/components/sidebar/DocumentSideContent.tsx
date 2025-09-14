@@ -92,8 +92,6 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
       } catch (err) {
         console.error('カテゴリの取得に失敗しました:', err);
         setError('カテゴリの取得に失敗しました');
-        // エラー時はハードコーディングされたデータをフォールバックとして使用
-        setCategories(fallbackCategories);
       } finally {
         setIsLoading(false);
       }
@@ -101,40 +99,6 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
 
     loadCategories();
   }, []);
-
-  // フォールバック用のハードコーディングされたカテゴリ構造
-  const fallbackCategories: CategoryItem[] = [
-    {
-      id: 1,
-      label: 'ビジョン・ミッション',
-      icon: Folder,
-    },
-    {
-      id: 2,
-      label: '会社制度',
-      icon: Folder,
-    },
-    {
-      id: 3,
-      label: '事業内容',
-      icon: Folder,
-    },
-    {
-      id: 4,
-      label: '人事制度',
-      icon: Folder,
-      children: [
-        {
-          id: 1,
-          label: '有給の取得方法に...',
-        },
-        {
-          id: 2,
-          label: '昇進基準について',
-        },
-      ],
-    },
-  ];
 
   // カテゴリの展開/折りたたみを切り替え
   const toggleExpanded = (categoryId: number) => {

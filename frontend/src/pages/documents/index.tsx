@@ -4,6 +4,7 @@ import type { JSX } from 'react';
 import { Home } from '@/components/icon/common/Home';
 import { Toast } from '@/components/admin/Toast';
 import { fetchCategoryDetail, type ApiCategoryDetailResponse } from '@/api/category';
+import { apiClient } from '@/components/admin/api/client';
 
 
 /**
@@ -13,9 +14,27 @@ export default function DocumentsPage(): JSX.Element {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string>('hr-system');
+  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string | null>(null);
   const [categoryDetail, setCategoryDetail] = useState<ApiCategoryDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // カテゴリリストを取得する関数
+  const fetchCategories = async (parentId: number | null = null): Promise<any[]> => {
+    try {
+      const params = new URLSearchParams();
+      if (parentId !== null) {
+        params.append('parent_id', parentId.toString());
+      }
+      
+      const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
+      const response = await apiClient.get(endpoint);
+      
+      return response.categories || [];
+    } catch (error) {
+      console.error('カテゴリの取得に失敗しました:', error);
+      throw error;
+    }
+  };
 
   // カテゴリ詳細を取得する関数
   const loadCategoryDetail = async (categoryId: number | string) => {
@@ -41,11 +60,33 @@ export default function DocumentsPage(): JSX.Element {
     loadCategoryDetail(categoryId);
   };
 
-  // 初期カテゴリの詳細を取得
+  // 初期表示時に最小IDのカテゴリを自動選択
   useEffect(() => {
-    if (selectedSideContentCategory) {
-      loadCategoryDetail(selectedSideContentCategory);
-    }
+    const loadInitialCategory = async () => {
+      try {
+        if (!selectedSideContentCategory) {
+          // カテゴリリストを取得
+          const categories = await fetchCategories(null);
+          if (categories.length > 0) {
+            // IDが最も小さいカテゴリを選択
+            const minIdCategory = categories.reduce((min, current) => 
+              current.id < min.id ? current : min
+            );
+            setSelectedSideContentCategory(minIdCategory.id.toString());
+            await loadCategoryDetail(minIdCategory.id);
+          }
+        } else {
+          await loadCategoryDetail(selectedSideContentCategory);
+        }
+      } catch (error) {
+        console.error('初期カテゴリの読み込みに失敗しました:', error);
+        setToastMessage('初期カテゴリの読み込みに失敗しました');
+        setToastType('error');
+        setShowToast(true);
+      }
+    };
+
+    loadInitialCategory();
   }, []);
 
   return (
