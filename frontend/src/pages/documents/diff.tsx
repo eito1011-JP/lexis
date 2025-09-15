@@ -967,6 +967,7 @@ export default function DiffPage(): JSX.Element {
                         category.description,
                         originalCategory?.description
                       )}
+                      isMarkdown={true}
                     />
                   </div>
                 );

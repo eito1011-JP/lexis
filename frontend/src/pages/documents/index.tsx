@@ -7,13 +7,14 @@ import { Toast } from '@/components/admin/Toast';
 import { fetchCategoryDetail, type ApiCategoryDetailResponse } from '@/api/category';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
+import { MarkdownRenderer } from '@/utils/markdownToHtml';
+import { markdownStyles } from '@/styles/markdownContent';
 
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
-  const [searchParams] = useSearchParams();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
@@ -23,6 +24,17 @@ export default function DocumentsPage(): JSX.Element {
   const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
   const [userBranchId, setUserBranchId] = useState<string | null>(null);
   const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
+
+  // マークダウンスタイルを一度だけ適用
+  useEffect(() => {
+    const styleId = 'markdown-content-styles';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.textContent = markdownStyles;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   // カテゴリリストを取得する関数
   const fetchCategories = async (parentId: number | null = null): Promise<any[]> => {
@@ -169,9 +181,11 @@ export default function DocumentsPage(): JSX.Element {
                 <h2 className="text-xl font-semibold text-white">
                   {categoryDetail.title}
                 </h2>
-                <p className="text-gray-300 leading-relaxed">
-                  {categoryDetail.description}
-                </p>
+                <div className="text-gray-300 leading-relaxed max-w-none markdown-content">
+                  <MarkdownRenderer>
+                    {categoryDetail.description || ''}
+                  </MarkdownRenderer>
+                </div>
               </div>
             </div>
           ) : (
