@@ -26,6 +26,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
             'title' => 'required|string',
             'description' => 'nullable|string',
             'edit_pull_request_id' => 'nullable|integer',
+            'pull_request_edit_token' => 'nullable|string',
         ];
     }
 

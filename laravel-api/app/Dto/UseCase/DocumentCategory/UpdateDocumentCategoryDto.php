@@ -17,6 +17,7 @@ class UpdateDocumentCategoryDto extends UseCaseDto
         public readonly string $title,
         public readonly ?string $description = null,
         public readonly ?int $editPullRequestId = null,
+        public readonly ?string $pullRequestEditToken = null,
     ) {}
 
     /**
@@ -29,6 +30,7 @@ class UpdateDocumentCategoryDto extends UseCaseDto
             title: $requestData['title'],
             description: $requestData['description'] ?? null,
             editPullRequestId: $requestData['edit_pull_request_id'] ?? null,
+            pullRequestEditToken: $requestData['pull_request_edit_token'] ?? null,
         );
     }
 }

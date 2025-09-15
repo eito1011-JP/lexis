@@ -55,7 +55,7 @@ class UpdateDocumentCategoryUseCase
             // 4. PullRequestEditSession::findEditSessionId
             $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId(
                 $dto->editPullRequestId,
-                null, // pull_request_edit_tokenは今回不要
+                $dto->pullRequestEditToken,
                 $user->id
             );
 
