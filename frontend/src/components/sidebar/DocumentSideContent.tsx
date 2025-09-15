@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ArrowDown } from '@/components/icon/common/ArrowDown';
 import { Folder } from '@/components/icon/common/Folder';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Plus } from '@/components/icon/common/Plus';
 import { Edit } from '@/components/icon/common/Edit';
 import { apiClient } from '@/components/admin/api/client';
+import CategoryActionModal from '@/components/admin/CategoryActionModal';
 
 // APIから取得するカテゴリデータの型定義
 interface ApiCategoryData {
@@ -66,6 +67,10 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   const [isLoading, setIsLoading] = useState<boolean>(true);
   // エラー状態
   const [error, setError] = useState<string | null>(null);
+  // モーダル状態
+  const [showActionModal, setShowActionModal] = useState<boolean>(false);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryItem | null>(null);
+  const [activeButtonRef, setActiveButtonRef] = useState<React.RefObject<HTMLButtonElement> | undefined>(undefined);
 
   // APIデータをCategoryItem形式に変換する関数
   const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
@@ -128,6 +133,39 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   const handleCreateRootCategory = () => {
     const url = `/categories/create`;
     window.location.href = url;
+  };
+
+  // 三点メニューのハンドラ
+  const handleThreeDotsClick = (category: CategoryItem, event: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedCategory(category);
+    setActiveButtonRef({ current: event.currentTarget });
+    setShowActionModal(true);
+  };
+
+  // モーダルを閉じるハンドラ
+  const handleCloseModal = () => {
+    setShowActionModal(false);
+    setSelectedCategory(null);
+    setActiveButtonRef(undefined);
+  };
+
+  // 編集のハンドラ
+  const handleEdit = () => {
+    if (selectedCategory) {
+      const url = `/categories/${selectedCategory.id}/edit`;
+      window.location.href = url;
+    }
+    handleCloseModal();
+  };
+
+  // 削除のハンドラ
+  const handleDelete = () => {
+    if (selectedCategory) {
+      // 削除処理をここに実装
+      console.log('削除:', selectedCategory.label);
+      // TODO: 削除APIの実装
+    }
+    handleCloseModal();
   };
 
   // ドキュメントアイテムをレンダリング
@@ -234,7 +272,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
                 className="p-1 hover:bg-gray-700 rounded transition-colors mr-1"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // 三点メニューアクションをここに実装
+                  handleThreeDotsClick(item, e);
                 }}
               >
                 <ThreeDots className="w-4 h-4" />
@@ -294,6 +332,16 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
           categories.map((category) => renderCategoryItem(category))
         )}
       </div>
+
+      {/* カテゴリアクションモーダル */}
+      <CategoryActionModal
+        isOpen={showActionModal}
+        onClose={handleCloseModal}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        categoryName={selectedCategory?.label || ''}
+        buttonRef={activeButtonRef}
+      />
     </div>
   );
 }

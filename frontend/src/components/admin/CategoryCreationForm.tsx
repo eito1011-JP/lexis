@@ -9,10 +9,18 @@ interface CategoryCreationFormProps {
   onCancel?: () => void;
   onNavigateAway?: () => void;
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
+  isEditMode?: boolean;
+  categoryId?: number;
+  initialData?: {
+    slug?: string;
+    title?: string;
+    description?: string;
+    position?: string | number;
+  };
 }
 
 /**
- * カテゴリ新規作成フォームコンポーネント
+ * カテゴリ作成・編集フォームコンポーネント
  * 添付画像のデザインに基づいて実装
  */
 export default function CategoryCreationForm({ 
@@ -20,22 +28,27 @@ export default function CategoryCreationForm({
   onSuccess, 
   onCancel,
   onNavigateAway,
-  onUnsavedChangesChange
+  onUnsavedChangesChange,
+  isEditMode = false,
+  categoryId,
+  initialData
 }: CategoryCreationFormProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [description, setDescription] = useState(initialData?.description || '');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // 未保存の変更を追跡
   useEffect(() => {
-    const hasChanges = title.trim() !== '' || description.trim() !== '';
+    const hasChanges = isEditMode
+      ? title !== (initialData?.title || '') || description !== (initialData?.description || '')
+      : title.trim() !== '' || description.trim() !== '';
     setHasUnsavedChanges(hasChanges);
     if (onUnsavedChangesChange) {
       onUnsavedChangesChange(hasChanges);
     }
-  }, [title, description, onUnsavedChangesChange]);
+  }, [title, description, onUnsavedChangesChange, isEditMode, initialData]);
 
   // ブラウザタブ/ウィンドウを閉じる際の保護
   useEffect(() => {
@@ -67,15 +80,27 @@ export default function CategoryCreationForm({
     setError(null);
 
     try {
-      const payload = {
-        title: title,
-        description: description,
-        parent_id: parentCategoryId || null,
-        edit_pull_request_id: null,
-        pull_request_edit_token: null,
-      };
+      if (isEditMode && categoryId) {
+        // 編集モード：PUT リクエスト
+        const payload = {
+          id: categoryId,
+          title: title,
+          description: description,
+        };
 
-      await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
+        await apiClient.put(`/api/document-categories/${categoryId}`, payload);
+      } else {
+        // 作成モード：POST リクエスト
+        const payload = {
+          title: title,
+          description: description,
+          parent_id: parentCategoryId || null,
+          edit_pull_request_id: null,
+          pull_request_edit_token: null,
+        };
+
+        await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
+      }
 
       // 保存成功時は未保存状態をリセット
       setHasUnsavedChanges(false);
@@ -163,7 +188,7 @@ export default function CategoryCreationForm({
             disabled={isCreating}
             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-md text-white transition-colors"
           >
-            {isCreating ? '保存中...' : '保存'}
+{isCreating ? (isEditMode ? '更新中...' : '保存中...') : (isEditMode ? '更新' : '保存')}
           </button>
           {onCancel && (
             <button
