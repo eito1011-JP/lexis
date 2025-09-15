@@ -39,6 +39,14 @@ export default function CategoryCreationForm({
   const [error, setError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // initialData が変更されたときに state を更新
+  useEffect(() => {
+    if (initialData) {
+      setTitle(initialData.title || '');
+      setDescription(initialData.description || '');
+    }
+  }, [initialData]);
+
   // 未保存の変更を追跡
   useEffect(() => {
     const hasChanges = isEditMode
@@ -160,7 +168,7 @@ export default function CategoryCreationForm({
           <label className="block text-sm font-medium mb-2">説明</label>
           <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
             <SlateEditor
-              initialContent=""
+              initialContent={initialData?.description || ""}
               onChange={() => {}}
               onMarkdownChange={handleEditorChange}
               placeholder="ここにカテゴリの説明を入力してください"

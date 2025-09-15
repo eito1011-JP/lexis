@@ -4,6 +4,7 @@ import CategoryCreationForm, { useUnsavedChangesHandler } from '@/components/adm
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
 import { apiClient } from '@/components/admin/api/client';
+import { API_CONFIG } from '@/components/admin/api/config';
 
 /**
  * カテゴリ編集ページ
@@ -18,7 +19,6 @@ export default function EditCategoryPage(): JSX.Element {
   const [category, setCategory] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 未保存変更ハンドラーを使用
   const {
     showModal,
     handleNavigationRequest,
@@ -33,7 +33,8 @@ export default function EditCategoryPage(): JSX.Element {
       
       try {
         setIsLoading(true);
-        const response = await apiClient.get(`/api/document-categories/${id}`);
+        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
+        console.log(response);
         setCategory(response.category);
       } catch (err) {
         console.error('カテゴリの取得に失敗しました:', err);
@@ -47,7 +48,7 @@ export default function EditCategoryPage(): JSX.Element {
   }, [id]);
 
   const handleSuccess = () => {
-    // 成功時はドキュメント一覧ページに戻る
+    // カテゴリ編集成功時はドキュメント一覧ページに遷移
     navigate('/documents', { 
       state: { 
         message: 'カテゴリが更新されました',
@@ -57,7 +58,7 @@ export default function EditCategoryPage(): JSX.Element {
   };
 
   const handleCancel = () => {
-    // キャンセル時はドキュメント一覧ページに戻る
+    // キャンセル時はドキュメント一覧ページに遷移
     navigate('/documents');
   };
 
@@ -130,7 +131,6 @@ export default function EditCategoryPage(): JSX.Element {
         categoryId={parseInt(id!)}
         onSuccess={handleSuccess}
         onCancel={handleCancel}
-        onNavigateAway={handleNavigationRequest}
         onUnsavedChangesChange={setHasUnsavedChanges}
       />
 

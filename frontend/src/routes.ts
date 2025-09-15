@@ -9,6 +9,7 @@ export const ROUTES = {
   CREATE_DOCUMENT: 'create-document',
   CREATE_CATEGORY: 'create-category',
   CREATE_ROOT_CATEGORY: 'create-root-category',
+  EDIT_CATEGORY: 'edit-category',
   EDIT_DOCUMENT: 'edit-document',
   DOCUMENT_BY_SLUG: 'document-by-slug',
   CHANGE_SUGGESTIONS: 'change-suggestions',
@@ -30,6 +31,7 @@ export const ROUTE_PATHS = {
   [ROUTES.CREATE_DOCUMENT]: '/documents/create',
   [ROUTES.CREATE_CATEGORY]: '/categories/:categoryId/create',
   [ROUTES.CREATE_ROOT_CATEGORY]: '/categories/create',
+  [ROUTES.EDIT_CATEGORY]: '/categories/:id/edit',
   [ROUTES.EDIT_DOCUMENT]: '/documents/**/edit',
   [ROUTES.DOCUMENT_BY_SLUG]: '/documents/:paths/*',
   [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
@@ -57,6 +59,8 @@ export const generatePath = (
     return `/documents/${params.slug}`;
   } else if (routeName === ROUTES.CREATE_CATEGORY && params?.categoryId) {
     return `/categories/${params.categoryId}/create`;
+  } else if (routeName === ROUTES.EDIT_CATEGORY && params?.id) {
+    return `/categories/${params.id}/edit`;
   }
 
   if (params) {
