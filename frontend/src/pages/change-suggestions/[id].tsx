@@ -27,7 +27,7 @@ import { Closed } from '@/components/icon/common/Closed';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
-import { markdownToHtml } from '@/utils/markdownToHtml';
+import { MarkdownRenderer } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { CheckMark } from '@/components/icon/common/CheckMark';
 import SendReview from '@/components/icon/common/SendReview';
@@ -97,12 +97,10 @@ const SmartDiffValue: React.FC<{
     if (!isMarkdown || !content) return content;
 
     try {
-      const htmlContent = markdownToHtml(content);
       return (
-        <div
-          className="markdown-content prose prose-invert max-w-none"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
+        <div className="markdown-content prose prose-invert max-w-none">
+          <MarkdownRenderer>{content}</MarkdownRenderer>
+        </div>
       );
     } catch (error) {
       return content;
