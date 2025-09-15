@@ -47,14 +47,24 @@ export default function EditCategoryPage(): JSX.Element {
     fetchCategory();
   }, [id]);
 
-  const handleSuccess = () => {
-    // カテゴリ編集成功時はドキュメント一覧ページに遷移
-    navigate('/documents', { 
-      state: { 
-        message: 'カテゴリが更新されました',
-        type: 'success'
-      }
-    });
+  const handleSave = async () => {
+    console.log('categoryddd', category);
+    try {
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${id}`, {
+        title: category.title,
+        description: category.description,
+      });
+      // カテゴリ編集成功時はドキュメント一覧ページに遷移
+      navigate('/documents', { 
+        state: { 
+          message: 'カテゴリが更新されました',
+          type: 'success'
+        }
+      });
+    } catch (error) {
+      console.error('カテゴリの更新に失敗しました:', error);
+      setError('カテゴリの更新に失敗しました');
+    }
   };
 
   const handleCancel = () => {
@@ -129,7 +139,7 @@ export default function EditCategoryPage(): JSX.Element {
         }}
         isEditMode={true}
         categoryId={parseInt(id!)}
-        onSuccess={handleSuccess}
+        onSuccess={handleSave}
         onCancel={handleCancel}
         onUnsavedChangesChange={setHasUnsavedChanges}
       />

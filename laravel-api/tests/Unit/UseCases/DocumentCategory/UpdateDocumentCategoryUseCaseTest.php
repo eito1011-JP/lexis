@@ -166,6 +166,14 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
 
+        // PullRequestEditSession::findEditSessionIdをモック
+        $pullRequestEditSessionMock = Mockery::mock('alias:' . PullRequestEditSession::class);
+        $pullRequestEditSessionMock
+            ->shouldReceive('findEditSessionId')
+            ->once()
+            ->with($pullRequest->id, null, $this->user->id)
+            ->andReturn($pullRequestEditSession->id);
+
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -235,6 +243,14 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
+
+        // PullRequestEditSession::findEditSessionIdをモック
+        $pullRequestEditSessionMock = Mockery::mock('alias:' . PullRequestEditSession::class);
+        $pullRequestEditSessionMock
+            ->shouldReceive('findEditSessionId')
+            ->once()
+            ->with($pullRequest->id, null, $this->user->id)
+            ->andReturn($pullRequestEditSession->id);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);

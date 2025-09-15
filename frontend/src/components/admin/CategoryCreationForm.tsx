@@ -91,7 +91,6 @@ export default function CategoryCreationForm({
       if (isEditMode && categoryId) {
         // 編集モード：PUT リクエスト
         const payload = {
-          id: categoryId,
           title: title,
           description: description,
         };

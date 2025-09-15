@@ -87,7 +87,7 @@ class UpdateDocumentCategoryUseCase
             ]);
 
             // 既存のDocumentCategoryを論理削除
-            $existingCategory->editStartVersions()->delete();
+            $existingCategory->originalEditStartVersions()->delete();
             $existingCategory->delete();
 
             // 9. プルリクエストを編集している処理を考慮
