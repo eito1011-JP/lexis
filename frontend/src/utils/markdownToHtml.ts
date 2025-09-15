@@ -76,22 +76,40 @@ export const MarkdownRenderer: React.FC<{ children: string }> = ({ children }) =
 // 後方互換性のためのHTML文字列変換関数
 export const markdownToHtml = (markdown: string): string => {
   if (!markdown) return '';
-
-  // react-markdownを使用したReactコンポーネントをHTMLに変換するのは複雑なため、
-  // この関数は段階的移行のために残していますが、
-  // 新しいコードではMarkdownRendererコンポーネントの使用を推奨します
-  console.warn('markdownToHtml は非推奨です。MarkdownRenderer コンポーネントを使用してください。');
   
-  // 簡易的なフォールバック実装（セキュリティ上の理由で最小限の機能のみ）
+  // 基本的なマークダウン変換（セキュリティを考慮）
   let html = markdown;
   
-  // 基本的なエスケープ処理
+  // HTMLエスケープ処理
   html = html.replace(/&/g, '&amp;');
   html = html.replace(/</g, '&lt;');
   html = html.replace(/>/g, '&gt;');
   html = html.replace(/"/g, '&quot;');
   html = html.replace(/'/g, '&#x27;');
   
-  // 段落として包む
-  return `<p>${html.replace(/\n/g, '<br>')}</p>`;
+  // マークダウン記法の変換
+  // 見出し（### → h3, ## → h2, # → h1）
+  html = html.replace(/^### (.*$)/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.*$)/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+  
+  // 太字 (**text** → <strong>text</strong>)
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // イタリック (*text* → <em>text</em>)
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // コードブロック (```code``` → <pre><code>code</code></pre>)
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  
+  // インラインコード (`code` → <code>code</code>)
+  html = html.replace(/`(.*?)`/g, '<code>$1</code>');
+  
+  // リンク ([text](url) → <a href="url">text</a>)
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  
+  // 改行を<br>に変換
+  html = html.replace(/\n/g, '<br>');
+  
+  return html;
 };

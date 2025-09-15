@@ -729,6 +729,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                                   category.description,
                                   originalCategory?.description
                                 )}
+                                isMarkdown={true}
                               />
                             </div>
                           );
