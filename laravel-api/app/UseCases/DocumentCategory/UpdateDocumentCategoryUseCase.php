@@ -3,6 +3,7 @@
 namespace App\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
+use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
 use App\Models\EditStartVersion;
@@ -68,13 +69,13 @@ class UpdateDocumentCategoryUseCase
 
             // 7. DocumentCategoryを作成
             $newCategory = DocumentCategory::create([
-                'sidebar_label' => $dto->title,
-                'slug' => $existingCategory->slug, // 既存のslugを維持
+                'title' => $dto->title,
                 'parent_id' => $existingCategory->parent_id,
-                'position' => $existingCategory->position,
                 'description' => $dto->description,
                 'user_branch_id' => $userBranchId,
                 'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                'organization_id' => $organizationId,
+                'status' => DocumentCategoryStatus::DRAFT->value,
             ]);
 
             // 8. EditStartVersionを作成(original_version_id = existingCategory.id, current_version_id = 新規のDocumentCategory.id)
@@ -84,6 +85,10 @@ class UpdateDocumentCategoryUseCase
                 'original_version_id' => $existingCategory->id,
                 'current_version_id' => $newCategory->id,
             ]);
+
+            // 既存のDocumentCategoryを論理削除
+            $existingCategory->editStartVersions()->delete();
+            $existingCategory->delete();
 
             // 9. プルリクエストを編集している処理を考慮
             if ($pullRequestEditSessionId) {
@@ -101,17 +106,12 @@ class UpdateDocumentCategoryUseCase
             }
 
             DB::commit();
-            Log::info('カテゴリを正常に更新しました', ['category_id' => $newCategory->id]);
 
             return $newCategory;
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('カテゴリの更新に失敗しました', [
-                'error' => $e->getMessage(),
-                'category_id' => $dto->categoryId,
-                'user_id' => $user->id,
-            ]);
+            Log::error($e);
             throw $e;
         }
     }
