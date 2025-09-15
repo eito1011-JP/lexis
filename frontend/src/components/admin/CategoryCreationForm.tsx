@@ -196,7 +196,7 @@ export default function CategoryCreationForm({
             disabled={isCreating}
             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-md text-white transition-colors"
           >
-{isCreating ? (isEditMode ? '更新中...' : '保存中...') : (isEditMode ? '更新' : '保存')}
+{isCreating ? (isEditMode ? '更新中...' : '保存中...') : '保存'}
           </button>
           {onCancel && (
             <button
