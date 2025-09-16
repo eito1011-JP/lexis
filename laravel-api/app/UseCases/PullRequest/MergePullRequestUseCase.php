@@ -5,9 +5,11 @@ namespace App\UseCases\PullRequest;
 use App\Dto\UseCase\PullRequest\MergePullRequestDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestStatus;
 use App\Models\ActivityLogOnPullRequest;
+use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Policies\PullRequestPolicy;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -45,10 +47,13 @@ class MergePullRequestUseCase
                 throw new NotFoundException();
             }
 
-            // 3. 操作ユーザーがそのorganizationでadminかowner以上であることを確認（policyでmerge権限実装）
+            // 2. 基本的な権限チェック（組織メンバーかどうか）
             if (!$this->pullRequestPolicy->merge($dto->userId, $pullRequest)) {
                 throw new AuthorizationException();
             }
+
+            // 3. 競合解決：同じオリジナルを編集した他のバージョンを論理削除
+            $this->resolveConflicts($pullRequest);
 
             // 4. pull_requestに紐づくdocument_versionsとdocument_categoriesのstatusをmergedに更新
             $userBranch = $pullRequest->userBranch;
@@ -87,5 +92,83 @@ class MergePullRequestUseCase
 
             throw $e;
         }
+    }
+
+    /**
+     * 競合解決：変更対象となったoriginalのdocument/categoryを論理削除
+     *
+     * @param PullRequest $pullRequest マージするプルリクエスト
+     */
+    private function resolveConflicts(PullRequest $pullRequest): void
+    {
+        // このプルリクエストのブランチに含まれるEditStartVersionを取得
+        $editStartVersions = EditStartVersion::where('user_branch_id', $pullRequest->user_branch_id)
+            ->get();
+
+        if ($editStartVersions->isEmpty()) {
+            return;
+        }
+
+        // 競合があるoriginal_version_idとtarget_typeの組み合わせを一括で取得
+        $originalVersionIds = $editStartVersions->pluck('original_version_id')->unique();
+        $targetTypes = $editStartVersions->pluck('target_type')->unique();
+
+        $conflictingEditStartVersions = EditStartVersion::whereIn('original_version_id', $originalVersionIds)
+            ->whereIn('target_type', $targetTypes)
+            ->where('user_branch_id', '!=', $pullRequest->user_branch_id)
+            ->get()
+            ->groupBy(['original_version_id', 'target_type']);
+
+        // 競合があるEditStartVersionのみを抽出
+        $conflictingEditStartVersionsList = $editStartVersions->filter(function ($editStartVersion) use ($conflictingEditStartVersions) {
+            return isset($conflictingEditStartVersions[$editStartVersion->original_version_id][$editStartVersion->target_type]);
+        });
+
+        if ($conflictingEditStartVersionsList->isNotEmpty()) {
+            $this->deleteOriginalVersionsBatch($conflictingEditStartVersionsList);
+        }
+    }
+
+    /**
+     * 競合があるoriginalのdocument/categoryを一括で論理削除
+     *
+     * @param \Illuminate\Support\Collection $conflictingEditStartVersions 競合があるEditStartVersionのコレクション
+     */
+    private function deleteOriginalVersionsBatch(\Illuminate\Support\Collection $conflictingEditStartVersions): void
+    {
+        // ドキュメントとカテゴリを分離
+        $documentEditStartVersions = $conflictingEditStartVersions->filter(function ($editStartVersion) {
+            return $editStartVersion->target_type === EditStartVersionTargetType::DOCUMENT->value;
+        });
+
+        $categoryEditStartVersions = $conflictingEditStartVersions->filter(function ($editStartVersion) {
+            return $editStartVersion->target_type === EditStartVersionTargetType::CATEGORY->value;
+        });
+
+        // ドキュメントバージョンを一括論理削除
+        if ($documentEditStartVersions->isNotEmpty()) {
+            $documentIds = $documentEditStartVersions->pluck('original_version_id')->unique();
+            DB::table('document_versions')
+                ->whereIn('id', $documentIds)
+                ->whereNull('deleted_at')
+                ->update(['deleted_at' => now()]);
+        }
+
+        // ドキュメントカテゴリを一括論理削除
+        if ($categoryEditStartVersions->isNotEmpty()) {
+            $categoryIds = $categoryEditStartVersions->pluck('original_version_id')->unique();
+            DB::table('document_categories')
+                ->whereIn('id', $categoryIds)
+                ->whereNull('deleted_at')
+                ->update(['deleted_at' => now()]);
+        }
+
+        // 対象となったoriginalのEditStartVersionを一括論理削除
+        $originalVersionIds = $conflictingEditStartVersions->pluck('original_version_id')->unique();
+        $targetTypes = $conflictingEditStartVersions->pluck('target_type')->unique();
+
+        EditStartVersion::whereIn('original_version_id', $originalVersionIds)
+            ->whereIn('target_type', $targetTypes)
+            ->delete();
     }
 }
