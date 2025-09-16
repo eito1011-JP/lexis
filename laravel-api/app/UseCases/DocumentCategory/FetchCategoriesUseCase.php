@@ -4,7 +4,9 @@ namespace App\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
+use App\Models\EditStartVersion;
 use App\Models\User;
 use App\Models\UserBranch;
 use Illuminate\Database\Eloquent\Collection;
@@ -36,9 +38,25 @@ class FetchCategoriesUseCase
                 ])
                 ->where('user_branch_id', $activeUserBranch->id);
             } else {
-                // 初回編集の場合：DRAFTステータスのみ取得（自分のユーザーブランチのもの）
-                $query->where('status', DocumentCategoryStatus::DRAFT->value)
-                    ->where('user_branch_id', $activeUserBranch->id);
+                // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+                // ただし、編集対象となったMERGEDカテゴリは除外する（新規作成は除外しない）
+                $editedMergedCategoryIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+                    ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
+                    ->whereColumn('original_version_id', '!=', 'current_version_id') // 新規作成は除外（original_version_id = current_version_id）
+                    ->whereHas('originalCategory', function($q) {
+                        $q->where('status', DocumentCategoryStatus::MERGED->value);
+                    })
+                    ->pluck('original_version_id');
+
+                $query->where(function($subQuery) use ($activeUserBranch, $editedMergedCategoryIds) {
+                    $subQuery->where(function($q1) use ($activeUserBranch) {
+                        $q1->where('status', DocumentCategoryStatus::DRAFT->value)
+                           ->where('user_branch_id', $activeUserBranch->id);
+                    })->orWhere(function($q2) use ($editedMergedCategoryIds) {
+                        $q2->where('status', DocumentCategoryStatus::MERGED->value)
+                           ->whereNotIn('id', $editedMergedCategoryIds);
+                    });
+                });
             }
         } else {
             // 未編集の場合：MERGEDステータスのみ取得
