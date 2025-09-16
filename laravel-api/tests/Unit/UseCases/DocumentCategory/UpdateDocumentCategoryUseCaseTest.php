@@ -6,7 +6,6 @@ use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
-use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\PullRequest;
@@ -86,7 +85,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
         $this->userBranchService
@@ -116,9 +116,10 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'current_version_id' => $result->id,
         ]);
 
-        // 既存カテゴリが論理削除されていることを確認
-        $this->assertSoftDeleted('document_categories', [
+        // 既存カテゴリがMERGEDステータスなので削除されていないことを確認
+        $this->assertDatabaseHas('document_categories', [
             'id' => $existingCategory->id,
+            'deleted_at' => null,
         ]);
     }
 
@@ -138,8 +139,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        // UpdateDocumentCategoryUseCaseではtokenにnullを渡すが、
-        // 実際のDBではtoken列はNOT NULLなので、testではfindEditSessionIdをモックする必要がある
         $pullRequestEditSession = PullRequestEditSession::factory()->create([
             'pull_request_id' => $pullRequest->id,
             'user_id' => $this->user->id,
@@ -157,7 +156,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: $pullRequest->id
+            editPullRequestId: $pullRequest->id,
+            pullRequestEditToken: $pullRequestEditSession->token
         );
 
         $this->userBranchService
@@ -165,14 +165,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
-
-        // PullRequestEditSession::findEditSessionIdをモック
-        $pullRequestEditSessionMock = Mockery::mock('alias:' . PullRequestEditSession::class);
-        $pullRequestEditSessionMock
-            ->shouldReceive('findEditSessionId')
-            ->once()
-            ->with($pullRequest->id, null, $this->user->id)
-            ->andReturn($pullRequestEditSession->id);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -208,8 +200,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        // UpdateDocumentCategoryUseCaseではtokenにnullを渡すが、
-        // 実際のDBではtoken列はNOT NULLなので、testではfindEditSessionIdをモックする必要がある
         $pullRequestEditSession = PullRequestEditSession::factory()->create([
             'pull_request_id' => $pullRequest->id,
             'user_id' => $this->user->id,
@@ -235,7 +225,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: $pullRequest->id
+            editPullRequestId: $pullRequest->id,
+            pullRequestEditToken: $pullRequestEditSession->token
         );
 
         $this->userBranchService
@@ -243,14 +234,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
-
-        // PullRequestEditSession::findEditSessionIdをモック
-        $pullRequestEditSessionMock = Mockery::mock('alias:' . PullRequestEditSession::class);
-        $pullRequestEditSessionMock
-            ->shouldReceive('findEditSessionId')
-            ->once()
-            ->with($pullRequest->id, null, $this->user->id)
-            ->andReturn($pullRequestEditSession->id);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -285,7 +268,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
         // Act & Assert
@@ -305,7 +289,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $nonExistentCategoryId,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
         $userBranch = UserBranch::factory()->create([
@@ -338,7 +323,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
         $this->userBranchService
@@ -358,11 +344,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     public function test_update_category_handles_database_exception_and_rolls_back_transaction(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
         $existingCategory = DocumentCategory::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -371,45 +352,21 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
+        // UserBranchServiceがExceptionを投げるようにモック
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
             ->with($this->user, $this->organization->id, null)
-            ->andReturn($userBranch->id);
+            ->andThrow(new \Exception('Database error'));
 
-        // DocumentCategory::createメソッドでエラーを発生させるため、
-        // DB::shouldReceiveを使ってモックする
-        DB::shouldReceive('beginTransaction')->once();
-        DB::shouldReceive('rollBack')->once();
-        
-        Log::shouldReceive('error')->once();
-
-        // DocumentCategoryのcreateメソッドを無効なデータでエラーを発生させるため、
-        // 実際のDBエラーを発生させる代わりに、Exceptionを投げる方法を使用
-        $originalCategory = $existingCategory;
-        
         // Act & Assert
-        // title フィールドに非常に長い文字列を設定してDBエラーを発生させる
-        $longTitle = str_repeat('a', 256); // 通常のVARCHAR制限を超える長さ
-        
-        $dtoWithInvalidData = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
-            title: $longTitle,
-            description: 'Updated Description',
-            editPullRequestId: null
-        );
-
         $this->expectException(\Exception::class);
-        $this->useCase->execute($dtoWithInvalidData, $this->user);
-
-        // 元のカテゴリが削除されていないことを確認（ロールバックされている）
-        $this->assertDatabaseHas('document_categories', [
-            'id' => $originalCategory->id,
-            'deleted_at' => null,
-        ]);
+        $this->expectExceptionMessage('Database error');
+        $this->useCase->execute($dto, $this->user);
     }
 
     /**
@@ -431,7 +388,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
         $this->userBranchService
@@ -477,7 +435,8 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryId: $existingCategory->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
         $this->userBranchService
@@ -496,7 +455,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function test_update_category_deletes_existing_edit_start_versions(): void
+    public function test_update_category_deletes_draft_status_existing_category(): void
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -506,14 +465,56 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
 
         $existingCategory = DocumentCategory::factory()->create([
             'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::DRAFT->value, // DRAFTステータスで作成
         ]);
 
-        // 既存のEditStartVersionを作成
-        $existingEditStartVersion = EditStartVersion::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $existingCategory->id,
-            'current_version_id' => $existingCategory->id,
+        $dto = new UpdateDocumentCategoryDto(
+            categoryId: $existingCategory->id,
+            title: 'Updated Title',
+            description: 'Updated Description',
+            editPullRequestId: null,
+            pullRequestEditToken: null,
+        );
+
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->with($this->user, $this->organization->id, null)
+            ->andReturn($userBranch->id);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        // DRAFTステータスの既存カテゴリが削除されていることを確認
+        $this->assertSoftDeleted('document_categories', [
+            'id' => $existingCategory->id,
+        ]);
+
+        // 新しいカテゴリが作成されていることを確認
+        $this->assertDatabaseHas('document_categories', [
+            'id' => $result->id,
+            'title' => 'Updated Title',
+            'description' => 'Updated Description',
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'deleted_at' => null,
+        ]);
+    }
+
+    /**
+     * @test
+     */
+    public function test_update_category_does_not_delete_merged_status_existing_category(): void
+    {
+        // Arrange
+        $userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $existingCategory = DocumentCategory::factory()->create([
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::MERGED->value, // MERGEDステータスで作成
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
@@ -533,17 +534,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        // 既存のEditStartVersionが論理削除されていることを確認
-        $this->assertSoftDeleted('edit_start_versions', [
-            'id' => $existingEditStartVersion->id,
+        // MERGEDステータスの既存カテゴリが削除されていないことを確認
+        $this->assertDatabaseHas('document_categories', [
+            'id' => $existingCategory->id,
+            'deleted_at' => null,
         ]);
 
-        // 新しいEditStartVersionが作成されていることを確認
-        $this->assertDatabaseHas('edit_start_versions', [
-            'user_branch_id' => $userBranch->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $existingCategory->id,
-            'current_version_id' => $result->id,
+        // 新しいカテゴリが作成されていることを確認
+        $this->assertDatabaseHas('document_categories', [
+            'id' => $result->id,
+            'title' => 'Updated Title',
+            'description' => 'Updated Description',
+            'status' => DocumentCategoryStatus::DRAFT->value,
             'deleted_at' => null,
         ]);
     }

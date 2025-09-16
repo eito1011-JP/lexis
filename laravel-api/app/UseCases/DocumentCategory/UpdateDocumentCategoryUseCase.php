@@ -35,6 +35,7 @@ class UpdateDocumentCategoryUseCase
     public function execute(UpdateDocumentCategoryDto $dto, User $user): DocumentCategory
     {
         try {
+            Log::info(json_encode($dto));
             DB::beginTransaction();
 
             // 1. $organizationId = $user->organizationMember->organization_id;
@@ -59,7 +60,7 @@ class UpdateDocumentCategoryUseCase
                 $user->id
             );
 
-            // 5. 編集対象のexisitingCategoryを取得
+            // 5. 編集対象のexistingCategoryを取得
             $existingCategory = DocumentCategory::find($dto->categoryId);
 
             // 6. if existingCategoryがない場合 throw new NotFoundException;
@@ -86,9 +87,9 @@ class UpdateDocumentCategoryUseCase
                 'current_version_id' => $newCategory->id,
             ]);
 
-            // 既存のDocumentCategoryを論理削除
-            $existingCategory->originalEditStartVersions()->delete();
-            $existingCategory->delete();
+            if ($existingCategory->status === DocumentCategoryStatus::DRAFT->value) {
+                $existingCategory->delete();
+            }
 
             // 9. プルリクエストを編集している処理を考慮
             if ($pullRequestEditSessionId) {
