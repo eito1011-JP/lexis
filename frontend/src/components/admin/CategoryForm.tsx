@@ -33,10 +33,13 @@ export default function CategoryForm({
   const [description, setDescription] = useState(initialData.description);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // initialData が変更されたときに state を更新
+  // initialData が変更されたときに state を更新（空でない場合のみ）
   useEffect(() => {
-    setTitle(initialData.title);
-    setDescription(initialData.description);
+    // 空でないデータが来た場合のみ更新
+    if (initialData.title !== '' || initialData.description !== '') {
+      setTitle(initialData.title);
+      setDescription(initialData.description);
+    }
   }, [initialData]);
 
   // 未保存の変更を追跡
@@ -84,6 +87,7 @@ export default function CategoryForm({
     // プレビュー機能は今回は実装しない
     console.log('プレビュー機能は未実装です');
   };
+
 
   return (
     <div className="text-white min-h-full">

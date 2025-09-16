@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
 import AdminLayout from '@/components/admin/layout';
@@ -35,7 +35,6 @@ export default function EditCategoryPage(): JSX.Element {
       try {
         setIsLoading(true);
         const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
-        console.log(response);
         setCategory(response.category);
       } catch (err) {
         console.error('カテゴリの取得に失敗しました:', err);
@@ -98,6 +97,12 @@ export default function EditCategoryPage(): JSX.Element {
     });
   };
 
+  // initialDataをメモ化して不要な再レンダリングを防ぐ
+  const initialData = useMemo(() => ({
+    title: category?.title || '',
+    description: category?.description || ''
+  }), [category]);
+
   if (isLoading) {
     return (
       <AdminLayout 
@@ -142,10 +147,7 @@ export default function EditCategoryPage(): JSX.Element {
       onNavigationRequest={handleControlledNavigation}
     >
       <CategoryForm
-        initialData={{
-          title: category.title,
-          description: category.description || ''
-        }}
+        initialData={initialData}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         onUnsavedChangesChange={setHasUnsavedChanges}
