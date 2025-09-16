@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import CategoryCreationForm, { useUnsavedChangesHandler } from '@/components/admin/CategoryCreationForm';
+import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
 import { apiClient } from '@/components/admin/api/client';
@@ -18,6 +18,7 @@ export default function EditCategoryPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const [category, setCategory] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     showModal,
@@ -47,13 +48,18 @@ export default function EditCategoryPage(): JSX.Element {
     fetchCategory();
   }, [id]);
 
-  const handleSave = async () => {
-    console.log('categoryddd', category);
+  const handleSubmit = async (formData: CategoryFormData) => {
+    if (!id) return;
+    
+    setIsSubmitting(true);
+    setError(null);
+
     try {
       await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${id}`, {
-        title: category.title,
-        description: category.description,
+        title: formData.title,
+        description: formData.description,
       });
+      
       // カテゴリ編集成功時はドキュメント一覧ページに遷移
       navigate('/documents', { 
         state: { 
@@ -61,9 +67,15 @@ export default function EditCategoryPage(): JSX.Element {
           type: 'success'
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('カテゴリの更新に失敗しました:', error);
-      setError('カテゴリの更新に失敗しました');
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('カテゴリの更新に失敗しました');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -129,19 +141,17 @@ export default function EditCategoryPage(): JSX.Element {
       selectedCategoryId={selectedSideContentCategory}
       onNavigationRequest={handleControlledNavigation}
     >
-      <CategoryCreationForm
-        parentCategoryId={category.parent_id}
+      <CategoryForm
         initialData={{
-          slug: category.slug,
           title: category.title,
-          description: category.description || '',
-          position: category.position || ''
+          description: category.description || ''
         }}
-        isEditMode={true}
-        categoryId={parseInt(id!)}
-        onSuccess={handleSave}
+        onSubmit={handleSubmit}
         onCancel={handleCancel}
         onUnsavedChangesChange={setHasUnsavedChanges}
+        isSubmitting={isSubmitting}
+        submitButtonText="更新"
+        submittingText="更新中..."
       />
 
       {/* 未保存変更確認モーダル */}
