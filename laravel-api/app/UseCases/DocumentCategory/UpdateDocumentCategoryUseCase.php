@@ -35,7 +35,6 @@ class UpdateDocumentCategoryUseCase
     public function execute(UpdateDocumentCategoryDto $dto, User $user): DocumentCategory
     {
         try {
-            Log::info(json_encode($dto));
             DB::beginTransaction();
 
             // 1. $organizationId = $user->organizationMember->organization_id;

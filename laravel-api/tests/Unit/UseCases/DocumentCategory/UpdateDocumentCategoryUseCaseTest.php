@@ -17,8 +17,6 @@ use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\UpdateDocumentCategoryUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Mockery;
 use Tests\TestCase;
 
