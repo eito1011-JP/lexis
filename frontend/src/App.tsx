@@ -100,6 +100,7 @@ function App() {
         />
         <Route path={ROUTE_PATHS.documents} element={<ProtectedRoute><DocumentsPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['create-document']} element={<ProtectedRoute><CreateDocumentPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS['create-document-in-category']} element={<ProtectedRoute><CreateDocumentPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['create-category']} element={<ProtectedRoute><CreateCategoryPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['create-root-category']} element={<ProtectedRoute><CreateRootCategoryPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['edit-category']} element={<ProtectedRoute><EditCategoryPage /></ProtectedRoute>} />
