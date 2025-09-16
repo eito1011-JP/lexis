@@ -135,6 +135,11 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/{token}', [FixRequestController::class, 'fetchFixRequestDiff']);
         Route::post('/apply', [FixRequestController::class, 'applyFixRequest']);
     });
+
+    // ドキュメントバージョン関連（新仕様）
+    Route::prefix('document_versions')->group(function () {
+        Route::post('/', [DocumentController::class, 'createDocument']);
+    });
 });
 
 // 組織登録（プリサインアップフロー）

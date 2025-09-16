@@ -31,4 +31,9 @@ return [
     'description' => '説明',
     'reviewers' => 'レビュアー',
     'reviewers.*' => 'レビュアーのメールアドレス',
+    
+    // ドキュメント作成用の属性名
+    'category_id' => 'カテゴリID',
+    'edit_pull_request_id' => '編集プルリクエストID',
+    'pull_request_edit_token' => 'プルリクエスト編集トークン',
 ];
