@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import CategoryCreationForm, { useUnsavedChangesHandler } from '@/components/admin/CategoryCreationForm';
+import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
 import { apiClient } from '@/components/admin/api/client';
@@ -18,6 +18,7 @@ export default function EditCategoryPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const [category, setCategory] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     showModal,
@@ -34,7 +35,6 @@ export default function EditCategoryPage(): JSX.Element {
       try {
         setIsLoading(true);
         const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
-        console.log(response);
         setCategory(response.category);
       } catch (err) {
         console.error('カテゴリの取得に失敗しました:', err);
@@ -47,14 +47,35 @@ export default function EditCategoryPage(): JSX.Element {
     fetchCategory();
   }, [id]);
 
-  const handleSuccess = () => {
-    // カテゴリ編集成功時はドキュメント一覧ページに遷移
-    navigate('/documents', { 
-      state: { 
-        message: 'カテゴリが更新されました',
-        type: 'success'
+  const handleSubmit = async (formData: CategoryFormData) => {
+    if (!id) return;
+    
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${id}`, {
+        title: formData.title,
+        description: formData.description,
+      });
+      
+      // カテゴリ編集成功時はドキュメント一覧ページに遷移
+      navigate('/documents', { 
+        state: { 
+          message: 'カテゴリが更新されました',
+          type: 'success'
+        }
+      });
+    } catch (error: any) {
+      console.error('カテゴリの更新に失敗しました:', error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('カテゴリの更新に失敗しました');
       }
-    });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -75,6 +96,12 @@ export default function EditCategoryPage(): JSX.Element {
       window.location.href = path;
     });
   };
+
+  // initialDataをメモ化して不要な再レンダリングを防ぐ
+  const initialData = useMemo(() => ({
+    title: category?.title || '',
+    description: category?.description || ''
+  }), [category]);
 
   if (isLoading) {
     return (
@@ -119,19 +146,14 @@ export default function EditCategoryPage(): JSX.Element {
       selectedCategoryId={selectedSideContentCategory}
       onNavigationRequest={handleControlledNavigation}
     >
-      <CategoryCreationForm
-        parentCategoryId={category.parent_id}
-        initialData={{
-          slug: category.slug,
-          title: category.title,
-          description: category.description || '',
-          position: category.position || ''
-        }}
-        isEditMode={true}
-        categoryId={parseInt(id!)}
-        onSuccess={handleSuccess}
+      <CategoryForm
+        initialData={initialData}
+        onSubmit={handleSubmit}
         onCancel={handleCancel}
         onUnsavedChangesChange={setHasUnsavedChanges}
+        isSubmitting={isSubmitting}
+        submitButtonText="更新"
+        submittingText="更新中..."
       />
 
       {/* 未保存変更確認モーダル */}

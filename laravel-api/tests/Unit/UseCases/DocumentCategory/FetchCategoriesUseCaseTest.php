@@ -104,7 +104,7 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         // Assert
         $this->assertCount(1, $result);
-        $this->assertEquals('マージ済みカテゴリ', $result->first()->title);
+        $this->assertEquals('ドラフトカテゴリ', $result->first()->title);
     }
 
     /**
@@ -121,10 +121,35 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         $dto = new FetchCategoriesDto(parentId: null, pullRequestEditSessionToken: 'some-token');
 
+        $draftCategoryByOtherUser = DocumentCategory::factory()->create([
+            'title' => 'ドラフトカテゴリ',
+            'parent_id' => null,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => null,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pushedCategoryByOtherUser = DocumentCategory::factory()->create([
+            'title' => 'プッシュ済みカテゴリ',
+            'parent_id' => null,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+            'user_branch_id' => null,
+            'organization_id' => $this->organization->id,
+        ]);
+
+
         $draftCategory = DocumentCategory::factory()->create([
             'title' => 'ドラフトカテゴリ',
             'parent_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pushedCategory = DocumentCategory::factory()->create([
+            'title' => 'プッシュ済みカテゴリ',
+            'parent_id' => null,
+            'status' => DocumentCategoryStatus::PUSHED->value,
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
@@ -140,8 +165,9 @@ class FetchCategoriesUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertCount(1, $result);
-        $this->assertEquals('ドラフトカテゴリ', $result->first()->title);
+        $this->assertCount(2, $result);
+        $this->assertEquals($pushedCategory->id, $result->first()->id);
+        $this->assertEquals($draftCategory->id, $result->last()->id);
     }
 
     /**
@@ -256,13 +282,21 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        // 再編集の場合（activeなuser_branchがあり、かつpullRequestEditSessionTokenがnull）
-        $dto = new FetchCategoriesDto(parentId: null, pullRequestEditSessionToken: null);
+        // 再編集の場合（activeなuser_branchがあり、かつpullRequestEditSessionTokenがある）
+        $dto = new FetchCategoriesDto(parentId: null, pullRequestEditSessionToken: 'some-token');
 
         $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
             'parent_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pushedCategory = DocumentCategory::factory()->create([
+            'title' => 'プッシュ済みカテゴリ',
+            'parent_id' => null,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+            'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -278,8 +312,9 @@ class FetchCategoriesUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertCount(1, $result);
-        $this->assertEquals('マージ済みカテゴリ', $result->first()->title);
+        $this->assertCount(2, $result);
+        $this->assertEquals($pushedCategory->id, $result->first()->id);
+        $this->assertEquals($draftCategory->id, $result->last()->id);
     }
 
     /**

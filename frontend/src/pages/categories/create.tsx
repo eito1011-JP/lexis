@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import CategoryCreationForm, { useUnsavedChangesHandler } from '@/components/admin/CategoryCreationForm';
+import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
+import { apiClient } from '@/components/admin/api/client';
+import { API_CONFIG } from '@/components/admin/api/config';
 
 /**
  * ルートカテゴリ新規作成ページ
@@ -12,6 +14,8 @@ export default function CreateRootCategoryPage(): JSX.Element {
   const navigate = useNavigate();
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number>(4);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const {
     showModal,
@@ -20,14 +24,38 @@ export default function CreateRootCategoryPage(): JSX.Element {
     handleCancel: handleModalCancel
   } = useUnsavedChangesHandler(hasUnsavedChanges);
 
-  const handleSuccess = () => {
-    // カテゴリ作成成功時はドキュメント一覧ページに遷移
-    navigate('/documents', { 
-      state: { 
-        message: 'カテゴリが作成されました',
-        type: 'success'
+  const handleSubmit = async (formData: CategoryFormData) => {
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const payload = {
+        title: formData.title,
+        description: formData.description,
+        parent_id: null, // ルートカテゴリとして作成
+        edit_pull_request_id: null,
+        pull_request_edit_token: null,
+      };
+
+      await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
+      
+      // カテゴリ作成成功時はドキュメント一覧ページに遷移
+      navigate('/documents', { 
+        state: { 
+          message: 'カテゴリが作成されました',
+          type: 'success'
+        }
+      });
+    } catch (error: any) {
+      console.error('カテゴリの作成に失敗しました:', error);
+      if (error.response?.data?.message) {
+        setError(error.response.data.message);
+      } else {
+        setError('カテゴリの作成に失敗しました');
       }
-    });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -58,11 +86,14 @@ export default function CreateRootCategoryPage(): JSX.Element {
       selectedCategoryId={selectedSideContentCategory}
       onNavigationRequest={handleControlledNavigation}
     >
-      <CategoryCreationForm
-        parentCategoryId={undefined} // parent_id = null でルートカテゴリを作成
-        onSuccess={handleSuccess}
+      <CategoryForm
+        onSubmit={handleSubmit}
         onCancel={handleCancel}
         onUnsavedChangesChange={setHasUnsavedChanges}
+        isSubmitting={isSubmitting}
+        error={error}
+        submitButtonText="作成"
+        submittingText="作成中..."
       />
 
       {/* 未保存変更確認モーダル */}

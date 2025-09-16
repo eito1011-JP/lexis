@@ -1,62 +1,55 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
 
-interface CategoryCreationFormProps {
-  parentCategoryId?: number;
-  onSuccess?: () => void;
+export interface CategoryFormData {
+  title: string;
+  description: string;
+}
+
+interface CategoryFormProps {
+  initialData?: CategoryFormData;
+  onSubmit: (data: CategoryFormData) => Promise<void>;
   onCancel?: () => void;
-  onNavigateAway?: () => void;
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
-  isEditMode?: boolean;
-  categoryId?: number;
-  initialData?: {
-    slug?: string;
-    title?: string;
-    description?: string;
-    position?: string | number;
-  };
+  isSubmitting?: boolean;
+  submitButtonText?: string;
+  submittingText?: string;
 }
 
 /**
- * カテゴリ作成・編集フォームコンポーネント
- * 添付画像のデザインに基づいて実装
+ * カテゴリフォームの純粋なUIコンポーネント
+ * 作成・編集の両方で使用可能
  */
-export default function CategoryCreationForm({ 
-  parentCategoryId, 
-  onSuccess, 
+export default function CategoryForm({
+  initialData = { title: '', description: '' },
+  onSubmit,
   onCancel,
-  onNavigateAway,
   onUnsavedChangesChange,
-  isEditMode = false,
-  categoryId,
-  initialData
-}: CategoryCreationFormProps) {
-  const [title, setTitle] = useState(initialData?.title || '');
-  const [description, setDescription] = useState(initialData?.description || '');
-  const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  isSubmitting = false,
+  submitButtonText = '保存',
+  submittingText = '保存中...'
+}: CategoryFormProps) {
+  const [title, setTitle] = useState(initialData.title);
+  const [description, setDescription] = useState(initialData.description);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // initialData が変更されたときに state を更新
+  // initialData が変更されたときに state を更新（空でない場合のみ）
   useEffect(() => {
-    if (initialData) {
-      setTitle(initialData.title || '');
-      setDescription(initialData.description || '');
+    // 空でないデータが来た場合のみ更新
+    if (initialData.title !== '' || initialData.description !== '') {
+      setTitle(initialData.title);
+      setDescription(initialData.description);
     }
   }, [initialData]);
 
   // 未保存の変更を追跡
   useEffect(() => {
-    const hasChanges = isEditMode
-      ? title !== (initialData?.title || '') || description !== (initialData?.description || '')
-      : title.trim() !== '' || description.trim() !== '';
+    const hasChanges = title !== initialData.title || description !== initialData.description;
     setHasUnsavedChanges(hasChanges);
     if (onUnsavedChangesChange) {
       onUnsavedChangesChange(hasChanges);
     }
-  }, [title, description, onUnsavedChangesChange, isEditMode, initialData]);
+  }, [title, description, onUnsavedChangesChange, initialData]);
 
   // ブラウザタブ/ウィンドウを閉じる際の保護
   useEffect(() => {
@@ -75,66 +68,18 @@ export default function CategoryCreationForm({
     setDescription(markdown);
   };
 
-
-  const handleSave = async () => {
-    if (isCreating) return;
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
     
     if (!title.trim()) {
-      setError('タイトルを入力してください');
       return;
     }
 
-    setIsCreating(true);
-    setError(null);
-
     try {
-      if (isEditMode && categoryId) {
-        // 編集モード：PUT リクエスト
-        const payload = {
-          id: categoryId,
-          title: title,
-          description: description,
-        };
-
-        await apiClient.put(`/api/document-categories/${categoryId}`, payload);
-      } else {
-        // 作成モード：POST リクエスト
-        const payload = {
-          title: title,
-          description: description,
-          parent_id: parentCategoryId || null,
-          edit_pull_request_id: null,
-          pull_request_edit_token: null,
-        };
-
-        await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
-      }
-
-      // 保存成功時は未保存状態をリセット
-      setHasUnsavedChanges(false);
-      if (onUnsavedChangesChange) {
-        onUnsavedChangesChange(false);
-      }
-
-      onSuccess?.();
-    } catch (error: any) {
-      if (error.response?.status === 401) {
-        setError(error.response?.message);
-      } 
-      else if (error.response?.status === 409) {
-        setError(error.response?.message);
-      }
-      else if (error.response?.status === 422) {
-        setError(error.response?.message);
-      }
-      else if (error.response?.status === 500) {
-        setError(error.response?.message);
-      }
-      else {
-        setError(error.response?.message);
-      }
-    } finally {
-      setIsCreating(false);
+      await onSubmit({ title, description });
+    } catch (error) {
+      // エラーハンドリングは親コンポーネントに委譲
+      console.error('フォーム送信エラー:', error);
     }
   };
 
@@ -142,6 +87,7 @@ export default function CategoryCreationForm({
     // プレビュー機能は今回は実装しない
     console.log('プレビュー機能は未実装です');
   };
+
 
   return (
     <div className="text-white min-h-full">
@@ -161,6 +107,7 @@ export default function CategoryCreationForm({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="これは新しいカテゴリです"
             className="w-full px-3 py-2 bg-transparent border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            disabled={isSubmitting}
           />
         </div>
 
@@ -168,7 +115,7 @@ export default function CategoryCreationForm({
           <label className="block text-sm font-medium mb-2">説明</label>
           <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
             <SlateEditor
-              initialContent={initialData?.description || ""}
+              initialContent={initialData.description}
               onChange={() => {}}
               onMarkdownChange={handleEditorChange}
               placeholder="ここにカテゴリの説明を入力してください"
@@ -176,32 +123,26 @@ export default function CategoryCreationForm({
           </div>
         </div>
 
-        {/* エラーメッセージ */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-md text-red-300">
-            {error}
-          </div>
-        )}
-
         {/* ボタン */}
         <div className="flex gap-4">
           <button
             onClick={handlePreview}
             className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
+            disabled={isSubmitting}
           >
             プレビュー
           </button>
           <button
-            onClick={handleSave}
-            disabled={isCreating}
+            onClick={handleSubmit}
+            disabled={isSubmitting || !title.trim()}
             className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-md text-white transition-colors"
           >
-{isCreating ? (isEditMode ? '更新中...' : '保存中...') : (isEditMode ? '更新' : '保存')}
+            {isSubmitting ? submittingText : submitButtonText}
           </button>
           {onCancel && (
             <button
               onClick={onCancel}
-              disabled={isCreating}
+              disabled={isSubmitting}
               className="px-6 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-md text-white transition-colors"
             >
               キャンセル

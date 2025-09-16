@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Api\DocumentCategory;
 
-use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateDocumentCategoryRequest extends FormRequest
@@ -23,17 +22,18 @@ class UpdateDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'slug' => [
-                'required',
-                'string',
-                new UniqueSlugInSameParent($this->category_path, $this->current_category_id, null),
-            ],
-            'current_category_id' => 'required|integer',
-            'category_path' => 'nullable|string|max:255',
-            'sidebar_label' => 'required|string|max:255',
-            'position' => 'required|integer',
+            'category_id' => 'required|integer|exists:document_categories,id',
+            'title' => 'required|string',
             'description' => 'nullable|string',
             'edit_pull_request_id' => 'nullable|integer',
+            'pull_request_edit_token' => 'nullable|string',
         ];
+    }
+
+    public function prepareForValidation(): void
+    {
+        $this->merge([
+            'category_id' => $this->route('id'),
+        ]);
     }
 }

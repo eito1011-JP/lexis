@@ -7,6 +7,7 @@ use App\Consts\Flag;
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
+use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
@@ -14,9 +15,9 @@ use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
 use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
 use App\Http\Requests\Api\DocumentCategory\GetCategoryRequest;
+use App\Http\Requests\Api\DocumentCategory\UpdateDocumentCategoryRequest;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
-use App\Http\Requests\UpdateDocumentCategoryRequest;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -27,6 +28,7 @@ use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
 use App\UseCases\DocumentCategory\GetCategoryUseCase;
+use App\UseCases\DocumentCategory\UpdateDocumentCategoryUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -185,95 +187,51 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリを更新
      */
-    public function updateCategory(UpdateDocumentCategoryRequest $request): JsonResponse
+    public function updateCategory(UpdateDocumentCategoryRequest $request, UpdateDocumentCategoryUseCase $useCase): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
+            // 1. 認証ユーザーか確認
             $user = $this->user();
 
-            if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
-            }
-
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
-
-            // 編集セッションIDを取得
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id);
-
-            $categoryPath = array_filter(explode('/', $request->category_path));
-            $parentCategoryId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
-
-            $existingCategory = DocumentCategory::where('parent_id', $parentCategoryId)->where('slug', $request->slug)->first();
-
-            if (! $existingCategory) {
-                return response()->json([
-                    'error' => '更新対象のカテゴリが見つかりません',
-                ], 404);
-            }
-
-            // positionの正規化
-            $position = $this->documentCategoryService->normalizePosition(
-                $request->position,
-                $existingCategory->parent_id
-            );
-
-            EditStartVersion::where('current_version_id', $existingCategory->id)
-                ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
-                ->first()
-                ->delete();
-
-            $existingCategory->delete();
-
-            $newCategory = DocumentCategory::create([
-                'slug' => $request->slug,
-                'sidebar_label' => $request->sidebar_label,
-                'position' => $position,
-                'description' => $request->description,
-                'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                'parent_id' => $existingCategory->parent_id,
-            ]);
-
-            // 編集開始バージョンの作成
-            EditStartVersion::create([
-                'user_branch_id' => $userBranchId,
-                'target_type' => 'category',
-                'original_version_id' => $existingCategory->id,
-                'current_version_id' => $newCategory->id,
-            ]);
-
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                        'current_version_id' => $existingCategory->id,
-                    ],
-                    [
-                        'current_version_id' => $newCategory->id,
-                        'diff_type' => 'updated',
-                    ]
+            // 3. 認証ユーザーではない時は401エラー
+            if (!$user) {
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
                 );
             }
 
-            DB::commit();
+            // 2. 認証ユーザーの時
+            // DTOを作成
+            $validatedData = $request->validated();
+            $validatedData['category_id'] = $request->route('id'); // URLパラメータからcategory_idを取得
+            $dto = UpdateDocumentCategoryDto::fromRequest($validatedData);
+
+            // UseCaseを実行
+            $useCase->execute($dto, $user);
 
             return response()->json();
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('カテゴリの更新に失敗しました', [
-                'error' => $e->getMessage(),
-                'stack_trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'error' => 'カテゴリの更新に失敗しました',
-            ], 500);
+        } catch (AuthenticationException) {
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+            );
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 

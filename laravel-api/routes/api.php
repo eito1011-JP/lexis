@@ -119,7 +119,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/', [DocumentCategoryController::class, 'fetchCategories']);
         Route::get('/{id}', [DocumentCategoryController::class, 'detail']);
         Route::post('/', [DocumentCategoryController::class, 'createCategory']);
-        Route::put('/', [DocumentCategoryController::class, 'updateCategory']);
+        Route::put('/{id}', [DocumentCategoryController::class, 'updateCategory']);
         Route::delete('/', [DocumentCategoryController::class, 'deleteCategory']);
         Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
     });

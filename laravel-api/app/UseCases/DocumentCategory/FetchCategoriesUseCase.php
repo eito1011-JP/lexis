@@ -22,28 +22,33 @@ class FetchCategoriesUseCase
         // ユーザーのアクティブブランチを取得
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
 
-        $query = DocumentCategory::select('id', 'title');
+        $query = DocumentCategory::select('id', 'title')
+            ->where('parent_id', $dto->parentId)
+            ->where('organization_id', $user->organizationMember->organization_id);
 
         if ($activeUserBranch) {
             // activeなuser_branchがある場合
-            if ($dto->pullRequestEditSessionToken === null) {
-                // 再編集している場合
-                $query->where('status', DocumentCategoryStatus::MERGED->value)
-                    ->where('parent_id', $dto->parentId)
-                    ->where('organization_id', $user->organizationMember->organization_id);
+            if ($dto->pullRequestEditSessionToken) {
+                // 再編集している場合：PUSHEDとDRAFTステータスの両方を取得（自分のユーザーブランチのもの）
+                $query->whereIn('status', [
+                    DocumentCategoryStatus::PUSHED->value,
+                    DocumentCategoryStatus::DRAFT->value
+                ])
+                ->where('user_branch_id', $activeUserBranch->id);
             } else {
+                // 初回編集の場合：DRAFTステータスのみ取得（自分のユーザーブランチのもの）
                 $query->where('status', DocumentCategoryStatus::DRAFT->value)
-                    ->where('parent_id', $dto->parentId)
-                    ->where('user_branch_id', $activeUserBranch->id)
-                    ->where('organization_id', $user->organizationMember->organization_id);
+                    ->where('user_branch_id', $activeUserBranch->id);
             }
         } else {
-            // 未編集の場合
-            $query->where('status', DocumentCategoryStatus::MERGED->value)
-                ->where('parent_id', $dto->parentId)
-                ->where('organization_id', $user->organizationMember->organization_id);
+            // 未編集の場合：MERGEDステータスのみ取得
+            $query->where('status', DocumentCategoryStatus::MERGED->value);
         }
 
-        return $query->orderBy('created_at', 'asc')->get();
+        // ステータス優先度とcreated_atで並び替え
+        // PUSHEDが最初、DRAFTが後、同一ステータス内ではcreated_at昇順
+        return $query->orderByRaw("CASE status WHEN 'pushed' THEN 1 WHEN 'draft' THEN 2 ELSE 3 END")
+            ->orderBy('created_at', 'asc')
+            ->get();
     }
 }
