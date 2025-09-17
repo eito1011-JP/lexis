@@ -15,6 +15,7 @@ use App\Models\DocumentVersion;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
+use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
 use App\UseCases\Document\CreateDocumentUseCase;
 use App\UseCases\Document\DeleteDocumentUseCase;
 use App\UseCases\Document\GetDocumentDetailUseCase;
@@ -92,14 +93,14 @@ class DocumentController extends ApiBaseController
 
         // return response()->json([
         //     'documents' => $result['documents'],
-        //     'categories' => $result['categories'],
-        // ]);
+            //     'categories' => $result['categories'],
+            // ]);
     }
 
     /**
      * ドキュメントを作成
      */
-    public function createDocument(CreateDocumentRequest $request): JsonResponse
+    public function createDocument(CreateDocumentRequest $request, CreateDocumentUseCase $useCase, CreateDocumentUseCaseDto $dto): JsonResponse
     {
         // 認証チェック
         $user = $this->user();
@@ -110,8 +111,9 @@ class DocumentController extends ApiBaseController
             ], 401);
         }
 
-        // UseCaseを実行
-        $result = $this->createDocumentUseCase->execute($request->all(), $user);
+        // DTOを作成してUseCaseを実行
+        $dto = CreateDocumentUseCaseDto::fromRequest($request->all(), $user);
+        $result = $useCase->execute($dto);
 
         if (! $result['success']) {
             return response()->json([

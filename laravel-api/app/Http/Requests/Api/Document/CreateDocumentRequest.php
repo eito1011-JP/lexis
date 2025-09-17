@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Document;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 
 class CreateDocumentRequest extends FormRequest
 {
