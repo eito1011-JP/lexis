@@ -17,6 +17,9 @@ export const API_CONFIG = {
       GET_DOCUMENT_DETAIL: '/api/documents/detail',
       GET_DOCUMENT_CATEGORY_CONTENTS: '/api/documents/category-contents',
     },
+    DOCUMENT_VERSIONS: {
+      CREATE: '/api/document_versions',
+    },
     CATEGORIES: {
       GET: '/api/document-categories',
       CREATE: '/api/document-categories',
