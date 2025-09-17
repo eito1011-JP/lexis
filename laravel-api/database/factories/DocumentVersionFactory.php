@@ -31,19 +31,14 @@ class DocumentVersionFactory extends Factory
         return [
             'user_id' => User::factory(),
             'user_branch_id' => 1,
-            'file_path' => $this->faker->filePath(),
             'status' => DocumentStatus::DRAFT->value,
-            'content' => $this->faker->text(),
-            'original_blob_sha' => $this->faker->sha1(),
-            'slug' => $this->faker->slug(),
+            'description' => $this->faker->text(),
             'category_id' => DocumentCategory::factory(),
-            'sidebar_label' => $this->faker->sentence(),
-            'file_order' => $this->faker->numberBetween(1, 100),
+            'title' => $this->faker->sentence(),
             'last_edited_by' => $this->faker->name(),
             'last_reviewed_by' => null,
             'is_deleted' => false,
             'deleted_at' => null,
-            'is_public' => true,
         ];
     }
 
