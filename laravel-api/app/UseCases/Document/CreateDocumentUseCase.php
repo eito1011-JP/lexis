@@ -13,6 +13,7 @@ use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CreateDocumentUseCase
@@ -27,11 +28,14 @@ class CreateDocumentUseCase
      * ドキュメントを作成
      *
      * @param  CreateDocumentUseCaseDto  $dto  DTOオブジェクト
-     * @return array{success: bool, document?: object, error?: string}
+     * @return DocumentVersion 作成されたドキュメント
+     * @throws NotFoundException 組織が見つからない場合
+     * @throws \Exception その他のエラーが発生した場合
      */
-    public function execute(CreateDocumentUseCaseDto $dto): array
+    public function execute(CreateDocumentUseCaseDto $dto): DocumentVersion
     {
         try {
+            DB::beginTransaction();
             // ユーザーの組織IDを取得
             $organizationId = $dto->user->organizationMember?->organization_id;
             if (!$organizationId) {
@@ -91,9 +95,12 @@ class CreateDocumentUseCase
                 );
             }
 
+            DB::commit();
+
             return $document;
         } catch (\Exception $e) {
             Log::error($e);
+            DB::rollBack();
             throw $e;
         }
     }
