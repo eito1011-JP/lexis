@@ -18,25 +18,20 @@ class DocumentVersion extends Model
         'user_id',
         'user_branch_id',
         'pull_request_edit_session_id',
-        'file_path',
+        'organization_id',
         'status',
         'content',
-        'original_blob_sha',
-        'slug',
         'category_id',
-        'sidebar_label',
-        'file_order',
+        'title',
+        'description',
         'last_edited_by',
         'last_reviewed_by',
         'is_deleted',
         'deleted_at',
-        'is_public',
-        'organization_id',
     ];
 
     protected $casts = [
-        'is_public' => 'boolean',
-        'file_order' => 'integer',
+        'organization_id' => 'integer',
         'is_deleted' => 'boolean',
     ];
 
@@ -122,14 +117,6 @@ class DocumentVersion extends Model
     public function scopeByCategory($query, int $categoryId)
     {
         return $query->where('category_id', $categoryId);
-    }
-
-    /**
-     * スラッグによるスコープ
-     */
-    public function scopeBySlug($query, string $slug)
-    {
-        return $query->where('slug', $slug);
     }
 
     /**

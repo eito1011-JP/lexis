@@ -5,6 +5,7 @@ namespace App\UseCases\Document;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
+use App\Enums\PullRequestEditSessionDiffType;
 use Http\Discovery\Exception\NotFoundException;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
@@ -90,7 +91,7 @@ class CreateDocumentUseCase
                     ],
                     [
                         'current_version_id' => $document->id,
-                        'diff_type' => 'created',
+                        'diff_type' => PullRequestEditSessionDiffType::CREATED->value,
                     ]
                 );
             }
