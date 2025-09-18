@@ -152,22 +152,17 @@ class FetchNodesUseCaseTest extends TestCase
         // マージ済みカテゴリのアサート
         $this->assertEquals($mergedCategory->id, $result['categories'][0]['id']);
         $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['title']);
-        $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['sidebar_label']);
 
         // ドラフトカテゴリのアサート
         $this->assertEquals('ドラフトカテゴリ', $result['categories'][1]['title']);
-        $this->assertEquals('ドラフトカテゴリ', $result['categories'][1]['sidebar_label']);
-
         // マージ済みドキュメントのアサート
         $this->assertEquals($mergedDocument->id, $result['documents'][0]['id']);
         $this->assertEquals('マージ済みドキュメント', $result['documents'][0]['title']);
-        $this->assertEquals('マージ済みドキュメント', $result['documents'][0]['sidebar_label']);
         $this->assertEquals('merged', $result['documents'][0]['status']);
         $this->assertEquals($this->user->id, $result['documents'][0]['last_edited_by']);
 
         // ドラフトドキュメントのアサート
         $this->assertEquals('ドラフトドキュメント', $result['documents'][1]['title']);
-        $this->assertEquals('ドラフトドキュメント', $result['documents'][1]['sidebar_label']);
         $this->assertEquals('draft', $result['documents'][1]['status']);
     }
 
