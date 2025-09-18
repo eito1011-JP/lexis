@@ -5,8 +5,10 @@ namespace App\UseCases\Explorer;
 use App\Dto\UseCase\Explorer\FetchNodesDto;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\User;
+use App\Enums\EditStartVersionTargetType;
 use Illuminate\Support\Facades\Log;
 
 class FetchNodesUseCase
@@ -44,23 +46,16 @@ class FetchNodesUseCase
                 }
             }
 
-            // カテゴリとドキュメントの取得条件を決定
-            if ($pullRequestEditSessionToken === null || $pullRequestEditSessionId === null) {
-                // status = merged and parent_id = request.parent_id
-                $categories = $this->fetchMergedCategories($categoryId);
-                $documents = $this->fetchMergedDocuments($categoryId);
-            } else {
-                // status = draft AND parent_id = request.parent_id AND user_id = login.user_id
-                $categories = $this->fetchDraftCategories($categoryId, $user->id, $userBranchId);
-                $documents = $this->fetchDraftDocuments($categoryId, $user->id, $userBranchId);
-            }
+            // EditStartVersionを使って現在のバージョンを取得
+            $categories = $this->fetchCurrentCategories($categoryId, $userBranchId);
+            $documents = $this->fetchCurrentDocuments($categoryId, $userBranchId);
 
             // レスポンス形式に変換
             $formattedCategories = $categories->map(function ($category) {
                 return [
                     'id' => $category->id,
                     'title' => $category->title,
-                    'sidebar_label' => $category->title,
+                    'status' => $category->status,
                 ];
             });
 
@@ -68,7 +63,6 @@ class FetchNodesUseCase
                 return [
                     'id' => $document->id,
                     'title' => $document->title,
-                    'sidebar_label' => $document->title,
                     'status' => $document->status,
                     'last_edited_by' => $document->last_edited_by,
                 ];
@@ -84,6 +78,56 @@ class FetchNodesUseCase
 
             throw $e;
         }
+    }
+
+    /**
+     * EditStartVersionを使って現在のカテゴリを取得
+     */
+    private function fetchCurrentCategories(int $parentId, int $userBranchId)
+    {
+        // EditStartVersionから現在のバージョンIDを取得
+        // 同じoriginal_version_idに対して複数のEditStartVersionがある場合は、最新のものを使用
+        $editStartVersions = EditStartVersion::where('user_branch_id', $userBranchId)
+            ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->groupBy('original_version_id')
+            ->map(function ($group) {
+                return $group->first(); // 最新の（ID最大の）EditStartVersionを取得
+            });
+
+        $currentVersionIds = $editStartVersions->pluck('current_version_id')->unique();
+
+        // 現在のバージョンIDに対応するカテゴリを取得
+        return DocumentCategory::whereIn('id', $currentVersionIds)
+            ->where('parent_id', $parentId)
+            ->orderBy('id', 'asc')
+            ->get();
+    }
+
+    /**
+     * EditStartVersionを使って現在のドキュメントを取得
+     */
+    private function fetchCurrentDocuments(int $categoryId, int $userBranchId)
+    {
+        // EditStartVersionから現在のバージョンIDを取得
+        // 同じoriginal_version_idに対して複数のEditStartVersionがある場合は、最新のものを使用
+        $editStartVersions = EditStartVersion::where('user_branch_id', $userBranchId)
+            ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->groupBy('original_version_id')
+            ->map(function ($group) {
+                return $group->first(); // 最新の（ID最大の）EditStartVersionを取得
+            });
+
+        $currentVersionIds = $editStartVersions->pluck('current_version_id')->unique();
+
+        // 現在のバージョンIDに対応するドキュメントを取得
+        return DocumentVersion::whereIn('id', $currentVersionIds)
+            ->where('category_id', $categoryId)
+            ->orderBy('id', 'asc')
+            ->get();
     }
 
     /**
@@ -104,31 +148,6 @@ class FetchNodesUseCase
     {
         return DocumentVersion::where('category_id', $categoryId)
             ->where('status', 'merged')
-            ->orderBy('id', 'asc')
-            ->get();
-    }
-
-    /**
-     * ドラフト状態のカテゴリを取得
-     */
-    private function fetchDraftCategories(int $parentId, int $userId, int $userBranchId)
-    {
-        return DocumentCategory::where('parent_id', $parentId)
-            ->where('status', 'draft')
-            ->where('user_branch_id', $userBranchId)
-            ->orderBy('id', 'asc')
-            ->get();
-    }
-
-    /**
-     * ドラフト状態のドキュメントを取得
-     */
-    private function fetchDraftDocuments(int $categoryId, int $userId, int $userBranchId)
-    {
-        return DocumentVersion::where('category_id', $categoryId)
-            ->where('status', 'draft')
-            ->where('user_id', $userId)
-            ->where('user_branch_id', $userBranchId)
             ->orderBy('id', 'asc')
             ->get();
     }

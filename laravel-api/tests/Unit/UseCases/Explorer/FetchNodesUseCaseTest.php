@@ -3,10 +3,13 @@
 namespace Tests\Unit\UseCases\Explorer;
 
 use App\Dto\UseCase\Explorer\FetchNodesDto;
+use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
+use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
 use App\Models\User;
 use App\Models\UserBranch;
@@ -54,7 +57,7 @@ class FetchNodesUseCaseTest extends TestCase
      * マージ済みカテゴリとドキュメントを取得する（pullRequestEditSessionTokenなし）
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnMergedNodesWhenNoPullRequestEditSessionToken(): void
+    public function executeShouldReturnMergedAndDraftNodesWhenHasActiveUserBranch(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -63,6 +66,13 @@ class FetchNodesUseCaseTest extends TestCase
             'parent_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
         ]);
         
         $dto = new FetchNodesDto(
@@ -78,6 +88,13 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $mergedCategory->id,
+        ]);
+
         $mergedDocument = DocumentVersion::factory()->create([
             'title' => 'マージ済みドキュメント',
             'category_id' => $parentCategory->id,
@@ -86,8 +103,15 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        // ドラフト状態のカテゴリとドキュメント（取得されない）
-        DocumentCategory::factory()->create([
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $mergedDocument->id,
+        ]);
+
+        // ドラフト状態のカテゴリとドキュメント
+        $draftCategory = DocumentCategory::factory()->create([
             'title' => 'ドラフトカテゴリ',
             'parent_id' => $parentCategory->id,
             'status' => 'draft',
@@ -95,7 +119,14 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        DocumentVersion::factory()->create([
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $draftCategory->id,
+            'current_version_id' => $draftCategory->id,
+        ]);
+
+        $draftDocument = DocumentVersion::factory()->create([
             'title' => 'ドラフトドキュメント',
             'category_id' => $parentCategory->id,
             'status' => 'draft',
@@ -104,29 +135,47 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $draftDocument->id,
+            'current_version_id' => $draftDocument->id,
+        ]);
+
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertCount(1, $result['categories']);
-        $this->assertCount(1, $result['documents']);
+        $this->assertCount(2, $result['categories']);
+        $this->assertCount(2, $result['documents']);
 
+        // マージ済みカテゴリのアサート
         $this->assertEquals($mergedCategory->id, $result['categories'][0]['id']);
         $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['title']);
         $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['sidebar_label']);
 
+        // ドラフトカテゴリのアサート
+        $this->assertEquals('ドラフトカテゴリ', $result['categories'][1]['title']);
+        $this->assertEquals('ドラフトカテゴリ', $result['categories'][1]['sidebar_label']);
+
+        // マージ済みドキュメントのアサート
         $this->assertEquals($mergedDocument->id, $result['documents'][0]['id']);
         $this->assertEquals('マージ済みドキュメント', $result['documents'][0]['title']);
         $this->assertEquals('マージ済みドキュメント', $result['documents'][0]['sidebar_label']);
         $this->assertEquals('merged', $result['documents'][0]['status']);
         $this->assertEquals($this->user->id, $result['documents'][0]['last_edited_by']);
+
+        // ドラフトドキュメントのアサート
+        $this->assertEquals('ドラフトドキュメント', $result['documents'][1]['title']);
+        $this->assertEquals('ドラフトドキュメント', $result['documents'][1]['sidebar_label']);
+        $this->assertEquals('draft', $result['documents'][1]['status']);
     }
 
     /**
      * ドラフト状態のカテゴリとドキュメントを取得する（pullRequestEditSessionTokenあり、編集セッション存在）
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnDraftNodesWhenPullRequestEditSessionTokenExistsAndSessionFound(): void
+    public function executeShouldReturnDraftNodesWhenEditMergedNodes(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -137,30 +186,63 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
         
-        $token = 'test-edit-session-token';
-        
-        // プルリクエスト編集セッションを作成
-        $editSession = PullRequestEditSession::factory()->create([
-            'token' => $token,
-            'user_id' => $this->user->id,
-            'pull_request_id' => \App\Models\PullRequest::factory()->create([
-                'user_branch_id' => $this->userBranch->id,
-                'organization_id' => $this->organization->id,
-            ])->id,
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
         ]);
 
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
-            pullRequestEditSessionToken: $token
+            pullRequestEditSessionToken: null
         );
 
         // ドラフト状態のカテゴリとドキュメントを作成
+        $mergedCategory = DocumentCategory::factory()->create([
+            'title' => 'マージ済みカテゴリ',
+            'parent_id' => $parentCategory->id,
+            'status' => 'merged',
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $mergedCategory->id,
+        ]);
+
         $draftCategory = DocumentCategory::factory()->create([
-            'title' => 'ドラフトカテゴリ',
+            'title' => 'アップデートカテゴリ',
             'parent_id' => $parentCategory->id,
             'status' => 'draft',
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $draftCategory->id,
+        ]);
+
+        $mergedDocument = DocumentVersion::factory()->create([
+            'title' => 'マージ済みドキュメント',
+            'category_id' => $parentCategory->id,
+            'status' => 'merged',
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $mergedDocument->id,
         ]);
 
         $draftDocument = DocumentVersion::factory()->create([
@@ -169,24 +251,16 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'draft',
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
-            'last_edited_by' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
-        // マージ済みカテゴリとドキュメント（取得されない）
-        DocumentCategory::factory()->create([
-            'title' => 'マージ済みカテゴリ',
-            'parent_id' => $parentCategory->id,
-            'status' => 'merged',
-            'organization_id' => $this->organization->id,
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $draftDocument->id,
         ]);
 
-        DocumentVersion::factory()->create([
-            'title' => 'マージ済みドキュメント',
-            'category_id' => $parentCategory->id,
-            'status' => 'merged',
-            'organization_id' => $this->organization->id,
-        ]);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -196,21 +270,19 @@ class FetchNodesUseCaseTest extends TestCase
         $this->assertCount(1, $result['documents']);
 
         $this->assertEquals($draftCategory->id, $result['categories'][0]['id']);
-        $this->assertEquals('ドラフトカテゴリ', $result['categories'][0]['title']);
-        $this->assertEquals('ドラフトカテゴリ', $result['categories'][0]['sidebar_label']);
+        $this->assertEquals('アップデートカテゴリ', $result['categories'][0]['title']);
+        $this->assertEquals('draft', $result['categories'][0]['status']);
 
         $this->assertEquals($draftDocument->id, $result['documents'][0]['id']);
         $this->assertEquals('ドラフトドキュメント', $result['documents'][0]['title']);
-        $this->assertEquals('ドラフトドキュメント', $result['documents'][0]['sidebar_label']);
         $this->assertEquals('draft', $result['documents'][0]['status']);
-        $this->assertEquals($this->user->id, $result['documents'][0]['last_edited_by']);
     }
 
     /**
      * 編集セッションが見つからない場合、マージ済みデータを取得する
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnMergedNodesWhenPullRequestEditSessionTokenProvidedButSessionNotFound(): void
+    public function executeShouldReturnMergedNodesWhenDoesNotHaveActiveUserBranch(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -221,11 +293,19 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
         
-        $nonExistentToken = 'non-existent-token';
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
+        ]);
+
+        // アクティブなユーザーブランチを非アクティブにする
+        $this->userBranch->update(['is_active' => false]);
         
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
-            pullRequestEditSessionToken: $nonExistentToken
+            pullRequestEditSessionToken: null
         );
 
         // マージ済みカテゴリとドキュメントを作成
@@ -236,6 +316,13 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $mergedCategory->id,
+        ]);
+
         $mergedDocument = DocumentVersion::factory()->create([
             'title' => 'マージ済みドキュメント',
             'category_id' => $parentCategory->id,
@@ -244,8 +331,15 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $mergedDocument->id,
+        ]);
+
         // ドラフト状態のカテゴリとドキュメント（取得されない）
-        DocumentCategory::factory()->create([
+        $draftCategory = DocumentCategory::factory()->create([
             'title' => 'ドラフトカテゴリ',
             'parent_id' => $parentCategory->id,
             'status' => 'draft',
@@ -253,13 +347,27 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        DocumentVersion::factory()->create([
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $draftCategory->id,
+            'current_version_id' => $draftCategory->id,
+        ]);
+
+        $draftDocument = DocumentVersion::factory()->create([
             'title' => 'ドラフトドキュメント',
             'category_id' => $parentCategory->id,
             'status' => 'draft',
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $draftDocument->id,
+            'current_version_id' => $draftDocument->id,
         ]);
 
         // Act
@@ -275,16 +383,17 @@ class FetchNodesUseCaseTest extends TestCase
 
         $this->assertContains('マージ済みカテゴリ', $categoryTitles);
         $this->assertContains('マージ済みドキュメント', $documentTitles);
-        
-        $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['title']);
-        $this->assertEquals('マージ済みドキュメント', $result['documents'][0]['title']);
+        $this->assertNotContains('ドラフトカテゴリ', $categoryTitles);
+        $this->assertNotContains('ドラフトドキュメント', $documentTitles);
+        $this->assertEquals('merged', $result['categories'][0]['status']);
+        $this->assertEquals('merged', $result['documents'][0]['status']);
     }
 
     /**
      * アクティブなユーザーブランチが存在しない場合、マージ済みデータを取得する
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnMergedNodesWhenNoActiveUserBranch(): void
+    public function executeShouldReturnMergedAndDraftNodesWhenHasPullRequestAndActiveUserBranch(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -295,13 +404,15 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
         
-        // アクティブなユーザーブランチを非アクティブにする
-        $this->userBranch->update(['is_active' => false]);
-        
-        // 新しいユーザーを作成（アクティブなユーザーブランチなし）
-        $userWithoutActiveBranch = User::factory()->create();
-        OrganizationMember::factory()->create([
-            'user_id' => $userWithoutActiveBranch->id,
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
+        ]);
+
+        $pullRequest = PullRequest::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -318,16 +429,47 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $mergedCategory->id,
+        ]);
+
         $mergedDocument = DocumentVersion::factory()->create([
             'title' => 'マージ済みドキュメント',
             'category_id' => $parentCategory->id,
             'status' => 'merged',
-            'last_edited_by' => $userWithoutActiveBranch->id,
+            'last_edited_by' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $mergedDocument->id,
+        ]);
+
+        $draftDocument = DocumentVersion::factory()->create([
+            'title' => 'ドラフトドキュメント',
+            'category_id' => $parentCategory->id,
+            'status' => 'draft',
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $draftDocument->id,
+        ]);
+
+
         // Act
-        $result = $this->useCase->execute($dto, $userWithoutActiveBranch);
+        $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
         $this->assertCount(1, $result['categories']);
@@ -335,9 +477,11 @@ class FetchNodesUseCaseTest extends TestCase
 
         $this->assertEquals($mergedCategory->id, $result['categories'][0]['id']);
         $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['title']);
+        $this->assertEquals('merged', $result['categories'][0]['status']);
 
-        $this->assertEquals($mergedDocument->id, $result['documents'][0]['id']);
-        $this->assertEquals('マージ済みドキュメント', $result['documents'][0]['title']);
+        $this->assertEquals($draftDocument->id, $result['documents'][0]['id']);
+        $this->assertEquals('ドラフトドキュメント', $result['documents'][0]['title']);
+        $this->assertEquals('draft', $result['documents'][0]['status']);
     }
 
     /**
@@ -398,11 +542,25 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category2->id,
+            'current_version_id' => $category2->id,
+        ]);
+
         $category1 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ1',
             'parent_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category1->id,
+            'current_version_id' => $category1->id,
         ]);
 
         $document2 = DocumentVersion::factory()->create([
@@ -412,11 +570,25 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $document2->id,
+            'current_version_id' => $document2->id,
+        ]);
+
         $document1 = DocumentVersion::factory()->create([
             'title' => 'ドキュメント1',
             'category_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $document1->id,
+            'current_version_id' => $document1->id,
         ]);
 
         // Act
@@ -447,8 +619,6 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
         
-        $token = 'test-edit-session-token';
-        
         // 別のユーザーとブランチを作成
         $otherUser = User::factory()->create();
         $otherUserBranch = UserBranch::factory()->create([
@@ -457,19 +627,9 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        // プルリクエスト編集セッションを作成
-        $editSession = PullRequestEditSession::factory()->create([
-            'token' => $token,
-            'user_id' => $this->user->id,
-            'pull_request_id' => \App\Models\PullRequest::factory()->create([
-                'user_branch_id' => $this->userBranch->id,
-                'organization_id' => $this->organization->id,
-            ])->id,
-        ]);
-
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
-            pullRequestEditSessionToken: $token
+            pullRequestEditSessionToken: null
         );
 
         // 正しいユーザーとブランチのドラフトデータ（取得される）
@@ -479,6 +639,13 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'draft',
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $correctCategory->id,
+            'current_version_id' => $correctCategory->id,
         ]);
 
         $correctDocument = DocumentVersion::factory()->create([
@@ -491,8 +658,15 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $correctDocument->id,
+            'current_version_id' => $correctDocument->id,
+        ]);
+
         // 他のユーザーとブランチのドラフトデータ（取得されない）
-        DocumentCategory::factory()->create([
+        $otherCategory = DocumentCategory::factory()->create([
             'title' => '他のユーザーのカテゴリ',
             'parent_id' => $parentCategory->id,
             'status' => 'draft',
@@ -500,13 +674,27 @@ class FetchNodesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        DocumentVersion::factory()->create([
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $otherCategory->id,
+            'current_version_id' => $otherCategory->id,
+        ]);
+
+        $otherDocument = DocumentVersion::factory()->create([
             'title' => '他のユーザーのドキュメント',
             'category_id' => $parentCategory->id,
             'status' => 'draft',
             'user_id' => $otherUser->id,
             'user_branch_id' => $otherUserBranch->id,
             'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $otherDocument->id,
+            'current_version_id' => $otherDocument->id,
         ]);
 
         // Act
@@ -518,9 +706,11 @@ class FetchNodesUseCaseTest extends TestCase
 
         $this->assertEquals($correctCategory->id, $result['categories'][0]['id']);
         $this->assertEquals('正しいユーザーのカテゴリ', $result['categories'][0]['title']);
+        $this->assertEquals('draft', $result['categories'][0]['status']);
 
         $this->assertEquals($correctDocument->id, $result['documents'][0]['id']);
         $this->assertEquals('正しいユーザーのドキュメント', $result['documents'][0]['title']);
+        $this->assertEquals('draft', $result['documents'][0]['status']);
     }
 
     /**
