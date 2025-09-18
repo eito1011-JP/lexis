@@ -12,8 +12,8 @@ use App\Models\ActivityLogOnPullRequest;
 use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Policies\PullRequestPolicy;
-use Illuminate\Auth\Access\AuthorizationException;
 use Http\Discovery\Exception\NotFoundException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -43,13 +43,13 @@ class MergePullRequestUseCase
                 ->lockForUpdate()
                 ->first();
 
-            if (!$pullRequest) {
-                throw new NotFoundException();
+            if (! $pullRequest) {
+                throw new NotFoundException;
             }
 
             // 2. 基本的な権限チェック（組織メンバーかどうか）
-            if (!$this->pullRequestPolicy->merge($dto->userId, $pullRequest)) {
-                throw new AuthorizationException();
+            if (! $this->pullRequestPolicy->merge($dto->userId, $pullRequest)) {
+                throw new AuthorizationException;
             }
 
             // 3. 競合解決：同じオリジナルを編集した他のバージョンを論理削除
@@ -97,7 +97,7 @@ class MergePullRequestUseCase
     /**
      * 競合解決：変更対象となったoriginalのdocument/categoryを論理削除
      *
-     * @param PullRequest $pullRequest マージするプルリクエスト
+     * @param  PullRequest  $pullRequest  マージするプルリクエスト
      */
     private function resolveConflicts(PullRequest $pullRequest): void
     {
@@ -132,7 +132,7 @@ class MergePullRequestUseCase
     /**
      * 競合があるoriginalのdocument/categoryを一括で論理削除
      *
-     * @param \Illuminate\Support\Collection $conflictingEditStartVersions 競合があるEditStartVersionのコレクション
+     * @param  \Illuminate\Support\Collection  $conflictingEditStartVersions  競合があるEditStartVersionのコレクション
      */
     private function deleteOriginalVersionsBatch(\Illuminate\Support\Collection $conflictingEditStartVersions): void
     {

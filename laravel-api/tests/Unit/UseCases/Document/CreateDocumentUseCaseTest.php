@@ -13,7 +13,6 @@ use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
-use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\DocumentCategoryService;
@@ -385,6 +384,7 @@ class CreateDocumentUseCaseTest extends TestCase
             // ロールバックが実行されているかを確認
             $this->assertEquals($initialDocumentCount, DocumentVersion::count());
             $this->assertEquals($initialEditStartVersionCount, EditStartVersion::count());
+
             throw $e;
         }
     }
@@ -426,6 +426,7 @@ class CreateDocumentUseCaseTest extends TestCase
             // ロールバックが実行されているかを確認
             $this->assertEquals($initialDocumentCount, DocumentVersion::count());
             $this->assertEquals($initialEditStartVersionCount, EditStartVersion::count());
+
             throw $e;
         }
     }
@@ -549,7 +550,7 @@ class CreateDocumentUseCaseTest extends TestCase
 
         // Assert - すべてのサービスが正しいパラメータで呼び出されたことを確認
         $this->assertInstanceOf(DocumentVersion::class, $result);
-        
+
         // DocumentVersionが正しいデータで作成されたことを確認
         $this->assertDatabaseHas('document_versions', [
             'id' => $result->id,

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
+use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
 use App\Dto\UseCase\Document\GetDocumentDetailDto;
 use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
@@ -16,18 +17,16 @@ use App\Models\DocumentVersion;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
-use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
-use App\Exceptions\BaseException;
 use App\UseCases\Document\CreateDocumentUseCase;
-use Http\Discovery\Exception\NotFoundException;
 use App\UseCases\Document\DeleteDocumentUseCase;
 use App\UseCases\Document\GetDocumentDetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
+use Exception;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Exception;
 use Psr\Log\LogLevel;
 
 class DocumentController extends ApiBaseController
@@ -98,8 +97,8 @@ class DocumentController extends ApiBaseController
 
         // return response()->json([
         //     'documents' => $result['documents'],
-            //     'categories' => $result['categories'],
-            // ]);
+        //     'categories' => $result['categories'],
+        // ]);
     }
 
     /**

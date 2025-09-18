@@ -62,16 +62,17 @@ class UserBranchService extends BaseService
     /**
      * ユーザーブランチを取得し、アクティブでない場合は例外をスロー
      *
-     * @param int $userBranchId ユーザーブランチID
+     * @param  int  $userBranchId  ユーザーブランチID
      * @return UserBranch アクティブなユーザーブランチ
+     *
      * @throws \Exception ユーザーブランチが見つからない、またはアクティブでない場合
      */
     public function findActiveUserBranch(int $userBranchId): UserBranch
     {
         $userBranch = UserBranch::query()->active()->find($userBranchId);
 
-        if (!$userBranch) {
-            throw new NotFoundException();
+        if (! $userBranch) {
+            throw new NotFoundException;
         }
 
         return $userBranch;
@@ -80,15 +81,15 @@ class UserBranchService extends BaseService
     /**
      * ユーザーブランチを非アクティブにする
      *
-     * @param int $userBranchId ユーザーブランチID
+     * @param  int  $userBranchId  ユーザーブランチID
      * @return bool 更新が成功した場合はtrue
      */
     public function deactivateUserBranch(int $userBranchId): bool
     {
         $userBranch = UserBranch::query()->active()->find($userBranchId);
-        
-        if (!$userBranch) {
-            throw new NotFoundException();
+
+        if (! $userBranch) {
+            throw new NotFoundException;
         }
 
         return $userBranch->update(['is_active' => Flag::FALSE]);

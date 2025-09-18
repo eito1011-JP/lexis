@@ -6,7 +6,6 @@ use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 
 class DocumentDiffService
 {

@@ -92,7 +92,7 @@ class DocumentCategoryController extends ApiBaseController
             // 認証チェック
             $user = $this->user();
 
-            if (!$user) {
+            if (! $user) {
                 return $this->sendError(
                     ErrorType::CODE_AUTHENTICATION_FAILED,
                     __('errors.MSG_AUTHENTICATION_FAILED'),
@@ -194,7 +194,7 @@ class DocumentCategoryController extends ApiBaseController
             $user = $this->user();
 
             // 3. 認証ユーザーではない時は401エラー
-            if (!$user) {
+            if (! $user) {
                 return $this->sendError(
                     ErrorType::CODE_AUTHENTICATION_FAILED,
                     __('errors.MSG_AUTHENTICATION_FAILED'),

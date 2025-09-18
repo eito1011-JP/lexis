@@ -23,7 +23,7 @@ return [
         'description' => '説明',
         'categoryPath' => 'カテゴリパス',
     ],
-    
+
     // プルリクエスト作成用の属性名
     'organization_id' => '組織ID',
     'user_branch_id' => 'ユーザーブランチID',
@@ -31,7 +31,7 @@ return [
     'description' => '説明',
     'reviewers' => 'レビュアー',
     'reviewers.*' => 'レビュアーのメールアドレス',
-    
+
     // ドキュメント作成用の属性名
     'category_id' => 'カテゴリID',
     'edit_pull_request_id' => '編集プルリクエストID',

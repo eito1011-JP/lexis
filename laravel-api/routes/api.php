@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
 use App\Http\Controllers\Api\DocumentController;
 use App\Http\Controllers\Api\EmailAuthnController;
+use App\Http\Controllers\Api\ExplorerController;
 use App\Http\Controllers\Api\FixRequestController;
 use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\OrganizationController;
@@ -135,6 +136,9 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/{token}', [FixRequestController::class, 'fetchFixRequestDiff']);
         Route::post('/apply', [FixRequestController::class, 'applyFixRequest']);
     });
+
+    // エクスプローラー関連
+    Route::get('/nodes', [ExplorerController::class, 'fetchNodes']);
 
     // ドキュメントバージョン関連（新仕様）
     Route::prefix('document_versions')->group(function () {

@@ -10,9 +10,9 @@ use App\Enums\OrganizationRoleBindingRole;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestStatus;
 use App\Models\ActivityLogOnPullRequest;
-use App\Models\EditStartVersion;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\OrganizationRoleBinding;
@@ -31,19 +31,33 @@ class MergePullRequestUseCaseTest extends TestCase
     use DatabaseTransactions;
 
     private MergePullRequestUseCase $useCase;
+
     private User $adminUser;
+
     private User $ownerUser;
+
     private User $editorUser;
+
     private User $nonMemberUser;
+
     private User $pullRequestAuthor;
+
     private Organization $organization;
+
     private UserBranch $userBranch;
+
     private UserBranch $authorUserBranch;
+
     private PullRequest $pullRequest;
+
     private DocumentVersion $documentVersion;
+
     private DocumentCategory $documentCategory;
+
     private EditStartVersion $documentEditStartVersion;
+
     private EditStartVersion $categoryEditStartVersion;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -178,7 +192,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 管理者権限でマージが成功する場合のテスト
      */
-    public function testExecuteSuccessWithAdminUser(): void
+    public function test_execute_success_with_admin_user(): void
     {
         // Arrange
         $dto = new MergePullRequestDto(
@@ -215,7 +229,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * オーナー権限でマージが成功する場合のテスト
      */
-    public function testExecuteSuccessWithOwnerUser(): void
+    public function test_execute_success_with_owner_user(): void
     {
         // Arrange
         $dto = new MergePullRequestDto(
@@ -244,7 +258,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 編集者権限でマージが失敗する場合のテスト（AuthorizationException）
      */
-    public function testExecuteFailsWithEditorUser(): void
+    public function test_execute_fails_with_editor_user(): void
     {
         // Arrange
         $dto = new MergePullRequestDto(
@@ -277,7 +291,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 組織に所属していないユーザーでマージが失敗する場合のテスト（AuthorizationException）
      */
-    public function testExecuteFailsWithNonMemberUser(): void
+    public function test_execute_fails_with_non_member_user(): void
     {
         // Arrange
         $dto = new MergePullRequestDto(
@@ -297,7 +311,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 存在しないプルリクエストIDでマージが失敗する場合のテスト（NotFoundException）
      */
-    public function testExecuteFailsWithNonExistentPullRequest(): void
+    public function test_execute_fails_with_non_existent_pull_request(): void
     {
         // Arrange
         $nonExistentId = 99999;
@@ -314,7 +328,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 既にクローズされたプルリクエストでマージが失敗する場合のテスト（NotFoundException）
      */
-    public function testExecuteFailsWithClosedPullRequest(): void
+    public function test_execute_fails_with_closed_pull_request(): void
     {
         // Arrange
         $this->pullRequest->update(['status' => PullRequestStatus::CLOSED->value]);
@@ -332,7 +346,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 既にマージされたプルリクエストでマージが失敗する場合のテスト（NotFoundException）
      */
-    public function testExecuteFailsWithMergedPullRequest(): void
+    public function test_execute_fails_with_merged_pull_request(): void
     {
         // Arrange
         $this->pullRequest->update(['status' => PullRequestStatus::MERGED->value]);
@@ -350,7 +364,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * トランザクション内で例外が発生した場合のロールバックテスト
      */
-    public function testTransactionRollbackOnException(): void
+    public function test_transaction_rollback_on_exception(): void
     {
         // Arrange
         $dto = new MergePullRequestDto(
@@ -367,7 +381,7 @@ class MergePullRequestUseCaseTest extends TestCase
         $mockUseCase->method('execute')
             ->willReturnCallback(function ($dto) {
                 DB::beginTransaction();
-                
+
                 try {
                     // プルリクエストを取得
                     $pullRequest = PullRequest::with(['userBranch'])
@@ -376,13 +390,13 @@ class MergePullRequestUseCaseTest extends TestCase
                         ->lockForUpdate()
                         ->first();
 
-                    if (!$pullRequest) {
-                        throw new NotFoundException();
+                    if (! $pullRequest) {
+                        throw new NotFoundException;
                     }
 
                     // 権限チェック
-                    if (!$this->app->make(\App\Policies\PullRequestPolicy::class)->merge($dto->userId, $pullRequest)) {
-                        throw new AuthorizationException();
+                    if (! $this->app->make(\App\Policies\PullRequestPolicy::class)->merge($dto->userId, $pullRequest)) {
+                        throw new AuthorizationException;
                     }
 
                     // ステータス更新を開始
@@ -393,9 +407,9 @@ class MergePullRequestUseCaseTest extends TestCase
 
                     // 意図的に例外を発生させる
                     throw new \RuntimeException('Intentional exception for testing rollback');
-
                 } catch (\Exception $e) {
                     DB::rollBack();
+
                     throw $e;
                 }
             });
@@ -403,7 +417,7 @@ class MergePullRequestUseCaseTest extends TestCase
         // Act & Assert
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('Intentional exception for testing rollback');
-        
+
         $mockUseCase->execute($dto);
 
         // ロールバックされていることを確認
@@ -420,7 +434,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 競合解決：同じドキュメントを複数ユーザーが編集し、先にマージされた場合のテスト
      */
-    public function testExecuteResolvesDocumentConflictsByDeletingConflictingVersions(): void
+    public function test_execute_resolves_document_conflicts_by_deleting_conflicting_versions(): void
     {
         // Arrange - 同じオリジナルドキュメントを複数ユーザーが編集するシナリオ
         $originalDocument = DocumentVersion::factory()->create([
@@ -507,7 +521,7 @@ class MergePullRequestUseCaseTest extends TestCase
         $allEditStartVersions = EditStartVersion::withTrashed()
             ->where('original_version_id', $originalDocument->id)
             ->get();
-        
+
         // EditStartVersionが作成されて削除されていることを確認
         foreach ($allEditStartVersions as $esv) {
             $this->assertNotNull($esv->deleted_at);
@@ -517,7 +531,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 競合解決：同じカテゴリを複数ユーザーが編集し、先にマージされた場合のテスト
      */
-    public function testExecuteResolvesCategoryConflictsByDeletingConflictingVersions(): void
+    public function test_execute_resolves_category_conflicts_by_deleting_conflicting_versions(): void
     {
         // Arrange - 同じオリジナルカテゴリを複数ユーザーが編集するシナリオ
         $originalCategory = DocumentCategory::factory()->create([
@@ -598,7 +612,7 @@ class MergePullRequestUseCaseTest extends TestCase
         $allEditStartVersions = EditStartVersion::withTrashed()
             ->where('original_version_id', $originalCategory->id)
             ->get();
-        
+
         // EditStartVersionが作成されて削除されていることを確認
         foreach ($allEditStartVersions as $esv) {
             $this->assertNotNull($esv->deleted_at);
@@ -608,7 +622,7 @@ class MergePullRequestUseCaseTest extends TestCase
     /**
      * 競合解決：競合がない場合のテスト（正常系）
      */
-    public function testExecuteWithNoConflicts(): void
+    public function test_execute_with_no_conflicts(): void
     {
         // Arrange - 競合がないシナリオ
         $dto = new MergePullRequestDto(

@@ -8,13 +8,14 @@ use App\UseCases\UserBranch\FetchDiffUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Psr\Log\LogLevel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Psr\Log\LogLevel;
 
 class UserBranchController extends ApiBaseController
 {
     protected DocumentDiffService $documentDiffService;
+
     protected FetchDiffUseCase $fetchDiffUseCase;
 
     public function __construct(

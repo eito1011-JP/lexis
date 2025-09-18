@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
+use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
+use App\Dto\UseCase\PullRequest\MergePullRequestDto;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestReviewerActionStatus;
 use App\Enums\PullRequestStatus;
@@ -13,9 +15,6 @@ use App\Http\Requests\Api\PullRequest\FetchActivityLogRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\UpdatePullRequestTitleRequest;
 use App\Http\Requests\CreatePullRequestRequest;
-use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
-use App\Dto\UseCase\PullRequest\MergePullRequestDto;
-use App\UseCases\PullRequest\CreatePullRequestUseCase;
 use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
 use App\Models\ActivityLogOnPullRequest;
@@ -26,16 +25,17 @@ use App\Services\DocumentDiffService;
 use App\Services\GitService;
 use App\Services\MdFileService;
 use App\Services\PullRequestConflictService;
-use App\UseCases\PullRequest\MergePullRequestUseCase;
+use App\UseCases\PullRequest\CreatePullRequestUseCase;
 use App\UseCases\PullRequest\IsConflictResolvedUseCase;
+use App\UseCases\PullRequest\MergePullRequestUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
-use Illuminate\Auth\Access\AuthorizationException;
 
 class PullRequestController extends ApiBaseController
 {
@@ -80,7 +80,7 @@ class PullRequestController extends ApiBaseController
             // 1. 認証ユーザーか確認
             $user = $this->user();
 
-            if (!$user) {
+            if (! $user) {
                 return $this->sendError(
                     ErrorType::CODE_AUTHENTICATION_FAILED,
                     __('errors.MSG_AUTHENTICATION_FAILED'),
@@ -108,8 +108,7 @@ class PullRequestController extends ApiBaseController
                 __('errors.MSG_NOT_FOUND'),
                 ErrorType::STATUS_NOT_FOUND,
             );
-        }
-        catch (Exception) {
+        } catch (Exception) {
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),
@@ -274,7 +273,7 @@ class PullRequestController extends ApiBaseController
             // 1. 認証ユーザーか確認
             $user = $this->user();
 
-            if (!$user) {
+            if (! $user) {
                 return $this->sendError(
                     ErrorType::CODE_AUTHENTICATION_FAILED,
                     __('errors.MSG_AUTHENTICATION_FAILED'),
@@ -291,7 +290,7 @@ class PullRequestController extends ApiBaseController
             $mergePullRequestUseCase->execute($dto);
 
             return response()->json();
-            
+
         } catch (AuthorizationException) {
             return $this->sendError(
                 ErrorType::CODE_NOT_AUTHORIZED,

@@ -34,27 +34,27 @@ class FetchCategoriesUseCase
                 // 再編集している場合：PUSHEDとDRAFTステータスの両方を取得（自分のユーザーブランチのもの）
                 $query->whereIn('status', [
                     DocumentCategoryStatus::PUSHED->value,
-                    DocumentCategoryStatus::DRAFT->value
+                    DocumentCategoryStatus::DRAFT->value,
                 ])
-                ->where('user_branch_id', $activeUserBranch->id);
+                    ->where('user_branch_id', $activeUserBranch->id);
             } else {
                 // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
                 // ただし、編集対象となったMERGEDカテゴリは除外する（新規作成は除外しない）
                 $editedMergedCategoryIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
                     ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
                     ->whereColumn('original_version_id', '!=', 'current_version_id') // 新規作成は除外（original_version_id = current_version_id）
-                    ->whereHas('originalCategory', function($q) {
+                    ->whereHas('originalCategory', function ($q) {
                         $q->where('status', DocumentCategoryStatus::MERGED->value);
                     })
                     ->pluck('original_version_id');
 
-                $query->where(function($subQuery) use ($activeUserBranch, $editedMergedCategoryIds) {
-                    $subQuery->where(function($q1) use ($activeUserBranch) {
+                $query->where(function ($subQuery) use ($activeUserBranch, $editedMergedCategoryIds) {
+                    $subQuery->where(function ($q1) use ($activeUserBranch) {
                         $q1->where('status', DocumentCategoryStatus::DRAFT->value)
-                           ->where('user_branch_id', $activeUserBranch->id);
-                    })->orWhere(function($q2) use ($editedMergedCategoryIds) {
+                            ->where('user_branch_id', $activeUserBranch->id);
+                    })->orWhere(function ($q2) use ($editedMergedCategoryIds) {
                         $q2->where('status', DocumentCategoryStatus::MERGED->value)
-                           ->whereNotIn('id', $editedMergedCategoryIds);
+                            ->whereNotIn('id', $editedMergedCategoryIds);
                     });
                 });
             }
