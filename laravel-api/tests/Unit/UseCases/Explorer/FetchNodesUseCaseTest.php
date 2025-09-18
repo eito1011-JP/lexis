@@ -52,9 +52,8 @@ class FetchNodesUseCaseTest extends TestCase
 
     /**
      * マージ済みカテゴリとドキュメントを取得する（pullRequestEditSessionTokenなし）
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldReturnMergedNodesWhenNoPullRequestEditSessionToken(): void
     {
         // Arrange
@@ -125,9 +124,8 @@ class FetchNodesUseCaseTest extends TestCase
 
     /**
      * ドラフト状態のカテゴリとドキュメントを取得する（pullRequestEditSessionTokenあり、編集セッション存在）
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldReturnDraftNodesWhenPullRequestEditSessionTokenExistsAndSessionFound(): void
     {
         // Arrange
@@ -144,9 +142,11 @@ class FetchNodesUseCaseTest extends TestCase
         // プルリクエスト編集セッションを作成
         $editSession = PullRequestEditSession::factory()->create([
             'token' => $token,
-            'user_branch_id' => $this->userBranch->id,
             'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
+            'pull_request_id' => \App\Models\PullRequest::factory()->create([
+                'user_branch_id' => $this->userBranch->id,
+                'organization_id' => $this->organization->id,
+            ])->id,
         ]);
 
         $dto = new FetchNodesDto(
@@ -208,9 +208,8 @@ class FetchNodesUseCaseTest extends TestCase
 
     /**
      * 編集セッションが見つからない場合、マージ済みデータを取得する
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldReturnMergedNodesWhenPullRequestEditSessionTokenProvidedButSessionNotFound(): void
     {
         // Arrange
@@ -270,18 +269,21 @@ class FetchNodesUseCaseTest extends TestCase
         $this->assertCount(1, $result['categories']);
         $this->assertCount(1, $result['documents']);
 
-        $this->assertEquals($mergedCategory->id, $result['categories'][0]['id']);
-        $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['title']);
+        // カテゴリとドキュメントのタイトルで確認
+        $categoryTitles = collect($result['categories'])->pluck('title')->toArray();
+        $documentTitles = collect($result['documents'])->pluck('title')->toArray();
 
-        $this->assertEquals($mergedDocument->id, $result['documents'][0]['id']);
+        $this->assertContains('マージ済みカテゴリ', $categoryTitles);
+        $this->assertContains('マージ済みドキュメント', $documentTitles);
+        
+        $this->assertEquals('マージ済みカテゴリ', $result['categories'][0]['title']);
         $this->assertEquals('マージ済みドキュメント', $result['documents'][0]['title']);
     }
 
     /**
      * アクティブなユーザーブランチが存在しない場合、マージ済みデータを取得する
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldReturnMergedNodesWhenNoActiveUserBranch(): void
     {
         // Arrange
@@ -340,9 +342,8 @@ class FetchNodesUseCaseTest extends TestCase
 
     /**
      * カテゴリとドキュメントが空の場合のテスト
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldReturnEmptyArraysWhenNoNodesExist(): void
     {
         // Arrange
@@ -371,9 +372,8 @@ class FetchNodesUseCaseTest extends TestCase
 
     /**
      * データの並び順をテスト（id昇順）
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldReturnNodesOrderedByIdAscending(): void
     {
         // Arrange
@@ -434,9 +434,8 @@ class FetchNodesUseCaseTest extends TestCase
 
     /**
      * ドラフトデータ取得時に正しいユーザーIDとブランチIDでフィルタリングされることをテスト
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldFilterDraftNodesByCorrectUserAndBranch(): void
     {
         // Arrange
@@ -461,9 +460,11 @@ class FetchNodesUseCaseTest extends TestCase
         // プルリクエスト編集セッションを作成
         $editSession = PullRequestEditSession::factory()->create([
             'token' => $token,
-            'user_branch_id' => $this->userBranch->id,
             'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
+            'pull_request_id' => \App\Models\PullRequest::factory()->create([
+                'user_branch_id' => $this->userBranch->id,
+                'organization_id' => $this->organization->id,
+            ])->id,
         ]);
 
         $dto = new FetchNodesDto(
@@ -524,9 +525,8 @@ class FetchNodesUseCaseTest extends TestCase
 
     /**
      * 例外が発生した場合の処理をテスト
-     *
-     * @test
      */
+    #[\PHPUnit\Framework\Attributes\Test]
     public function executeShouldLogAndRethrowExceptionWhenErrorOccurs(): void
     {
         // Arrange

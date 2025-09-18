@@ -7,6 +7,7 @@ use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -30,7 +31,7 @@ class DocumentVersionFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'user_branch_id' => 1,
+            'user_branch_id' => null,
             'status' => DocumentStatus::DRAFT->value,
             'description' => $this->faker->text(),
             'category_id' => DocumentCategory::factory(),
@@ -39,6 +40,7 @@ class DocumentVersionFactory extends Factory
             'last_reviewed_by' => null,
             'is_deleted' => false,
             'deleted_at' => null,
+            'organization_id' => Organization::factory(),
         ];
     }
 
@@ -49,7 +51,7 @@ class DocumentVersionFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => DocumentStatus::MERGED->value,
-            'user_branch_id' => 1,
+            'user_branch_id' => null,
         ]);
     }
 
@@ -79,7 +81,7 @@ class DocumentVersionFactory extends Factory
     public function mainline(): static
     {
         return $this->state(fn (array $attributes) => [
-            'user_branch_id' => 1,
+            'user_branch_id' => null,
         ]);
     }
 

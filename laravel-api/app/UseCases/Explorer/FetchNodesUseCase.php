@@ -26,21 +26,26 @@ class FetchNodesUseCase
             // 認証ユーザーに紐づくactiveなuser_branchを確認
             $activeUserBranch = $user->userBranches()->active()->first();
 
+            // アクティブなユーザーブランチが存在しない場合はマージ済みデータを取得
+            if (!$activeUserBranch) {
+                return $this->fetchMergedNodes($dto->categoryId);
+            }
+
             // user_branch_idを設定
             $userBranchId = $activeUserBranch->id;
 
             // pull_request_edit_session_tokenが提供されている場合の処理
             $pullRequestEditSessionId = null;
             if ($pullRequestEditSessionToken) {
-                $editSession = PullRequestEditSession::where('token', $pullRequestEditSessionToken)->first();
+                $editSession = PullRequestEditSession::with('pullRequest')->where('token', $pullRequestEditSessionToken)->first();
                 if ($editSession) {
                     $pullRequestEditSessionId = $editSession->id;
-                    $userBranchId = $editSession->user_branch_id;
+                    $userBranchId = $editSession->pullRequest->user_branch_id;
                 }
             }
 
             // カテゴリとドキュメントの取得条件を決定
-            if ($userBranchId === null || $pullRequestEditSessionToken === null) {
+            if ($pullRequestEditSessionToken === null || $pullRequestEditSessionId === null) {
                 // status = merged and parent_id = request.parent_id
                 $categories = $this->fetchMergedCategories($categoryId);
                 $documents = $this->fetchMergedDocuments($categoryId);
@@ -126,5 +131,19 @@ class FetchNodesUseCase
             ->where('user_branch_id', $userBranchId)
             ->orderBy('id', 'asc')
             ->get();
+    }
+
+    /**
+     * マージ済みノード（カテゴリとドキュメント）を取得
+     */
+    private function fetchMergedNodes(int $categoryId): array
+    {
+        $categories = $this->fetchMergedCategories($categoryId);
+        $documents = $this->fetchMergedDocuments($categoryId);
+
+        return [
+            'categories' => $categories,
+            'documents' => $documents,
+        ];
     }
 }
