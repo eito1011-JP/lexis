@@ -16,13 +16,9 @@ import { useNavigate } from 'react-router-dom';
 // 差分データの型定義
 type DiffItem = {
   id: number;
-  slug: string;
-  sidebar_label?: string; // ドキュメント用
-  title?: string; // カテゴリ用
+  title?: string;
   description?: string;
-  content?: string;
   file_order?: number;
-  parent_id?: number;
   category_id?: number;
   category_path?: string; // カテゴリ階層パス
   status: string;
@@ -756,8 +752,8 @@ export default function DiffPage(): JSX.Element {
     );
   }
 
-  // original/currentをslugでマッピング
-  const mapBySlug = (arr: DiffItem[]) => Object.fromEntries(arr.map(item => [item.slug, item]));
+  // original/currentをidでマッピング
+  const mapBySlug = (arr: DiffItem[]) => Object.fromEntries(arr.map(item => [item.id, item]));
 
   const originalDocs = mapBySlug(diffData.original_document_versions || []);
   const originalCats = mapBySlug(diffData.original_document_categories || []);
@@ -942,7 +938,7 @@ export default function DiffPage(): JSX.Element {
             <div className="space-y-6 mr-20">
               {diffData.document_categories.map(category => {
                 const diffInfo = getDiffInfoById(category.id, 'category');
-                const originalCategory = originalCats[category.slug];
+                const originalCategory = originalCats[category.id];
 
                 return (
                   <div
@@ -988,7 +984,7 @@ export default function DiffPage(): JSX.Element {
             <div className="space-y-6">
               {diffData.document_versions.map(document => {
                 const diffInfo = getDiffInfoById(document.id, 'document');
-                const originalDocument = originalDocs[document.slug];
+                const originalDocument = originalDocs[document.id];
                 
                 // ドキュメントのカテゴリのcategory_pathを取得
                 const documentCategory = diffData.document_categories.find(cat => cat.id === document.category_id);
@@ -1001,41 +997,23 @@ export default function DiffPage(): JSX.Element {
                   >
                     <CategoryPathBreadcrumb categoryPath={documentCategoryPath} />
                     <SmartDiffValue
-                      label="Slug"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'slug',
-                        document.slug,
-                        originalDocument?.slug
-                      )}
-                    />
-                    <SmartDiffValue
                       label="タイトル"
                       fieldInfo={getFieldInfo(
                         diffInfo,
-                        'sidebar_label',
-                        document.sidebar_label,
-                        originalDocument?.sidebar_label
+                        'title',
+                        document.title,
+                        originalDocument?.title
                       )}
                     />
                     <SmartDiffValue
-                      label="公開設定"
+                      label="説明"
                       fieldInfo={getFieldInfo(
                         diffInfo,
-                        'is_public',
-                        document.status === 'published',
-                        originalDocument?.status === 'published'
+                        'description',
+                        document.description,
+                        originalDocument?.description
                       )}
-                    />
-                    <SmartDiffValue
-                      label="本文"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'content',
-                        document.content,
-                        originalDocument?.content
-                      )}
-                      isMarkdown
+                      isMarkdown={true}
                     />
                   </div>
                 );
