@@ -9,7 +9,7 @@ use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
-use App\Http\Requests\Api\Document\GetDocumentDetailRequest;
+use App\Http\Requests\Api\Document\DetailRequest;
 use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Models\DocumentCategory;
@@ -23,7 +23,7 @@ use App\UseCases\Document\GetDocumentDetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
-use Http\Discovery\Exception\NotFoundException;
+use App\Exceptions\DocumentNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -46,6 +46,7 @@ class DocumentController extends ApiBaseController
     protected DeleteDocumentUseCase $deleteDocumentUseCase;
 
     protected DocumentCategoryService $documentCategoryService;
+
 
     public function __construct(
         DocumentService $documentService,
@@ -123,7 +124,7 @@ class DocumentController extends ApiBaseController
             $useCase->execute($dto);
 
             return response()->json();
-        } catch (NotFoundException) {
+        } catch (DocumentNotFoundException) {
             return $this->sendError(
                 ErrorType::CODE_NOT_FOUND,
                 __('errors.MSG_NOT_FOUND'),
@@ -141,9 +142,9 @@ class DocumentController extends ApiBaseController
     }
 
     /**
-     * スラッグでドキュメントを取得
+     * ドキュメントバージョンIDでドキュメントを取得
      */
-    public function getDocumentDetail(GetDocumentDetailRequest $request): JsonResponse
+    public function detail(DetailRequest $request, GetDocumentDetailUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -156,15 +157,29 @@ class DocumentController extends ApiBaseController
             }
 
             // DTOを作成してUseCaseを実行
+            new GetDocumentDetailDto(
+                id: $request->id,
+                user_id: $user->id,
+                organization_id: $user->organization_id,
+            );
             $dto = GetDocumentDetailDto::fromArray($request->validated());
-            $result = $this->getDocumentDetailUseCase->execute($dto);
+            $result = $useCase->execute($dto);
 
             return response()->json($result);
         } catch (\Exception $e) {
-            Log::error('ドキュメント取得エラー: '.$e);
+            Log::error('ドキュメントバージョン取得エラー: '.$e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($e instanceof DocumentNotFoundException) {
+                return response()->json([
+                    'error' => $e->getMessage(),
+                ], 404);
+            }
 
             return response()->json([
-                'error' => 'ドキュメントの取得に失敗しました',
+                'error' => 'ドキュメントバージョンの取得に失敗しました',
             ], 500);
         }
     }
