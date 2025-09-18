@@ -5,10 +5,12 @@ namespace Tests\Unit\UseCases\PullRequest;
 use App\Dto\UseCase\PullRequest\MergePullRequestDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Enums\OrganizationRoleBindingRole;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestStatus;
 use App\Models\ActivityLogOnPullRequest;
+use App\Models\EditStartVersion;
 use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
 use App\Models\Organization;
@@ -33,12 +35,15 @@ class MergePullRequestUseCaseTest extends TestCase
     private User $ownerUser;
     private User $editorUser;
     private User $nonMemberUser;
+    private User $pullRequestAuthor;
     private Organization $organization;
     private UserBranch $userBranch;
+    private UserBranch $authorUserBranch;
     private PullRequest $pullRequest;
     private DocumentVersion $documentVersion;
     private DocumentCategory $documentCategory;
-
+    private EditStartVersion $documentEditStartVersion;
+    private EditStartVersion $categoryEditStartVersion;
     protected function setUp(): void
     {
         parent::setUp();
@@ -60,6 +65,7 @@ class MergePullRequestUseCaseTest extends TestCase
         $this->ownerUser = User::factory()->create();
         $this->editorUser = User::factory()->create();
         $this->nonMemberUser = User::factory()->create();
+        $this->pullRequestAuthor = User::factory()->create();
 
         // 組織メンバーの作成
         OrganizationMember::create([
@@ -76,6 +82,12 @@ class MergePullRequestUseCaseTest extends TestCase
 
         OrganizationMember::create([
             'user_id' => $this->editorUser->id,
+            'organization_id' => $this->organization->id,
+            'joined_at' => now(),
+        ]);
+
+        OrganizationMember::create([
+            'user_id' => $this->pullRequestAuthor->id,
             'organization_id' => $this->organization->id,
             'joined_at' => now(),
         ]);
@@ -99,6 +111,12 @@ class MergePullRequestUseCaseTest extends TestCase
             'role' => OrganizationRoleBindingRole::EDITOR->value,
         ]);
 
+        OrganizationRoleBinding::create([
+            'user_id' => $this->pullRequestAuthor->id,
+            'organization_id' => $this->organization->id,
+            'role' => OrganizationRoleBindingRole::EDITOR->value,
+        ]);
+
         // ユーザーブランチの作成
         $this->userBranch = UserBranch::factory()->create([
             'user_id' => $this->adminUser->id,
@@ -107,7 +125,15 @@ class MergePullRequestUseCaseTest extends TestCase
             'branch_name' => 'test-branch',
         ]);
 
-        // プルリクエストの作成
+        // プルリクエスト作成者のユーザーブランチ
+        $this->authorUserBranch = UserBranch::factory()->create([
+            'user_id' => $this->pullRequestAuthor->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+            'branch_name' => 'author-test-branch',
+        ]);
+
+        // プルリクエストの作成（adminユーザーが作成）
         $this->pullRequest = PullRequest::create([
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
@@ -123,6 +149,14 @@ class MergePullRequestUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::PUSHED->value,
         ]);
 
+        // ドキュメントカテゴリの編集開始バージョンの作成
+        $this->categoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->documentCategory->id,
+            'current_version_id' => $this->documentCategory->id,
+        ]);
+
         // ドキュメントバージョンの作成
         $this->documentVersion = DocumentVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
@@ -130,6 +164,14 @@ class MergePullRequestUseCaseTest extends TestCase
             'category_id' => $this->documentCategory->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentStatus::PUSHED->value,
+        ]);
+
+        // 編集開始バージョンの作成
+        $this->documentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $this->documentVersion->id,
+            'current_version_id' => $this->documentVersion->id,
         ]);
     }
 
@@ -373,5 +415,223 @@ class MergePullRequestUseCaseTest extends TestCase
 
         $this->documentCategory->refresh();
         $this->assertEquals(DocumentCategoryStatus::PUSHED->value, $this->documentCategory->status);
+    }
+
+    /**
+     * 競合解決：同じドキュメントを複数ユーザーが編集し、先にマージされた場合のテスト
+     */
+    public function testExecuteResolvesDocumentConflictsByDeletingConflictingVersions(): void
+    {
+        // Arrange - 同じオリジナルドキュメントを複数ユーザーが編集するシナリオ
+        $originalDocument = DocumentVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'user_id' => $this->adminUser->id,
+            'category_id' => $this->documentCategory->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        // ユーザーAが編集した版
+        $userAEditedDocument = DocumentVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'user_id' => $this->adminUser->id,
+            'category_id' => $this->documentCategory->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::PUSHED->value,
+        ]);
+
+        // ユーザーBが編集した版（競合）
+        $userBBranch = UserBranch::factory()->create([
+            'user_id' => $this->editorUser->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+            'branch_name' => 'user-b-branch',
+        ]);
+
+        $userBEditedDocument = DocumentVersion::factory()->create([
+            'user_branch_id' => $userBBranch->id,
+            'user_id' => $this->editorUser->id,
+            'category_id' => $this->documentCategory->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::PUSHED->value,
+        ]);
+
+        $userBPullRequest = PullRequest::create([
+            'user_branch_id' => $userBBranch->id,
+            'organization_id' => $this->organization->id,
+            'title' => 'User B Pull Request',
+            'description' => 'Conflicting changes',
+            'status' => PullRequestStatus::OPENED->value,
+        ]);
+
+        // EditStartVersionを作成（同じオリジナルを参照）
+        EditStartVersion::create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $originalDocument->id,
+            'current_version_id' => $userAEditedDocument->id,
+        ]);
+
+        EditStartVersion::create([
+            'user_branch_id' => $userBBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $originalDocument->id,
+            'current_version_id' => $userBEditedDocument->id,
+        ]);
+
+        // ユーザーAのプルリクエストを先にマージ
+        $dto = new MergePullRequestDto(
+            pullRequestId: $this->pullRequest->id,
+            userId: $this->adminUser->id
+        );
+
+        // Act
+        $result = $this->useCase->execute($dto);
+
+        // Assert
+        $this->assertEquals($this->pullRequest->id, $result['pull_request_id']);
+
+        // ユーザーAの変更がマージされている
+        $userAEditedDocument->refresh();
+        $this->assertEquals(DocumentStatus::MERGED->value, $userAEditedDocument->status);
+
+        // 競合するユーザーBの変更は削除されない（ユーザーが競合修正するため）
+        $userBEditedDocument->refresh();
+        $this->assertNull($userBEditedDocument->deleted_at);
+
+        // 変更対象となったoriginalのドキュメントが論理削除されている
+        $originalDocument->refresh();
+        $this->assertNotNull($originalDocument->deleted_at);
+
+        // originalを指すEditStartVersionが論理削除されている
+        $allEditStartVersions = EditStartVersion::withTrashed()
+            ->where('original_version_id', $originalDocument->id)
+            ->get();
+        
+        // EditStartVersionが作成されて削除されていることを確認
+        foreach ($allEditStartVersions as $esv) {
+            $this->assertNotNull($esv->deleted_at);
+        }
+    }
+
+    /**
+     * 競合解決：同じカテゴリを複数ユーザーが編集し、先にマージされた場合のテスト
+     */
+    public function testExecuteResolvesCategoryConflictsByDeletingConflictingVersions(): void
+    {
+        // Arrange - 同じオリジナルカテゴリを複数ユーザーが編集するシナリオ
+        $originalCategory = DocumentCategory::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+        ]);
+
+        // ユーザーAが編集した版
+        $userAEditedCategory = DocumentCategory::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+        ]);
+
+        // ユーザーBが編集した版（競合）
+        $userBBranch = UserBranch::factory()->create([
+            'user_id' => $this->editorUser->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+            'branch_name' => 'user-b-category-branch',
+        ]);
+
+        $userBEditedCategory = DocumentCategory::factory()->create([
+            'user_branch_id' => $userBBranch->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+        ]);
+
+        $userBPullRequest = PullRequest::create([
+            'user_branch_id' => $userBBranch->id,
+            'organization_id' => $this->organization->id,
+            'title' => 'User B Category Pull Request',
+            'description' => 'Conflicting category changes',
+            'status' => PullRequestStatus::OPENED->value,
+        ]);
+
+        // EditStartVersionを作成（同じオリジナルを参照）
+        EditStartVersion::create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $originalCategory->id,
+            'current_version_id' => $userAEditedCategory->id,
+        ]);
+
+        EditStartVersion::create([
+            'user_branch_id' => $userBBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $originalCategory->id,
+            'current_version_id' => $userBEditedCategory->id,
+        ]);
+
+        // ユーザーAのプルリクエストを先にマージ
+        $dto = new MergePullRequestDto(
+            pullRequestId: $this->pullRequest->id,
+            userId: $this->adminUser->id
+        );
+
+        // Act
+        $result = $this->useCase->execute($dto);
+
+        // Assert
+        $this->assertEquals($this->pullRequest->id, $result['pull_request_id']);
+
+        // ユーザーAの変更がマージされている
+        $userAEditedCategory->refresh();
+        $this->assertEquals(DocumentCategoryStatus::MERGED->value, $userAEditedCategory->status);
+
+        // 競合するユーザーBの変更は削除されない（ユーザーが競合修正するため）
+        $userBEditedCategory->refresh();
+        $this->assertNull($userBEditedCategory->deleted_at);
+
+        // 変更対象となったoriginalのカテゴリが論理削除されている
+        $originalCategory->refresh();
+        $this->assertNotNull($originalCategory->deleted_at);
+
+        // originalを指すEditStartVersionが論理削除されている
+        $allEditStartVersions = EditStartVersion::withTrashed()
+            ->where('original_version_id', $originalCategory->id)
+            ->get();
+        
+        // EditStartVersionが作成されて削除されていることを確認
+        foreach ($allEditStartVersions as $esv) {
+            $this->assertNotNull($esv->deleted_at);
+        }
+    }
+
+    /**
+     * 競合解決：競合がない場合のテスト（正常系）
+     */
+    public function testExecuteWithNoConflicts(): void
+    {
+        // Arrange - 競合がないシナリオ
+        $dto = new MergePullRequestDto(
+            pullRequestId: $this->pullRequest->id,
+            userId: $this->adminUser->id
+        );
+
+        // Act
+        $result = $this->useCase->execute($dto);
+
+        // Assert
+        $this->assertEquals($this->pullRequest->id, $result['pull_request_id']);
+
+        // ドキュメントがマージされている
+        $this->documentVersion->refresh();
+        $this->assertEquals(DocumentStatus::MERGED->value, $this->documentVersion->status);
+
+        // カテゴリがマージされている
+        $this->documentCategory->refresh();
+        $this->assertEquals(DocumentCategoryStatus::MERGED->value, $this->documentCategory->status);
+
+        // プルリクエストがマージされている
+        $this->pullRequest->refresh();
+        $this->assertEquals(PullRequestStatus::MERGED->value, $this->pullRequest->status);
     }
 }

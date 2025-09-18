@@ -6,6 +6,7 @@ import { Plus } from '@/components/icon/common/Plus';
 import { Edit } from '@/components/icon/common/Edit';
 import { apiClient } from '@/components/admin/api/client';
 import CategoryActionModal from '@/components/admin/CategoryActionModal';
+import CreateActionModal from '@/components/sidebar/CreateActionModal';
 
 // APIから取得するカテゴリデータの型定義
 interface ApiCategoryData {
@@ -71,6 +72,10 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryItem | null>(null);
   const [activeButtonRef, setActiveButtonRef] = useState<React.RefObject<HTMLButtonElement> | undefined>(undefined);
+  // 作成アクションモーダル状態
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [createTargetCategoryId, setCreateTargetCategoryId] = useState<number | null>(null);
+  const [createModalButtonRef, setCreateModalButtonRef] = useState<React.RefObject<HTMLButtonElement> | undefined>(undefined);
 
   // APIデータをCategoryItem形式に変換する関数
   const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
@@ -123,10 +128,34 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     }
   };
 
-  // 新規カテゴリ作成のハンドラ
-  const handleCreateCategory = (parentCategoryId: number) => {
-    const url = `/categories/${parentCategoryId}/create`;
-    window.location.href = url;
+  // Plusボタンクリック時のハンドラ（モーダルを表示）
+  const handlePlusClick = (parentCategoryId: number, event: React.MouseEvent<HTMLButtonElement>) => {
+    setCreateTargetCategoryId(parentCategoryId);
+    setCreateModalButtonRef({ current: event.currentTarget });
+    setShowCreateModal(true);
+  };
+
+  // ドキュメント作成のハンドラ
+  const handleCreateDocument = () => {
+    if (createTargetCategoryId) {
+      const url = `/categories/${createTargetCategoryId}/documents/create`;
+      window.location.href = url;
+    }
+  };
+
+  // カテゴリ作成のハンドラ
+  const handleCreateCategory = () => {
+    if (createTargetCategoryId) {
+      const url = `/categories/${createTargetCategoryId}/create`;
+      window.location.href = url;
+    }
+  };
+
+  // 作成モーダルを閉じるハンドラ
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+    setCreateTargetCategoryId(null);
+    setCreateModalButtonRef(undefined);
   };
 
   // ルートカテゴリ作成のハンドラ（parent_id = null）
@@ -281,7 +310,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCreateCategory(item.id);
+                  handlePlusClick(item.id, e);
                 }}
               >
                 <Plus className="w-3 h-3" />
@@ -341,6 +370,15 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
         onDelete={handleDelete}
         categoryName={selectedCategory?.label || ''}
         buttonRef={activeButtonRef}
+      />
+
+      {/* 作成アクションモーダル */}
+      <CreateActionModal
+        isOpen={showCreateModal}
+        onClose={handleCloseCreateModal}
+        onCreateDocument={handleCreateDocument}
+        onCreateCategory={handleCreateCategory}
+        buttonRef={createModalButtonRef}
       />
     </div>
   );

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Consts\ErrorType;
 use App\Dto\UseCase\Document\GetDocumentDetailDto;
 use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
@@ -15,7 +16,10 @@ use App\Models\DocumentVersion;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
+use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
+use App\Exceptions\BaseException;
 use App\UseCases\Document\CreateDocumentUseCase;
+use Http\Discovery\Exception\NotFoundException;
 use App\UseCases\Document\DeleteDocumentUseCase;
 use App\UseCases\Document\GetDocumentDetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
@@ -23,6 +27,8 @@ use App\UseCases\Document\UpdateDocumentUseCase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Exception;
+use Psr\Log\LogLevel;
 
 class DocumentController extends ApiBaseController
 {
@@ -92,36 +98,47 @@ class DocumentController extends ApiBaseController
 
         // return response()->json([
         //     'documents' => $result['documents'],
-        //     'categories' => $result['categories'],
-        // ]);
+            //     'categories' => $result['categories'],
+            // ]);
     }
 
     /**
      * ドキュメントを作成
      */
-    public function createDocument(CreateDocumentRequest $request): JsonResponse
+    public function createDocument(CreateDocumentRequest $request, CreateDocumentUseCase $useCase): JsonResponse
     {
-        // 認証チェック
-        $user = $this->user();
+        try {
+            // 認証チェック
+            $user = $this->user();
 
-        if (! $user) {
-            return response()->json([
-                'error' => '認証が必要です',
-            ], 401);
+            if (! $user) {
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
+            }
+
+            // DTOを作成してUseCaseを実行
+            $dto = CreateDocumentUseCaseDto::fromRequest($request->all(), $user);
+            $useCase->execute($dto);
+
+            return response()->json();
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+                LogLevel::ERROR,
+            );
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
-
-        // UseCaseを実行
-        $result = $this->createDocumentUseCase->execute($request->all(), $user);
-
-        if (! $result['success']) {
-            return response()->json([
-                'error' => $result['error'],
-            ], 500);
-        }
-
-        return response()->json([
-            'document' => $result['document'],
-        ]);
     }
 
     /**
