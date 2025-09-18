@@ -19,14 +19,14 @@ class DocumentCategoryServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new DocumentCategoryService();
+        $this->service = new DocumentCategoryService;
         $this->organization = Organization::factory()->create();
     }
 
     /**
      * @test
      */
-    public function createCategoryPath_親カテゴリがない場合はnullを返す()
+    public function create_category_path_親カテゴリがない場合はnullを返す()
     {
         // Arrange
         $category = DocumentCategory::factory()->create([
@@ -45,7 +45,7 @@ class DocumentCategoryServiceTest extends TestCase
     /**
      * @test
      */
-    public function createCategoryPath_単一の親カテゴリがある場合はそのタイトルを返す()
+    public function create_category_path_単一の親カテゴリがある場合はそのタイトルを返す()
     {
         // Arrange
         $parentCategory = DocumentCategory::factory()->create([
@@ -70,7 +70,7 @@ class DocumentCategoryServiceTest extends TestCase
     /**
      * @test
      */
-    public function createCategoryPath_複数レベルの階層がある場合は正しいパスを返す()
+    public function create_category_path_複数レベルの階層がある場合は正しいパスを返す()
     {
         // Arrange
         $grandParentCategory = DocumentCategory::factory()->create([
@@ -101,7 +101,7 @@ class DocumentCategoryServiceTest extends TestCase
     /**
      * @test
      */
-    public function createCategoryPath_3レベル以上の深い階層でも正しいパスを返す()
+    public function create_category_path_3レベル以上の深い階層でも正しいパスを返す()
     {
         // Arrange
         $level1 = DocumentCategory::factory()->create([

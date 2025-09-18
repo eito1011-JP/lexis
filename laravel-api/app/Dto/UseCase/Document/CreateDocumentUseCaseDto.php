@@ -20,10 +20,6 @@ class CreateDocumentUseCaseDto extends UseCaseDto
 
     /**
      * リクエストデータからDTOを作成
-     *
-     * @param array $requestData
-     * @param object $user
-     * @return self
      */
     public static function fromRequest(array $requestData, object $user): self
     {

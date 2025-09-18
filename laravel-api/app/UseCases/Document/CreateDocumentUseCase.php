@@ -6,7 +6,6 @@ use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestEditSessionDiffType;
-use Http\Discovery\Exception\NotFoundException;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
@@ -14,6 +13,7 @@ use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -30,6 +30,7 @@ class CreateDocumentUseCase
      *
      * @param  CreateDocumentUseCaseDto  $dto  DTOオブジェクト
      * @return DocumentVersion 作成されたドキュメント
+     *
      * @throws NotFoundException 組織が見つからない場合
      * @throws \Exception その他のエラーが発生した場合
      */
@@ -39,8 +40,8 @@ class CreateDocumentUseCase
             DB::beginTransaction();
             // ユーザーの組織IDを取得
             $organizationId = $dto->user->organizationMember?->organization_id;
-            if (!$organizationId) {
-                throw new NotFoundException();
+            if (! $organizationId) {
+                throw new NotFoundException;
             }
 
             // ユーザーブランチIDを取得または作成
@@ -102,6 +103,7 @@ class CreateDocumentUseCase
         } catch (\Exception $e) {
             Log::error($e);
             DB::rollBack();
+
             throw $e;
         }
     }

@@ -5,6 +5,7 @@ namespace Database\Factories;
 use App\Enums\PullRequestStatus;
 use App\Models\PullRequest;
 use App\Models\UserBranch;
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -31,6 +32,7 @@ class PullRequestFactory extends Factory
             'title' => $this->faker->sentence(),
             'description' => $this->faker->paragraph(),
             'status' => PullRequestStatus::OPENED->value,
+            'organization_id' => Organization::factory(),
         ];
     }
 

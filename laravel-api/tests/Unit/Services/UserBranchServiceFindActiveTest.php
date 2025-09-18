@@ -25,10 +25,10 @@ class UserBranchServiceFindActiveTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // GitHubクライアントをモック化
-        $this->service = new UserBranchService();
-        
+        $this->service = new UserBranchService;
+
         $this->user = User::factory()->create();
         $this->organization = Organization::factory()->create();
     }
@@ -42,7 +42,7 @@ class UserBranchServiceFindActiveTest extends TestCase
     /**
      * @test
      */
-    public function findActiveUserBranch_アクティブなユーザーブランチが存在する場合は正常に取得できる()
+    public function find_active_user_branch_アクティブなユーザーブランチが存在する場合は正常に取得できる()
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -65,7 +65,7 @@ class UserBranchServiceFindActiveTest extends TestCase
     /**
      * @test
      */
-    public function findActiveUserBranch_存在しないユーザーブランチIDの場合はNotFoundException例外がスローされる()
+    public function find_active_user_branch_存在しないユーザーブランチ_i_dの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $nonExistentUserBranchId = 99999;
@@ -78,7 +78,7 @@ class UserBranchServiceFindActiveTest extends TestCase
     /**
      * @test
      */
-    public function findActiveUserBranch_非アクティブなユーザーブランチの場合はNotFoundException例外がスローされる()
+    public function find_active_user_branch_非アクティブなユーザーブランチの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -95,7 +95,7 @@ class UserBranchServiceFindActiveTest extends TestCase
     /**
      * @test
      */
-    public function findActiveUserBranch_削除されたユーザーブランチの場合はNotFoundException例外がスローされる()
+    public function find_active_user_branch_削除されたユーザーブランチの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -103,7 +103,7 @@ class UserBranchServiceFindActiveTest extends TestCase
             'organization_id' => $this->organization->id,
             'is_active' => Flag::TRUE,
         ]);
-        
+
         // ソフトデリート
         $userBranch->delete();
 
@@ -115,7 +115,7 @@ class UserBranchServiceFindActiveTest extends TestCase
     /**
      * @test
      */
-    public function findActiveUserBranch_複数のユーザーブランチが存在する場合でも正しいアクティブなブランチが取得できる()
+    public function find_active_user_branch_複数のユーザーブランチが存在する場合でも正しいアクティブなブランチが取得できる()
     {
         // Arrange
         $activeUserBranch = UserBranch::factory()->create([
@@ -141,7 +141,7 @@ class UserBranchServiceFindActiveTest extends TestCase
     /**
      * @test
      */
-    public function findActiveUserBranch_別の組織のアクティブなユーザーブランチでも正常に取得できる()
+    public function find_active_user_branch_別の組織のアクティブなユーザーブランチでも正常に取得できる()
     {
         // Arrange
         $anotherOrganization = Organization::factory()->create();
@@ -163,7 +163,7 @@ class UserBranchServiceFindActiveTest extends TestCase
     /**
      * @test
      */
-    public function findActiveUserBranch_別のユーザーのアクティブなユーザーブランチでも正常に取得できる()
+    public function find_active_user_branch_別のユーザーのアクティブなユーザーブランチでも正常に取得できる()
     {
         // Arrange
         $anotherUser = User::factory()->create();

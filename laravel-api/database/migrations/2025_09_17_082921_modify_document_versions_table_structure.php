@@ -15,14 +15,14 @@ return new class extends Migration
             // カラム名を変更
             $table->renameColumn('sidebar_label', 'title');
             $table->renameColumn('content', 'description');
-            
+
             // 不要なカラムを削除
             $table->dropColumn([
                 'slug',
                 'file_order',
                 'original_blob_sha',
                 'file_path',
-                'is_public'
+                'is_public',
             ]);
         });
     }
@@ -36,7 +36,7 @@ return new class extends Migration
             // カラム名を元に戻す
             $table->renameColumn('title', 'sidebar_label');
             $table->renameColumn('description', 'content');
-            
+
             // 削除したカラムを復元
             $table->string('slug')->after('description');
             $table->integer('file_order')->after('title');

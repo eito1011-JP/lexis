@@ -11,34 +11,25 @@ class GetCategoryDto extends UseCaseDto
 {
     /**
      * カテゴリID
-     *
-     * @var int
      */
     public readonly int $id;
 
     /**
      * ユーザー
-     *
-     * @var object
      */
     public readonly object $user;
 
     /**
      * コンストラクタ
-     *
-     * @param array $data
      */
     public function __construct(array $data)
     {
         $this->id = $data['id'];
-        $this->user = $data['user'];  
+        $this->user = $data['user'];
     }
 
     /**
      * リクエストからDTOを作成
-     *
-     * @param array $data
-     * @return self
      */
     public static function fromRequest(array $data): self
     {

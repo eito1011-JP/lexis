@@ -18,12 +18,12 @@ class PullRequestPolicy
             ->where('organization_id', $pullRequest->organization_id)
             ->first();
 
-        if (!$roleBinding) {
+        if (! $roleBinding) {
             return false;
         }
 
         $role = OrganizationRoleBindingRole::from($roleBinding->role);
-        
+
         return $role->isAdmin() || $role->isOwner();
     }
 }

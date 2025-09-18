@@ -25,9 +25,9 @@ class UserBranchServiceDeactivateTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        $this->service = new UserBranchService();
-        
+
+        $this->service = new UserBranchService;
+
         $this->user = User::factory()->create();
         $this->organization = Organization::factory()->create();
     }
@@ -41,7 +41,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_アクティブなユーザーブランチを正常に非アクティブにできる()
+    public function deactivate_user_branch_アクティブなユーザーブランチを正常に非アクティブにできる()
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -55,7 +55,7 @@ class UserBranchServiceDeactivateTest extends TestCase
 
         // Assert
         $this->assertTrue($result);
-        
+
         // データベースの状態を確認
         $userBranch->refresh();
         $this->assertEquals(Flag::FALSE, $userBranch->is_active);
@@ -64,7 +64,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_存在しないユーザーブランチIDの場合はNotFoundException例外がスローされる()
+    public function deactivate_user_branch_存在しないユーザーブランチ_i_dの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $nonExistentUserBranchId = 99999;
@@ -77,7 +77,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_既に非アクティブなユーザーブランチの場合はNotFoundException例外がスローされる()
+    public function deactivate_user_branch_既に非アクティブなユーザーブランチの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -94,7 +94,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_削除されたユーザーブランチの場合はNotFoundException例外がスローされる()
+    public function deactivate_user_branch_削除されたユーザーブランチの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -102,7 +102,7 @@ class UserBranchServiceDeactivateTest extends TestCase
             'organization_id' => $this->organization->id,
             'is_active' => Flag::TRUE,
         ]);
-        
+
         // ソフトデリート
         $userBranch->delete();
 
@@ -114,7 +114,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_複数のアクティブなユーザーブランチがある場合でも指定されたブランチのみ非アクティブにできる()
+    public function deactivate_user_branch_複数のアクティブなユーザーブランチがある場合でも指定されたブランチのみ非アクティブにできる()
     {
         // Arrange
         $userBranch1 = UserBranch::factory()->create([
@@ -134,7 +134,7 @@ class UserBranchServiceDeactivateTest extends TestCase
 
         // Assert
         $this->assertTrue($result);
-        
+
         // データベースの状態を確認
         $userBranch1->refresh();
         $userBranch2->refresh();
@@ -145,7 +145,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_別の組織のアクティブなユーザーブランチも正常に非アクティブにできる()
+    public function deactivate_user_branch_別の組織のアクティブなユーザーブランチも正常に非アクティブにできる()
     {
         // Arrange
         $anotherOrganization = Organization::factory()->create();
@@ -160,7 +160,7 @@ class UserBranchServiceDeactivateTest extends TestCase
 
         // Assert
         $this->assertTrue($result);
-        
+
         // データベースの状態を確認
         $userBranch->refresh();
         $this->assertEquals(Flag::FALSE, $userBranch->is_active);
@@ -170,7 +170,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_別のユーザーのアクティブなユーザーブランチも正常に非アクティブにできる()
+    public function deactivate_user_branch_別のユーザーのアクティブなユーザーブランチも正常に非アクティブにできる()
     {
         // Arrange
         $anotherUser = User::factory()->create();
@@ -185,7 +185,7 @@ class UserBranchServiceDeactivateTest extends TestCase
 
         // Assert
         $this->assertTrue($result);
-        
+
         // データベースの状態を確認
         $userBranch->refresh();
         $this->assertEquals(Flag::FALSE, $userBranch->is_active);
@@ -195,7 +195,7 @@ class UserBranchServiceDeactivateTest extends TestCase
     /**
      * @test
      */
-    public function deactivateUserBranch_updated_atフィールドが更新される()
+    public function deactivate_user_branch_updated_atフィールドが更新される()
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -203,9 +203,9 @@ class UserBranchServiceDeactivateTest extends TestCase
             'organization_id' => $this->organization->id,
             'is_active' => Flag::TRUE,
         ]);
-        
+
         $originalUpdatedAt = $userBranch->updated_at;
-        
+
         // 1秒待機してタイムスタンプの差を確実にする
         sleep(1);
 
@@ -214,7 +214,7 @@ class UserBranchServiceDeactivateTest extends TestCase
 
         // Assert
         $this->assertTrue($result);
-        
+
         // データベースの状態を確認
         $userBranch->refresh();
         $this->assertEquals(Flag::FALSE, $userBranch->is_active);

@@ -120,7 +120,7 @@ class DocumentCategoryService
         return $query->orderBy('position', 'asc')->get();
     }
 
-        /**
+    /**
      * 親カテゴリのパスを取得
      */
     public function createCategoryPath(DocumentCategory $documentCategory): ?string

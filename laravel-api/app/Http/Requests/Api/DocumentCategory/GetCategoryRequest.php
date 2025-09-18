@@ -11,8 +11,6 @@ class GetCategoryRequest extends FormRequest
 {
     /**
      * リクエストが認証されているかを判定
-     *
-     * @return bool
      */
     public function authorize(): bool
     {
@@ -33,8 +31,6 @@ class GetCategoryRequest extends FormRequest
 
     /**
      * バリデーション用のデータを準備
-     *
-     * @return void
      */
     protected function prepareForValidation(): void
     {

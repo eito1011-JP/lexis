@@ -28,14 +28,23 @@ class CreatePullRequestUseCaseTest extends TestCase
     use DatabaseTransactions;
 
     private CreatePullRequestUseCase $useCase;
+
     private MockInterface $organizationService;
+
     private MockInterface $userBranchService;
+
     private User $user;
+
     private User $reviewerUser;
+
     private Organization $organization;
+
     private OrganizationMember $organizationMember;
+
     private UserBranch $userBranch;
+
     private DocumentVersion $documentVersion;
+
     private DocumentCategory $documentCategory;
 
     protected function setUp(): void
@@ -70,7 +79,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     {
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
-        $this->reviewerUser = User::factory()->create(['email' => 'reviewer_' . time() . '@example.com']);
+        $this->reviewerUser = User::factory()->create(['email' => 'reviewer_'.time().'@example.com']);
 
         $this->organizationMember = OrganizationMember::create([
             'user_id' => $this->user->id,
@@ -103,7 +112,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * 正常にプルリクエストが作成される場合のテスト（レビュアーあり）
      */
-    public function testExecuteSuccessWithReviewers(): void
+    public function test_execute_success_with_reviewers(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -136,7 +145,7 @@ class CreatePullRequestUseCaseTest extends TestCase
 
         // Assert
         $this->assertArrayHasKey('pull_request_id', $result);
-        
+
         // プルリクエストが作成されているか確認
         $pullRequest = PullRequest::find($result['pull_request_id']);
         $this->assertNotNull($pullRequest);
@@ -163,7 +172,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * 正常にプルリクエストが作成される場合のテスト（レビュアーなし）
      */
-    public function testExecuteSuccessWithoutReviewers(): void
+    public function test_execute_success_without_reviewers(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -196,7 +205,7 @@ class CreatePullRequestUseCaseTest extends TestCase
 
         // Assert
         $this->assertArrayHasKey('pull_request_id', $result);
-        
+
         // プルリクエストが作成されているか確認
         $pullRequest = PullRequest::find($result['pull_request_id']);
         $this->assertNotNull($pullRequest);
@@ -209,7 +218,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * 正常にプルリクエストが作成される場合のテスト（レビュアー空配列）
      */
-    public function testExecuteSuccessWithEmptyReviewers(): void
+    public function test_execute_success_with_empty_reviewers(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -242,7 +251,7 @@ class CreatePullRequestUseCaseTest extends TestCase
 
         // Assert
         $this->assertArrayHasKey('pull_request_id', $result);
-        
+
         // レビュアーが作成されていないことを確認
         $pullRequest = PullRequest::find($result['pull_request_id']);
         $reviewerCount = PullRequestReviewer::where('pull_request_id', $pullRequest->id)->count();
@@ -252,7 +261,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * ユーザーが組織に所属していない場合のテスト
      */
-    public function testExecuteFailsWhenUserNotBelongsToOrganization(): void
+    public function test_execute_fails_when_user_not_belongs_to_organization(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -266,7 +275,7 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->shouldReceive('validateUserBelongsToOrganization')
             ->once()
             ->with($this->user->id, $this->organization->id)
-            ->andThrow(new NotFoundException());
+            ->andThrow(new NotFoundException);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -280,7 +289,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * ユーザーブランチが見つからない場合のテスト
      */
-    public function testExecuteFailsWhenUserBranchNotFound(): void
+    public function test_execute_fails_when_user_branch_not_found(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -299,7 +308,7 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->shouldReceive('findActiveUserBranch')
             ->once()
             ->with($this->userBranch->id)
-            ->andThrow(new NotFoundException());
+            ->andThrow(new NotFoundException);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -313,7 +322,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * 一部のレビュアーが見つからない場合のテスト
      */
-    public function testExecuteFailsWhenSomeReviewersNotFound(): void
+    public function test_execute_fails_when_some_reviewers_not_found(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -353,7 +362,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * ユーザーブランチの無効化に失敗した場合のテスト
      */
-    public function testExecuteFailsWhenDeactivateUserBranchFails(): void
+    public function test_execute_fails_when_deactivate_user_branch_fails(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -378,7 +387,7 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->shouldReceive('deactivateUserBranch')
             ->once()
             ->with($this->userBranch->id)
-            ->andThrow(new NotFoundException());
+            ->andThrow(new NotFoundException);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -392,11 +401,11 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * 複数のレビュアーが正しく処理される場合のテスト
      */
-    public function testExecuteSuccessWithMultipleReviewers(): void
+    public function test_execute_success_with_multiple_reviewers(): void
     {
         // Arrange
-        $reviewer2 = User::factory()->create(['email' => 'reviewer2_' . time() . '@example.com']);
-        $reviewer3 = User::factory()->create(['email' => 'reviewer3_' . time() . '@example.com']);
+        $reviewer2 = User::factory()->create(['email' => 'reviewer2_'.time().'@example.com']);
+        $reviewer3 = User::factory()->create(['email' => 'reviewer3_'.time().'@example.com']);
 
         $dto = new CreatePullRequestDto(
             userBranchId: $this->userBranch->id,
@@ -436,19 +445,19 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->sort()
             ->values()
             ->toArray();
-        
+
         $expectedIds = collect([$this->reviewerUser->id, $reviewer2->id, $reviewer3->id])
             ->sort()
             ->values()
             ->toArray();
-        
+
         $this->assertEquals($expectedIds, $reviewerIds);
     }
 
     /**
      * descriptionがnullの場合のテスト
      */
-    public function testExecuteSuccessWithNullDescription(): void
+    public function test_execute_success_with_null_description(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -486,7 +495,7 @@ class CreatePullRequestUseCaseTest extends TestCase
     /**
      * トランザクションロールバックの詳細テスト
      */
-    public function testTransactionRollbackOnException(): void
+    public function test_transaction_rollback_on_exception(): void
     {
         // Arrange
         $dto = new CreatePullRequestDto(
@@ -526,7 +535,7 @@ class CreatePullRequestUseCaseTest extends TestCase
         // 状態が元に戻っていることを確認
         $this->documentVersion->refresh();
         $this->documentCategory->refresh();
-        
+
         $this->assertEquals($initialDocumentVersionStatus, $this->documentVersion->status);
         $this->assertEquals($initialDocumentCategoryStatus, $this->documentCategory->status);
         $this->assertEquals($initialPullRequestCount, PullRequest::count());

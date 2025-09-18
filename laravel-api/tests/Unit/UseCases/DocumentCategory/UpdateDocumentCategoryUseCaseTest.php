@@ -401,7 +401,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
 
         // Assert
         $this->assertNull($result->pull_request_edit_session_id);
-        
+
         // PullRequestEditSessionDiffが作成されていないことを確認
         $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
             'target_type' => EditStartVersionTargetType::CATEGORY->value,

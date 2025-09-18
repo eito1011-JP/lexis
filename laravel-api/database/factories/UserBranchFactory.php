@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -29,6 +30,7 @@ class UserBranchFactory extends Factory
             'user_id' => User::factory(),
             'branch_name' => $this->faker->word(),
             'is_active' => true,
+            'organization_id' => Organization::factory(),
         ];
     }
 

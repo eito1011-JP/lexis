@@ -87,6 +87,37 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     }));
   };
 
+  // 従属するカテゴリとドキュメントを取得する関数
+  const handleFetchBelogingItems = async (categoryId: number) => {
+    try {
+      const response = await apiClient.get(`/api/nodes?category_id=${categoryId}`);
+
+      console.log(response);
+      // 既存のカテゴリデータを更新
+      setCategories(prevCategories => {
+        return prevCategories.map(category => {
+          if (category.id === categoryId) {
+            // 取得したドキュメントをchildrenに追加
+            const children: DocumentItem[] = response.documents.map((doc: any) => ({
+              id: doc.id,
+              label: doc.sidebar_label || doc.title,
+            }));
+            
+            return {
+              ...category,
+              children: children
+            };
+          }
+          return category;
+        });
+      });
+      
+    } catch (error) {
+      console.error('従属アイテムの取得に失敗しました:', error);
+      // エラーハンドリング - ユーザーに通知するかログのみにするか検討
+    }
+  };
+
   // カテゴリデータを取得するuseEffect
   useEffect(() => {
     const loadCategories = async () => {
@@ -117,6 +148,8 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
       newExpanded.delete(categoryId);
     } else {
       newExpanded.add(categoryId);
+      // フォルダ展開時に従属アイテムを取得
+      handleFetchBelogingItems(categoryId);
     }
     setExpandedItems(newExpanded);
   };

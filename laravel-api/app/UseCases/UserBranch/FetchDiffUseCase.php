@@ -16,8 +16,6 @@ class FetchDiffUseCase
     /**
      * ユーザーブランチの差分データを取得
      *
-     * @param User $user
-     * @return array
      * @throws TargetDocumentNotFoundException
      */
     public function execute(User $user): array
@@ -34,7 +32,7 @@ class FetchDiffUseCase
                 ])
                 ->first();
 
-            if (!$userBranch) {
+            if (! $userBranch) {
                 throw new TargetDocumentNotFoundException(
                     'アクティブなユーザーブランチが見つかりません',
                     'MSG_USER_BRANCH_NOT_FOUND',
@@ -51,10 +49,12 @@ class FetchDiffUseCase
             return $diffResult;
 
         } catch (TargetDocumentNotFoundException $e) {
-            Log::error('ユーザーブランチが見つかりません: ' . $e->getMessage());
+            Log::error('ユーザーブランチが見つかりません: '.$e->getMessage());
+
             throw $e;
         } catch (\Exception $e) {
-            Log::error('Git差分の取得に失敗しました: ' . $e->getMessage());
+            Log::error('Git差分の取得に失敗しました: '.$e->getMessage());
+
             throw $e;
         }
     }

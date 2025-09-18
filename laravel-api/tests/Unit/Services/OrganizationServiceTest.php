@@ -23,7 +23,7 @@ class OrganizationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new OrganizationService();
+        $this->service = new OrganizationService;
         $this->user = User::factory()->create();
         $this->organization = Organization::factory()->create();
     }
@@ -31,7 +31,7 @@ class OrganizationServiceTest extends TestCase
     /**
      * @test
      */
-    public function validateUserBelongsToOrganization_ユーザーが組織に所属している場合は例外がスローされない()
+    public function validate_user_belongs_to_organization_ユーザーが組織に所属している場合は例外がスローされない()
     {
         // Arrange
         OrganizationMember::factory()->create([
@@ -47,7 +47,7 @@ class OrganizationServiceTest extends TestCase
     /**
      * @test
      */
-    public function validateUserBelongsToOrganization_ユーザーが組織に所属していない場合はNotFoundException例外がスローされる()
+    public function validate_user_belongs_to_organization_ユーザーが組織に所属していない場合は_not_found_exception例外がスローされる()
     {
         // Arrange - OrganizationMemberレコードを作成しない
 
@@ -59,7 +59,7 @@ class OrganizationServiceTest extends TestCase
     /**
      * @test
      */
-    public function validateUserBelongsToOrganization_存在しないユーザーIDの場合はNotFoundException例外がスローされる()
+    public function validate_user_belongs_to_organization_存在しないユーザー_i_dの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $nonExistentUserId = 99999;
@@ -72,7 +72,7 @@ class OrganizationServiceTest extends TestCase
     /**
      * @test
      */
-    public function validateUserBelongsToOrganization_存在しない組織IDの場合はNotFoundException例外がスローされる()
+    public function validate_user_belongs_to_organization_存在しない組織_i_dの場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $nonExistentOrganizationId = 99999;
@@ -85,7 +85,7 @@ class OrganizationServiceTest extends TestCase
     /**
      * @test
      */
-    public function validateUserBelongsToOrganization_ユーザーが別の組織に所属している場合はNotFoundException例外がスローされる()
+    public function validate_user_belongs_to_organization_ユーザーが別の組織に所属している場合は_not_found_exception例外がスローされる()
     {
         // Arrange
         $anotherOrganization = Organization::factory()->create();
@@ -102,11 +102,11 @@ class OrganizationServiceTest extends TestCase
     /**
      * @test
      */
-    public function validateUserBelongsToOrganization_複数の組織に所属しているユーザーが正しい組織でチェックされる場合は例外がスローされない()
+    public function validate_user_belongs_to_organization_複数の組織に所属しているユーザーが正しい組織でチェックされる場合は例外がスローされない()
     {
         // Arrange
         $anotherOrganization = Organization::factory()->create();
-        
+
         // 複数の組織に所属させる
         OrganizationMember::factory()->create([
             'user_id' => $this->user->id,

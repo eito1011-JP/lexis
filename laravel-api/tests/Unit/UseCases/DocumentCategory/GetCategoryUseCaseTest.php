@@ -28,7 +28,7 @@ class GetCategoryUseCaseTest extends TestCase
     {
         parent::setUp();
 
-        $this->useCase = new GetCategoryUseCase();
+        $this->useCase = new GetCategoryUseCase;
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();

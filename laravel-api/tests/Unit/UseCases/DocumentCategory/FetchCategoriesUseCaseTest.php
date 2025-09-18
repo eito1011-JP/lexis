@@ -6,11 +6,11 @@ use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
+use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
-use App\Models\EditStartVersion;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -171,7 +171,6 @@ class FetchCategoriesUseCaseTest extends TestCase
             'user_branch_id' => null,
             'organization_id' => $this->organization->id,
         ]);
-
 
         $draftCategory = DocumentCategory::factory()->create([
             'title' => 'ドラフトカテゴリ',
@@ -529,12 +528,12 @@ class FetchCategoriesUseCaseTest extends TestCase
         // Assert
         $this->assertCount(3, $result);
         $resultTitles = $result->pluck('title')->toArray();
-        
+
         // 表示されるもの
         $this->assertContains('新規作成マージ済みカテゴリ', $resultTitles);
         $this->assertContains('編集後ドラフトカテゴリ', $resultTitles);
         $this->assertContains('未編集マージ済みカテゴリ', $resultTitles);
-        
+
         // 表示されないもの（編集対象となった元のマージ済みカテゴリ）
         $this->assertNotContains('編集対象元マージ済みカテゴリ', $resultTitles);
     }

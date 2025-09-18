@@ -27,9 +27,10 @@ class UpdateDocumentCategoryUseCase
     /**
      * ドキュメントカテゴリを更新
      *
-     * @param UpdateDocumentCategoryDto $dto カテゴリ更新DTO
-     * @param User $user 認証済みユーザー
+     * @param  UpdateDocumentCategoryDto  $dto  カテゴリ更新DTO
+     * @param  User  $user  認証済みユーザー
      * @return DocumentCategory 更新されたカテゴリ
+     *
      * @throws NotFoundException 組織またはカテゴリが見つからない場合
      */
     public function execute(UpdateDocumentCategoryDto $dto, User $user): DocumentCategory
@@ -41,8 +42,8 @@ class UpdateDocumentCategoryUseCase
             $organizationId = $user->organizationMember->organization_id;
 
             // 2. if $organizationない場合 throw new NotFoundException;
-            if (!$organizationId) {
-                throw new NotFoundException();
+            if (! $organizationId) {
+                throw new NotFoundException;
             }
 
             // 3. fetchOrCreateActiveBranch
@@ -63,8 +64,8 @@ class UpdateDocumentCategoryUseCase
             $existingCategory = DocumentCategory::find($dto->categoryId);
 
             // 6. if existingCategoryがない場合 throw new NotFoundException;
-            if (!$existingCategory) {
-                throw new NotFoundException();
+            if (! $existingCategory) {
+                throw new NotFoundException;
             }
 
             // 7. DocumentCategoryを作成
@@ -112,6 +113,7 @@ class UpdateDocumentCategoryUseCase
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error($e);
+
             throw $e;
         }
     }

@@ -14,9 +14,9 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\OrganizationService;
 use App\Services\UserBranchService;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Http\Discovery\Exception\NotFoundException;
 
 /**
  * プルリクエスト作成UseCase
@@ -27,12 +27,14 @@ class CreatePullRequestUseCase
         private OrganizationService $organizationService,
         private UserBranchService $userBranchService,
     ) {}
+
     /**
      * プルリクエストを作成
      *
-     * @param CreatePullRequestDto $dto プルリクエスト作成DTO
-     * @param User $user 認証済みユーザー
+     * @param  CreatePullRequestDto  $dto  プルリクエスト作成DTO
+     * @param  User  $user  認証済みユーザー
      * @return array プルリクエスト作成結果
+     *
      * @throws \Exception
      */
     public function execute(CreatePullRequestDto $dto, User $user): array
@@ -59,7 +61,7 @@ class CreatePullRequestUseCase
             $this->userBranchService->deactivateUserBranch($dto->userBranchId);
 
             // 7. レビュアーのuser_idを取得してpull_request_reviewersテーブルに一括insert
-            if (!empty($dto->reviewers)) {
+            if (! empty($dto->reviewers)) {
                 $this->createPullRequestReviewers($pullRequest->id, $dto->reviewers);
             }
 
@@ -72,10 +74,10 @@ class CreatePullRequestUseCase
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error($e);
+
             throw $e;
         }
     }
-
 
     /**
      * document_versionsのステータスをpushedに更新
@@ -118,7 +120,7 @@ class CreatePullRequestUseCase
         $reviewerUsers = User::whereIn('email', $reviewerEmails)->get();
 
         if ($reviewerUsers->count() !== count($reviewerEmails)) {
-            throw new NotFoundException();
+            throw new NotFoundException;
         }
 
         $reviewerData = $reviewerUsers->map(function ($user) use ($pullRequestId) {
