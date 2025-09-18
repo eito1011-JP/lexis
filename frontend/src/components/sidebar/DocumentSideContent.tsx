@@ -258,35 +258,19 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
           onMouseLeave={() => setHoveredItem(null)}
         >
           {/* 左端の矢印アイコン（全てのカテゴリに表示） */}
-          {hasChildren ? (
-            <button
-              className="mr-0.5 flex-shrink-0 p-1 hover:bg-gray-700 rounded transition-transform"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpanded(item.id);
-              }}
-            >
-              <ArrowDown 
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  isExpanded ? 'rotate-0' : '-rotate-90'
-                }`} 
-              />
-            </button>
-          ) : (
-            <button
-              className="mr-0.5 flex-shrink-0 p-1 hover:bg-gray-700 rounded transition-transform"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleExpanded(item.id);
-              }}
-            >
-              <ArrowDown 
-                className={`w-4 h-4 transition-transform duration-200 ${
-                  isExpanded ? 'rotate-0' : '-rotate-90'
-                }`} 
-              />
-            </button>
-          )}
+          <button
+            className="mr-0.5 flex-shrink-0 p-1 hover:bg-gray-700 rounded transition-transform"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpanded(item.id);
+            }}
+          >
+            <ArrowDown 
+              className={`w-4 h-4 transition-transform duration-200 ${
+                isExpanded ? 'rotate-0' : '-rotate-90'
+              }`} 
+            />
+          </button>
           
           {/* カテゴリアイコン */}
           <IconComponent className="w-5 h-5 mr-1 flex-shrink-0" />
