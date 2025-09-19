@@ -7,6 +7,7 @@ use App\Exceptions\DocumentNotFoundException;
 use App\Models\DocumentVersion;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\DocumentCategoryService;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 class DetailUseCase
@@ -21,12 +22,12 @@ class DetailUseCase
      *
      * @param  DetailDto  $dto  リクエストデータ
      */
-    public function execute(DetailDto $dto): array
+    public function execute(DetailDto $dto, User $user): array
     {
         try {
             // 指定されたIDとorganization_idでドキュメントバージョンを取得
             $document = DocumentVersion::where('id', $dto->id)
-                ->where('organization_id', $dto->organizationId)
+                ->where('organization_id', $user->organization_id)
                 ->first();
 
             if (! $document) {
@@ -42,12 +43,7 @@ class DetailUseCase
         } catch (DocumentNotFoundException $e) {
             throw $e;
         } catch (\Exception $e) {
-            Log::error('GetDocumentDetailUseCase: エラー', [
-                'error' => $e->getMessage(),
-                'id' => $dto->id,
-                'organization_id' => $dto->organizationId,
-            ]);
-
+            Log::error($e);
             throw $e;
         }
     }

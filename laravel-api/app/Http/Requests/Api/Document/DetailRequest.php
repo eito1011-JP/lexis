@@ -35,16 +35,4 @@ class DetailRequest extends FormRequest
             'id' => $this->route('id'),
         ]);
     }
-
-    /**
-     * エラーメッセージ
-     */
-    public function messages(): array
-    {
-        return [
-            'id.required' => 'ドキュメントバージョンIDが必要です',
-            'id.integer' => 'ドキュメントバージョンIDは整数である必要があります',
-            'id.exists' => '指定されたドキュメントバージョンは存在しません',
-        ];
-    }
 }

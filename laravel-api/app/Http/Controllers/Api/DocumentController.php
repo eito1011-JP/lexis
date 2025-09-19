@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
-use App\Dto\UseCase\Document\GetDocumentDetailDto;
+use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
@@ -19,7 +19,7 @@ use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
 use App\UseCases\Document\DeleteDocumentUseCase;
-use App\UseCases\Document\GetDocumentDetailUseCase;
+use App\UseCases\Document\DetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
@@ -41,7 +41,7 @@ class DocumentController extends ApiBaseController
 
     protected UpdateDocumentUseCase $updateDocumentUseCase;
 
-    protected GetDocumentDetailUseCase $getDocumentDetailUseCase;
+    protected DetailUseCase $getDocumentDetailUseCase;
 
     protected DeleteDocumentUseCase $deleteDocumentUseCase;
 
@@ -54,7 +54,7 @@ class DocumentController extends ApiBaseController
         CreateDocumentUseCase $createDocumentUseCase,
         GetDocumentsUseCase $getDocumentsUseCase,
         UpdateDocumentUseCase $updateDocumentUseCase,
-        GetDocumentDetailUseCase $getDocumentDetailUseCase,
+        DetailUseCase $getDocumentDetailUseCase,
         DeleteDocumentUseCase $deleteDocumentUseCase,
         DocumentCategoryService $documentCategoryService
     ) {
@@ -144,43 +144,32 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントバージョンIDでドキュメントを取得
      */
-    public function detail(DetailRequest $request, GetDocumentDetailUseCase $useCase): JsonResponse
+    public function detail(DetailRequest $request, DetailUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
             // DTOを作成してUseCaseを実行
-            new GetDocumentDetailDto(
-                id: $request->id,
-                user_id: $user->id,
-                organization_id: $user->organization_id,
-            );
-            $dto = GetDocumentDetailDto::fromArray($request->validated());
-            $result = $useCase->execute($dto);
+            $dto = DetailDto::fromRequest($request->validated());
+            $result = $useCase->execute($dto, $user);
 
             return response()->json($result);
-        } catch (\Exception $e) {
-            Log::error('ドキュメントバージョン取得エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            if ($e instanceof DocumentNotFoundException) {
-                return response()->json([
-                    'error' => $e->getMessage(),
-                ], 404);
-            }
-
-            return response()->json([
-                'error' => 'ドキュメントバージョンの取得に失敗しました',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 
