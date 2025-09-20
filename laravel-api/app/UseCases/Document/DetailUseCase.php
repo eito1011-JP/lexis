@@ -26,9 +26,11 @@ class DetailUseCase
     public function execute(DetailDto $dto, User $user): array
     {
         try {
+            $organizationId = $user->organizationMember->organization_id;
+
             // 指定されたIDとorganization_idでドキュメントバージョンを取得
             $document = DocumentVersion::where('id', $dto->id)
-                ->where('organization_id', $user->organization_id)
+                ->where('organization_id', $organizationId)
                 ->first();
 
             if (! $document) {
