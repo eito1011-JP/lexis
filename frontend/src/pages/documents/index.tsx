@@ -93,11 +93,12 @@ export default function DocumentsPage(): JSX.Element {
       const response = await apiClient.get(endpoint);
       
       console.log(response);
-      // レスポンスからtitleとdescriptionを取得
+      // レスポンスからドキュメント詳細とパンクズリストを取得
       const documentDetail: DocumentDetail = {
         id: response.id,
         title: response.title,
-        description: response.description
+        description: response.description,
+        breadcrumbs: response.breadcrumbs
       };
 
       console.log(documentDetail);
@@ -178,17 +179,21 @@ export default function DocumentsPage(): JSX.Element {
                 <Home className="w-4 h-4 ml-0 mr-2" />
               </a>
              
-             {categoryDetail && (
+             {documentDetail?.breadcrumbs && (
                <>
-                 <span className="mx-2">{'>'}</span>
-                 <span className="text-white">{categoryDetail.title}</span>
+                 {documentDetail.breadcrumbs.map((breadcrumb) => (
+                   <span key={breadcrumb.id}>
+                     <span className="mx-2">{'>'}</span>
+                     <span className="text-white">{breadcrumb.title}</span>
+                   </span>
+                 ))}
                </>
              )}
 
-             {documentDetail && (
+             {!documentDetail && categoryDetail && (
                <>
                  <span className="mx-2">{'>'}</span>
-                 <span className="text-white">{documentDetail.title}</span>
+                 <span className="text-white">{categoryDetail.title}</span>
                </>
              )}
            </div>

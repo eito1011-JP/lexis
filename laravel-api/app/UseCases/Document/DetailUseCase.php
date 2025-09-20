@@ -28,8 +28,11 @@ class DetailUseCase
         try {
             $organizationId = $user->organizationMember->organization_id;
 
-            // 指定されたIDとorganization_idでドキュメントバージョンを取得
-            $document = DocumentVersion::where('id', $dto->id)
+            // 指定されたIDとorganization_idでドキュメントバージョンを取得（カテゴリの親階層も一緒に読み込み）
+            $document = DocumentVersion::with(['category' => function ($query) {
+                $query->with('parent.parent.parent.parent.parent.parent.parent'); // 7階層まで親カテゴリを読み込み
+            }])
+                ->where('id', $dto->id)
                 ->where('organization_id', $organizationId)
                 ->first();
 
@@ -37,10 +40,23 @@ class DetailUseCase
                 throw new NotFoundException();
             }
 
+            // パンクズリストを生成
+            $breadcrumbs = [];
+            if ($document->category) {
+                $categoryBreadcrumbs = $document->category->getBreadcrumbs();
+                $breadcrumbs = array_merge($categoryBreadcrumbs, [
+                    [
+                        'id' => $document->id,
+                        'title' => $document->title
+                    ]
+                ]);
+            }
+
             return [
                 'id' => $document->id,
                 'title' => $document->title,
                 'description' => $document->description,
+                'breadcrumbs' => $breadcrumbs
             ];
         } catch (\Exception $e) {
             Log::error($e);

@@ -134,4 +134,26 @@ class DocumentCategory extends Model
     {
         return $this->hasMany(EditStartVersion::class, 'current_version_id');
     }
+
+    /**
+     * パンクズリストを生成（親カテゴリを再帰的に取得）
+     *
+     * @return array カテゴリの階層配列（ルートから現在まで）
+     */
+    public function getBreadcrumbs(): array
+    {
+        $breadcrumbs = [];
+        $current = $this;
+
+        // 親カテゴリを再帰的に辿って配列に追加
+        while ($current) {
+            array_unshift($breadcrumbs, [
+                'id' => $current->id,
+                'title' => $current->title
+            ]);
+            $current = $current->parent;
+        }
+
+        return $breadcrumbs;
+    }
 }

@@ -12,6 +12,10 @@ export interface DocumentDetail {
   id: number;
   title: string;
   description: string;
+  breadcrumbs?: Array<{
+    id: number;
+    title: string;
+  }>;
 }
 
 interface AdminLayoutProps {
