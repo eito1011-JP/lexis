@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
@@ -7,11 +7,14 @@ import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 
 /**
- * ルートカテゴリ新規作成ページ
- * parent_id = null でカテゴリを作成
+ * カテゴリ新規作成ページ
+ * URLパスに応じてルートカテゴリまたはサブカテゴリを作成
+ * - /categories/create: parent_id = null (ルートカテゴリ)
+ * - /categories/:categoryId/create: parent_id = :categoryId (サブカテゴリ)
  */
 export default function CreateRootCategoryPage(): JSX.Element {
   const navigate = useNavigate();
+  const { categoryId } = useParams<{ categoryId: string }>();
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number>(4);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,10 +32,13 @@ export default function CreateRootCategoryPage(): JSX.Element {
     setError(null);
 
     try {
+      // URLパラメータに基づいてparent_idを設定
+      const parentId = categoryId ? parseInt(categoryId, 10) : null;
+
       const payload = {
         title: formData.title,
         description: formData.description,
-        parent_id: null, // ルートカテゴリとして作成
+        parent_id: parentId, // URLにidがある場合はサブカテゴリ、ない場合はルートカテゴリ
         edit_pull_request_id: null,
         pull_request_edit_token: null,
       };
@@ -91,7 +97,6 @@ export default function CreateRootCategoryPage(): JSX.Element {
         onCancel={handleCancel}
         onUnsavedChangesChange={setHasUnsavedChanges}
         isSubmitting={isSubmitting}
-        error={error}
         submitButtonText="作成"
         submittingText="作成中..."
       />
