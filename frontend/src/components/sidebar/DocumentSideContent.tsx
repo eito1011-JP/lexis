@@ -32,7 +32,9 @@ interface DocumentItem {
 // サイドコンテンツのプロパティ
 interface DocumentSideContentProps {
   onCategorySelect?: (categoryId: number) => void;
+  onDocumentSelect?: (documentId: number) => void;
   selectedCategoryId?: number;
+  selectedDocumentId?: number;
 }
 
 // カテゴリデータを取得するサービス関数
@@ -57,7 +59,7 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
  * ドキュメント用サイドコンテンツコンポーネント
  * 株式会社Nexis配下の階層構造のみを表示
  */
-export default function DocumentSideContent({ onCategorySelect, selectedCategoryId }: DocumentSideContentProps) {
+export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryId, selectedDocumentId }: DocumentSideContentProps) {
   // デフォルトで人事制度カテゴリを展開
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
@@ -230,9 +232,16 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     handleCloseModal();
   };
 
+  // ドキュメント選択ハンドラ
+  const handleDocumentClick = (documentId: number) => {
+    if (onDocumentSelect) {
+      onDocumentSelect(documentId);
+    }
+  };
+
   // ドキュメントアイテムをレンダリング
   const renderDocumentItem = (document: DocumentItem, level: number = 0) => {
-    const isSelected = selectedCategoryId === document.id;
+    const isSelected = selectedDocumentId === document.id;
     const isHovered = hoveredItem === document.id;
 
     return (
@@ -242,7 +251,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
           style={{ paddingLeft: `${level * 4}px` }}
-          onClick={() => handleCategoryClick(document.id)}
+          onClick={() => handleDocumentClick(document.id)}
           onMouseEnter={() => setHoveredItem(document.id)}
           onMouseLeave={() => setHoveredItem(null)}
         >

@@ -23,7 +23,7 @@ use App\UseCases\Document\DetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
-use App\Exceptions\DocumentNotFoundException;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -122,15 +122,6 @@ class DocumentController extends ApiBaseController
             // DTOを作成してUseCaseを実行
             $dto = CreateDocumentUseCaseDto::fromRequest($request->all(), $user);
             $useCase->execute($dto);
-
-            return response()->json();
-        } catch (DocumentNotFoundException) {
-            return $this->sendError(
-                ErrorType::CODE_NOT_FOUND,
-                __('errors.MSG_NOT_FOUND'),
-                ErrorType::STATUS_NOT_FOUND,
-                LogLevel::ERROR,
-            );
         } catch (Exception) {
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,

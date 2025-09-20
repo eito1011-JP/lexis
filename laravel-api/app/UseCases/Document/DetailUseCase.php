@@ -8,6 +8,7 @@ use App\Models\DocumentVersion;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\DocumentCategoryService;
 use App\Models\User;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\Log;
 
 class DetailUseCase
@@ -31,7 +32,7 @@ class DetailUseCase
                 ->first();
 
             if (! $document) {
-                throw new DocumentNotFoundException('指定されたドキュメントは見つかりませんでした');
+                throw new NotFoundException();
             }
 
             return [
@@ -39,9 +40,6 @@ class DetailUseCase
                 'title' => $document->title,
                 'description' => $document->description,
             ];
-
-        } catch (DocumentNotFoundException $e) {
-            throw $e;
         } catch (\Exception $e) {
             Log::error($e);
             throw $e;
