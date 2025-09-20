@@ -19,6 +19,7 @@ export const API_CONFIG = {
     },
     DOCUMENT_VERSIONS: {
       CREATE: '/api/document_versions',
+      GET_DETAIL: (id: number) => `/api/document_versions/${id}`,
     },
     CATEGORIES: {
       GET: '/api/document-categories',

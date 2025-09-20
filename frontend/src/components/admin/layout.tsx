@@ -7,13 +7,26 @@ import DocumentSideContent from '../sidebar/DocumentSideContent';
 /**
  * 管理画面用のレイアウトコンポーネント
  */
+// ドキュメント詳細の型定義
+export interface DocumentDetail {
+  id: number;
+  title: string;
+  description: string;
+  breadcrumbs?: Array<{
+    id: number;
+    title: string;
+  }>;
+}
+
 interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;
   sidebar?: boolean;
   showDocumentSideContent?: boolean;
   onCategorySelect?: (categoryId: number) => void;
+  onDocumentSelect?: (documentId: number) => void;
   selectedCategoryId?: number;
+  selectedDocumentId?: number;
   onNavigationRequest?: (path: string) => void;
 }
 
@@ -23,7 +36,9 @@ export default function AdminLayout({
   sidebar = false,
   showDocumentSideContent = false,
   onCategorySelect,
+  onDocumentSelect,
   selectedCategoryId,
+  selectedDocumentId,
   onNavigationRequest,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
@@ -169,7 +184,9 @@ export default function AdminLayout({
               {showDocumentSideContent && (
                   <DocumentSideContent
                     onCategorySelect={onCategorySelect}
+                    onDocumentSelect={onDocumentSelect}
                     selectedCategoryId={selectedCategoryId}
+                    selectedDocumentId={selectedDocumentId}
                   />
               )}
             </div>
