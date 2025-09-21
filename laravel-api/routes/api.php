@@ -142,6 +142,7 @@ Route::middleware('auth:api')->group(function () {
 
     // ドキュメントバージョン関連（新仕様）
     Route::prefix('document_versions')->group(function () {
+        Route::post('/', [DocumentController::class, 'createDocument']);
         Route::get('/{id}', [DocumentController::class, 'detail']);
     });
 });

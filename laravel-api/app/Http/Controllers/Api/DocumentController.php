@@ -122,6 +122,8 @@ class DocumentController extends ApiBaseController
             // DTOを作成してUseCaseを実行
             $dto = CreateDocumentUseCaseDto::fromRequest($request->all(), $user);
             $useCase->execute($dto);
+
+            return response()->json();
         } catch (Exception) {
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,

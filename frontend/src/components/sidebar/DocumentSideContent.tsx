@@ -41,7 +41,7 @@ interface DocumentSideContentProps {
   selectedDocumentId?: number;
 }
 
-// カテゴリデータを取得するサービス関数
+// カテゴリデータを取得するサービス関数（無制限表示）
 const fetchCategories = async (parentId: number | null = null): Promise<ApiCategoryData[]> => {
   try {
     const params = new URLSearchParams();
@@ -52,6 +52,7 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
     const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(endpoint);
     
+    // すべてのカテゴリを返す（制限なし）
     return response.categories || [];
   } catch (error) {
     console.error('カテゴリの取得に失敗しました:', error);
@@ -61,7 +62,7 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
 
 /**
  * ドキュメント用サイドコンテンツコンポーネント
- * 株式会社Nexis配下の階層構造のみを表示
+ * 株式会社Nexis配下の階層構造を無制限表示
  */
 export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryId, selectedDocumentId }: DocumentSideContentProps) {
   // デフォルトで人事制度カテゴリを展開
@@ -94,40 +95,61 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     }));
   };
 
-  // 従属するカテゴリとドキュメントを取得する関数
+  // 深い階層まで再帰的に検索してカテゴリを更新する関数
+  const updateCategoryInTree = (categories: CategoryItem[], targetId: number, children: BaseItem[]): CategoryItem[] => {
+    return categories.map(category => {
+      if (category.id === targetId) {
+        return {
+          ...category,
+          children: children
+        };
+      }
+      
+      if (category.children && category.children.length > 0) {
+        // 子要素のうちカテゴリタイプのもののみを再帰的に処理
+        const childCategories = category.children.filter(child => child.type === 'category') as CategoryItem[];
+        const updatedChildCategories = updateCategoryInTree(childCategories, targetId, children);
+        const childDocuments = category.children.filter(child => child.type === 'document');
+        
+        return {
+          ...category,
+          children: [...updatedChildCategories, ...childDocuments]
+        };
+      }
+      
+      return category;
+    });
+  };
+
+  // 従属するカテゴリとドキュメントを取得する関数（無制限表示・深い階層対応）
   const handleFetchBelogingItems = async (categoryId: number) => {
     try {
       const response = await apiClient.get(`/api/nodes?category_id=${categoryId}`);
 
-      console.log(response);
-      // 既存のカテゴリデータを更新
+      console.log('API Response for category', categoryId, ':', response);
+      
+      // 既存のカテゴリデータを更新（深い階層まで対応）
       setCategories(prevCategories => {
-        return prevCategories.map(category => {
-          if (category.id === categoryId) {
-            // 取得したカテゴリとドキュメントをchildrenに追加
-            const categoryChildren: BaseItem[] = response.categories.map((cat: any) => ({
-              id: cat.id,
-              label: cat.title,
-              icon: Folder,
-              type: 'category' as const,
-            }));
-            
-            const documentChildren: BaseItem[] = response.documents.map((doc: any) => ({
-              id: doc.id,
-              label: doc.sidebar_label || doc.title,
-              type: 'document' as const,
-            }));
-            
-            // カテゴリとドキュメントを結合
-            const children = [...categoryChildren, ...documentChildren];
-            
-            return {
-              ...category,
-              children: children
-            };
-          }
-          return category;
-        });
+        // 取得したすべてのカテゴリとドキュメントをchildrenに追加（制限なし）
+        const categoryChildren: CategoryItem[] = response.categories.map((cat: any) => ({
+          id: cat.id,
+          label: cat.title,
+          icon: Folder,
+          type: 'category' as const,
+          children: [] // 子カテゴリには空の配列を初期化
+        }));
+        
+        const documentChildren: BaseItem[] = response.documents.map((doc: any) => ({
+          id: doc.id,
+          label: doc.sidebar_label || doc.title,
+          type: 'document' as const,
+        }));
+        
+        // すべてのカテゴリとドキュメントを結合（制限なし）
+        const children = [...categoryChildren, ...documentChildren];
+        
+        // 深い階層まで再帰的に検索して更新
+        return updateCategoryInTree(prevCategories, categoryId, children);
       });
       
     } catch (error) {
@@ -136,14 +158,14 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     }
   };
 
-  // カテゴリデータを取得するuseEffect
+  // カテゴリデータを取得するuseEffect（無制限表示）
   useEffect(() => {
     const loadCategories = async () => {
       try {
         setIsLoading(true);
         setError(null);
         
-        // parent_id=nullでルートカテゴリを取得
+        // parent_id=nullですべてのルートカテゴリを取得（制限なし）
         const apiCategories = await fetchCategories(null);
         const transformedCategories = transformApiDataToCategories(apiCategories);
         
