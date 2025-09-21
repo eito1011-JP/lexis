@@ -65,8 +65,6 @@ class FetchCategoriesUseCase
 
         // ステータス優先度とcreated_atで並び替え
         // PUSHEDが最初、DRAFTが後、同一ステータス内ではcreated_at昇順
-        return $query->orderByRaw("CASE status WHEN 'pushed' THEN 1 WHEN 'draft' THEN 2 ELSE 3 END")
-            ->orderBy('created_at', 'asc')
-            ->get();
+        return $query->orderBy('created_at', 'asc')->get();
     }
 }

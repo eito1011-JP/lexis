@@ -14,19 +14,23 @@ interface ApiCategoryData {
   title: string;
 }
 
-// フロントエンドで使用するカテゴリの型定義
-interface CategoryItem {
+// 共通のアイテム型定義
+interface BaseItem {
   id: number;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
-  children?: DocumentItem[];
+  type: 'category' | 'document';
+}
+
+// フロントエンドで使用するカテゴリの型定義
+interface CategoryItem extends BaseItem {
+  type: 'category';
+  children?: BaseItem[];
 }
 
 // ドキュメントの型定義
-interface DocumentItem {
-  id: number;
-  label: string;
-  icon?: React.ComponentType<{ className?: string }>;
+interface DocumentItem extends BaseItem {
+  type: 'document';
 }
 
 // サイドコンテンツのプロパティ
@@ -85,6 +89,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
       id: item.id,
       label: item.title,
       icon: Folder,
+      type: 'category' as const,
       children: [] // 現時点ではドキュメント子要素は取得しない
     }));
   };
@@ -99,11 +104,22 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
       setCategories(prevCategories => {
         return prevCategories.map(category => {
           if (category.id === categoryId) {
-            // 取得したドキュメントをchildrenに追加
-            const children: DocumentItem[] = response.documents.map((doc: any) => ({
+            // 取得したカテゴリとドキュメントをchildrenに追加
+            const categoryChildren: BaseItem[] = response.categories.map((cat: any) => ({
+              id: cat.id,
+              label: cat.title,
+              icon: Folder,
+              type: 'category' as const,
+            }));
+            
+            const documentChildren: BaseItem[] = response.documents.map((doc: any) => ({
               id: doc.id,
               label: doc.sidebar_label || doc.title,
+              type: 'document' as const,
             }));
+            
+            // カテゴリとドキュメントを結合
+            const children = [...categoryChildren, ...documentChildren];
             
             return {
               ...category,
@@ -345,10 +361,14 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
           )}
         </div>
 
-        {/* 子ドキュメント */}
+        {/* 子要素（カテゴリとドキュメント） */}
         {hasChildren && isExpanded && (
           <div className="ml-2">
-            {item.children!.map((document) => renderDocumentItem(document, level + 1))}
+            {item.children!.map((child) => 
+              child.type === 'category' 
+                ? renderCategoryItem(child as CategoryItem, level + 1)
+                : renderDocumentItem(child as DocumentItem, level + 1)
+            )}
           </div>
         )}
 
