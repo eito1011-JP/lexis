@@ -1,4 +1,4 @@
-import AdminLayout from '@/components/admin/layout';
+import AdminLayout, { type DocumentDetail } from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -20,6 +20,8 @@ export default function DocumentsPage(): JSX.Element {
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string | null>(null);
   const [categoryDetail, setCategoryDetail] = useState<ApiCategoryDetailResponse | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
   const [userBranchId, setUserBranchId] = useState<string | null>(null);
@@ -74,8 +76,51 @@ export default function DocumentsPage(): JSX.Element {
   // サイドコンテンツのカテゴリ選択ハンドラ
   const handleSideContentCategorySelect = (categoryId: number) => {
     setSelectedSideContentCategory(categoryId.toString());
+    setSelectedDocumentId(null);
+    setDocumentDetail(null);
     console.log('Selected side content category:', categoryId);
     loadCategoryDetail(categoryId);
+  };
+
+  // ドキュメント選択ハンドラ
+  const handleDocumentSelect = async (documentId: number) => {
+    try {
+      setLoading(true);
+      const endpoint = API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentId);
+      console.log('API endpoint:', endpoint);
+      console.log('Document ID:', documentId);
+      
+      const response = await apiClient.get(endpoint);
+      
+      console.log(response);
+      // レスポンスからドキュメント詳細とパンクズリストを取得
+      const documentDetail: DocumentDetail = {
+        id: response.id,
+        title: response.title,
+        description: response.description,
+        breadcrumbs: response.breadcrumbs
+      };
+
+      console.log(documentDetail);
+      
+      setSelectedDocumentId(documentDetail.id);
+      setDocumentDetail(documentDetail);
+      setSelectedSideContentCategory(null);
+      setCategoryDetail(null);
+      console.log('Selected document:', documentDetail);
+      
+    } catch (error) {
+      console.error('ドキュメント取得エラー:', error);
+      console.error('エラー詳細:', JSON.stringify(error, null, 2));
+      if (error instanceof Error && (error as any).response) {
+        console.error('レスポンス詳細:', (error as any).response);
+      }
+      setToastMessage('ドキュメント詳細の取得に失敗しました');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 初期表示時に最小IDのカテゴリを自動選択とユーザー変更チェック
@@ -122,23 +167,36 @@ export default function DocumentsPage(): JSX.Element {
       sidebar={true}
       showDocumentSideContent={true}
       onCategorySelect={handleSideContentCategorySelect}
+      onDocumentSelect={handleDocumentSelect}
       selectedCategoryId={selectedSideContentCategory ? parseInt(selectedSideContentCategory) : undefined}
+      selectedDocumentId={selectedDocumentId || undefined}
     >
          <div className="mb-6 align-left">
            {/* パンくずリストと差分提出ボタン */}
            <div className="flex items-center justify-between mb-6 mx-6 mx-auto">
-             <div className="flex items-center text-sm text-gray-400">
-               <a href="/documents" className="hover:text-white">
-                 <Home className="w-4 h-4 ml-0 mr-2" />
-               </a>
-              
-              {categoryDetail && (
-                <>
-                  <span className="mx-2">{'>'}</span>
-                  <span className="text-white">{categoryDetail.title}</span>
-                </>
-              )}
-            </div>
+            <div className="flex items-center text-sm text-gray-400">
+              <a href="/documents" className="hover:text-white">
+                <Home className="w-4 h-4 ml-0 mr-2" />
+              </a>
+             
+             {documentDetail?.breadcrumbs && (
+               <>
+                 {documentDetail.breadcrumbs.map((breadcrumb) => (
+                   <span key={breadcrumb.id}>
+                     <span className="mx-2">{'>'}</span>
+                     <span className="text-white">{breadcrumb.title}</span>
+                   </span>
+                 ))}
+               </>
+             )}
+
+             {!documentDetail && categoryDetail && (
+               <>
+                 <span className="mx-2">{'>'}</span>
+                 <span className="text-white">{categoryDetail.title}</span>
+               </>
+             )}
+           </div>
 
             <div className="flex items-center gap-4 mr-9">
               <button
@@ -168,15 +226,29 @@ export default function DocumentsPage(): JSX.Element {
           </div>
         </div>
 
-        {/* カテゴリ詳細コンテンツ */}
+        {/* カテゴリ・ドキュメント詳細コンテンツ */}
         <div className="max-w-4xl">
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="text-gray-400">読み込み中...</div>
             </div>
+          ) : documentDetail ? (
+            <div className="space-y-6">
+              {/* ドキュメント詳細セクション */}
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-white">
+                  {documentDetail.title}
+                </h2>
+                <div className="text-gray-300 leading-relaxed max-w-none markdown-content">
+                  <MarkdownRenderer>
+                    {documentDetail.description || ''}
+                  </MarkdownRenderer>
+                </div>
+              </div>
+            </div>
           ) : categoryDetail ? (
             <div className="space-y-6">
-              {/* 詳細セクション */}
+              {/* カテゴリ詳細セクション */}
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-white">
                   {categoryDetail.title}
@@ -190,7 +262,7 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-400">カテゴリを選択してください</p>
+              <p className="text-gray-400">カテゴリまたはドキュメントを選択してください</p>
             </div>
           )}
         </div>

@@ -14,28 +14,34 @@ interface ApiCategoryData {
   title: string;
 }
 
-// フロントエンドで使用するカテゴリの型定義
-interface CategoryItem {
+// 共通のアイテム型定義
+interface BaseItem {
   id: number;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
-  children?: DocumentItem[];
+  type: 'category' | 'document';
+}
+
+// フロントエンドで使用するカテゴリの型定義
+interface CategoryItem extends BaseItem {
+  type: 'category';
+  children?: BaseItem[];
 }
 
 // ドキュメントの型定義
-interface DocumentItem {
-  id: number;
-  label: string;
-  icon?: React.ComponentType<{ className?: string }>;
+interface DocumentItem extends BaseItem {
+  type: 'document';
 }
 
 // サイドコンテンツのプロパティ
 interface DocumentSideContentProps {
   onCategorySelect?: (categoryId: number) => void;
+  onDocumentSelect?: (documentId: number) => void;
   selectedCategoryId?: number;
+  selectedDocumentId?: number;
 }
 
-// カテゴリデータを取得するサービス関数
+// カテゴリデータを取得するサービス関数（無制限表示）
 const fetchCategories = async (parentId: number | null = null): Promise<ApiCategoryData[]> => {
   try {
     const params = new URLSearchParams();
@@ -46,6 +52,7 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
     const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(endpoint);
     
+    // すべてのカテゴリを返す（制限なし）
     return response.categories || [];
   } catch (error) {
     console.error('カテゴリの取得に失敗しました:', error);
@@ -55,9 +62,9 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
 
 /**
  * ドキュメント用サイドコンテンツコンポーネント
- * 株式会社Nexis配下の階層構造のみを表示
+ * 株式会社Nexis配下の階層構造を無制限表示
  */
-export default function DocumentSideContent({ onCategorySelect, selectedCategoryId }: DocumentSideContentProps) {
+export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryId, selectedDocumentId }: DocumentSideContentProps) {
   // デフォルトで人事制度カテゴリを展開
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
@@ -83,33 +90,66 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
       id: item.id,
       label: item.title,
       icon: Folder,
+      type: 'category' as const,
       children: [] // 現時点ではドキュメント子要素は取得しない
     }));
   };
 
-  // 従属するカテゴリとドキュメントを取得する関数
+  // 深い階層まで再帰的に検索してカテゴリを更新する関数
+  const updateCategoryInTree = (categories: CategoryItem[], targetId: number, children: BaseItem[]): CategoryItem[] => {
+    return categories.map(category => {
+      if (category.id === targetId) {
+        return {
+          ...category,
+          children: children
+        };
+      }
+      
+      if (category.children && category.children.length > 0) {
+        // 子要素のうちカテゴリタイプのもののみを再帰的に処理
+        const childCategories = category.children.filter(child => child.type === 'category') as CategoryItem[];
+        const updatedChildCategories = updateCategoryInTree(childCategories, targetId, children);
+        const childDocuments = category.children.filter(child => child.type === 'document');
+        
+        return {
+          ...category,
+          children: [...updatedChildCategories, ...childDocuments]
+        };
+      }
+      
+      return category;
+    });
+  };
+
+  // 従属するカテゴリとドキュメントを取得する関数（無制限表示・深い階層対応）
   const handleFetchBelogingItems = async (categoryId: number) => {
     try {
       const response = await apiClient.get(`/api/nodes?category_id=${categoryId}`);
 
-      console.log(response);
-      // 既存のカテゴリデータを更新
+      console.log('API Response for category', categoryId, ':', response);
+      
+      // 既存のカテゴリデータを更新（深い階層まで対応）
       setCategories(prevCategories => {
-        return prevCategories.map(category => {
-          if (category.id === categoryId) {
-            // 取得したドキュメントをchildrenに追加
-            const children: DocumentItem[] = response.documents.map((doc: any) => ({
-              id: doc.id,
-              label: doc.sidebar_label || doc.title,
-            }));
-            
-            return {
-              ...category,
-              children: children
-            };
-          }
-          return category;
-        });
+        // 取得したすべてのカテゴリとドキュメントをchildrenに追加（制限なし）
+        const categoryChildren: CategoryItem[] = response.categories.map((cat: any) => ({
+          id: cat.id,
+          label: cat.title,
+          icon: Folder,
+          type: 'category' as const,
+          children: [] // 子カテゴリには空の配列を初期化
+        }));
+        
+        const documentChildren: BaseItem[] = response.documents.map((doc: any) => ({
+          id: doc.id,
+          label: doc.sidebar_label || doc.title,
+          type: 'document' as const,
+        }));
+        
+        // すべてのカテゴリとドキュメントを結合（制限なし）
+        const children = [...categoryChildren, ...documentChildren];
+        
+        // 深い階層まで再帰的に検索して更新
+        return updateCategoryInTree(prevCategories, categoryId, children);
       });
       
     } catch (error) {
@@ -118,14 +158,14 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     }
   };
 
-  // カテゴリデータを取得するuseEffect
+  // カテゴリデータを取得するuseEffect（無制限表示）
   useEffect(() => {
     const loadCategories = async () => {
       try {
         setIsLoading(true);
         setError(null);
         
-        // parent_id=nullでルートカテゴリを取得
+        // parent_id=nullですべてのルートカテゴリを取得（制限なし）
         const apiCategories = await fetchCategories(null);
         const transformedCategories = transformApiDataToCategories(apiCategories);
         
@@ -230,9 +270,16 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
     handleCloseModal();
   };
 
+  // ドキュメント選択ハンドラ
+  const handleDocumentClick = (documentId: number) => {
+    if (onDocumentSelect) {
+      onDocumentSelect(documentId);
+    }
+  };
+
   // ドキュメントアイテムをレンダリング
   const renderDocumentItem = (document: DocumentItem, level: number = 0) => {
-    const isSelected = selectedCategoryId === document.id;
+    const isSelected = selectedDocumentId === document.id;
     const isHovered = hoveredItem === document.id;
 
     return (
@@ -241,8 +288,8 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
           className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors group ${
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
-          style={{ paddingLeft: `${level * 4}px` }}
-          onClick={() => handleCategoryClick(document.id)}
+          style={{ paddingLeft: `${level * 0.8}rem` }}
+          onClick={() => handleDocumentClick(document.id)}
           onMouseEnter={() => setHoveredItem(document.id)}
           onMouseLeave={() => setHoveredItem(null)}
         >
@@ -285,7 +332,7 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
           className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors group ${
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
-          style={{ paddingLeft: `${8 + level * 20}px` }}
+          style={{ paddingLeft: `${1 + level * 0.8}rem` }}
           onClick={() => handleCategoryClick(item.id)}
           onMouseEnter={() => setHoveredItem(item.id)}
           onMouseLeave={() => setHoveredItem(null)}
@@ -336,10 +383,14 @@ export default function DocumentSideContent({ onCategorySelect, selectedCategory
           )}
         </div>
 
-        {/* 子ドキュメント */}
+        {/* 子要素（カテゴリとドキュメント） */}
         {hasChildren && isExpanded && (
           <div className="ml-2">
-            {item.children!.map((document) => renderDocumentItem(document, level + 1))}
+            {item.children!.map((child) => 
+              child.type === 'category' 
+                ? renderCategoryItem(child as CategoryItem, level + 1)
+                : renderDocumentItem(child as DocumentItem, level + 1)
+            )}
           </div>
         )}
 
