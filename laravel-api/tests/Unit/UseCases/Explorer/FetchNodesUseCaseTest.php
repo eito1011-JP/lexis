@@ -505,8 +505,8 @@ class FetchNodesUseCaseTest extends TestCase
         // Assert
         $this->assertCount(0, $result['categories']);
         $this->assertCount(0, $result['documents']);
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result['categories']);
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result['documents']);
+        $this->assertIsArray($result['categories']);
+        $this->assertIsArray($result['documents']);
     }
 
     /**
@@ -707,6 +707,128 @@ class FetchNodesUseCaseTest extends TestCase
         $this->assertEquals('正しいユーザーのドキュメント', $result['documents'][0]['title']);
         $this->assertEquals('draft', $result['documents'][0]['status']);
     }
+
+    /**
+     * アクティブなuser_branchが存在し、現在のactive user_branchとは違う非アクティブなbranchで作られたmergedなdocumentとカテゴリも表示されることを検証するテスト
+     */
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function executeShouldReturnMergedDocumentAndCategoryFromDifferentBranches(): void
+    {
+        // Arrange
+        // 別のユーザーを作成
+        $otherUser = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $otherUser->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // 別のユーザーブランチを作成（非アクティブ）
+        $otherUserBranch = UserBranch::factory()->create([
+            'user_id' => $otherUser->id,
+            'is_active' => false,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // 親カテゴリを作成
+        $parentCategory = DocumentCategory::factory()->create([
+            'title' => '親カテゴリ',
+            'parent_id' => null,
+            'status' => 'merged',
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
+        ]);
+        
+        $dto = new FetchNodesDto(
+            categoryId: $parentCategory->id,
+            pullRequestEditSessionToken: null
+        );
+
+        // 現在のユーザーブランチで作成されたマージ済みドキュメント
+        $mergedDocumentFromCurrentBranch = DocumentVersion::factory()->create([
+            'title' => '現在ブランチのマージ済みドキュメント',
+            'category_id' => $parentCategory->id,
+            'status' => 'merged',
+            'last_edited_by' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocumentFromCurrentBranch->id,
+            'current_version_id' => $mergedDocumentFromCurrentBranch->id,
+        ]);
+
+        // 別のブランチで作成されたマージ済みドキュメント（別のuser_branchのEditStartVersionあり）
+        $mergedDocumentFromOtherBranch = DocumentVersion::factory()->create([
+            'title' => '別ブランチのマージ済みドキュメント',
+            'category_id' => $parentCategory->id,
+            'status' => 'merged',
+            'last_edited_by' => $otherUser->id,
+            'organization_id' => $this->organization->id,
+            'user_branch_id' => $otherUserBranch->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocumentFromOtherBranch->id,
+            'current_version_id' => $mergedDocumentFromOtherBranch->id,
+        ]);
+
+        // 別のブランチで作成されたマージ済みカテゴリ（別のuser_branchのEditStartVersionあり）
+        $mergedCategoryFromOtherBranch = DocumentCategory::factory()->create([
+            'title' => '別ブランチのマージ済みカテゴリ',
+            'parent_id' => $parentCategory->id,
+            'status' => 'merged',
+            'organization_id' => $this->organization->id,
+            'user_branch_id' => $otherUserBranch->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategoryFromOtherBranch->id,
+            'current_version_id' => $mergedCategoryFromOtherBranch->id,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        $this->assertCount(1, $result['categories']); // 別ブランチで作成されたマージ済みカテゴリが1つ
+        $this->assertCount(2, $result['documents']); // 両方のマージ済みドキュメントが表示される
+
+        // カテゴリの検証
+        $this->assertEquals($mergedCategoryFromOtherBranch->id, $result['categories'][0]['id']);
+        $this->assertEquals('別ブランチのマージ済みカテゴリ', $result['categories'][0]['title']);
+        $this->assertEquals('merged', $result['categories'][0]['status']);
+
+        // ドキュメントの検証（順序は保証されないのでIDで確認）
+        $documentIds = array_column($result['documents'], 'id');
+        $this->assertContains($mergedDocumentFromCurrentBranch->id, $documentIds);
+        $this->assertContains($mergedDocumentFromOtherBranch->id, $documentIds);
+
+        // 各ドキュメントの詳細を確認
+        foreach ($result['documents'] as $document) {
+            $this->assertEquals('merged', $document['status']);
+            if ($document['id'] === $mergedDocumentFromCurrentBranch->id) {
+                $this->assertEquals('現在ブランチのマージ済みドキュメント', $document['title']);
+                $this->assertEquals($this->user->id, $document['last_edited_by']);
+            } elseif ($document['id'] === $mergedDocumentFromOtherBranch->id) {
+                $this->assertEquals('別ブランチのマージ済みドキュメント', $document['title']);
+                $this->assertEquals($otherUser->id, $document['last_edited_by']);
+            }
+        }
+    }
+    
 
     /**
      * 例外が発生した場合の処理をテスト
