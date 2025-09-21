@@ -266,7 +266,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
           className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors group ${
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
-          style={{ paddingLeft: `${level * 4}px` }}
+          style={{ paddingLeft: `${level * 0.8}rem` }}
           onClick={() => handleDocumentClick(document.id)}
           onMouseEnter={() => setHoveredItem(document.id)}
           onMouseLeave={() => setHoveredItem(null)}
@@ -310,7 +310,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
           className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors group ${
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
-          style={{ paddingLeft: `${8 + level * 20}px` }}
+          style={{ paddingLeft: `${1 + level * 0.8}rem` }}
           onClick={() => handleCategoryClick(item.id)}
           onMouseEnter={() => setHoveredItem(item.id)}
           onMouseLeave={() => setHoveredItem(null)}
