@@ -9,6 +9,9 @@ use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\User;
 use App\Enums\EditStartVersionTargetType;
+use App\Enums\DocumentCategoryStatus;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Log;
 
 class FetchNodesUseCase
@@ -18,104 +21,119 @@ class FetchNodesUseCase
      *
      * @param  FetchNodesDto  $dto  リクエストデータのDTO
      * @param  User  $user  認証済みユーザー
+     * @return array<string, array<int, array<string, mixed>>>
      */
     public function execute(FetchNodesDto $dto, User $user): array
     {
         try {
-            $categoryId = $dto->categoryId;
-            $pullRequestEditSessionToken = $dto->pullRequestEditSessionToken;
+            $userBranchId = $this->resolveUserBranchId($user, $dto->pullRequestEditSessionToken);
 
-            // 認証ユーザーに紐づくactiveなuser_branchを確認
-            $activeUserBranch = $user->userBranches()->active()->first();
-
-            // アクティブなユーザーブランチが存在しない場合はマージ済みデータを取得
-            if (!$activeUserBranch) {
+            if ($userBranchId === null) {
                 return $this->fetchMergedNodes($dto->categoryId);
             }
 
-            // user_branch_idを設定
-            $userBranchId = $activeUserBranch->id;
-
-            // pull_request_edit_session_tokenが提供されている場合の処理
-            $pullRequestEditSessionId = null;
-            if ($pullRequestEditSessionToken) {
-                $editSession = PullRequestEditSession::with('pullRequest')->where('token', $pullRequestEditSessionToken)->first();
-                if ($editSession) {
-                    $pullRequestEditSessionId = $editSession->id;
-                    $userBranchId = $editSession->pullRequest->user_branch_id;
-                }
-            }
-
-            // EditStartVersionを使って現在のバージョンを取得
-            $categories = $this->fetchCurrentCategories($categoryId, $userBranchId);
-            $documents = $this->fetchCurrentDocuments($categoryId, $userBranchId);
-
-            // レスポンス形式に変換
-            $formattedCategories = $categories->map(function ($category) {
-                return [
-                    'id' => $category->id,
-                    'title' => $category->title,
-                    'status' => $category->status,
-                ];
-            });
-
-            $formattedDocuments = $documents->map(function ($document) {
-                return [
-                    'id' => $document->id,
-                    'title' => $document->title,
-                    'status' => $document->status,
-                    'last_edited_by' => $document->last_edited_by,
-                ];
-            });
+            $categories = $this->fetchCurrentCategories($dto->categoryId, $userBranchId);
+            $documents = $this->fetchCurrentDocuments($dto->categoryId, $userBranchId);
 
             return [
-                'documents' => $formattedDocuments->values()->toArray(),
-                'categories' => $formattedCategories->values()->toArray(),
+                'categories' => $this->formatCategories($categories),
+                'documents' => $this->formatDocuments($documents),
             ];
 
         } catch (\Exception $e) {
             Log::error($e);
-
             throw $e;
         }
     }
 
     /**
-     * EditStartVersionを使って現在のカテゴリを取得
+     * ユーザーブランチIDを解決する
+     *
+     * @param  User  $user  認証済みユーザー
+     * @param  string|null  $pullRequestEditSessionToken  プルリクエスト編集セッショントークン
+     * @return int|null  ユーザーブランチID（nullの場合はマージ済みデータのみ取得）
      */
-    private function fetchCurrentCategories(int $parentId, int $userBranchId)
+    private function resolveUserBranchId(User $user, ?string $pullRequestEditSessionToken): ?int
     {
-        // 現在のユーザーブランチのEditStartVersionから現在のバージョンIDを取得
-        $currentBranchEditStartVersions = EditStartVersion::where('user_branch_id', $userBranchId)
-            ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
-            ->orderBy('id', 'desc')
-            ->get()
+        $activeUserBranch = $user->userBranches()->active()->first();
+        
+        if (!$activeUserBranch) {
+            return null;
+        }
+
+        $userBranchId = $activeUserBranch->id;
+
+        if ($pullRequestEditSessionToken) {
+            $editSession = PullRequestEditSession::with('pullRequest')
+                ->where('token', $pullRequestEditSessionToken)
+                ->first();
+            
+            if ($editSession) {
+                $userBranchId = $editSession->pullRequest->user_branch_id;
+            }
+        }
+
+        return $userBranchId;
+    }
+
+    /**
+     * EditStartVersionから現在のバージョンIDを取得する
+     *
+     * @param  EditStartVersionTargetType  $targetType  対象タイプ
+     * @param  int  $userBranchId  ユーザーブランチID
+     * @return SupportCollection<int, int>  バージョンIDのコレクション
+     */
+    private function getCurrentVersionIds(EditStartVersionTargetType $targetType, int $userBranchId): SupportCollection
+    {
+        $currentBranchVersionIds = $this->getLatestEditStartVersions($targetType, $userBranchId)
+            ->pluck('current_version_id')
+            ->unique();
+
+        $allMergedVersionIds = $this->getLatestEditStartVersions($targetType)
+            ->pluck('current_version_id')
+            ->unique();
+
+        return $currentBranchVersionIds->merge($allMergedVersionIds)->unique();
+    }
+
+    /**
+     * 最新のEditStartVersionを取得する
+     *
+     * @param  EditStartVersionTargetType  $targetType  対象タイプ
+     * @param  int|null  $userBranchId  ユーザーブランチID（nullの場合は全ブランチ）
+     * @return Collection<EditStartVersion>
+     */
+    private function getLatestEditStartVersions(EditStartVersionTargetType $targetType, ?int $userBranchId = null): Collection
+    {
+        $query = EditStartVersion::where('target_type', $targetType->value)
+            ->orderBy('id', 'desc');
+
+        if ($userBranchId !== null) {
+            $query->where('user_branch_id', $userBranchId);
+        }
+
+        return $query->get()
             ->groupBy('original_version_id')
             ->map(function ($group) {
                 return $group->first(); // 最新の（ID最大の）EditStartVersionを取得
             });
+    }
 
-        $currentBranchVersionIds = $currentBranchEditStartVersions->pluck('current_version_id')->unique();
+    /**
+     * EditStartVersionを使って現在のカテゴリを取得
+     *
+     * @param  int  $parentId  親カテゴリID
+     * @param  int  $userBranchId  ユーザーブランチID
+     * @return Collection<DocumentCategory>
+     */
+    private function fetchCurrentCategories(int $parentId, int $userBranchId): Collection
+    {
+        $allVersionIds = $this->getCurrentVersionIds(EditStartVersionTargetType::CATEGORY, $userBranchId);
 
-        // 全てのブランチからマージ済みカテゴリのバージョンIDを取得
-        $allMergedEditStartVersions = EditStartVersion::where('target_type', EditStartVersionTargetType::CATEGORY->value)
-            ->orderBy('id', 'desc')
-            ->get()
-            ->groupBy('original_version_id')
-            ->map(function ($group) {
-                return $group->first(); // 最新の（ID最大の）EditStartVersionを取得
-            });
-
-        $allMergedVersionIds = $allMergedEditStartVersions->pluck('current_version_id')->unique();
-
-        // 現在のバージョンIDまたはマージ済みバージョンIDに対応するカテゴリを取得
-        $allVersionIds = $currentBranchVersionIds->merge($allMergedVersionIds)->unique();
-
-        // カテゴリを取得してマージ済みのものを含める
         return DocumentCategory::whereIn('id', $allVersionIds)
             ->where('parent_id', $parentId)
             ->where(function ($query) use ($userBranchId) {
-                $query->where('status', 'merged')
+                $query->where('status', DocumentCategoryStatus::MERGED->value)
                       ->orWhere('user_branch_id', $userBranchId);
             })
             ->orderBy('id', 'asc')
@@ -124,44 +142,23 @@ class FetchNodesUseCase
 
     /**
      * EditStartVersionを使って現在のドキュメントを取得
+     *
+     * @param  int  $categoryId  カテゴリID
+     * @param  int  $userBranchId  ユーザーブランチID
+     * @return Collection<DocumentVersion>
      */
-    private function fetchCurrentDocuments(int $categoryId, int $userBranchId)
+    private function fetchCurrentDocuments(int $categoryId, int $userBranchId): Collection
     {
         Log::info('fetchCurrentDocuments: '.$categoryId);
         
-        // 現在のユーザーブランチのEditStartVersionから現在のバージョンIDを取得
-        $currentBranchEditStartVersions = EditStartVersion::where('user_branch_id', $userBranchId)
-            ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
-            ->orderBy('id', 'desc')
-            ->get()
-            ->groupBy('original_version_id')
-            ->map(function ($group) {
-                return $group->first(); // 最新の（ID最大の）EditStartVersionを取得
-            });
-
-        $currentBranchVersionIds = $currentBranchEditStartVersions->pluck('current_version_id')->unique();
-
-        // 全てのブランチからマージ済みドキュメントのバージョンIDを取得
-        $allMergedEditStartVersions = EditStartVersion::where('target_type', EditStartVersionTargetType::DOCUMENT->value)
-            ->orderBy('id', 'desc')
-            ->get()
-            ->groupBy('original_version_id')
-            ->map(function ($group) {
-                return $group->first(); // 最新の（ID最大の）EditStartVersionを取得
-            });
-
-        $allMergedVersionIds = $allMergedEditStartVersions->pluck('current_version_id')->unique();
-
-        // 現在のバージョンIDまたはマージ済みバージョンIDに対応するドキュメントを取得
-        $allVersionIds = $currentBranchVersionIds->merge($allMergedVersionIds)->unique();
-
+        $allVersionIds = $this->getCurrentVersionIds(EditStartVersionTargetType::DOCUMENT, $userBranchId);
+        
         Log::info('currentVersionIds: '.json_encode($allVersionIds));
         
-        // ドキュメントを取得してマージ済みのものを含める
         return DocumentVersion::whereIn('id', $allVersionIds)
             ->where('category_id', $categoryId)
             ->where(function ($query) use ($userBranchId) {
-                $query->where('status', 'merged')
+                $query->where('status', DocumentCategoryStatus::MERGED->value)
                       ->orWhere('user_branch_id', $userBranchId);
             })
             ->orderBy('id', 'asc')
@@ -169,56 +166,82 @@ class FetchNodesUseCase
     }
 
     /**
-     * マージ済みカテゴリを取得
+     * カテゴリコレクションをレスポンス形式に変換
+     *
+     * @param  Collection<DocumentCategory>  $categories  カテゴリコレクション
+     * @return array<int, array<string, mixed>>
      */
-    private function fetchMergedCategories(int $parentId)
+    private function formatCategories(Collection $categories): array
     {
-        return DocumentCategory::where('parent_id', $parentId)
-            ->where('status', 'merged')
-            ->orderBy('id', 'asc')
-            ->get();
-    }
-
-    /**
-     * マージ済みドキュメントを取得
-     */
-    private function fetchMergedDocuments(int $categoryId)
-    {
-        return DocumentVersion::where('category_id', $categoryId)
-            ->where('status', 'merged')
-            ->orderBy('id', 'asc')
-            ->get();
-    }
-
-    /**
-     * マージ済みノード（カテゴリとドキュメント）を取得
-     */
-    private function fetchMergedNodes(int $categoryId): array
-    {
-        $categories = $this->fetchMergedCategories($categoryId);
-        $documents = $this->fetchMergedDocuments($categoryId);
-
-        // レスポンス形式に変換
-        $formattedCategories = $categories->map(function ($category) {
+        return $categories->map(function ($category) {
             return [
                 'id' => $category->id,
                 'title' => $category->title,
                 'status' => $category->status,
             ];
-        });
+        })->values()->toArray();
+    }
 
-        $formattedDocuments = $documents->map(function ($document) {
+    /**
+     * ドキュメントコレクションをレスポンス形式に変換
+     *
+     * @param  Collection<DocumentVersion>  $documents  ドキュメントコレクション
+     * @return array<int, array<string, mixed>>
+     */
+    private function formatDocuments(Collection $documents): array
+    {
+        return $documents->map(function ($document) {
             return [
                 'id' => $document->id,
                 'title' => $document->title,
                 'status' => $document->status,
                 'last_edited_by' => $document->last_edited_by,
             ];
-        });
+        })->values()->toArray();
+    }
+
+    /**
+     * マージ済みカテゴリを取得
+     *
+     * @param  int  $parentId  親カテゴリID
+     * @return Collection<DocumentCategory>
+     */
+    private function fetchMergedCategories(int $parentId): Collection
+    {
+        return DocumentCategory::where('parent_id', $parentId)
+            ->where('status', DocumentCategoryStatus::MERGED->value)
+            ->orderBy('id', 'asc')
+            ->get();
+    }
+
+    /**
+     * マージ済みドキュメントを取得
+     *
+     * @param  int  $categoryId  カテゴリID
+     * @return Collection<DocumentVersion>
+     */
+    private function fetchMergedDocuments(int $categoryId): Collection
+    {
+        return DocumentVersion::where('category_id', $categoryId)
+            ->where('status', DocumentCategoryStatus::MERGED->value)
+            ->orderBy('id', 'asc')
+            ->get();
+    }
+
+    /**
+     * マージ済みノード（カテゴリとドキュメント）を取得
+     *
+     * @param  int  $categoryId  カテゴリID
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    private function fetchMergedNodes(int $categoryId): array
+    {
+        $categories = $this->fetchMergedCategories($categoryId);
+        $documents = $this->fetchMergedDocuments($categoryId);
 
         return [
-            'categories' => $formattedCategories->values()->toArray(),
-            'documents' => $formattedDocuments->values()->toArray(),
+            'categories' => $this->formatCategories($categories),
+            'documents' => $this->formatDocuments($documents),
         ];
     }
 }
