@@ -154,40 +154,59 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        // 他のユーザーを作成
+        $otherUser = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $otherUser->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // 他のユーザーのuser_branchを作成
+        $otherUserBranch = UserBranch::factory()->create([
+            'user_id' => $otherUser->id,
+            'is_active' => true,
+            'organization_id' => $this->organization->id,
+        ]);
+
         $dto = new FetchCategoriesDto(parentId: null, pullRequestEditSessionToken: 'some-token');
 
+        // 他のユーザーが作成したドラフトカテゴリ（表示されない）
         $draftCategoryByOtherUser = DocumentCategory::factory()->create([
-            'title' => 'ドラフトカテゴリ',
+            'title' => '他ユーザーのドラフトカテゴリ',
             'parent_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => null,
+            'user_branch_id' => $otherUserBranch->id,
             'organization_id' => $this->organization->id,
         ]);
 
+        // 他のユーザーが作成したプッシュ済みカテゴリ（表示されない）
         $pushedCategoryByOtherUser = DocumentCategory::factory()->create([
-            'title' => 'プッシュ済みカテゴリ',
+            'title' => '他ユーザーのプッシュ済みカテゴリ',
             'parent_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
-            'user_branch_id' => null,
+            'user_branch_id' => $otherUserBranch->id,
             'organization_id' => $this->organization->id,
         ]);
 
+        // 現在のユーザーのドラフトカテゴリ（表示される）
         $draftCategory = DocumentCategory::factory()->create([
-            'title' => 'ドラフトカテゴリ',
+            'title' => '自分のドラフトカテゴリ',
             'parent_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
 
+        // 現在のユーザーのプッシュ済みカテゴリ（表示される）
         $pushedCategory = DocumentCategory::factory()->create([
-            'title' => 'プッシュ済みカテゴリ',
+            'title' => '自分のプッシュ済みカテゴリ',
             'parent_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
 
+        // 未編集のマージ済みカテゴリ（表示される）
         $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
             'parent_id' => null,
@@ -199,9 +218,15 @@ class FetchCategoriesUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertCount(2, $result);
-        $this->assertEquals($pushedCategory->id, $result->first()->id);
-        $this->assertEquals($draftCategory->id, $result->last()->id);
+        $this->assertCount(3, $result);
+        
+        // 他のユーザーのカテゴリが表示されていないことを確認
+        $resultTitles = $result->pluck('title')->toArray();
+        $this->assertContains('自分のプッシュ済みカテゴリ', $resultTitles);
+        $this->assertContains('自分のドラフトカテゴリ', $resultTitles);
+        $this->assertContains('マージ済みカテゴリ', $resultTitles);
+        $this->assertNotContains('他ユーザーのドラフトカテゴリ', $resultTitles);
+        $this->assertNotContains('他ユーザーのプッシュ済みカテゴリ', $resultTitles);
     }
 
     /**
@@ -307,7 +332,7 @@ class FetchCategoriesUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function test_returns_merged_categories_when_active_user_branch_exists_with_edit_session(): void
+    public function test_returns_merged_and_updated_categories_when_active_user_branch_exists_with_edit_session(): void
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -346,9 +371,11 @@ class FetchCategoriesUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertCount(2, $result);
-        $this->assertEquals($pushedCategory->id, $result->first()->id);
-        $this->assertEquals($draftCategory->id, $result->last()->id);
+        $this->assertCount(3, $result);
+        $resultTitles = $result->pluck('title')->toArray();
+        $this->assertContains('マージ済みカテゴリ', $resultTitles);
+        $this->assertContains('プッシュ済みカテゴリ', $resultTitles);
+        $this->assertContains('ドラフトカテゴリ', $resultTitles);
     }
 
     /**
@@ -536,5 +563,67 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         // 表示されないもの（編集対象となった元のマージ済みカテゴリ）
         $this->assertNotContains('編集対象元マージ済みカテゴリ', $resultTitles);
+    }
+
+        /**
+     * @test
+     */
+    public function test_latest_draft_category_with_user_branch(): void
+    {
+        // Arrange
+        $userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $dto = new FetchCategoriesDto(parentId: null, pullRequestEditSessionToken: null);
+
+        // ケース1: ドラフトカテゴリ（表示されない）
+        $originalDraftCategory = DocumentCategory::factory()->create([
+            'title' => '元のドラフトカテゴリ',
+            'parent_id' => null,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // 新規作成時のEditStartVersion（original_version_id = current_version_id）
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $originalDraftCategory->id,
+            'current_version_id' => $originalDraftCategory->id,
+        ]);
+
+        // ケース2: draftカテゴリを再編集したカテゴリ(表示される)
+        $editedDraftCategory = DocumentCategory::factory()->create([
+            'title' => '編集後ドラフトカテゴリ',
+            'parent_id' => null,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // 編集時のEditStartVersion（original_version_id ≠ current_version_id）
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $originalDraftCategory->id,
+            'current_version_id' => $editedDraftCategory->id,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        $this->assertCount(1, $result);
+        $resultTitles = $result->pluck('title')->toArray();
+
+        // 表示されるもの
+        $this->assertContains('編集後ドラフトカテゴリ', $resultTitles);
+
+        // 表示されないもの
+        $this->assertNotContains('元のドラフトカテゴリ', $resultTitles);
     }
 }

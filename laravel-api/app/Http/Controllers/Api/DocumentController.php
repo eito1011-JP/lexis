@@ -23,7 +23,6 @@ use App\UseCases\Document\DetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
-use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
