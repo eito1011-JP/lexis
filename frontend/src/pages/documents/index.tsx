@@ -4,7 +4,7 @@ import type { JSX } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Home } from '@/components/icon/common/Home';
 import { Toast } from '@/components/admin/Toast';
-import { fetchCategoryDetail, type ApiCategoryDetailResponse } from '@/api/category';
+import { fetchCategoryDetail, type ApiCategoryDetailResponse, type BreadcrumbItem } from '@/api/category';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { MarkdownRenderer } from '@/utils/markdownToHtml';
@@ -192,8 +192,12 @@ export default function DocumentsPage(): JSX.Element {
 
              {!documentDetail && categoryDetail && (
                <>
-                 <span className="mx-2">{'>'}</span>
-                 <span className="text-white">{categoryDetail.title}</span>
+                 {categoryDetail.breadcrumbs && categoryDetail.breadcrumbs.map((breadcrumb: BreadcrumbItem) => (
+                   <span key={breadcrumb.id}>
+                     <span className="mx-2">{'>'}</span>
+                     <span className="text-white">{breadcrumb.title}</span>
+                   </span>
+                 ))}
                </>
              )}
            </div>

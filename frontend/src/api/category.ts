@@ -17,11 +17,18 @@ export interface CategoryDetailResponse {
   category: CategoryDetail;
 }
 
+// パンクズリストアイテムの型定義
+export interface BreadcrumbItem {
+  id: number;
+  title: string;
+}
+
 // APIレスポンスの型定義（実際のAPIレスポンス構造に合わせる）
 export interface ApiCategoryDetailResponse {
   id: number;
   title: string;
   description?: string;
+  breadcrumbs?: BreadcrumbItem[];
 }
 
 /**
