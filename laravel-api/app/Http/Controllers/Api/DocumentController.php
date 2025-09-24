@@ -180,18 +180,13 @@ class DocumentController extends ApiBaseController
         }
 
         $validatedRequest = $request->validated();
-        $payload = [
-            'category_path' => $validatedRequest['category_path'] ?? null,
-            'current_document_id' => $validatedRequest['current_document_id'],
-            'sidebar_label' => $validatedRequest['sidebar_label'],
-            'content' => $validatedRequest['content'],
-            'is_public' => $validatedRequest['is_public'],
-            'slug' => $validatedRequest['slug'],
-            'file_order' => $validatedRequest['file_order'] ?? null,
-            'edit_pull_request_id' => $validatedRequest['edit_pull_request_id'] ?? null,
-            'pull_request_edit_token' => $validatedRequest['pull_request_edit_token'] ?? null,
-        ];
-        $updateDocumentDto = UpdateDocumentDto::fromArray($payload);
+        $updateDocumentDto = new UpdateDocumentDto(
+            current_document_id: $validatedRequest['current_document_id'],
+            title: $validatedRequest['title'],
+            description: $validatedRequest['description'],
+            edit_pull_request_id: $validatedRequest['edit_pull_request_id'] ?? null,
+            pull_request_edit_token: $validatedRequest['pull_request_edit_token'] ?? null,
+        );
         $this->updateDocumentUseCase->execute($updateDocumentDto, $user);
 
         return response()->json();

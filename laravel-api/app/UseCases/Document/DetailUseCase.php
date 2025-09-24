@@ -56,6 +56,10 @@ class DetailUseCase
                 'id' => $document->id,
                 'title' => $document->title,
                 'description' => $document->description,
+                'category' => [
+                    'id' => $document->category?->id,
+                    'title' => $document->category?->title
+                ],
                 'breadcrumbs' => $breadcrumbs
             ];
         } catch (\Exception $e) {
