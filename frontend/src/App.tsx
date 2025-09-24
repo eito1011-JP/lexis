@@ -9,6 +9,7 @@ import CreateDocumentPage from './pages/documents/create';
 import CreateRootCategoryPage from './pages/categories/create';
 import EditCategoryPage from './pages/categories/[id]/edit';
 import EditDocumentPage from './pages/documents/[slug]/edit';
+import EditDocumentInCategoryPage from './pages/categories/[id]/documents/edit';
 import ChangeSuggestionsPage from './pages/change-suggestions';
 import ChangeSuggestionDetailPage from './pages/change-suggestions/[id]';
 import ChangeSuggestionDiffPage from './pages/change-suggestions/diff';
@@ -103,8 +104,7 @@ function App() {
         <Route path={ROUTE_PATHS['create-category']} element={<ProtectedRoute><CreateRootCategoryPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['create-root-category']} element={<ProtectedRoute><CreateRootCategoryPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['edit-category']} element={<ProtectedRoute><EditCategoryPage /></ProtectedRoute>} />
-        <Route path={ROUTE_PATHS['edit-document']} element={<ProtectedRoute><EditDocumentPage /></ProtectedRoute>} />
-        <Route path={ROUTE_PATHS['document-by-slug']} element={<ProtectedRoute><DocumentBySlugPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS['edit-document-in-category']} element={<ProtectedRoute><EditDocumentInCategoryPage /></ProtectedRoute>} />
         </Routes>
       </ToastProvider>
     </AuthProvider>

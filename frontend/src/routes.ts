@@ -11,7 +11,7 @@ export const ROUTES = {
   CREATE_CATEGORY: 'create-category',
   CREATE_ROOT_CATEGORY: 'create-root-category',
   EDIT_CATEGORY: 'edit-category',
-  EDIT_DOCUMENT: 'edit-document',
+  EDIT_DOCUMENT_IN_CATEGORY: 'edit-document-in-category',
   DOCUMENT_BY_SLUG: 'document-by-slug',
   CHANGE_SUGGESTIONS: 'change-suggestions',
   CHANGE_SUGGESTION_DETAIL: 'change-suggestion-detail',
@@ -34,8 +34,7 @@ export const ROUTE_PATHS = {
   [ROUTES.CREATE_CATEGORY]: '/categories/:categoryId/create',
   [ROUTES.CREATE_ROOT_CATEGORY]: '/categories/create',
   [ROUTES.EDIT_CATEGORY]: '/categories/:id/edit',
-  [ROUTES.EDIT_DOCUMENT]: '/documents/**/edit',
-  [ROUTES.DOCUMENT_BY_SLUG]: '/documents/:paths/*',
+  [ROUTES.EDIT_DOCUMENT_IN_CATEGORY]: '/categories/:categoryId/documents/:documentId/edit',
   [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
   [ROUTES.CHANGE_SUGGESTION_DETAIL]: '/change-suggestions/:id',
   [ROUTES.CHANGE_SUGGESTION_DIFF]: '/change-suggestions/:id/diff',
@@ -50,22 +49,6 @@ export const generatePath = (
   params?: Record<string, string>
 ): string => {
   let path: string = ROUTE_PATHS[routeName];
-
-  if (routeName === ROUTES.EDIT_DOCUMENT && params?.slug) {
-    // カテゴリとスラグが含まれている場合の処理
-    if (params.category) {
-      return `/documents/${params.category}/${params.slug}/edit`;
-    }
-    return `/documents/${params.slug}/edit`;
-  } else if (routeName === ROUTES.DOCUMENT_BY_SLUG && params?.slug) {
-    return `/documents/${params.slug}`;
-  } else if (routeName === ROUTES.CREATE_CATEGORY && params?.categoryId) {
-    return `/categories/${params.categoryId}/create`;
-  } else if (routeName === ROUTES.CREATE_DOCUMENT_IN_CATEGORY && params?.categoryId) {
-    return `/categories/${params.categoryId}/documents/create`;
-  } else if (routeName === ROUTES.EDIT_CATEGORY && params?.id) {
-    return `/categories/${params.id}/edit`;
-  }
 
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
