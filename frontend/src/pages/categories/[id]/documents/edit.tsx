@@ -101,7 +101,7 @@ export default function EditDocumentPage(): JSX.Element {
       const payload: any = {
         title: title.trim(),
         description: description.trim(),
-        document_id: documentIdParam,
+        current_document_id: documentIdParam,
       };
 
       // プルリクエスト編集関連の処理（必要に応じて）
