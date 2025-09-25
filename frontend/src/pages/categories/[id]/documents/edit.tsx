@@ -4,6 +4,7 @@ import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { useNavigate, useParams } from 'react-router-dom';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 // エラー型の定義
 interface ApiError {
@@ -24,6 +25,7 @@ interface Document {
   title: string;
   description: string;
   category_id: number;
+  breadcrumbs?: Array<{ id: number; title: string; }>;
 }
 
 export default function EditDocumentPage(): JSX.Element {
@@ -39,6 +41,7 @@ export default function EditDocumentPage(): JSX.Element {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [documentBreadcrumbs, setDocumentBreadcrumbs] = useState<Array<{ id: number; title: string; }>>([]);
 
   // URLパスからcategoryIdとdocumentIdを取得し、データを取得
   useEffect(() => {
@@ -54,8 +57,10 @@ export default function EditDocumentPage(): JSX.Element {
       try {
         const documentResponse = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(docId));
 
+        console.log('documentResponse', documentResponse);
         setTitle(documentResponse.title || '');
         setDescription(documentResponse.description || '');
+        setDocumentBreadcrumbs(documentResponse.breadcrumbs || []);
       } catch (error) {
         console.error('データ取得エラー:', error);
       } finally {
@@ -137,15 +142,8 @@ export default function EditDocumentPage(): JSX.Element {
       <div className="text-white min-h-full">
         {/* ヘッダー部分 */}
         <div className="border-b border-gray-700 p-6">
-          <div className="flex items-center text-sm text-gray-400 mb-4">
-            <span>🏠</span>
-            <span className="mx-2">›</span>
-            {selectedCategory && (
-              <>
-                <span>{selectedCategory.title || selectedCategory.name}</span>
-              </>
-            )}
-
+          <div className="mb-4">
+            <Breadcrumb breadcrumbs={documentBreadcrumbs} />
           </div>
           
           <div className="mb-6">

@@ -8,6 +8,7 @@ import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Settings } from '@/components/icon/common/Settings';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequest';
 import { markdownStyles } from '@/styles/markdownContent';
 import { useToast } from '@/contexts/ToastContext';
@@ -416,60 +417,6 @@ const SmartDiffValue = ({
   );
 };
 
-// 階層パンくずリストコンポーネント
-const CategoryPathBreadcrumb = ({ categoryPath }: { categoryPath: string | null | undefined }) => {
-  // categoryPathがnullまたはundefinedの場合は"/"を表示
-  if (!categoryPath) {
-    return (
-      <div className="mb-6">
-        <div className="flex items-center text-sm text-gray-400 mb-3">
-          <span className="text-gray-500">/</span>
-        </div>
-        <div className="border-b border-gray-700/50"></div>
-      </div>
-    );
-  }
-
-  // category_pathをそのまま表示し、階層構造をパンくずリストとして表示
-  const pathParts = categoryPath.split('/').filter(part => part.length > 0);
-
-  return (
-    <div className="mb-6">
-      <div className="flex items-center text-sm text-gray-400 mb-3">
-        <span className="text-gray-500">/</span>
-        {pathParts.map((part, index) => (
-          <React.Fragment key={index}>
-            {index > 0 && (
-              <span className="mx-2">
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 5l7 7-7 7"
-                  ></path>
-                </svg>
-              </span>
-            )}
-            {index === pathParts.length - 1 ? (
-              <span className="text-blue-400 font-medium">{part}</span>
-            ) : (
-              <span className="text-gray-400 hover:text-gray-300">{part}</span>
-            )}
-            {index < pathParts.length - 1 && <span className="mx-1">/</span>}
-          </React.Fragment>
-        ))}
-      </div>
-      <div className="border-b border-gray-700/50"></div>
-    </div>
-  );
-};
 
 /**
  * 差分確認画面コンポーネント
@@ -945,7 +892,13 @@ export default function DiffPage(): JSX.Element {
                     key={category.id}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
-                    <CategoryPathBreadcrumb categoryPath={category.category_path} />
+                    <div className="mb-6">
+                      <Breadcrumb 
+                        categoryPath={category.category_path} 
+                        className="flex items-center text-sm text-gray-400 mb-3"
+                      />
+                      <div className="border-b border-gray-700/50"></div>
+                    </div>
                     <SmartDiffValue
                       label="タイトル"
                       fieldInfo={getFieldInfo(
@@ -995,7 +948,13 @@ export default function DiffPage(): JSX.Element {
                     key={document.id}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
-                    <CategoryPathBreadcrumb categoryPath={documentCategoryPath} />
+                    <div className="mb-6">
+                      <Breadcrumb 
+                        categoryPath={documentCategoryPath} 
+                        className="flex items-center text-sm text-gray-400 mb-3"
+                      />
+                      <div className="border-b border-gray-700/50"></div>
+                    </div>
                     <SmartDiffValue
                       label="タイトル"
                       fieldInfo={getFieldInfo(

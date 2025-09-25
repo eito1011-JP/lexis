@@ -5,6 +5,7 @@ import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
 import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 /**
  * カテゴリ編集ページ
@@ -19,6 +20,7 @@ export default function EditCategoryPage(): JSX.Element {
   const [category, setCategory] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categoryBreadcrumbs, setCategoryBreadcrumbs] = useState<Array<{ id: number; title: string; }>>([]);
 
   const {
     showModal,
@@ -36,6 +38,7 @@ export default function EditCategoryPage(): JSX.Element {
         setIsLoading(true);
         const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
         setCategory(response.category);
+        setCategoryBreadcrumbs(response.category.breadcrumbs || []);
       } catch (err) {
         console.error('カテゴリの取得に失敗しました:', err);
         setError('カテゴリの取得に失敗しました');
@@ -146,15 +149,22 @@ export default function EditCategoryPage(): JSX.Element {
       selectedCategoryId={selectedSideContentCategory}
       onNavigationRequest={handleControlledNavigation}
     >
-      <CategoryForm
-        initialData={initialData}
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-        onUnsavedChangesChange={setHasUnsavedChanges}
-        isSubmitting={isSubmitting}
-        submitButtonText="更新"
-        submittingText="更新中..."
-      />
+      <div className="text-white">
+        {/* パンくずリスト */}
+        <div className="mb-6 p-6 border-b border-gray-700">
+          <Breadcrumb breadcrumbs={categoryBreadcrumbs} />
+        </div>
+        
+        <CategoryForm
+          initialData={initialData}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          onUnsavedChangesChange={setHasUnsavedChanges}
+          isSubmitting={isSubmitting}
+          submitButtonText="更新"
+          submittingText="更新中..."
+        />
+      </div>
 
       {/* 未保存変更確認モーダル */}
       <UnsavedChangesModal
