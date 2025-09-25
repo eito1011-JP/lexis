@@ -36,8 +36,6 @@ export default function EditDocumentPage(): JSX.Element {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [documentId, setDocumentId] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
@@ -45,48 +43,19 @@ export default function EditDocumentPage(): JSX.Element {
   // URLパスからcategoryIdとdocumentIdを取得し、データを取得
   useEffect(() => {
     const fetchData = async () => {
-      if (!categoryIdParam || !documentIdParam) {
-        console.error('categoryId or documentId is missing from URL path');
+      if (!documentIdParam) {
+        console.error('documentId is missing from URL path');
         setIsLoading(false);
         return;
       }
 
+      const docId = parseInt(documentIdParam);
+
       try {
-        const catId = parseInt(categoryIdParam);
-        const docId = parseInt(documentIdParam);
-        setCategoryId(catId);
-        setDocumentId(docId);
+        const documentResponse = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(docId));
 
-        // カテゴリ詳細情報を取得
-        const categoryResponse = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${catId}`);
-        
-        // レスポンス構造に応じてカテゴリ情報を取得
-        let categoryData = null;
-        if (categoryResponse.category) {
-          categoryData = categoryResponse.category;
-        } else if (categoryResponse.data) {
-          categoryData = categoryResponse.data;
-        } else {
-          categoryData = categoryResponse;
-        }
-        setSelectedCategory(categoryData);
-
-        // ドキュメント詳細情報を取得
-        const documentResponse = await apiClient.get(`${API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL}/${docId}`);
-        
-        // レスポンス構造に応じてドキュメント情報を取得
-        let documentData = null;
-        if (documentResponse.document) {
-          documentData = documentResponse.document;
-        } else if (documentResponse.data) {
-          documentData = documentResponse.data;
-        } else {
-          documentData = documentResponse;
-        }
-
-        // フォームの初期値を設定
-        setTitle(documentData.title || '');
-        setDescription(documentData.description || '');
+        setTitle(documentResponse.title || '');
+        setDescription(documentResponse.description || '');
       } catch (error) {
         console.error('データ取得エラー:', error);
       } finally {
@@ -108,7 +77,7 @@ export default function EditDocumentPage(): JSX.Element {
     if (!description.trim()) {
       errors.description = '本文を入力してください';
     }
-    if (!categoryId || !documentId) {
+    if (!documentIdParam) {
       alert('必要な情報が不足しています。');
       return;
     }
@@ -127,8 +96,7 @@ export default function EditDocumentPage(): JSX.Element {
       const payload: any = {
         title: title.trim(),
         description: description.trim(),
-        category_id: categoryId,
-        document_id: documentId,
+        document_id: documentIdParam,
       };
 
       // プルリクエスト編集関連の処理（必要に応じて）
