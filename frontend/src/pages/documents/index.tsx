@@ -2,7 +2,7 @@ import AdminLayout, { type DocumentDetail } from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Home } from '@/components/icon/common/Home';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Toast } from '@/components/admin/Toast';
 import { fetchCategoryDetail, type ApiCategoryDetailResponse, type BreadcrumbItem } from '@/api/category';
 import { apiClient } from '@/components/admin/api/client';
@@ -174,33 +174,12 @@ export default function DocumentsPage(): JSX.Element {
          <div className="mb-6 align-left">
            {/* パンくずリストと差分提出ボタン */}
            <div className="flex items-center justify-between mb-6 mx-6 mx-auto">
-            <div className="flex items-center text-sm text-gray-400">
-              <a href="/documents" className="hover:text-white">
-                <Home className="w-4 h-4 ml-0 mr-2" />
-              </a>
-             
-             {documentDetail?.breadcrumbs && (
-               <>
-                 {documentDetail.breadcrumbs.map((breadcrumb) => (
-                   <span key={breadcrumb.id}>
-                     <span className="mx-2">{'>'}</span>
-                     <span className="text-white">{breadcrumb.title}</span>
-                   </span>
-                 ))}
-               </>
-             )}
-
-             {!documentDetail && categoryDetail && (
-               <>
-                 {categoryDetail.breadcrumbs && categoryDetail.breadcrumbs.map((breadcrumb: BreadcrumbItem) => (
-                   <span key={breadcrumb.id}>
-                     <span className="mx-2">{'>'}</span>
-                     <span className="text-white">{breadcrumb.title}</span>
-                   </span>
-                 ))}
-               </>
-             )}
-           </div>
+            <Breadcrumb 
+              breadcrumbs={
+                documentDetail?.breadcrumbs || 
+                (categoryDetail?.breadcrumbs ? categoryDetail.breadcrumbs : undefined)
+              } 
+            />
 
             <div className="flex items-center gap-4 mr-9">
               <button

@@ -93,12 +93,6 @@ export default function CategoryForm({
     <div className="text-white min-h-full">
       {/* ヘッダー部分 */}
       <div className="border-b border-gray-700 p-6">
-        <div className="flex items-center text-sm text-gray-400 mb-4">
-          <span>🏠</span>
-          <span className="mx-2">›</span>
-          <span>人事制度</span>
-        </div>
-        
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2">タイトル</label>
           <input

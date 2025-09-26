@@ -170,31 +170,37 @@ class DocumentController extends ApiBaseController
      */
     public function updateDocument(UpdateDocumentRequest $request): JsonResponse
     {
-        // 認証チェック
-        $user = $this->user();
+        try {
+            // 認証チェック
+            $user = $this->user();
 
-        if (! $user) {
-            return response()->json([
-                'error' => '認証が必要です',
-            ], 401);
+            if (! $user) {
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
+            }
+
+            $validatedRequest = $request->validated();
+            $updateDocumentDto = new UpdateDocumentDto(
+                current_document_id: $validatedRequest['current_document_id'],
+                title: $validatedRequest['title'],
+                description: $validatedRequest['description'],
+                edit_pull_request_id: $validatedRequest['edit_pull_request_id'] ?? null,
+                pull_request_edit_token: $validatedRequest['pull_request_edit_token'] ?? null,
+            );
+            $this->updateDocumentUseCase->execute($updateDocumentDto, $user);
+
+            return response()->json();
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
-
-        $validatedRequest = $request->validated();
-        $payload = [
-            'category_path' => $validatedRequest['category_path'] ?? null,
-            'current_document_id' => $validatedRequest['current_document_id'],
-            'sidebar_label' => $validatedRequest['sidebar_label'],
-            'content' => $validatedRequest['content'],
-            'is_public' => $validatedRequest['is_public'],
-            'slug' => $validatedRequest['slug'],
-            'file_order' => $validatedRequest['file_order'] ?? null,
-            'edit_pull_request_id' => $validatedRequest['edit_pull_request_id'] ?? null,
-            'pull_request_edit_token' => $validatedRequest['pull_request_edit_token'] ?? null,
-        ];
-        $updateDocumentDto = UpdateDocumentDto::fromArray($payload);
-        $this->updateDocumentUseCase->execute($updateDocumentDto, $user);
-
-        return response()->json();
     }
 
     /**

@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Api\Document;
 
-use App\Rules\UniqueSlugInSameParent;
 use Illuminate\Foundation\Http\FormRequest;
 
 // use League\HTMLToMarkdown\HtmlConverter;
@@ -25,13 +24,9 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_path' => 'required|nullable|string',
             'current_document_id' => 'required|integer',
-            'sidebar_label' => 'required|string|max:255',
-            'content' => 'required|string',
-            'is_public' => 'required|boolean',
-            'slug' => ['required', 'string', new UniqueSlugInSameParent($this->category_path, null, $this->current_document_id)],
-            'file_order' => 'nullable|integer|min:1',
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
             'edit_pull_request_id' => 'nullable|integer',
             'pull_request_edit_token' => 'nullable|string',
         ];
@@ -43,11 +38,8 @@ class UpdateDocumentRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'category' => __('attributes.document.category'),
-            'sidebar_label' => __('attributes.document.sidebarLabel'),
-            'content' => __('attributes.document.content'),
-            'slug' => __('attributes.document.slug'),
-            'file_order' => __('attributes.document.fileOrder'),
+            'title' => __('attributes.document.title'),
+            'description' => __('attributes.document.description'),
             'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
             'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
@@ -60,8 +52,6 @@ class UpdateDocumentRequest extends FormRequest
     {
         $this->merge([
             'current_document_id' => (int) $this->current_document_id,
-            'is_public' => (bool) $this->is_public,
-            'file_order' => $this->file_order ? (int) $this->file_order : null,
             'edit_pull_request_id' => $this->edit_pull_request_id ? (int) $this->edit_pull_request_id : null,
         ]);
     }

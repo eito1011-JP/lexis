@@ -7,6 +7,7 @@ import { Edit } from '@/components/icon/common/Edit';
 import { apiClient } from '@/components/admin/api/client';
 import CategoryActionModal from '@/components/admin/CategoryActionModal';
 import CreateActionModal from '@/components/sidebar/CreateActionModal';
+import { useNavigate } from 'react-router-dom';
 
 // APIから取得するカテゴリデータの型定義
 interface ApiCategoryData {
@@ -65,6 +66,7 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
  * 株式会社Nexis配下の階層構造を無制限表示
  */
 export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryId, selectedDocumentId }: DocumentSideContentProps) {
+  const navigate = useNavigate();
   // デフォルトで人事制度カテゴリを展開
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
@@ -277,8 +279,14 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     }
   };
 
+  // ドキュメント編集ハンドラ
+  const handleDocumentEdit = (documentId: number, categoryId: number) => {
+    const url = `/categories/${categoryId}/documents/${documentId}/edit`;
+    navigate(url);
+  };
+
   // ドキュメントアイテムをレンダリング
-  const renderDocumentItem = (document: DocumentItem, level: number = 0) => {
+  const renderDocumentItem = (document: DocumentItem, level: number = 0, categoryId?: number) => {
     const isSelected = selectedDocumentId === document.id;
     const isHovered = hoveredItem === document.id;
 
@@ -306,7 +314,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  // 編集アクションをここに実装
+                  if (categoryId) {
+                    handleDocumentEdit(document.id, categoryId);
+                  }
                 }}
               >
                 <Edit className="w-3 h-3" />
@@ -389,7 +399,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
             {item.children!.map((child) => 
               child.type === 'category' 
                 ? renderCategoryItem(child as CategoryItem, level + 1)
-                : renderDocumentItem(child as DocumentItem, level + 1)
+                : renderDocumentItem(child as DocumentItem, level + 1, item.id)
             )}
           </div>
         )}
