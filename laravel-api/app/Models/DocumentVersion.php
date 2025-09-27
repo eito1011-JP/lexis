@@ -19,13 +19,11 @@ class DocumentVersion extends Model
         'user_branch_id',
         'pull_request_edit_session_id',
         'organization_id',
+        'entity_id',
+        'category_entity_id',
         'status',
-        'content',
-        'category_id',
         'title',
         'description',
-        'last_edited_by',
-        'last_reviewed_by',
         'is_deleted',
         'deleted_at',
     ];
@@ -36,12 +34,13 @@ class DocumentVersion extends Model
     ];
 
     /**
-     * カテゴリとのリレーション
+     * カテゴリエンティティとのリレーション
+     * TODO: DocumentCategoryEntityモデルクラス作成後に有効化
      */
-    public function category()
-    {
-        return $this->belongsTo(DocumentCategory::class, 'category_id');
-    }
+    // public function categoryEntity()
+    // {
+    //     return $this->belongsTo(DocumentCategoryEntity::class, 'category_entity_id');
+    // }
 
     /**
      * ユーザーブランチとのリレーション
@@ -93,14 +92,18 @@ class DocumentVersion extends Model
 
     /**
      * カテゴリパスを取得
+     * TODO: DocumentCategoryEntityモデルクラス作成後に有効化
      */
     public function getCategoryPathAttribute(): ?string
     {
-        if (! $this->category) {
-            return null;
-        }
+        // if (! $this->categoryEntity) {
+        //     return null;
+        // }
 
-        return $this->category->parent_path;
+        // return $this->categoryEntity->parent_path;
+        
+        // 一時的な実装: 空を返す
+        return null;
     }
 
     /**
@@ -112,11 +115,11 @@ class DocumentVersion extends Model
     }
 
     /**
-     * カテゴリIDによるスコープ
+     * カテゴリエンティティIDによるスコープ
      */
-    public function scopeByCategory($query, int $categoryId)
+    public function scopeByCategory($query, int $categoryEntityId)
     {
-        return $query->where('category_id', $categoryId);
+        return $query->where('category_entity_id', $categoryEntityId);
     }
 
     /**
@@ -124,11 +127,11 @@ class DocumentVersion extends Model
      * - PR未提出: MERGED + (自ブランチの DRAFT)
      * - 編集セッション: MERGED + (自ブランチの DRAFT/PUSHED)
      */
-    public function scopeForOrdering($query, int $categoryId, int $userBranchId, ?int $editPullRequestId)
+    public function scopeForOrdering($query, int $categoryEntityId, int $userBranchId, ?int $editPullRequestId)
     {
         $isEditSession = ! empty($editPullRequestId);
 
-        return $query->where('category_id', $categoryId)
+        return $query->where('category_entity_id', $categoryEntityId)
             ->where(function ($q) use ($userBranchId, $isEditSession) {
                 $q->where('status', DocumentStatus::MERGED->value)
                     ->orWhere(function ($q2) use ($userBranchId, $isEditSession) {

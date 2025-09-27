@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('document_versions', function (Blueprint $table) {
-            $table->text('description')->nullable()->change();
+            if (Schema::hasColumn('document_versions', 'description')) {
+                $table->text('description')->nullable()->change();
+            }
         });
     }
 
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('document_versions', function (Blueprint $table) {
-            $table->text('description')->nullable(false)->change();
+            if (Schema::hasColumn('document_versions', 'description')) {
+                $table->text('description')->nullable(false)->change();
+            }
         });
     }
 };
