@@ -14,10 +14,11 @@ class DocumentCategory extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'entity_id',
+        'parent_entity_id',
         'title',
         'description',
         'status',
-        'parent_entity_id',
         'user_branch_id',
         'pull_request_edit_session_id',
         'is_deleted',

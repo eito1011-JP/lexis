@@ -32,6 +32,7 @@ class GetCategoryUseCase
 
         return [
             'id' => $category->id,
+            'entity_id' => $category->entity_id,
             'title' => $category->title,
             'description' => $category->description,
             'breadcrumbs' => $breadcrumbs,

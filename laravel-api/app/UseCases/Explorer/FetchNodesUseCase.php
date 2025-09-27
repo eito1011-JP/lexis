@@ -166,6 +166,7 @@ class FetchNodesUseCase
         return $categories->map(function ($category) {
             return [
                 'id' => $category->id,
+                'entity_id' => $category->entity_id,
                 'title' => $category->title,
                 'status' => $category->status,
             ];
@@ -183,6 +184,7 @@ class FetchNodesUseCase
         return $documents->map(function ($document) {
             return [
                 'id' => $document->id,
+                'entity_id' => $document->entity_id,
                 'title' => $document->title,
                 'status' => $document->status,
                 'last_edited_by' => $document->last_edited_by,

@@ -24,7 +24,7 @@ class FetchCategoriesUseCase
         // ユーザーのアクティブブランチを取得
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
 
-        $query = DocumentCategory::select('id', 'title')
+        $query = DocumentCategory::select('id', 'entity_id', 'title')
             ->where('parent_entity_id', $dto->parentEntityId)
             ->where('organization_id', $user->organizationMember->organization_id);
 

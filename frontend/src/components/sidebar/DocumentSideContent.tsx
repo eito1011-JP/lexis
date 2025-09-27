@@ -12,12 +12,14 @@ import { useNavigate } from 'react-router-dom';
 // APIから取得するカテゴリデータの型定義
 interface ApiCategoryData {
   id: number;
+  entity_id: number;
   title: string;
 }
 
 // 共通のアイテム型定義
 interface BaseItem {
   id: number;
+  entityId: number;
   label: string;
   icon?: React.ComponentType<{ className?: string }>;
   type: 'category' | 'document';
@@ -43,16 +45,17 @@ interface DocumentSideContentProps {
 }
 
 // カテゴリデータを取得するサービス関数（無制限表示）
-const fetchCategories = async (parentId: number | null = null): Promise<ApiCategoryData[]> => {
+const fetchCategories = async (parentEntityId: number | null = null): Promise<ApiCategoryData[]> => {
   try {
     const params = new URLSearchParams();
-    if (parentId !== null) {
-      params.append('parent_entity_id', parentId.toString());
+    if (parentEntityId !== null) {
+      params.append('parent_entity_id', parentEntityId.toString());
     }
     
     const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(endpoint);
     
+    console.log('API Response for categories:', response);
     // すべてのカテゴリを返す（制限なし）
     return response.categories || [];
   } catch (error) {
@@ -67,7 +70,7 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
  */
 export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryId, selectedDocumentId }: DocumentSideContentProps) {
   const navigate = useNavigate();
-  // デフォルトで人事制度カテゴリを展開
+  // デフォルトで人事制度カテゴリを展開（entity_idベース）
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
@@ -90,6 +93,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
     return apiData.map(item => ({
       id: item.id,
+      entityId: item.entity_id,
       label: item.title,
       icon: Folder,
       type: 'category' as const,
@@ -98,9 +102,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // 深い階層まで再帰的に検索してカテゴリを更新する関数
-  const updateCategoryInTree = (categories: CategoryItem[], targetId: number, children: BaseItem[]): CategoryItem[] => {
+  const updateCategoryInTree = (categories: CategoryItem[], targetEntityId: number, children: BaseItem[]): CategoryItem[] => {
     return categories.map(category => {
-      if (category.id === targetId) {
+      if (category.entityId === targetEntityId) {
         return {
           ...category,
           children: children
@@ -110,7 +114,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
       if (category.children && category.children.length > 0) {
         // 子要素のうちカテゴリタイプのもののみを再帰的に処理
         const childCategories = category.children.filter(child => child.type === 'category') as CategoryItem[];
-        const updatedChildCategories = updateCategoryInTree(childCategories, targetId, children);
+        const updatedChildCategories = updateCategoryInTree(childCategories, targetEntityId, children);
         const childDocuments = category.children.filter(child => child.type === 'document');
         
         return {
@@ -124,17 +128,18 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // 従属するカテゴリとドキュメントを取得する関数（無制限表示・深い階層対応）
-  const handleFetchBelogingItems = async (categoryId: number) => {
+  const handleFetchBelogingItems = async (categoryEntityId: number) => {
     try {
-      const response = await apiClient.get(`/api/nodes?category_id=${categoryId}`);
+      const response = await apiClient.get(`/api/nodes?category_entity_id=${categoryEntityId}`);
 
-      console.log('API Response for category', categoryId, ':', response);
+      console.log('API Response for category', categoryEntityId, ':', response);
       
       // 既存のカテゴリデータを更新（深い階層まで対応）
       setCategories(prevCategories => {
         // 取得したすべてのカテゴリとドキュメントをchildrenに追加（制限なし）
         const categoryChildren: CategoryItem[] = response.categories.map((cat: any) => ({
           id: cat.id,
+          entityId: cat.entity_id,
           label: cat.title,
           icon: Folder,
           type: 'category' as const,
@@ -143,6 +148,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
         
         const documentChildren: BaseItem[] = response.documents.map((doc: any) => ({
           id: doc.id,
+          entityId: doc.entity_id,
           label: doc.sidebar_label || doc.title,
           type: 'document' as const,
         }));
@@ -151,7 +157,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
         const children = [...categoryChildren, ...documentChildren];
         
         // 深い階層まで再帰的に検索して更新
-        return updateCategoryInTree(prevCategories, categoryId, children);
+        return updateCategoryInTree(prevCategories, categoryEntityId, children);
       });
       
     } catch (error) {
@@ -184,28 +190,28 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   }, []);
 
   // カテゴリの展開/折りたたみを切り替え
-  const toggleExpanded = (categoryId: number) => {
+  const toggleExpanded = (categoryEntityId: number) => {
     const newExpanded = new Set(expandedItems);
-    if (newExpanded.has(categoryId)) {
-      newExpanded.delete(categoryId);
+    if (newExpanded.has(categoryEntityId)) {
+      newExpanded.delete(categoryEntityId);
     } else {
-      newExpanded.add(categoryId);
+      newExpanded.add(categoryEntityId);
       // フォルダ展開時に従属アイテムを取得
-      handleFetchBelogingItems(categoryId);
+      handleFetchBelogingItems(categoryEntityId);
     }
     setExpandedItems(newExpanded);
   };
 
   // カテゴリ選択のハンドラ
-  const handleCategoryClick = (categoryId: number) => {
+  const handleCategoryClick = (categoryEntityId: number) => {
     if (onCategorySelect) {
-      onCategorySelect(categoryId);
+      onCategorySelect(categoryEntityId);
     }
   };
 
   // Plusボタンクリック時のハンドラ（モーダルを表示）
-  const handlePlusClick = (parentCategoryId: number, event: React.MouseEvent<HTMLButtonElement>) => {
-    setCreateTargetCategoryId(parentCategoryId);
+  const handlePlusClick = (parentCategoryEntityId: number, event: React.MouseEvent<HTMLButtonElement>) => {
+    setCreateTargetCategoryId(parentCategoryEntityId);
     setCreateModalButtonRef({ current: event.currentTarget });
     setShowCreateModal(true);
   };
@@ -286,9 +292,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // ドキュメントアイテムをレンダリング
-  const renderDocumentItem = (document: DocumentItem, level: number = 0, categoryId?: number) => {
+  const renderDocumentItem = (document: DocumentItem, level: number = 0, categoryEntityId?: number) => {
     const isSelected = selectedDocumentId === document.id;
-    const isHovered = hoveredItem === document.id;
+    const isHovered = hoveredItem === document.entityId;
 
     return (
       <div key={document.id} className="select-none">
@@ -298,7 +304,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
           }`}
           style={{ paddingLeft: `${level * 0.8}rem` }}
           onClick={() => handleDocumentClick(document.id)}
-          onMouseEnter={() => setHoveredItem(document.id)}
+          onMouseEnter={() => setHoveredItem(document.entityId)}
           onMouseLeave={() => setHoveredItem(null)}
         >
           {/* ドキュメントには矢印なし、スペースのみ */}
@@ -314,8 +320,8 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (categoryId) {
-                    handleDocumentEdit(document.id, categoryId);
+                  if (categoryEntityId) {
+                    handleDocumentEdit(document.id, categoryEntityId);
                   }
                 }}
               >
@@ -330,10 +336,10 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
 
   // カテゴリアイテムを再帰的にレンダリング
   const renderCategoryItem = (item: CategoryItem, level: number = 0) => {
-    const isExpanded = expandedItems.has(item.id);
+    const isExpanded = expandedItems.has(item.entityId);
     const hasChildren = item.children && item.children.length > 0;
-    const isSelected = selectedCategoryId === item.id;
-    const isHovered = hoveredItem === item.id;
+    const isSelected = selectedCategoryId === item.entityId;
+    const isHovered = hoveredItem === item.entityId;
     const IconComponent = item.icon || Folder;
 
     return (
@@ -343,8 +349,8 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
           style={{ paddingLeft: `${1 + level * 0.8}rem` }}
-          onClick={() => handleCategoryClick(item.id)}
-          onMouseEnter={() => setHoveredItem(item.id)}
+          onClick={() => handleCategoryClick(item.entityId)}
+          onMouseEnter={() => setHoveredItem(item.entityId)}
           onMouseLeave={() => setHoveredItem(null)}
         >
           {/* 左端の矢印アイコン（全てのカテゴリに表示） */}
@@ -352,7 +358,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
             className="mr-0.5 flex-shrink-0 p-1 hover:bg-gray-700 rounded transition-transform"
             onClick={(e) => {
               e.stopPropagation();
-              toggleExpanded(item.id);
+              toggleExpanded(item.entityId);
             }}
           >
             <ArrowDown 
@@ -384,7 +390,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handlePlusClick(item.id, e);
+                  handlePlusClick(item.entityId, e);
                 }}
               >
                 <Plus className="w-3 h-3" />
@@ -399,7 +405,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
             {item.children!.map((child) => 
               child.type === 'category' 
                 ? renderCategoryItem(child as CategoryItem, level + 1)
-                : renderDocumentItem(child as DocumentItem, level + 1, item.id)
+                : renderDocumentItem(child as DocumentItem, level + 1, item.entityId)
             )}
           </div>
         )}
