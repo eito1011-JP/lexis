@@ -20,12 +20,12 @@ interface Category {
 
 export default function CreateDocumentPage(): JSX.Element {
   const navigate = useNavigate();
-  const { categoryId: categoryIdParam } = useParams<{ categoryId: string }>();
+  const { categoryEntityId: categoryEntityIdParam } = useParams<{ categoryEntityId: string }>();
   const [isLoading, setIsLoading] = useState(true);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [categoryEntityId, setCategoryEntityId] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
@@ -33,15 +33,15 @@ export default function CreateDocumentPage(): JSX.Element {
   // URLパスからcategoryIdを取得し、そのカテゴリ情報を取得
   useEffect(() => {
     const fetchCategoryDetail = async () => {
-      if (!categoryIdParam) {
+      if (!categoryEntityIdParam) {
         console.error('categoryId is missing from URL path');
         setIsLoading(false);
         return;
       }
 
       try {
-        const id = parseInt(categoryIdParam);
-        setCategoryId(id);
+        const id = parseInt(categoryEntityIdParam);
+        setCategoryEntityId(id);
         // 特定のカテゴリの詳細情報を取得
         const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
         
@@ -63,7 +63,7 @@ export default function CreateDocumentPage(): JSX.Element {
     };
 
     fetchCategoryDetail();
-  }, [categoryIdParam]);
+  }, [categoryEntityIdParam]);
 
   const handleSave = async () => {
     if (isSubmitting) return;
@@ -77,7 +77,7 @@ export default function CreateDocumentPage(): JSX.Element {
     if (!description.trim()) {
       errors.description = '本文を入力してください';
     }
-    if (!categoryId) {
+    if (!categoryEntityId) {
       alert('カテゴリが選択されていません。');
       return;
     }
@@ -96,7 +96,7 @@ export default function CreateDocumentPage(): JSX.Element {
       const payload: any = {
         title: title.trim(),
         description: description.trim(),
-        category_id: categoryId,
+        category_entity_id: categoryEntityId,
       };
 
       // プルリクエスト編集関連の処理（必要に応じて）

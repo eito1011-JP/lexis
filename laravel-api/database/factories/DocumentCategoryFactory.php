@@ -29,7 +29,7 @@ class DocumentCategoryFactory extends Factory
             'title' => $this->faker->words(2, true),
             'description' => $this->faker->sentence(),
             'status' => DocumentCategoryStatus::MERGED->value,
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'user_branch_id' => null,
             'is_deleted' => false,
             'deleted_at' => null,
@@ -42,7 +42,7 @@ class DocumentCategoryFactory extends Factory
     public function child(DocumentCategory $parent): static
     {
         return $this->state(fn (array $attributes) => [
-            'parent_id' => $parent->id,
+            'parent_entity_id' => $parent->id,
         ]);
     }
 

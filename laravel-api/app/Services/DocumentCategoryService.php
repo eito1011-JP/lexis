@@ -23,14 +23,14 @@ class DocumentCategoryService
     {
         if ($requestedPosition) {
             // position重複時、既存のposition >= 入力値を+1してずらす
-            DocumentCategory::where('parent_id', $parentId)
+            DocumentCategory::where('parent_entity_id', $parentId)
                 ->where('position', '>=', $requestedPosition)
                 ->increment('position');
 
             return $requestedPosition;
         } else {
             // position未入力時、親カテゴリ内最大値+1をセット
-            $maxPosition = DocumentCategory::where('parent_id', $parentId)
+            $maxPosition = DocumentCategory::where('parent_entity_id', $parentId)
                 ->max('position') ?? 0;
 
             return $maxPosition + 1;
@@ -65,7 +65,7 @@ class DocumentCategoryService
 
     //     foreach ($pathSegments as $slug) {
     //         $category = DocumentCategory::where('slug', $slug)
-    //             ->where('parent_id', $currentParentCategoryId)
+    //             ->where('parent_entity_id', $currentParentCategoryId)
     //             ->first();
 
     //         if (! $category) {
@@ -87,7 +87,7 @@ class DocumentCategoryService
         ?int $editPullRequestId = null
     ): Collection {
         $query = DocumentCategory::select('sidebar_label', 'position')
-            ->where('parent_id', $parentId)
+            ->where('parent_entity_id', $parentId)
             ->where(function ($q) use ($userBranchId) {
                 $q->where('status', 'merged')
                     ->orWhere(function ($subQ) use ($userBranchId) {
@@ -125,16 +125,16 @@ class DocumentCategoryService
      */
     public function createCategoryPath(DocumentCategory $documentCategory): ?string
     {
-        if (! $documentCategory->parent_id) {
+        if (! $documentCategory->parent_entity_id) {
             return null;
         }
 
         $path = [];
-        $parentCategory = DocumentCategory::find($documentCategory->parent_id);
+        $parentCategory = DocumentCategory::find($documentCategory->parent_entity_id);
 
         while ($parentCategory) {
             array_unshift($path, $parentCategory->title);
-            $parentCategory = $parentCategory->parent_id ? DocumentCategory::find($parentCategory->parent_id) : null;
+            $parentCategory = $parentCategory->parent_entity_id ? DocumentCategory::find($parentCategory->parent_entity_id) : null;
         }
 
         return implode('/', $path);

@@ -63,7 +63,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -83,7 +83,7 @@ class FetchNodesUseCaseTest extends TestCase
         // マージ済みカテゴリとドキュメントを作成
         $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -113,7 +113,7 @@ class FetchNodesUseCaseTest extends TestCase
         // ドラフト状態のカテゴリとドキュメント
         $draftCategory = DocumentCategory::factory()->create([
             'title' => 'ドラフトカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'draft',
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
@@ -176,7 +176,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -196,7 +196,7 @@ class FetchNodesUseCaseTest extends TestCase
         // ドラフト状態のカテゴリとドキュメントを作成
         $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'merged',
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
@@ -211,7 +211,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         $draftCategory = DocumentCategory::factory()->create([
             'title' => 'アップデートカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'draft',
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
@@ -283,7 +283,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -306,7 +306,7 @@ class FetchNodesUseCaseTest extends TestCase
         // マージ済みカテゴリとドキュメントを作成
         $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -336,7 +336,7 @@ class FetchNodesUseCaseTest extends TestCase
         // ドラフト状態のカテゴリとドキュメント（取得されない）
         $draftCategory = DocumentCategory::factory()->create([
             'title' => 'ドラフトカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'draft',
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
@@ -394,7 +394,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -419,7 +419,7 @@ class FetchNodesUseCaseTest extends TestCase
         // マージ済みカテゴリとドキュメントを作成
         $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -489,7 +489,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -519,7 +519,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -532,7 +532,7 @@ class FetchNodesUseCaseTest extends TestCase
         // IDが大きい順に作成して、結果では小さい順になることを確認
         $category2 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ2',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -546,7 +546,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         $category1 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ1',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -609,7 +609,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -630,7 +630,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 正しいユーザーとブランチのドラフトデータ（取得される）
         $correctCategory = DocumentCategory::factory()->create([
             'title' => '正しいユーザーのカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'draft',
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
@@ -663,7 +663,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 他のユーザーとブランチのドラフトデータ（取得されない）
         $otherCategory = DocumentCategory::factory()->create([
             'title' => '他のユーザーのカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'draft',
             'user_branch_id' => $otherUserBranch->id,
             'organization_id' => $this->organization->id,
@@ -732,7 +732,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 親カテゴリを作成
         $parentCategory = DocumentCategory::factory()->create([
             'title' => '親カテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
@@ -786,7 +786,7 @@ class FetchNodesUseCaseTest extends TestCase
         // 別のブランチで作成されたマージ済みカテゴリ（別のuser_branchのEditStartVersionあり）
         $mergedCategoryFromOtherBranch = DocumentCategory::factory()->create([
             'title' => '別ブランチのマージ済みカテゴリ',
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'status' => 'merged',
             'organization_id' => $this->organization->id,
             'user_branch_id' => $otherUserBranch->id,

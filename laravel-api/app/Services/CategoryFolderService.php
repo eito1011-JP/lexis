@@ -16,7 +16,7 @@ class CategoryFolderService
         $path = DocumentPathConstants::DOCS_BASE_PATH;
         $parentPath = null;
 
-        // parent_idが指定されている場合、親のパスを再帰的に構築
+        // parent_entity_idが指定されている場合、親のパスを再帰的に構築
         if ($parentId) {
             $parentPath = $this->buildParentPath($parentId);
             if ($parentPath) {

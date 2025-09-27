@@ -115,7 +115,7 @@ class DetailUseCaseTest extends TestCase
         $categoryWithoutBreadcrumbs = DocumentCategory::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => 'シンプルカテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
         ]);
 
         $documentWithSimpleCategory = DocumentVersion::factory()->create([
@@ -147,19 +147,19 @@ class DetailUseCaseTest extends TestCase
         $rootCategory = DocumentCategory::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => 'ルートカテゴリ',
-            'parent_id' => null,
+            'parent_entity_id' => null,
         ]);
 
         $childCategory = DocumentCategory::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => '子カテゴリ',
-            'parent_id' => $rootCategory->id,
+            'parent_entity_id' => $rootCategory->id,
         ]);
 
         $grandchildCategory = DocumentCategory::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => '孫カテゴリ',
-            'parent_id' => $childCategory->id,
+            'parent_entity_id' => $childCategory->id,
         ]);
 
         $documentWithHierarchy = DocumentVersion::factory()->create([
@@ -292,7 +292,7 @@ class DetailUseCaseTest extends TestCase
             $category = DocumentCategory::factory()->create([
                 'organization_id' => $this->organization->id,
                 'title' => "レベル{$i}カテゴリ",
-                'parent_id' => $parentId,
+                'parent_entity_id' => $parentId,
             ]);
             $categories[] = $category;
             $parentId = $category->id;

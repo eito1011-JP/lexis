@@ -62,22 +62,24 @@ class UpdateDocumentUseCase
             );
 
             // 5. 編集対象のexistingDocumentを取得
-            $existingDocument = DocumentVersion::find($dto->current_document_id);
+            $existingDocument = DocumentVersion::find($dto->document_entity_id);
+            $existingDocumentEntity = $existingDocument->entity;
 
             // 6. if existingDocumentがない場合 throw new NotFoundException;
-            if (! $existingDocument) {
+            if (! $existingDocument || ! $existingDocumentEntity) {
                 throw new NotFoundException;
             }
 
             // 7. DocumentVersionを作成
             $newDocumentVersion = DocumentVersion::create([
+                'entity_id' => $existingDocumentEntity->id,
                 'organization_id' => $organizationId,
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
                 'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'status' => DocumentStatus::DRAFT->value,
                 'description' => $dto->description,
-                'category_id' => $existingDocument->category_id,
+                'category_entity_id' => $existingDocument->category_entity_id,
                 'title' => $dto->title,
                 'last_edited_by' => $user->email,
             ]);

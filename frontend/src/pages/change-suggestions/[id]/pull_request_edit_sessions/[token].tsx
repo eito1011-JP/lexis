@@ -20,7 +20,7 @@ type DocumentVersion = {
   is_public?: boolean | number;
   position?: number;
   file_order?: number;
-  parent_id?: number;
+  parent_entity_id?: number;
   category_id?: number;
   status: string;
   user_branch_id: number;
@@ -36,7 +36,7 @@ type CategoryVersion = {
   sidebar_label: string;
   description?: string;
   position?: number;
-  parent_id?: number;
+  parent_entity_id?: number;
   user_branch_id: number;
   created_at: string;
   updated_at: string;

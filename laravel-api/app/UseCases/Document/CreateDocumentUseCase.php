@@ -7,6 +7,7 @@ use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestEditSessionDiffType;
 use App\Models\DocumentVersion;
+use App\Models\DocumentVersionEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
@@ -61,13 +62,19 @@ class CreateDocumentUseCase
                 );
             }
 
+            // ドキュメントエンティティを作成
+            $documentEntity = DocumentVersionEntity::create([
+                'organization_id' => $organizationId,
+            ]);
+
             // ドキュメントを作成
             $document = DocumentVersion::create([
+                'entity_id' => $documentEntity->id,
                 'user_id' => $dto->user->id,
                 'user_branch_id' => $userBranchId,
                 'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'organization_id' => $organizationId,
-                'category_id' => $dto->categoryId,
+                'category_entity_id' => $dto->categoryEntityId,
                 'title' => $dto->title,
                 'description' => $dto->description,
                 'status' => DocumentStatus::DRAFT->value,

@@ -100,7 +100,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentCategory::class, $result);
         $this->assertEquals('Updated Title', $result->title);
         $this->assertEquals('Updated Description', $result->description);
-        $this->assertEquals($existingCategory->parent_id, $result->parent_id);
+        $this->assertEquals($existingCategory->parent_entity_id, $result->parent_entity_id);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $result->status);
@@ -425,7 +425,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         ]);
 
         $existingCategory = DocumentCategory::factory()->create([
-            'parent_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategory->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -447,7 +447,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertEquals($parentCategory->id, $result->parent_id);
+        $this->assertEquals($parentCategory->id, $result->parent_entity_id);
     }
 
     /**

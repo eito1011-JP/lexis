@@ -4,6 +4,7 @@ namespace App\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
 use App\Models\DocumentCategory;
+use App\Models\DocumentCategoryEntity;
 use Http\Discovery\Exception\NotFoundException;
 
 /**
@@ -18,8 +19,11 @@ class GetCategoryUseCase
      */
     public function execute(GetCategoryDto $dto): array
     {
+        $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
+
+        // entityに紐づくdocumentCategoryの
         $category = DocumentCategory::with(['parent.parent.parent.parent.parent.parent.parent']) // 7階層まで親カテゴリを読み込み
-            ->where('id', $dto->id)
+            ->where('id', $categoryEntity->id)
             ->where('organization_id', $dto->user->organizationMember->organization_id)
             ->first();
 
@@ -32,6 +36,7 @@ class GetCategoryUseCase
 
         return [
             'id' => $category->id,
+            'entity_id' => $category->entity_id,
             'title' => $category->title,
             'description' => $category->description,
             'breadcrumbs' => $breadcrumbs,

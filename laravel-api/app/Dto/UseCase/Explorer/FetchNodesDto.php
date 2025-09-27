@@ -7,7 +7,7 @@ use App\Dto\UseCase\UseCaseDto;
 class FetchNodesDto extends UseCaseDto
 {
     public function __construct(
-        public readonly int $categoryId,
+        public readonly int $categoryEntityId,
         public readonly ?string $pullRequestEditSessionToken = null,
     ) {}
 
@@ -17,7 +17,7 @@ class FetchNodesDto extends UseCaseDto
     public static function fromRequest(array $requestData): self
     {
         return new self(
-            categoryId: $requestData['category_id'],
+            categoryId: $requestData['category_entity_id'],
             pullRequestEditSessionToken: $requestData['pull_request_edit_session_token'] ?? null,
         );
     }

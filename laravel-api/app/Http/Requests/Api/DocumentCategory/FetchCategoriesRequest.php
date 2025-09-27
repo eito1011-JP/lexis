@@ -20,7 +20,7 @@ class FetchCategoriesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'parent_id' => 'nullable|integer|exists:document_categories,id',
+            'parent_entity_id' => 'nullable|integer|exists:document_categories,id',
             'pull_request_edit_session_token' => 'nullable|string|size:32',
         ];
     }
@@ -31,8 +31,8 @@ class FetchCategoriesRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'parent_id.integer' => __('validation.category.parent_id.integer'),
-            'parent_id.exists' => __('validation.category.parent_id.exists'),
+            'parent_entity_id.integer' => __('validation.category.parent_entity_id.integer'),
+            'parent_entity_id.exists' => __('validation.category.parent_entity_id.exists'),
             'pull_request_edit_session_token.string' => __('validation.token.string'),
             'pull_request_edit_session_token.size' => __('validation.token.size'),
         ];

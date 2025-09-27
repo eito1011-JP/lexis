@@ -24,7 +24,7 @@ class CreateDocumentCategoryRequest extends FormRequest
         return [
             'title' => 'required|string',
             'description' => 'nullable|string',
-            'parent_id' => 'nullable|integer',
+            'parent_entity_id' => 'nullable|integer',
             'edit_pull_request_id' => 'nullable|integer',
             'pull_request_edit_token' => 'nullable|string',
         ];

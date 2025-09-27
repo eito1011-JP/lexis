@@ -24,7 +24,7 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'current_document_id' => 'required|integer',
+            'document_entity_id' => 'required|integer',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'edit_pull_request_id' => 'nullable|integer',
@@ -38,6 +38,7 @@ class UpdateDocumentRequest extends FormRequest
     public function attributes(): array
     {
         return [
+            'document_entity_id' => __('attributes.document.documentEntityId'),
             'title' => __('attributes.document.title'),
             'description' => __('attributes.document.description'),
             'edit_pull_request_id' => __('attributes.document.editPullRequestId'),

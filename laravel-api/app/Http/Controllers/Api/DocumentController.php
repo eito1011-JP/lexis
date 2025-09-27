@@ -268,7 +268,7 @@ class DocumentController extends ApiBaseController
                     ];
                 });
 
-            $subCategories = DocumentCategory::where('parent_id', $category->id)
+            $subCategories = DocumentCategory::where('parent_entity_id', $category->id)
                 ->select('id', 'name', 'slug')
                 ->get()
                 ->map(function ($cat) {

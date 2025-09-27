@@ -232,7 +232,7 @@ class FixRequestController extends ApiBaseController
                         'position' => $existingDocCategory->position,
                         'description' => $docCategory['description'],
                         'status' => DocumentCategoryStatus::FIX_REQUEST->value,
-                        'parent_id' => $existingDocCategory->parent_id,
+                        'parent_entity_id' => $existingDocCategory->parent_entity_id,
                         'user_branch_id' => $existingDocCategory->user_branch_id,
                     ];
                 }

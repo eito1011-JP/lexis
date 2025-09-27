@@ -20,7 +20,7 @@ type DiffItem = {
   content?: string;
   position?: number;
   file_order?: number;
-  parent_id?: number;
+  parent_entity_id?: number;
   category_id?: number;
   status: string;
   user_branch_id: number;

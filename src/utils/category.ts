@@ -78,7 +78,7 @@ export async function getCategoryTreeFromSlug(slug: string, userBranchId: number
 
       // 子カテゴリを再帰的に処理
       const childCategoriesResult = await db.execute({
-        sql: 'SELECT * FROM document_categories WHERE parent_id = ? AND user_branch_id = ? AND is_deleted = 0',
+        sql: 'SELECT * FROM document_categories WHERE parent_entity_id = ? AND user_branch_id = ? AND is_deleted = 0',
         args: [categoryId, userBranchId],
       });
 
@@ -116,7 +116,7 @@ const getCategoryIdBySlug = async (
   parentId: number | null
 ): Promise<number | null> => {
   const result = await db.execute({
-    sql: 'SELECT id FROM document_categories WHERE slug = ? AND parent_id IS ?',
+    sql: 'SELECT id FROM document_categories WHERE slug = ? AND parent_entity_id IS ?',
     args: [slug, parentId],
   });
   return result.rows[0]?.id ? Number(result.rows[0].id) : null;
