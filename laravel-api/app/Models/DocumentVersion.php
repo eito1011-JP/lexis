@@ -35,12 +35,19 @@ class DocumentVersion extends Model
 
     /**
      * カテゴリエンティティとのリレーション
-     * TODO: DocumentCategoryEntityモデルクラス作成後に有効化
      */
-    // public function categoryEntity()
-    // {
-    //     return $this->belongsTo(DocumentCategoryEntity::class, 'category_entity_id');
-    // }
+    public function categoryEntity()
+    {
+        return $this->belongsTo(DocumentCategoryEntity::class, 'category_entity_id');
+    }
+
+    /**
+     * ドキュメントバージョンエンティティとのリレーション
+     */
+    public function entity()
+    {
+        return $this->belongsTo(DocumentVersionEntity::class, 'entity_id');
+    }
 
     /**
      * ユーザーブランチとのリレーション
@@ -88,22 +95,6 @@ class DocumentVersion extends Model
     public function pullRequestEditSession()
     {
         return $this->belongsTo(PullRequestEditSession::class, 'pull_request_edit_session_id');
-    }
-
-    /**
-     * カテゴリパスを取得
-     * TODO: DocumentCategoryEntityモデルクラス作成後に有効化
-     */
-    public function getCategoryPathAttribute(): ?string
-    {
-        // if (! $this->categoryEntity) {
-        //     return null;
-        // }
-
-        // return $this->categoryEntity->parent_path;
-        
-        // 一時的な実装: 空を返す
-        return null;
     }
 
     /**
