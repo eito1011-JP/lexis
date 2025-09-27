@@ -147,12 +147,12 @@ class PullRequestConflictService
                 }
 
                 // Folder path for category
-                $currentFolder = $this->categoryFolderService->generateCategoryFilePath($currentCat->slug, $currentCat->parent_id);
+                $currentFolder = $this->categoryFolderService->generateCategoryFilePath($currentCat->slug, $currentCat->parent_entity_id);
                 $currentPath = rtrim($currentFolder, '/').'/_category_.json';
 
                 $originalCat = $esv->originalCategory;
                 $originalFolder = $originalCat
-                    ? $this->categoryFolderService->generateCategoryFilePath($originalCat->slug, $originalCat->parent_id)
+                    ? $this->categoryFolderService->generateCategoryFilePath($originalCat->slug, $originalCat->parent_entity_id)
                     : null;
                 $originalPath = $originalFolder ? rtrim($originalFolder, '/').'/_category_.json' : null;
 

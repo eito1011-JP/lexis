@@ -131,7 +131,7 @@ class FetchNodesUseCase
         $allVersionIds = $this->getCurrentVersionIds(EditStartVersionTargetType::CATEGORY, $userBranchId);
 
         return DocumentCategory::whereIn('id', $allVersionIds)
-            ->where('parent_id', $parentId)
+            ->where('parent_entity_id', $parentId)
             ->where(function ($query) use ($userBranchId) {
                 $query->where('status', DocumentCategoryStatus::MERGED->value)
                       ->orWhere('user_branch_id', $userBranchId);
@@ -208,7 +208,7 @@ class FetchNodesUseCase
      */
     private function fetchMergedCategories(int $parentId): Collection
     {
-        return DocumentCategory::where('parent_id', $parentId)
+        return DocumentCategory::where('parent_entity_id', $parentId)
             ->where('status', DocumentCategoryStatus::MERGED->value)
             ->orderBy('id', 'asc')
             ->get();
