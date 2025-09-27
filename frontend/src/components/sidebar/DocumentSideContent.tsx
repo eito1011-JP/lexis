@@ -70,7 +70,6 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
  */
 export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryId, selectedDocumentId }: DocumentSideContentProps) {
   const navigate = useNavigate();
-  // デフォルトで人事制度カテゴリを展開（entity_idベース）
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
@@ -102,9 +101,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // 深い階層まで再帰的に検索してカテゴリを更新する関数
-  const updateCategoryInTree = (categories: CategoryItem[], targetEntityId: number, children: BaseItem[]): CategoryItem[] => {
+  const updateCategoryInTree = (categories: CategoryItem[], targetId: number, children: BaseItem[]): CategoryItem[] => {
     return categories.map(category => {
-      if (category.entityId === targetEntityId) {
+      if (category.id === targetId) {
         return {
           ...category,
           children: children
@@ -114,7 +113,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
       if (category.children && category.children.length > 0) {
         // 子要素のうちカテゴリタイプのもののみを再帰的に処理
         const childCategories = category.children.filter(child => child.type === 'category') as CategoryItem[];
-        const updatedChildCategories = updateCategoryInTree(childCategories, targetEntityId, children);
+        const updatedChildCategories = updateCategoryInTree(childCategories, targetId, children);
         const childDocuments = category.children.filter(child => child.type === 'document');
         
         return {
@@ -130,6 +129,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // 従属するカテゴリとドキュメントを取得する関数（無制限表示・深い階層対応）
   const handleFetchBelogingItems = async (categoryEntityId: number) => {
     try {
+      console.log('categoryEntityId: ', categoryEntityId);
       const response = await apiClient.get(`/api/nodes?category_entity_id=${categoryEntityId}`);
 
       console.log('API Response for category', categoryEntityId, ':', response);
@@ -146,6 +146,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
           children: [] // 子カテゴリには空の配列を初期化
         }));
         
+        console.log('categoryChildren: ', categoryChildren);
         const documentChildren: BaseItem[] = response.documents.map((doc: any) => ({
           id: doc.id,
           entityId: doc.entity_id,
@@ -203,9 +204,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // カテゴリ選択のハンドラ
-  const handleCategoryClick = (categoryEntityId: number) => {
+  const handleCategoryClick = (categoryId: number) => {
     if (onCategorySelect) {
-      onCategorySelect(categoryEntityId);
+      onCategorySelect(categoryId);
     }
   };
 
@@ -219,6 +220,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // ドキュメント作成のハンドラ
   const handleCreateDocument = () => {
     if (createTargetCategoryId) {
+      // createTargetCategoryIdはentityIdなので、そのまま使用
       const url = `/categories/${createTargetCategoryId}/documents/create`;
       window.location.href = url;
     }
@@ -227,6 +229,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // カテゴリ作成のハンドラ
   const handleCreateCategory = () => {
     if (createTargetCategoryId) {
+      // createTargetCategoryIdはentityIdなので、そのまま使用
       const url = `/categories/${createTargetCategoryId}/create`;
       window.location.href = url;
     }
@@ -262,6 +265,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // 編集のハンドラ
   const handleEdit = () => {
     if (selectedCategory) {
+      // selectedCategory.idはdocument_categories.idなので、そのまま使用
       const url = `/categories/${selectedCategory.id}/edit`;
       window.location.href = url;
     }
@@ -286,15 +290,17 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // ドキュメント編集ハンドラ
-  const handleDocumentEdit = (documentId: number, categoryId: number) => {
-    const url = `/categories/${categoryId}/documents/${documentId}/edit`;
+  const handleDocumentEdit = (documentId: number, categoryEntityId: number) => {
+    // categoryEntityIdはdocument_category_entities.idなので、
+    // document_categories.idに変換する必要がある場合は別途処理が必要
+    const url = `/categories/${categoryEntityId}/documents/${documentId}/edit`;
     navigate(url);
   };
 
   // ドキュメントアイテムをレンダリング
   const renderDocumentItem = (document: DocumentItem, level: number = 0, categoryEntityId?: number) => {
     const isSelected = selectedDocumentId === document.id;
-    const isHovered = hoveredItem === document.entityId;
+    const isHovered = hoveredItem === document.id;
 
     return (
       <div key={document.id} className="select-none">
@@ -304,7 +310,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
           }`}
           style={{ paddingLeft: `${level * 0.8}rem` }}
           onClick={() => handleDocumentClick(document.id)}
-          onMouseEnter={() => setHoveredItem(document.entityId)}
+          onMouseEnter={() => setHoveredItem(document.id)}
           onMouseLeave={() => setHoveredItem(null)}
         >
           {/* ドキュメントには矢印なし、スペースのみ */}
@@ -336,10 +342,11 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
 
   // カテゴリアイテムを再帰的にレンダリング
   const renderCategoryItem = (item: CategoryItem, level: number = 0) => {
+    console.log('item: ', item);
     const isExpanded = expandedItems.has(item.entityId);
     const hasChildren = item.children && item.children.length > 0;
-    const isSelected = selectedCategoryId === item.entityId;
-    const isHovered = hoveredItem === item.entityId;
+    const isSelected = selectedCategoryId === item.id;
+    const isHovered = hoveredItem === item.id;
     const IconComponent = item.icon || Folder;
 
     return (
@@ -349,8 +356,8 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
           style={{ paddingLeft: `${1 + level * 0.8}rem` }}
-          onClick={() => handleCategoryClick(item.entityId)}
-          onMouseEnter={() => setHoveredItem(item.entityId)}
+          onClick={() => handleCategoryClick(item.id)}
+          onMouseEnter={() => setHoveredItem(item.id)}
           onMouseLeave={() => setHoveredItem(null)}
         >
           {/* 左端の矢印アイコン（全てのカテゴリに表示） */}

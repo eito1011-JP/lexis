@@ -1,7 +1,6 @@
 import AdminLayout, { type DocumentDetail } from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Toast } from '@/components/admin/Toast';
 import { fetchCategoryDetail, type ApiCategoryDetailResponse, type BreadcrumbItem } from '@/api/category';
@@ -18,7 +17,7 @@ export default function DocumentsPage(): JSX.Element {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<string | null>(null);
+  const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number | null>(null);
   const [categoryDetail, setCategoryDetail] = useState<ApiCategoryDetailResponse | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
@@ -57,7 +56,7 @@ export default function DocumentsPage(): JSX.Element {
   };
 
   // カテゴリ詳細を取得する関数
-  const loadCategoryDetail = async (categoryId: number | string) => {
+  const loadCategoryDetail = async (categoryId: number) => {
     try {
       setLoading(true);
       const detail = await fetchCategoryDetail(categoryId);
@@ -75,7 +74,7 @@ export default function DocumentsPage(): JSX.Element {
 
   // サイドコンテンツのカテゴリ選択ハンドラ
   const handleSideContentCategorySelect = (categoryId: number) => {
-    setSelectedSideContentCategory(categoryId.toString());
+    setSelectedSideContentCategory(categoryId);
     setSelectedDocumentId(null);
     setDocumentDetail(null);
     console.log('Selected side content category:', categoryId);
@@ -135,7 +134,7 @@ export default function DocumentsPage(): JSX.Element {
             const minIdCategory = categories.reduce((min, current) => 
               current.id < min.id ? current : min
             );
-            setSelectedSideContentCategory(minIdCategory.id.toString());
+            setSelectedSideContentCategory(minIdCategory.id);
             await loadCategoryDetail(minIdCategory.id);
           }
         } else {
@@ -168,7 +167,7 @@ export default function DocumentsPage(): JSX.Element {
       showDocumentSideContent={true}
       onCategorySelect={handleSideContentCategorySelect}
       onDocumentSelect={handleDocumentSelect}
-      selectedCategoryId={selectedSideContentCategory ? parseInt(selectedSideContentCategory) : undefined}
+      selectedCategoryId={selectedSideContentCategory ? selectedSideContentCategory : undefined}
       selectedDocumentId={selectedDocumentId || undefined}
     >
          <div className="mb-6 align-left">

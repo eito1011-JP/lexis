@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\DocumentCategory;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 
 /**
  * カテゴリ詳細取得リクエスト
@@ -25,7 +26,7 @@ class GetCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_entity_id' => 'required|integer|min:1',
+            'category_id' => 'required|integer|min:1',
         ];
     }
 
@@ -35,7 +36,7 @@ class GetCategoryRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'category_entity_id' => $this->route('category_entity_id'),
+            'category_id' => $this->route('id'),
         ]);
     }
 }
