@@ -13,7 +13,6 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
-use Database\Factories\DocumentCategoryFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -43,6 +42,11 @@ class FetchCategoriesUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
+
+        // firstEntityを作成
+        $this->firstEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
     }
 
     /**
@@ -68,7 +72,8 @@ class FetchCategoriesUseCaseTest extends TestCase
             'title' => 'マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
-            'entity_id' => $mergedCategoryEntity->id,
+            'entity_id' => $this->firstEntity->id,
+            'organization_id' => $this->organization->id,
             'user_branch_id' => $userBranch->id,
         ]);
 
@@ -89,6 +94,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $draftCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
 
         $draftCategoryEditStartVersion = EditStartVersion::factory()->create([
@@ -127,11 +133,12 @@ class FetchCategoriesUseCaseTest extends TestCase
         $unEditedMergedCategoryEntity = DocumentCategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $unEditedMergedCategory = DocumentCategoryFactory::create([
+        $unEditedMergedCategory = DocumentCategory::factory()->create([
             'title' => '未編集マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
             'entity_id' => $unEditedMergedCategoryEntity->id,
+            'organization_id' => $this->organization->id,
         ]);
         $unEditedMergedCategoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -144,11 +151,12 @@ class FetchCategoriesUseCaseTest extends TestCase
         $editedMergedCategoryEntity = DocumentCategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $editedMergedCategory = DocumentCategoryFactory::create([
+        $editedMergedCategory = DocumentCategory::factory()->create([
             'title' => '編集済みマージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
             'entity_id' => $editedMergedCategoryEntity->id,
+            'organization_id' => $this->organization->id,
         ]);
         $editedMergedCategoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -158,12 +166,13 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 編集されたドラフトカテゴリ（表示される）
-        $editedDraftCategory = DocumentCategoryFactory::create([
+        $editedDraftCategory = DocumentCategory::factory()->create([
             'title' => '編集後ドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
             'user_branch_id' => $userBranch->id,
             'entity_id' => $editedMergedCategoryEntity->id,
+            'organization_id' => $this->organization->id,
         ]);
         $editedDraftCategoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -222,6 +231,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $draftCategoryEntityByOtherUser->id,
             'user_branch_id' => $otherUserBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $otherUserBranch->id,
@@ -240,6 +250,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::PUSHED->value,
             'entity_id' => $pushedCategoryEntityByOtherUser->id,
             'user_branch_id' => $otherUserBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $otherUserBranch->id,   
@@ -258,6 +269,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $draftCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -276,6 +288,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::PUSHED->value,
             'entity_id' => $pushedCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -293,6 +306,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
             'entity_id' => $mergedCategoryEntity->id,
+            'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -340,6 +354,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $category1Entity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
             'created_at' => now()->subHour(),
         ]);
         EditStartVersion::factory()->create([
@@ -357,6 +372,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $category2Entity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
             'created_at' => now(),
         ]);
         EditStartVersion::factory()->create([
@@ -376,6 +392,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::PUSHED->value,
             'entity_id' => $category3Entity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -419,6 +436,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $category3Entity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
             'created_at' => now()->addMinutes(2),
         ]);
         EditStartVersion::factory()->create([
@@ -437,6 +455,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $category1Entity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
             'created_at' => now(),
         ]);
         EditStartVersion::factory()->create([
@@ -455,6 +474,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $category2Entity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
             'created_at' => now()->addMinutes(1),
         ]);
         EditStartVersion::factory()->create([
@@ -497,6 +517,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $originalDraftCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
@@ -512,6 +533,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $originalDraftCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
         ]);
 
         // 編集時のEditStartVersion（original_version_id ≠ current_version_id）
