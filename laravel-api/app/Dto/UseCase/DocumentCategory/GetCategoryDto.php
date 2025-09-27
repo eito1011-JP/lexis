@@ -12,7 +12,7 @@ class GetCategoryDto extends UseCaseDto
     /**
      * カテゴリID
      */
-    public readonly int $categoryEntityId;
+    public readonly int $categoryId;
 
     /**
      * ユーザー
@@ -20,12 +20,18 @@ class GetCategoryDto extends UseCaseDto
     public readonly object $user;
 
     /**
+     * プルリクエスト編集セッショントークン
+     */
+    public readonly ?string $pullRequestEditSessionToken;
+
+    /**
      * コンストラクタ
      */
     public function __construct(array $data)
     {
-        $this->categoryEntityId = $data['category_entity_id'];
+        $this->categoryId = $data['category_id'];
         $this->user = $data['user'];
+        $this->pullRequestEditSessionToken = $data['pull_request_edit_session_token'] ?? null;
     }
 
     /**

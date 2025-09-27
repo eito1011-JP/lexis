@@ -35,7 +35,7 @@ export interface ApiCategoryDetailResponse {
  * カテゴリ詳細を取得する
  */
 export const fetchCategoryDetail = async (
-  categoryId: string | number
+  categoryId: number
 ): Promise<ApiCategoryDetailResponse> => {
   try {
     const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${categoryId}`);
