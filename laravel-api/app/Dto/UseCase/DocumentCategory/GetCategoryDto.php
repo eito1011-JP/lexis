@@ -12,7 +12,7 @@ class GetCategoryDto extends UseCaseDto
     /**
      * カテゴリID
      */
-    public readonly int $id;
+    public readonly int $categoryEntityId;
 
     /**
      * ユーザー
@@ -24,7 +24,7 @@ class GetCategoryDto extends UseCaseDto
      */
     public function __construct(array $data)
     {
-        $this->id = $data['id'];
+        $this->categoryEntityId = $data['category_entity_id'];
         $this->user = $data['user'];
     }
 
