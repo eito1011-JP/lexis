@@ -25,7 +25,6 @@ class FetchNodesUseCase
      */
     public function execute(FetchNodesDto $dto, User $user): array
     {
-        try {
             $userBranchId = $this->resolveUserBranchId($user, $dto->pullRequestEditSessionToken);
 
             if ($userBranchId === null) {
@@ -39,11 +38,6 @@ class FetchNodesUseCase
                 'categories' => $this->formatCategories($categories),
                 'documents' => $this->formatDocuments($documents),
             ];
-
-        } catch (\Exception $e) {
-            Log::error($e);
-            throw $e;
-        }
     }
 
     /**
@@ -149,14 +143,10 @@ class FetchNodesUseCase
      */
     private function fetchCurrentDocuments(int $categoryId, int $userBranchId): Collection
     {
-        Log::info('fetchCurrentDocuments: '.$categoryId);
-        
         $allVersionIds = $this->getCurrentVersionIds(EditStartVersionTargetType::DOCUMENT, $userBranchId);
-        
-        Log::info('currentVersionIds: '.json_encode($allVersionIds));
-        
+
         return DocumentVersion::whereIn('id', $allVersionIds)
-            ->where('category_id', $categoryId)
+            ->where('category_entity_id', $categoryId)
             ->where(function ($query) use ($userBranchId) {
                 $query->where('status', DocumentCategoryStatus::MERGED->value)
                       ->orWhere('user_branch_id', $userBranchId);
@@ -222,7 +212,7 @@ class FetchNodesUseCase
      */
     private function fetchMergedDocuments(int $categoryId): Collection
     {
-        return DocumentVersion::where('category_id', $categoryId)
+        return DocumentVersion::where('category_entity_id', $categoryId)
             ->where('status', DocumentCategoryStatus::MERGED->value)
             ->orderBy('id', 'asc')
             ->get();
