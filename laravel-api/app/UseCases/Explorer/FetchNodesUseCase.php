@@ -28,11 +28,11 @@ class FetchNodesUseCase
             $userBranchId = $this->resolveUserBranchId($user, $dto->pullRequestEditSessionToken);
 
             if ($userBranchId === null) {
-                return $this->fetchMergedNodes($dto->categoryId);
+                return $this->fetchMergedNodes($dto->categoryEntityId);
             }
 
-            $categories = $this->fetchCurrentCategories($dto->categoryId, $userBranchId);
-            $documents = $this->fetchCurrentDocuments($dto->categoryId, $userBranchId);
+            $categories = $this->fetchCurrentCategories($dto->categoryEntityId, $userBranchId);
+            $documents = $this->fetchCurrentDocuments($dto->categoryEntityId, $userBranchId);
 
             return [
                 'categories' => $this->formatCategories($categories),
