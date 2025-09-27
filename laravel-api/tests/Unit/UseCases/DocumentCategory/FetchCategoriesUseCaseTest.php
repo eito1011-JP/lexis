@@ -13,6 +13,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
+use Database\Factories\DocumentCategoryFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -42,24 +43,6 @@ class FetchCategoriesUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
-
-        // 最初のエンティティを作成（FetchCategoriesUseCaseが最初のエンティティを取得するため）
-        $this->firstEntity = DocumentCategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-    }
-
-
-    /**
-     * 最初のエンティティに関連するカテゴリを作成するヘルパーメソッド
-     * （FetchCategoriesUseCaseが最初のエンティティのカテゴリのみを返すため）
-     */
-    private function createCategoryInFirstEntity(array $attributes): DocumentCategory
-    {
-        return DocumentCategory::factory()->create(array_merge([
-            'entity_id' => $this->firstEntity->id,
-            'organization_id' => $this->organization->id,
-        ], $attributes));
     }
 
     /**
@@ -70,20 +53,49 @@ class FetchCategoriesUseCaseTest extends TestCase
         // Arrange
         $dto = new FetchCategoriesDto(parentEntityId: null);
 
+        $userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
+
         // 最初のエンティティに関連するマージ済みカテゴリ（表示される）
-        $mergedCategory = $this->createCategoryInFirstEntity([
+        $mergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
+            'entity_id' => $mergedCategoryEntity->id,
+            'user_branch_id' => $userBranch->id,
+        ]);
+
+        $mergedCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $mergedCategory->id,
         ]);
 
         // 他のエンティティに関連するドラフトカテゴリ（表示されない）
-        // 注意：現在のFetchCategoriesUseCaseの実装では、最初のエンティティのカテゴリのみを返すため、
-        // このテストケースでは実際には別のエンティティを作成せず、同じエンティティを使用します
-        $draftCategory = $this->createCategoryInFirstEntity([
+        $draftCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $draftCategory = DocumentCategory::factory()->create([
             'title' => 'ドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $draftCategoryEntity->id,
+            'user_branch_id' => $userBranch->id,
+        ]);
+
+        $draftCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $draftCategory->id,
+            'current_version_id' => $draftCategory->id,
         ]);
 
         // Act
@@ -111,39 +123,49 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
 
-        // 新規作成されたドラフトカテゴリ（最初のエンティティに関連）
-        $draftCategory = $this->createCategoryInFirstEntity([
-            'title' => 'ドラフトカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => $userBranch->id,
-        ]);
-
         // 編集対象になっていないマージ済みカテゴリ（表示される）
-        $unEditedMergedCategory = $this->createCategoryInFirstEntity([
+        $unEditedMergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $unEditedMergedCategory = DocumentCategoryFactory::create([
             'title' => '未編集マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
+            'entity_id' => $unEditedMergedCategoryEntity->id,
+        ]);
+        $unEditedMergedCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $unEditedMergedCategory->id,
+            'current_version_id' => $unEditedMergedCategory->id,
         ]);
 
         // 編集対象になったマージ済みカテゴリ（表示されない）
-        $editedMergedCategory = $this->createCategoryInFirstEntity([
+        $editedMergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $editedMergedCategory = DocumentCategoryFactory::create([
             'title' => '編集済みマージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
+            'entity_id' => $editedMergedCategoryEntity->id,
+        ]);
+        $editedMergedCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $editedMergedCategory->id,
+            'current_version_id' => $editedMergedCategory->id,
         ]);
 
         // 編集されたドラフトカテゴリ（表示される）
-        $editedDraftCategory = $this->createCategoryInFirstEntity([
+        $editedDraftCategory = DocumentCategoryFactory::create([
             'title' => '編集後ドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
             'user_branch_id' => $userBranch->id,
+            'entity_id' => $editedMergedCategoryEntity->id,
         ]);
-
-        // 編集開始バージョンを作成（編集対象のマージ済みカテゴリを指定）
-        // original_version_id ≠ current_version_id なので編集対象として扱われる
-        EditStartVersion::factory()->create([
+        $editedDraftCategoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $editedMergedCategory->id,
@@ -154,9 +176,8 @@ class FetchCategoriesUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertCount(3, $result);
+        $this->assertCount(2, $result);
         $resultTitles = $result->pluck('title')->toArray();
-        $this->assertContains('ドラフトカテゴリ', $resultTitles);
         $this->assertContains('編集後ドラフトカテゴリ', $resultTitles);
         $this->assertContains('未編集マージ済みカテゴリ', $resultTitles);
         // 編集対象となったマージ済みカテゴリは表示されない
@@ -179,6 +200,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         $otherUser = User::factory()->create();
         OrganizationMember::factory()->create([
             'user_id' => $otherUser->id,
+            'organization_id' => $this->organization->id,
         ]);
 
         // 他のユーザーのuser_branchを作成
@@ -190,43 +212,93 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
 
-        // 他のユーザーが作成したドラフトカテゴリ（表示されない）
-        $draftCategoryByOtherUser = $this->createCategoryInFirstEntity([
+        // 他のユーザーが作成したドラフトカテゴリ用のエンティティ（表示されない）
+        $draftCategoryEntityByOtherUser = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $draftCategoryByOtherUser = DocumentCategory::factory()->create([
             'title' => '他ユーザーのドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $draftCategoryEntityByOtherUser->id,
             'user_branch_id' => $otherUserBranch->id,
         ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $draftCategoryByOtherUser->id,
+            'current_version_id' => $draftCategoryByOtherUser->id,
+        ]);
 
-        // 他のユーザーが作成したプッシュ済みカテゴリ（表示されない）
-        $pushedCategoryByOtherUser = $this->createCategoryInFirstEntity([
+        // 他のユーザーが作成したプッシュ済みカテゴリ用のエンティティ（表示されない）
+        $pushedCategoryEntityByOtherUser = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $pushedCategoryByOtherUser = DocumentCategory::factory()->create([
             'title' => '他ユーザーのプッシュ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
+            'entity_id' => $pushedCategoryEntityByOtherUser->id,
             'user_branch_id' => $otherUserBranch->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,   
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $pushedCategoryByOtherUser->id,
+            'current_version_id' => $pushedCategoryByOtherUser->id,
         ]);
 
         // 現在のユーザーのドラフトカテゴリ（表示される）
-        $draftCategory = $this->createCategoryInFirstEntity([
+        $draftCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $draftCategory = DocumentCategory::factory()->create([
             'title' => '自分のドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $draftCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $draftCategory->id,
+            'current_version_id' => $draftCategory->id,
         ]);
 
         // 現在のユーザーのプッシュ済みカテゴリ（表示される）
-        $pushedCategory = $this->createCategoryInFirstEntity([
+        $pushedCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $pushedCategory = DocumentCategory::factory()->create([
             'title' => '自分のプッシュ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
+            'entity_id' => $pushedCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $pushedCategory->id,
+            'current_version_id' => $pushedCategory->id,
         ]);
 
         // 未編集のマージ済みカテゴリ（表示される）
-        $mergedCategory = $this->createCategoryInFirstEntity([
+        $mergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $mergedCategory = DocumentCategory::factory()->create([
             'title' => 'マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
+            'entity_id' => $mergedCategoryEntity->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $mergedCategory->id,
         ]);
 
         // Act
@@ -259,28 +331,57 @@ class FetchCategoriesUseCaseTest extends TestCase
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
 
         // 同じエンティティに関連するカテゴリ（表示される）
-        $category1 = $this->createCategoryInFirstEntity([
+        $category1Entity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $category1 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ1',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $category1Entity->id,
             'user_branch_id' => $userBranch->id,
             'created_at' => now()->subHour(),
         ]);
-
-        $category2 = $this->createCategoryInFirstEntity([
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category1->id,
+            'current_version_id' => $category1->id,
+        ]);
+        $category2Entity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $category2 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ2',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $category2Entity->id,
             'user_branch_id' => $userBranch->id,
             'created_at' => now(),
         ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category2->id,
+            'current_version_id' => $category2->id,
+        ]);
 
         // 3つ目のカテゴリ（表示される）
-        $category3 = $this->createCategoryInFirstEntity([
+        $category3Entity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $category3 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ3',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
+            'entity_id' => $category3Entity->id,
             'user_branch_id' => $userBranch->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category3->id,
+            'current_version_id' => $category3->id,
         ]);
 
         // Act
@@ -309,33 +410,59 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
 
-        $category3 = $this->createCategoryInFirstEntity([
+        $category3Entity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $category3 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ3',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $category3Entity->id,
             'user_branch_id' => $userBranch->id,
-            'organization_id' => $this->organization->id,
             'created_at' => now()->addMinutes(2),
         ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category3->id,
+            'current_version_id' => $category3->id,
+        ]);
 
-        $category1 = $this->createCategoryInFirstEntity([
+        $category1Entity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $category1 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ1',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $category1Entity->id,
             'user_branch_id' => $userBranch->id,
-            'organization_id' => $this->organization->id,
             'created_at' => now(),
         ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category1->id,
+            'current_version_id' => $category1->id,
+        ]);
 
-        $category2 = $this->createCategoryInFirstEntity([
+        $category2Entity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $category2 = DocumentCategory::factory()->create([
             'title' => 'カテゴリ2',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $category2Entity->id,
             'user_branch_id' => $userBranch->id,
-            'organization_id' => $this->organization->id,
             'created_at' => now()->addMinutes(1),
         ]);
-
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category2->id,
+            'current_version_id' => $category2->id,
+        ]);
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -347,235 +474,6 @@ class FetchCategoriesUseCaseTest extends TestCase
     }
 
     /**
-     * @test
-     */
-    public function test_returns_merged_and_updated_categories_when_active_user_branch_exists_with_edit_session(): void
-    {
-        // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        // 再編集の場合（activeなuser_branchがあり、かつpullRequestEditSessionTokenがある）
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
-
-        $mergedCategory = $this->createCategoryInFirstEntity([
-            'title' => 'マージ済みカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        $pushedCategory = $this->createCategoryInFirstEntity([
-            'title' => 'プッシュ済みカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::PUSHED->value,
-            'user_branch_id' => $userBranch->id,
-        ]);
-
-        $draftCategory = $this->createCategoryInFirstEntity([
-            'title' => 'ドラフトカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => $userBranch->id,
-        ]);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertCount(3, $result);
-        $resultTitles = $result->pluck('title')->toArray();
-        $this->assertContains('マージ済みカテゴリ', $resultTitles);
-        $this->assertContains('プッシュ済みカテゴリ', $resultTitles);
-        $this->assertContains('ドラフトカテゴリ', $resultTitles);
-    }
-
-    /**
-     * @test
-     */
-    public function test_filters_only_by_organization_id(): void
-    {
-        // Arrange
-        $otherOrganization = Organization::factory()->create();
-        $dto = new FetchCategoriesDto(parentEntityId: null);
-
-        $correctOrgCategory = $this->createCategoryInFirstEntity([
-            'title' => '正しい組織のカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        // 他の組織のエンティティとカテゴリを作成（表示されない）
-        $otherEntity = DocumentCategoryEntity::factory()->create([
-            'organization_id' => $otherOrganization->id,
-        ]);
-        $wrongOrgCategory = DocumentCategory::factory()->create([
-            'entity_id' => $otherEntity->id,
-            'title' => '他の組織のカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-            'organization_id' => $otherOrganization->id,
-        ]);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertCount(1, $result);
-        $this->assertEquals('正しい組織のカテゴリ', $result->first()->title);
-    }
-
-    /**
-     * @test
-     */
-    public function test_returns_draft_and_unedited_merged_categories_including_edited_versions(): void
-    {
-        // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
-
-        // 新規作成されたドラフトカテゴリ
-        $newDraftCategory = $this->createCategoryInFirstEntity([
-            'title' => '新規ドラフトカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => $userBranch->id,
-        ]);
-
-        // 新規作成時のEditStartVersionを作成（original_version_id = current_version_id）
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $newDraftCategory->id,
-            'current_version_id' => $newDraftCategory->id,
-        ]);
-
-        // 編集対象となったマージ済みカテゴリ（表示されない）
-        $originalMergedCategory = $this->createCategoryInFirstEntity([
-            'title' => '元のマージ済みカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        // 編集されたドラフトカテゴリ（表示される）
-        $editedDraftCategory = $this->createCategoryInFirstEntity([
-            'title' => '編集されたドラフトカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => $userBranch->id,
-        ]);
-
-        // 編集開始バージョンを作成（元のマージ済みカテゴリを編集対象として指定）
-        // original_version_id ≠ current_version_id なので編集対象として扱われる
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $originalMergedCategory->id,
-            'current_version_id' => $editedDraftCategory->id,
-        ]);
-
-        // 編集対象になっていないマージ済みカテゴリ（表示される）
-        $unEditedMergedCategory = $this->createCategoryInFirstEntity([
-            'title' => '未編集マージ済みカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertCount(3, $result);
-        $resultTitles = $result->pluck('title')->toArray();
-        $this->assertContains('新規ドラフトカテゴリ', $resultTitles);
-        $this->assertContains('編集されたドラフトカテゴリ', $resultTitles);
-        $this->assertContains('未編集マージ済みカテゴリ', $resultTitles);
-        // 編集対象となったマージ済みカテゴリは表示されない
-        $this->assertNotContains('元のマージ済みカテゴリ', $resultTitles);
-    }
-
-    /**
-     * @test
-     */
-    public function test_distinguishes_between_new_and_edited_categories(): void
-    {
-        // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
-
-        // ケース1: 新規作成されたマージ済みカテゴリ（表示される）
-        $newMergedCategory = $this->createCategoryInFirstEntity([
-            'title' => '新規作成マージ済みカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        // 新規作成時のEditStartVersion（original_version_id = current_version_id）
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $newMergedCategory->id,
-            'current_version_id' => $newMergedCategory->id,
-        ]);
-
-        // ケース2: 実際に編集されたマージ済みカテゴリ（元のカテゴリは表示されない）
-        $originalMergedCategory = $this->createCategoryInFirstEntity([
-            'title' => '編集対象元マージ済みカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        $editedDraftCategory = $this->createCategoryInFirstEntity([
-            'title' => '編集後ドラフトカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => $userBranch->id,
-        ]);
-
-        // 編集時のEditStartVersion（original_version_id ≠ current_version_id）
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $originalMergedCategory->id,
-            'current_version_id' => $editedDraftCategory->id,
-        ]);
-
-        // ケース3: 編集対象になっていないマージ済みカテゴリ（表示される）
-        $unEditedMergedCategory = $this->createCategoryInFirstEntity([
-            'title' => '未編集マージ済みカテゴリ',
-            'parent_entity_id' => null,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertCount(3, $result);
-        $resultTitles = $result->pluck('title')->toArray();
-
-        // 表示されるもの
-        $this->assertContains('新規作成マージ済みカテゴリ', $resultTitles);
-        $this->assertContains('編集後ドラフトカテゴリ', $resultTitles);
-        $this->assertContains('未編集マージ済みカテゴリ', $resultTitles);
-
-        // 表示されないもの（編集対象となった元のマージ済みカテゴリ）
-        $this->assertNotContains('編集対象元マージ済みカテゴリ', $resultTitles);
-    }
-
-        /**
      * @test
      */
     public function test_latest_draft_category_with_user_branch(): void
@@ -590,14 +488,16 @@ class FetchCategoriesUseCaseTest extends TestCase
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
 
         // ケース1: ドラフトカテゴリ（表示されない）
-        $originalDraftCategory = $this->createCategoryInFirstEntity([
+        $originalDraftCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $originalDraftCategory = DocumentCategory::factory()->create([
             'title' => '元のドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $originalDraftCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
         ]);
-
-        // 新規作成時のEditStartVersion（original_version_id = current_version_id）
         EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
@@ -606,10 +506,11 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // ケース2: draftカテゴリを再編集したカテゴリ(表示される)
-        $editedDraftCategory = $this->createCategoryInFirstEntity([
+        $editedDraftCategory = DocumentCategory::factory()->create([
             'title' => '編集後ドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $originalDraftCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
         ]);
 
