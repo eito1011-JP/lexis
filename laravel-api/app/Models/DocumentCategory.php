@@ -17,7 +17,7 @@ class DocumentCategory extends Model
         'title',
         'description',
         'status',
-        'parent_id',
+        'parent_entity_id',
         'user_branch_id',
         'pull_request_edit_session_id',
         'is_deleted',
@@ -38,7 +38,7 @@ class DocumentCategory extends Model
     public static function getSubCategories(int $parentId, ?int $userBranchId = null, ?int $editPullRequestId = null): \Illuminate\Database\Eloquent\Collection
     {
         $query = self::select('title', 'position')
-            ->where('parent_id', $parentId)
+            ->where('parent_entity_id', $parentId)
             ->where(function ($q) use ($userBranchId) {
                 $q->where('status', 'merged')
                     ->orWhere(function ($subQ) use ($userBranchId) {
@@ -84,7 +84,7 @@ class DocumentCategory extends Model
      */
     public function parent()
     {
-        return $this->belongsTo(DocumentCategory::class, 'parent_id');
+        return $this->belongsTo(DocumentCategory::class, 'parent_entity_id');
     }
 
     /**
@@ -92,7 +92,7 @@ class DocumentCategory extends Model
      */
     public function children()
     {
-        return $this->hasMany(DocumentCategory::class, 'parent_id');
+        return $this->hasMany(DocumentCategory::class, 'parent_entity_id');
     }
 
     /**

@@ -37,7 +37,7 @@ class UniqueSlugInSameParent implements ValidationRule
         $parentId = $documentCategoryService->getIdFromPath(implode('/', $categoryPath));
 
         $duplicateSlug = DocumentCategory::where('slug', $value)
-            ->where('parent_id', $parentId)
+            ->where('parent_entity_id', $parentId)
             ->where(function ($query) {
                 if ($this->currentCategoryId !== null) {
                     $query->orWhere('id', '!=', $this->currentCategoryId);

@@ -9,8 +9,8 @@ import { API_CONFIG } from '@/components/admin/api/config';
 /**
  * カテゴリ新規作成ページ
  * URLパスに応じてルートカテゴリまたはサブカテゴリを作成
- * - /categories/create: parent_id = null (ルートカテゴリ)
- * - /categories/:categoryId/create: parent_id = :categoryId (サブカテゴリ)
+ * - /categories/create: parent_entity_id = null (ルートカテゴリ)
+ * - /categories/:categoryId/create: parent_entity_id = :categoryId (サブカテゴリ)
  */
 export default function CreateRootCategoryPage(): JSX.Element {
   const navigate = useNavigate();
@@ -32,13 +32,13 @@ export default function CreateRootCategoryPage(): JSX.Element {
     setError(null);
 
     try {
-      // URLパラメータに基づいてparent_idを設定
+      // URLパラメータに基づいてparent_entity_idを設定
       const parentId = categoryId ? parseInt(categoryId, 10) : null;
 
       const payload = {
         title: formData.title,
         description: formData.description,
-        parent_id: parentId, // URLにidがある場合はサブカテゴリ、ない場合はルートカテゴリ
+        parent_entity_id: parentId, // URLにidがある場合はサブカテゴリ、ない場合はルートカテゴリ
         edit_pull_request_id: null,
         pull_request_edit_token: null,
       };

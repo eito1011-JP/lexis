@@ -25,7 +25,7 @@ class FetchCategoriesUseCase
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
 
         $query = DocumentCategory::select('id', 'title')
-            ->where('parent_id', $dto->parentId)
+            ->where('parent_entity_id', $dto->parentEntityId)
             ->where('organization_id', $user->organizationMember->organization_id);
 
         if ($activeUserBranch) {

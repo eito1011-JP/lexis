@@ -62,16 +62,18 @@ class UpdateDocumentCategoryUseCase
 
             // 5. 編集対象のexistingCategoryを取得
             $existingCategory = DocumentCategory::find($dto->categoryId);
+            $existingCategoryEntity = $existingCategory->entity;
 
             // 6. if existingCategoryがない場合 throw new NotFoundException;
-            if (! $existingCategory) {
+            if (! $existingCategory || ! $existingCategoryEntity) {
                 throw new NotFoundException;
             }
 
             // 7. DocumentCategoryを作成
             $newCategory = DocumentCategory::create([
+                'entity_id' => $existingCategoryEntity->id,
                 'title' => $dto->title,
-                'parent_id' => $existingCategory->parent_id,
+                'parent_entity_id' => $existingCategory->parent_entity_id,
                 'description' => $dto->description,
                 'user_branch_id' => $userBranchId,
                 'pull_request_edit_session_id' => $pullRequestEditSessionId,

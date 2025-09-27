@@ -47,7 +47,7 @@ const fetchCategories = async (parentId: number | null = null): Promise<ApiCateg
   try {
     const params = new URLSearchParams();
     if (parentId !== null) {
-      params.append('parent_id', parentId.toString());
+      params.append('parent_entity_id', parentId.toString());
     }
     
     const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
@@ -167,7 +167,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
         setIsLoading(true);
         setError(null);
         
-        // parent_id=nullですべてのルートカテゴリを取得（制限なし）
+        // parent_entity_id=nullですべてのルートカテゴリを取得（制限なし）
         const apiCategories = await fetchCategories(null);
         const transformedCategories = transformApiDataToCategories(apiCategories);
         
@@ -233,7 +233,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     setCreateModalButtonRef(undefined);
   };
 
-  // ルートカテゴリ作成のハンドラ（parent_id = null）
+  // ルートカテゴリ作成のハンドラ（parent_entity_id = null）
   const handleCreateRootCategory = () => {
     const url = `/categories/create`;
     window.location.href = url;

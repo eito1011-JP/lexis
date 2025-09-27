@@ -43,7 +43,7 @@ export default function DocumentsPage(): JSX.Element {
     try {
       const params = new URLSearchParams();
       if (parentId !== null) {
-        params.append('parent_id', parentId.toString());
+        params.append('parent_entity_id', parentId.toString());
       }
       
       const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;

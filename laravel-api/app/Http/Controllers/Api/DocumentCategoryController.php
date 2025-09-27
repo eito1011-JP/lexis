@@ -61,9 +61,11 @@ class DocumentCategoryController extends ApiBaseController
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
             // DTOを作成してUseCaseを実行
@@ -74,12 +76,13 @@ class DocumentCategoryController extends ApiBaseController
                 'categories' => $categories,
             ]);
 
-        } catch (\Exception $e) {
-            Log::error('カテゴリ一覧の取得に失敗しました', ['error' => $e->getMessage()]);
-
-            return response()->json([
-                'error' => 'カテゴリ一覧の取得に失敗しました',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 
@@ -264,7 +267,7 @@ class DocumentCategoryController extends ApiBaseController
 
             // 削除対象のルートカテゴリの存在確認
             $rootCategory = DocumentCategory::where('slug', $slug)
-                ->where('parent_id', $parentCategoryId)
+                ->where('parent_entity_id', $parentCategoryId)
                 ->where(function ($query) use ($userBranchId) {
                     $query->where('status', DocumentCategoryStatus::MERGED->value)
                         ->orWhere(function ($subQuery) use ($userBranchId) {
@@ -284,14 +287,14 @@ class DocumentCategoryController extends ApiBaseController
             $categoryIds = DB::select('
                 WITH RECURSIVE tree AS (
                     SELECT id FROM document_categories
-                    WHERE slug = ? AND parent_id = ?
+                    WHERE slug = ? AND parent_entity_id = ?
                     AND (status = ? OR (status != ? AND user_branch_id = ?))
                     
                     UNION ALL
                     
                     SELECT dc.id
                     FROM document_categories dc
-                    INNER JOIN tree t ON dc.parent_id = t.id
+                    INNER JOIN tree t ON dc.parent_entity_id = t.id
                     WHERE (dc.status = ? OR (dc.status != ? AND dc.user_branch_id = ?))
                 )
                 SELECT id FROM tree
@@ -355,7 +358,7 @@ class DocumentCategoryController extends ApiBaseController
                 $newCategoryData[] = [
                     'sidebar_label' => $category->sidebar_label,
                     'slug' => $category->slug,
-                    'parent_id' => $category->parent_id,
+                    'parent_entity_id' => $category->parent_entity_id,
                     'position' => $category->position,
                     'description' => $category->description,
                     'user_branch_id' => $userBranchId,
@@ -519,7 +522,7 @@ class DocumentCategoryController extends ApiBaseController
                     ];
                 });
 
-            $subCategories = DocumentCategory::where('parent_id', $category->id)
+            $subCategories = DocumentCategory::where('parent_entity_id', $category->id)
                 ->select('id', 'name', 'slug')
                 ->get()
                 ->map(function ($cat) {
