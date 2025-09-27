@@ -8,12 +8,12 @@ import { API_CONFIG } from '@/components/admin/api/config';
 
 /**
  * カテゴリ新規作成ページ
- * /documents/categories/create?parent_id=xxx でアクセス
+ * /documents/categories/create?parent_entity_id=xxx でアクセス
  */
 export default function CreateCategoryPage(): JSX.Element {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const parentId = searchParams.get('parent_id');
+  const parentId = searchParams.get('parent_entity_id');
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number>(4);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export default function CreateCategoryPage(): JSX.Element {
       const payload = {
         title: formData.title,
         description: formData.description,
-        parent_id: parentId ? parseInt(parentId) : null,
+        parent_entity_id: parentId ? parseInt(parentId) : null,
         edit_pull_request_id: null,
         pull_request_edit_token: null,
       };

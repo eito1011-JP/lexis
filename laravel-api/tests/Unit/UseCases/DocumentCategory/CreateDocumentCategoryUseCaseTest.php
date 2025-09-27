@@ -91,7 +91,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
-        $this->assertEquals(null, $result->parent_id);
+        $this->assertEquals(null, $result->parent_entity_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertNull($result->pull_request_edit_session_id);
 
@@ -169,7 +169,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function test_create_category_with_parent_id(): void
+    public function test_create_category_with_parent_entity_id(): void
     {
         // Arrange
         // 実際のUserBranchレコードを作成
@@ -206,7 +206,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
-        $this->assertEquals($parentCategory->id, $result->parent_id);
+        $this->assertEquals($parentCategory->id, $result->parent_entity_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
     }
 

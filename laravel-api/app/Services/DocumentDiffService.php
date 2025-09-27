@@ -42,7 +42,7 @@ class DocumentDiffService
                 if ($isDocument) {
                     $documentVersions->push($currentObject);
                 } else {
-                    // parent_idから階層構造を取得して、document_categoriesに追加
+                    // parent_entity_idから階層構造を取得して、document_categoriesに追加
                     $currentObject->category_path = $this->documentCategoryService->createCategoryPath($currentObject);
                     $documentCategories->push($currentObject);
                 }

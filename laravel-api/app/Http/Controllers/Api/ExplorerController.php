@@ -54,7 +54,6 @@ class ExplorerController extends ApiBaseController
 
         } catch (Exception $e) {
             Log::error($e);
-
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 'サーバーエラーが発生しました',

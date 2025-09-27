@@ -24,7 +24,7 @@ class CreateDocumentRequest extends FormRequest
         return [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'category_id' => 'required|integer|exists:document_categories,id',
+            'category_entity_id' => 'required|integer|exists:document_categories,id',
             'edit_pull_request_id' => 'nullable|integer',
             'pull_request_edit_token' => 'nullable|string',
         ];
@@ -38,7 +38,7 @@ class CreateDocumentRequest extends FormRequest
         return [
             'title' => __('validation.attributes.title'),
             'description' => __('validation.attributes.description'),
-            'category_id' => __('validation.attributes.category_id'),
+            'category_entity_id' => __('validation.attributes.category_entity_id'),
             'edit_pull_request_id' => __('validation.attributes.edit_pull_request_id'),
             'pull_request_edit_token' => __('validation.attributes.pull_request_edit_token'),
         ];

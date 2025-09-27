@@ -12,9 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('document_versions', function (Blueprint $table) {
-            if (Schema::hasColumn('document_versions', 'description')) {
-                $table->text('description')->nullable()->change();
-            }
+            $table->renameColumn('sidebar_label', 'title');
+            $table->renameColumn('content', 'description');
         });
     }
 
@@ -24,9 +23,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('document_versions', function (Blueprint $table) {
-            if (Schema::hasColumn('document_versions', 'description')) {
-                $table->text('description')->nullable(false)->change();
-            }
+            $table->renameColumn('title', 'sidebar_label');
+            $table->renameColumn('description', 'content');
         });
     }
 };

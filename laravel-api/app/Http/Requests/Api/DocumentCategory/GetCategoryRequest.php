@@ -25,7 +25,7 @@ class GetCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => 'required|integer|min:1',
+            'category_entity_id' => 'required|integer|min:1',
         ];
     }
 
@@ -35,7 +35,7 @@ class GetCategoryRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'id' => $this->route('id'),
+            'category_entity_id' => $this->route('category_entity_id'),
         ]);
     }
 }

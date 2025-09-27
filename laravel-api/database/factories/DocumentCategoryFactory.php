@@ -4,6 +4,8 @@ namespace Database\Factories;
 
 use App\Enums\DocumentCategoryStatus;
 use App\Models\DocumentCategory;
+use App\Models\DocumentCategoryEntity;
+use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -26,10 +28,12 @@ class DocumentCategoryFactory extends Factory
     public function definition(): array
     {
         return [
+            'entity_id' => DocumentCategoryEntity::factory(),
+            'parent_entity_id' => null,
+            'organization_id' => Organization::factory(),
             'title' => $this->faker->words(2, true),
             'description' => $this->faker->sentence(),
             'status' => DocumentCategoryStatus::MERGED->value,
-            'parent_id' => null,
             'user_branch_id' => null,
             'is_deleted' => false,
             'deleted_at' => null,
@@ -39,10 +43,10 @@ class DocumentCategoryFactory extends Factory
     /**
      * Indicate that the category is a child category.
      */
-    public function child(DocumentCategory $parent): static
+    public function child(DocumentCategoryEntity $parentEntity): static
     {
         return $this->state(fn (array $attributes) => [
-            'parent_id' => $parent->id,
+            'parent_entity_id' => $parentEntity->id,
         ]);
     }
 

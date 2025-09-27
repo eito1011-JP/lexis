@@ -6,9 +6,13 @@ use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
+use App\Models\DocumentCategoryEntity;
 use App\Models\EditStartVersion;
 use App\Models\User;
 use App\Models\UserBranch;
+use Http\Discovery\Exception\NotFoundException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Collection;
 
 class FetchCategoriesUseCase
@@ -24,49 +28,59 @@ class FetchCategoriesUseCase
         // ユーザーのアクティブブランチを取得
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
 
-        $query = DocumentCategory::select('id', 'title')
-            ->where('parent_id', $dto->parentId)
-            ->where('organization_id', $user->organizationMember->organization_id);
+        if (!$activeUserBranch) {
+            // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
+            return DocumentCategory::select('id', 'entity_id', 'title')
+                ->where('parent_entity_id', $dto->parentEntityId)
+                ->where('organization_id', $user->organizationMember->organization_id)
+                ->where('status', DocumentCategoryStatus::MERGED->value)
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
 
-        if ($activeUserBranch) {
-            // activeなuser_branchがある場合
-            if ($dto->pullRequestEditSessionToken) {
-                // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
-                $query->where(function ($subQuery) use ($activeUserBranch) {
-                    $subQuery->where(function ($q1) use ($activeUserBranch) {
+        // EditStartVersionから現在のバージョンIDを取得
+        $currentVersionIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+            ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
+            ->pluck('current_version_id');
+
+        if ($dto->pullRequestEditSessionToken) {
+            // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            return DocumentCategory::select('id', 'entity_id', 'title')
+                ->where('parent_entity_id', $dto->parentEntityId)
+                ->where('organization_id', $user->organizationMember->organization_id)
+                ->whereIn('id', $currentVersionIds)
+                ->where(function ($query) use ($activeUserBranch) {
+                    $query->where(function ($q1) use ($activeUserBranch) {
                         $q1->whereIn('status', [
                             DocumentCategoryStatus::PUSHED->value,
                             DocumentCategoryStatus::DRAFT->value,
                         ])
                             ->where('user_branch_id', $activeUserBranch->id);
                     })->orWhere('status', DocumentCategoryStatus::MERGED->value);
-                });
-            } else {
-                // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
-                // ただし、編集対象となったカテゴリは除外する（新規作成は除外しない）
-                $editedCategoryIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
-                    ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
-                    ->whereColumn('original_version_id', '!=', 'current_version_id') // 新規作成は除外（original_version_id = current_version_id）
-                    ->pluck('original_version_id');
-
-                $query->where(function ($subQuery) use ($activeUserBranch, $editedCategoryIds) {
-                    $subQuery->where(function ($q1) use ($activeUserBranch, $editedCategoryIds) {
-                        $q1->where('status', DocumentCategoryStatus::DRAFT->value)
-                            ->where('user_branch_id', $activeUserBranch->id)
-                            ->whereNotIn('id', $editedCategoryIds);
-                    })->orWhere(function ($q2) use ($editedCategoryIds) {
-                        $q2->where('status', DocumentCategoryStatus::MERGED->value)
-                            ->whereNotIn('id', $editedCategoryIds);
-                    });
-                });
-            }
+                })
+                ->orderBy('created_at', 'asc')
+                ->get();
         } else {
-            // 未編集の場合：MERGEDステータスのみ取得
-            $query->where('status', DocumentCategoryStatus::MERGED->value);
-        }
+            // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            // ただし、編集対象となったカテゴリは除外する
+            $editedCategoryIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+                ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
+                ->whereColumn('original_version_id', '!=', 'current_version_id')
+                ->pluck('original_version_id');
 
-        // ステータス優先度とcreated_atで並び替え
-        // PUSHEDが最初、DRAFTが後、同一ステータス内ではcreated_at昇順
-        return $query->orderBy('created_at', 'asc')->get();
+            return DocumentCategory::select('id', 'entity_id', 'title')
+                ->where('parent_entity_id', $dto->parentEntityId)
+                ->where('organization_id', $user->organizationMember->organization_id)
+                ->whereIn('id', $currentVersionIds)
+                ->whereNotIn('id', $editedCategoryIds) // 編集対象となった元のカテゴリを除外
+                ->where(function ($query) use ($activeUserBranch) {
+                    $query->where(function ($q1) use ($activeUserBranch) {
+                        $q1->where('status', DocumentCategoryStatus::DRAFT->value)
+                            ->where('user_branch_id', $activeUserBranch->id);
+                    })->orWhere('status', DocumentCategoryStatus::MERGED->value);
+                })
+                ->orderBy('created_at', 'asc')
+                ->get();
+        }
     }
 }
