@@ -17,7 +17,7 @@ class FetchNodesDto extends UseCaseDto
     public static function fromRequest(array $requestData): self
     {
         return new self(
-            categoryId: $requestData['category_entity_id'],
+            categoryEntityId: $requestData['category_entity_id'],
             pullRequestEditSessionToken: $requestData['pull_request_edit_session_token'] ?? null,
         );
     }
