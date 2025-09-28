@@ -4,11 +4,14 @@ namespace App\Services;
 
 use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
+use App\Enums\EditStartVersionTargetType;
 use App\Enums\FixRequestStatus;
 use App\Models\DocumentCategory;
+use App\Models\EditStartVersion;
 use App\Models\FixRequest;
+use App\Models\User;
+use App\Models\UserBranch;
 use Illuminate\Database\Eloquent\Collection;
-use InvalidArgumentException;
 
 class DocumentCategoryService
 {
@@ -138,5 +141,66 @@ class DocumentCategoryService
         }
 
         return implode('/', $path);
+    }
+
+    /**
+     * 作業コンテキストに応じて適切なカテゴリを取得
+     */
+    public function getCategoryByWorkContext(
+        int $categoryEntityId,
+        User $user,
+        ?string $pullRequestEditSessionToken = null
+    ): ?DocumentCategory {
+        // ユーザーのアクティブブランチを取得
+        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+
+        $baseQuery = DocumentCategory::with(['parent.parent.parent.parent.parent.parent.parent']) // 7階層まで親カテゴリを読み込み
+            ->where('entity_id', $categoryEntityId)
+            ->where('organization_id', $user->organizationMember->organization_id);
+
+        if (!$activeUserBranch) {
+            // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
+            return $baseQuery->where('status', DocumentCategoryStatus::MERGED->value)->first();
+        }
+
+        // EditStartVersionから現在のバージョンIDを取得
+        $currentVersionId = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+            ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
+            ->where('original_version_id', function ($query) use ($categoryEntityId) {
+                $query->select('id')
+                    ->from('document_categories')
+                    ->where('entity_id', $categoryEntityId)
+                    ->where('status', DocumentCategoryStatus::MERGED->value);
+            })
+            ->value('current_version_id');
+
+        if ($currentVersionId) {
+            // EditStartVersionに登録されている場合は、現在のバージョンを取得
+            $category = $baseQuery->where('id', $currentVersionId)->first();
+            if ($category) {
+                return $category;
+            }
+        }
+
+        if ($pullRequestEditSessionToken) {
+            // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->whereIn('status', [
+                        DocumentCategoryStatus::PUSHED->value,
+                        DocumentCategoryStatus::DRAFT->value,
+                    ])
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentCategoryStatus::MERGED->value);
+            })->orderBy('created_at', 'desc')->first();
+        } else {
+            // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->where('status', DocumentCategoryStatus::DRAFT->value)
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentCategoryStatus::MERGED->value);
+            })->orderBy('created_at', 'desc')->first();
+        }
     }
 }
