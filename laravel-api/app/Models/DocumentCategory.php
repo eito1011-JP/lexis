@@ -113,6 +113,14 @@ class DocumentCategory extends Model
     }
 
     /**
+     * カテゴリエンティティとのリレーション
+     */
+    public function entity()
+    {
+        return $this->belongsTo(DocumentCategoryEntity::class, 'entity_id');
+    }
+
+    /**
      * プルリクエスト編集セッションとのリレーション
      */
     public function pullRequestEditSession()

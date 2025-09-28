@@ -13,7 +13,7 @@ class UpdateDocumentCategoryDto extends UseCaseDto
      * コンストラクタ
      */
     public function __construct(
-        public readonly int $categoryId,
+        public readonly int $categoryEntityId,
         public readonly string $title,
         public readonly ?string $description = null,
         public readonly ?int $editPullRequestId = null,
@@ -26,7 +26,7 @@ class UpdateDocumentCategoryDto extends UseCaseDto
     public static function fromRequest(array $requestData): self
     {
         return new self(
-            categoryId: $requestData['category_id'],
+            categoryEntityId: $requestData['category_entity_id'],
             title: $requestData['title'],
             description: $requestData['description'] ?? null,
             editPullRequestId: $requestData['edit_pull_request_id'] ?? null,

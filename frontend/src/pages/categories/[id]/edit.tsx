@@ -9,10 +9,11 @@ import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 /**
  * カテゴリ編集ページ
- * /categories/[id]/edit でアクセス
+ * /categories/[entity_id]/edit でアクセス
+ * URLパラメータのidはdocument_category_entities.idを指す
  */
 export default function EditCategoryPage(): JSX.Element {
-  const { id } = useParams<{ id: string }>();
+  const { categoryEntityId } = useParams<{ categoryEntityId: string }>();
   const navigate = useNavigate();
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number>(4);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -32,11 +33,11 @@ export default function EditCategoryPage(): JSX.Element {
   // カテゴリデータを取得
   useEffect(() => {
     const fetchCategory = async () => {
-      if (!id) return;
+      if (!categoryEntityId) return;
       
       try {
         setIsLoading(true);
-        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
+        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${categoryEntityId}`);
         setCategory(response.category);
         setCategoryBreadcrumbs(response.category.breadcrumbs || []);
       } catch (err) {
@@ -48,16 +49,16 @@ export default function EditCategoryPage(): JSX.Element {
     };
 
     fetchCategory();
-  }, [id]);
+  }, [categoryEntityId]);
 
   const handleSubmit = async (formData: CategoryFormData) => {
-    if (!id) return;
+    if (!categoryEntityId) return;
     
     setIsSubmitting(true);
     setError(null);
 
     try {
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${id}`, {
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${categoryEntityId}`, {
         title: formData.title,
         description: formData.description,
       });

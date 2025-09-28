@@ -208,7 +208,7 @@ class DocumentCategoryController extends ApiBaseController
             // 2. 認証ユーザーの時
             // DTOを作成
             $validatedData = $request->validated();
-            $validatedData['category_id'] = $request->route('id'); // URLパラメータからcategory_idを取得
+            $validatedData['category_entity_id'] = $request->route('id'); // URLパラメータからcategory_entity_idを取得
             $dto = UpdateDocumentCategoryDto::fromRequest($validatedData);
 
             // UseCaseを実行
