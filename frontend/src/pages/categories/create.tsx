@@ -14,7 +14,7 @@ import { API_CONFIG } from '@/components/admin/api/config';
  */
 export default function CreateRootCategoryPage(): JSX.Element {
   const navigate = useNavigate();
-  const { categoryId } = useParams<{ categoryId: string }>();
+  const { categoryEntityId } = useParams<{ categoryEntityId: string }>();
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number>(4);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +33,12 @@ export default function CreateRootCategoryPage(): JSX.Element {
 
     try {
       // URLパラメータに基づいてparent_entity_idを設定
-      const parentId = categoryId ? parseInt(categoryId, 10) : null;
+      const parentEntityId = categoryEntityId ? categoryEntityId : null;
 
       const payload = {
         title: formData.title,
         description: formData.description,
-        parent_entity_id: parentId, // URLにidがある場合はサブカテゴリ、ない場合はルートカテゴリ
+        parent_entity_id: parentEntityId, // URLにidがある場合はサブカテゴリ、ない場合はルートカテゴリ
         edit_pull_request_id: null,
         pull_request_edit_token: null,
       };
