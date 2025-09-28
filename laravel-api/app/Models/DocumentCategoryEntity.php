@@ -39,4 +39,20 @@ class DocumentCategoryEntity extends Model
     {
         return $this->hasMany(DocumentCategory::class, 'entity_id');
     }
+
+    /**
+     * 子カテゴリエンティティとのリレーション
+     */
+    public function documentCategoryChildren()
+    {
+        return $this->hasMany(DocumentCategory::class, 'parent_entity_id');
+    }
+
+        /**
+     * 子カテゴリエンティティとのリレーション
+     */
+    public function documentVersionChildren()
+    {
+        return $this->hasMany(DocumentVersion::class, 'category_entity_id');
+    }
 }

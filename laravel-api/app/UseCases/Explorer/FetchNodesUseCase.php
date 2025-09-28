@@ -8,6 +8,7 @@ use App\Models\DocumentCategoryEntity;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use Http\Discovery\Exception\NotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class FetchNodesUseCase
 {
@@ -25,27 +26,38 @@ class FetchNodesUseCase
      */
     public function execute(FetchNodesDto $dto, User $user): array
     {
-        $activeUserBranch = $user->userBranches()->active()->first();
-
         $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
 
         if (!$categoryEntity) {
             throw new NotFoundException('カテゴリエンティティが見つかりません。');
         }
 
-        // categoryEntityに従属しているcategoryEntityでforeach
-        $categories = $this->documentCategoryService->getCategoryByWorkContext(
-            $dto->categoryEntityId,
-            $user,
-            $dto->pullRequestEditSessionToken
-        );
+        Log::info('categoryEntity'.json_encode($categoryEntity));
+        Log::info('categoryEntityId'.json_encode($dto->categoryEntityId));
+        Log::info('documentcategorychildren'.json_encode($categoryEntity->documentCategoryChildren));
+        Log::info('documentversionchildren'.json_encode($categoryEntity->documentVersionChildren));
 
+        // categoryEntityに従属しているcategoryEntityでforeach
+        $categories = collect();
+        foreach ($categoryEntity->documentCategoryChildren as $childCategory) {
+            $categories->push($this->documentCategoryService->getCategoryByWorkContext(
+                $childCategory->id,
+                $user,
+                $dto->pullRequestEditSessionToken
+            ));
+        }
+
+        Log::info('categories'.json_encode($categories));
         // categoryEntityに従属しているdocumentEntityでforeach
-        $documents = $this->documentService->getDocumentByWorkContext(
-            $dto->categoryEntityId,
-            $user,
-            $dto->pullRequestEditSessionToken
-        );
+        $documents = collect();
+        foreach ($categoryEntity->documentVersionChildren as $childCategory) {
+            $documents->push($this->documentService->getDocumentByWorkContext(
+                $childCategory->id,
+                $user,
+                $dto->pullRequestEditSessionToken
+            ));
+        }
+        Log::info('documents'.json_encode($documents));
 
         return [
             'categories' => $categories,
