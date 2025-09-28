@@ -23,9 +23,9 @@ interface AdminLayoutProps {
   title: string;
   sidebar?: boolean;
   showDocumentSideContent?: boolean;
-  onCategorySelect?: (categoryId: number) => void;
+  onCategorySelect?: (categoryEntityId: number) => void;
   onDocumentSelect?: (documentId: number) => void;
-  selectedCategoryId?: number;
+  selectedCategoryEntityId?: number;
   selectedDocumentId?: number;
   onNavigationRequest?: (path: string) => void;
 }
@@ -37,7 +37,7 @@ export default function AdminLayout({
   showDocumentSideContent = false,
   onCategorySelect,
   onDocumentSelect,
-  selectedCategoryId,
+  selectedCategoryEntityId,
   selectedDocumentId,
   onNavigationRequest,
 }: AdminLayoutProps): React.ReactElement {
@@ -185,7 +185,7 @@ export default function AdminLayout({
                   <DocumentSideContent
                     onCategorySelect={onCategorySelect}
                     onDocumentSelect={onDocumentSelect}
-                    selectedCategoryId={selectedCategoryId}
+                    selectedCategoryEntityId={selectedCategoryEntityId}
                     selectedDocumentId={selectedDocumentId}
                   />
               )}

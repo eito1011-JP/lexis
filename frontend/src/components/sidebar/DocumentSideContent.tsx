@@ -40,7 +40,7 @@ interface DocumentItem extends BaseItem {
 interface DocumentSideContentProps {
   onCategorySelect?: (categoryId: number) => void;
   onDocumentSelect?: (documentId: number) => void;
-  selectedCategoryId?: number;
+  selectedCategoryEntityId?: number;
   selectedDocumentId?: number;
 }
 
@@ -68,7 +68,7 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
  * ドキュメント用サイドコンテンツコンポーネント
  * 株式会社Nexis配下の階層構造を無制限表示
  */
-export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryId, selectedDocumentId }: DocumentSideContentProps) {
+export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentId }: DocumentSideContentProps) {
   const navigate = useNavigate();
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
@@ -345,19 +345,19 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     console.log('item: ', item);
     const isExpanded = expandedItems.has(item.entityId);
     const hasChildren = item.children && item.children.length > 0;
-    const isSelected = selectedCategoryId === item.id;
-    const isHovered = hoveredItem === item.id;
+    const isSelected = selectedCategoryEntityId === item.entityId;
+    const isHovered = hoveredItem === item.entityId;
     const IconComponent = item.icon || Folder;
 
     return (
-      <div key={item.id} className="select-none">
+      <div key={item.entityId} className="select-none">
         <div
           className={`flex items-center py-1.5 px-2 cursor-pointer hover:bg-gray-800 rounded transition-colors group ${
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
           style={{ paddingLeft: `${1 + level * 0.8}rem` }}
-          onClick={() => handleCategoryClick(item.id)}
-          onMouseEnter={() => setHoveredItem(item.id)}
+          onClick={() => handleCategoryClick(item.entityId)}
+          onMouseEnter={() => setHoveredItem(item.entityId)}
           onMouseLeave={() => setHoveredItem(null)}
         >
           {/* 左端の矢印アイコン（全てのカテゴリに表示） */}
