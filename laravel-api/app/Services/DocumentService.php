@@ -7,6 +7,8 @@ use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
+use App\Models\User;
+use App\Models\UserBranch;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -312,5 +314,65 @@ class DocumentService
         }
 
         return $base->get();
+    }
+
+    /**
+     * 作業コンテキストに応じて適切なドキュメントを取得
+     */
+    public function getDocumentByWorkContext(
+        int $documentEntityId,
+        User $user,
+        ?string $pullRequestEditSessionToken = null
+    ): ?DocumentVersion {
+        // ユーザーのアクティブブランチを取得
+        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+
+        $baseQuery = DocumentVersion::where('entity_id', $documentEntityId)
+            ->where('organization_id', $user->organizationMember->organization_id);
+
+        if (!$activeUserBranch) {
+            // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
+            return $baseQuery->where('status', DocumentStatus::MERGED->value)->first();
+        }
+
+        // EditStartVersionから現在のバージョンIDを取得
+        $currentVersionId = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+            ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
+            ->where('original_version_id', function ($query) use ($documentEntityId) {
+                $query->select('id')
+                    ->from('document_versions')
+                    ->where('entity_id', $documentEntityId)
+                    ->where('status', DocumentStatus::MERGED->value);
+            })
+            ->value('current_version_id');
+
+        if ($currentVersionId) {
+            // EditStartVersionに登録されている場合は、現在のバージョンを取得
+            $document = $baseQuery->where('id', $currentVersionId)->first();
+            if ($document) {
+                return $document;
+            }
+        }
+
+        if ($pullRequestEditSessionToken) {
+            // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->whereIn('status', [
+                        DocumentStatus::PUSHED->value,
+                        DocumentStatus::DRAFT->value,
+                    ])
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentStatus::MERGED->value);
+            })->orderBy('created_at', 'desc')->first();
+        } else {
+            // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->where('status', DocumentStatus::DRAFT->value)
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentStatus::MERGED->value);
+            })->orderBy('created_at', 'desc')->first();
+        }
     }
 }
