@@ -4,6 +4,7 @@ namespace Tests\Unit\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
 use App\Models\DocumentCategory;
+use App\Models\DocumentCategoryEntity;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\PullRequest;
@@ -72,7 +73,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: null,
+            parentEntityId: null,
             editPullRequestId: null,
             pullRequestEditToken: null
         );
@@ -94,6 +95,13 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals(null, $result->parent_entity_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertNull($result->pull_request_edit_session_id);
+        $this->assertNotNull($result->entity_id);
+
+        // DocumentCategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('document_category_entities', [
+            'id' => $result->entity_id,
+            'organization_id' => $this->organization->id,
+        ]);
 
         // EditStartVersionが作成されていることを確認
         $this->assertDatabaseHas('edit_start_versions', [
@@ -127,7 +135,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: null,
+            parentEntityId: null,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: $pullRequestEditToken
         );
@@ -156,6 +164,13 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals($userBranch->id, $result->user_branch_id);
         $this->assertEquals($pullRequestEditSession->id, $result->pull_request_edit_session_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
+        $this->assertNotNull($result->entity_id);
+
+        // DocumentCategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('document_category_entities', [
+            'id' => $result->entity_id,
+            'organization_id' => $this->organization->id,
+        ]);
 
         // PullRequestEditSessionDiffが作成されていることを確認
         $this->assertDatabaseHas('pull_request_edit_session_diffs', [
@@ -178,8 +193,14 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        // 親カテゴリエンティティを作成
+        $parentCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         // 親カテゴリを実際に作成
         $parentCategory = DocumentCategory::factory()->create([
+            'entity_id' => $parentCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
         ]);
@@ -187,7 +208,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: $parentCategory->id,
+            parentEntityId: $parentCategoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
         );
@@ -206,8 +227,15 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
-        $this->assertEquals($parentCategory->id, $result->parent_entity_id);
+        $this->assertEquals($parentCategoryEntity->id, $result->parent_entity_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
+        $this->assertNotNull($result->entity_id);
+
+        // DocumentCategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('document_category_entities', [
+            'id' => $result->entity_id,
+            'organization_id' => $this->organization->id,
+        ]);
     }
 
     /**
@@ -225,7 +253,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: null,
+            parentEntityId: null,
             editPullRequestId: null,
             pullRequestEditToken: null
         );
@@ -247,7 +275,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: null,
+            parentEntityId: null,
             editPullRequestId: null,
             pullRequestEditToken: null
         );
@@ -277,7 +305,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: null,
+            parentEntityId: null,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: null
         );
@@ -297,6 +325,13 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
+        $this->assertNotNull($result->entity_id);
+
+        // DocumentCategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('document_category_entities', [
+            'id' => $result->entity_id,
+            'organization_id' => $this->organization->id,
+        ]);
     }
 
     /**
@@ -317,7 +352,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: null,
+            parentEntityId: null,
             editPullRequestId: $editPullRequestId,
             pullRequestEditToken: $pullRequestEditToken
         );
@@ -338,6 +373,13 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals($userBranch->id, $result->user_branch_id);
         $this->assertNull($result->pull_request_edit_session_id); // セッションが見つからない場合はnull
         $this->assertEquals($this->organization->id, $result->organization_id);
+        $this->assertNotNull($result->entity_id);
+
+        // DocumentCategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('document_category_entities', [
+            'id' => $result->entity_id,
+            'organization_id' => $this->organization->id,
+        ]);
     }
 
     /**
@@ -349,7 +391,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $dto = new CreateDocumentCategoryDto(
             title: 'Test Category',
             description: 'Test description',
-            parentId: null,
+            parentEntityId: null,
             editPullRequestId: null,
             pullRequestEditToken: null
         );
