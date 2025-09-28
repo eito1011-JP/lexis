@@ -6,10 +6,12 @@ use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
+use App\Models\DocumentCategoryEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
+use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,7 @@ class UpdateDocumentCategoryUseCase
 {
     public function __construct(
         private UserBranchService $userBranchService,
+        private DocumentCategoryService $documentCategoryService,
     ) {}
 
     /**
@@ -46,6 +49,12 @@ class UpdateDocumentCategoryUseCase
                 throw new NotFoundException;
             }
 
+            $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
+
+            if (! $categoryEntity) {
+                throw new NotFoundException;
+            }
+
             // 3. fetchOrCreateActiveBranch
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
@@ -61,17 +70,20 @@ class UpdateDocumentCategoryUseCase
             );
 
             // 5. 編集対象のexistingCategoryを取得
-            $existingCategory = DocumentCategory::find($dto->categoryId);
-            $existingCategoryEntity = $existingCategory->entity;
+            $existingCategory = $this->documentCategoryService->getCategoryByWorkContext(
+                $dto->categoryEntityId,
+                $user,
+                $dto->pullRequestEditToken
+            );
 
             // 6. if existingCategoryがない場合 throw new NotFoundException;
-            if (! $existingCategory || ! $existingCategoryEntity) {
+            if (! $existingCategory) {
                 throw new NotFoundException;
             }
 
             // 7. DocumentCategoryを作成
             $newCategory = DocumentCategory::create([
-                'entity_id' => $existingCategoryEntity->id,
+                'entity_id' => $categoryEntity->id,
                 'title' => $dto->title,
                 'parent_entity_id' => $existingCategory->parent_entity_id,
                 'description' => $dto->description,

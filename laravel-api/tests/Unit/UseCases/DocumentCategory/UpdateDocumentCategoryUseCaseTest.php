@@ -6,6 +6,7 @@ use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
+use App\Models\DocumentCategoryEntity;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\PullRequest;
@@ -13,6 +14,7 @@ use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\UpdateDocumentCategoryUseCase;
 use Http\Discovery\Exception\NotFoundException;
@@ -34,14 +36,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
 
     private $userBranchService;
 
+    private $documentCategoryService;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->userBranchService = Mockery::mock(UserBranchService::class);
+        $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
 
         $this->useCase = new UpdateDocumentCategoryUseCase(
-            $this->userBranchService
+            $this->userBranchService,
+            $this->documentCategoryService
         );
 
         $this->organization = Organization::factory()->create();
@@ -72,7 +78,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         $existingCategory = DocumentCategory::factory()->create([
+            'entity_id' => $categoryEntity->id,
             'title' => 'Original Title',
             'description' => 'Original Description',
             'organization_id' => $this->organization->id,
@@ -80,7 +91,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
@@ -92,6 +103,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
+
+        $this->documentCategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($categoryEntity->id, $this->user, null)
+            ->andReturn($existingCategory);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -143,7 +160,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'finished_at' => null,
         ]);
 
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         $existingCategory = DocumentCategory::factory()->create([
+            'entity_id' => $categoryEntity->id,
             'title' => 'Original Title',
             'description' => 'Original Description',
             'organization_id' => $this->organization->id,
@@ -151,7 +173,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: $pullRequest->id,
@@ -163,6 +185,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
+
+        $this->documentCategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($categoryEntity->id, $this->user, $pullRequestEditSession->token)
+            ->andReturn($existingCategory);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -204,7 +232,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'finished_at' => null,
         ]);
 
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         $existingCategory = DocumentCategory::factory()->create([
+            'entity_id' => $categoryEntity->id,
             'title' => 'Original Title',
             'description' => 'Original Description',
             'organization_id' => $this->organization->id,
@@ -220,7 +253,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: $pullRequest->id,
@@ -232,6 +265,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
+
+        $this->documentCategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($categoryEntity->id, $this->user, $pullRequestEditSession->token)
+            ->andReturn($existingCategory);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -258,12 +297,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->where('organization_id', $this->organization->id)
             ->delete();
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
@@ -281,26 +320,17 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     public function test_update_category_throws_not_found_exception_when_existing_category_not_found(): void
     {
         // Arrange
-        $nonExistentCategoryId = 99999;
+        $nonExistentCategoryEntityId = 99999;
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $nonExistentCategoryId,
+            categoryEntityId: $nonExistentCategoryEntityId,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
             pullRequestEditToken: null,
         );
 
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, null)
-            ->andReturn($userBranch->id);
+        // DocumentCategoryEntity::find()で見つからない場合、fetchOrCreateActiveBranchは呼び出されない
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -313,12 +343,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     public function test_update_category_handles_user_branch_service_exception(): void
     {
         // Arrange
-        $existingCategory = DocumentCategory::factory()->create([
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
@@ -342,12 +372,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     public function test_update_category_handles_database_exception_and_rolls_back_transaction(): void
     {
         // Arrange
-        $existingCategory = DocumentCategory::factory()->create([
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
@@ -378,12 +408,17 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         $existingCategory = DocumentCategory::factory()->create([
+            'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
@@ -395,6 +430,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
+
+        $this->documentCategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($categoryEntity->id, $this->user, null)
+            ->andReturn($existingCategory);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -420,17 +461,27 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        $parentCategoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         $parentCategory = DocumentCategory::factory()->create([
+            'entity_id' => $parentCategoryEntity->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
         $existingCategory = DocumentCategory::factory()->create([
-            'parent_entity_id' => $parentCategory->id,
+            'entity_id' => $categoryEntity->id,
+            'parent_entity_id' => $parentCategoryEntity->id,
             'organization_id' => $this->organization->id,
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
@@ -443,11 +494,17 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
 
+        $this->documentCategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($categoryEntity->id, $this->user, null)
+            ->andReturn($existingCategory);
+
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertEquals($parentCategory->id, $result->parent_entity_id);
+        $this->assertEquals($parentCategoryEntity->id, $result->parent_entity_id);
     }
 
     /**
@@ -461,13 +518,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         $existingCategory = DocumentCategory::factory()->create([
+            'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::DRAFT->value, // DRAFTステータスで作成
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             editPullRequestId: null,
@@ -479,6 +541,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
+
+        $this->documentCategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($categoryEntity->id, $this->user, null)
+            ->andReturn($existingCategory);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -497,6 +565,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'deleted_at' => null,
         ]);
+
+        $this->assertDatabaseHas('edit_start_versions', [
+            'original_version_id' => $existingCategory->id,
+            'current_version_id' => $result->id,
+        ]);
     }
 
     /**
@@ -510,16 +583,22 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        $categoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         $existingCategory = DocumentCategory::factory()->create([
+            'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::MERGED->value, // MERGEDステータスで作成
         ]);
 
         $dto = new UpdateDocumentCategoryDto(
-            categoryId: $existingCategory->id,
+            categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null
+            editPullRequestId: null,
+            pullRequestEditToken: null,
         );
 
         $this->userBranchService
@@ -527,6 +606,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
+
+        $this->documentCategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($categoryEntity->id, $this->user, null)
+            ->andReturn($existingCategory);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -545,6 +630,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'description' => 'Updated Description',
             'status' => DocumentCategoryStatus::DRAFT->value,
             'deleted_at' => null,
+        ]);
+
+        $this->assertDatabaseHas('edit_start_versions', [
+            'original_version_id' => $existingCategory->id,
+            'current_version_id' => $result->id,
         ]);
     }
 }
