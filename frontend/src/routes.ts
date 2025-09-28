@@ -33,7 +33,7 @@ export const ROUTE_PATHS = {
   [ROUTES.CREATE_DOCUMENT_IN_CATEGORY]: '/categories/:categoryEntityId/documents/create',
   [ROUTES.CREATE_CATEGORY]: '/categories/:categoryEntityId/create',
   [ROUTES.CREATE_ROOT_CATEGORY]: '/categories/create',
-  [ROUTES.EDIT_CATEGORY]: '/categories/:id/edit',
+  [ROUTES.EDIT_CATEGORY]: '/categories/:categoryEntityId/edit',
   [ROUTES.EDIT_DOCUMENT_IN_CATEGORY]: '/categories/:categoryEntityId/documents/:documentEntityId/edit',
   [ROUTES.CHANGE_SUGGESTIONS]: '/change-suggestions',
   [ROUTES.CHANGE_SUGGESTION_DETAIL]: '/change-suggestions/:id',

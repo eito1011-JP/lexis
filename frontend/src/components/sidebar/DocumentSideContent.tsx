@@ -266,7 +266,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   const handleEdit = () => {
     if (selectedCategory) {
       // selectedCategory.idはdocument_categories.idなので、そのまま使用
-      const url = `/categories/${selectedCategory.id}/edit`;
+      const url = `/categories/${selectedCategory.entityId}/edit`;
       window.location.href = url;
     }
     handleCloseModal();

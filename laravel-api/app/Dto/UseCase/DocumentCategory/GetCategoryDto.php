@@ -10,9 +10,9 @@ use App\Dto\UseCase\UseCaseDto;
 class GetCategoryDto extends UseCaseDto
 {
     /**
-     * カテゴリID
+     * カテゴリエンティティID
      */
-    public readonly int $categoryId;
+    public readonly int $categoryEntityId;
 
     /**
      * ユーザー
@@ -29,7 +29,7 @@ class GetCategoryDto extends UseCaseDto
      */
     public function __construct(array $data)
     {
-        $this->categoryId = $data['category_id'];
+        $this->categoryEntityId = $data['category_entity_id'];
         $this->user = $data['user'];
         $this->pullRequestEditSessionToken = $data['pull_request_edit_session_token'] ?? null;
     }

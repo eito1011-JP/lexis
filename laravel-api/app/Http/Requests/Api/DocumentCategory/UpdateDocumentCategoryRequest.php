@@ -22,7 +22,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_id' => 'required|integer|exists:document_categories,id',
+            'category_entity_id' => 'required|integer|exists:document_categories,id',
             'title' => 'required|string',
             'description' => 'nullable|string',
             'edit_pull_request_id' => 'nullable|integer',
@@ -33,7 +33,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
     public function prepareForValidation(): void
     {
         $this->merge([
-            'category_id' => $this->route('id'),
+            'category_entity_id' => $this->route('id'),
         ]);
     }
 }
