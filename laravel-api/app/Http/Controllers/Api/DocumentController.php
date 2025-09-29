@@ -151,7 +151,8 @@ class DocumentController extends ApiBaseController
             }
 
             // DTOを作成してUseCaseを実行
-            $dto = DetailDto::fromRequest($request->validated());
+            $validatedData = $request->validated();
+            $dto = DetailDto::fromRequest($validatedData);
             $result = $useCase->execute($dto, $user);
 
             return response()->json($result);
@@ -184,7 +185,7 @@ class DocumentController extends ApiBaseController
 
             $validatedRequest = $request->validated();
             $updateDocumentDto = new UpdateDocumentDto(
-                current_document_id: $validatedRequest['current_document_id'],
+                document_entity_id: $validatedRequest['current_document_id'],
                 title: $validatedRequest['title'],
                 description: $validatedRequest['description'],
                 edit_pull_request_id: $validatedRequest['edit_pull_request_id'] ?? null,

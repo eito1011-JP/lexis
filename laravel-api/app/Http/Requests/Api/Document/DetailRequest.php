@@ -23,6 +23,7 @@ class DetailRequest extends FormRequest
     {
         return [
             'entity_id' => 'required|integer|exists:document_version_entities,id',
+            'pull_request_edit_session_token' => 'nullable|string',
         ];
     }
 
