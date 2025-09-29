@@ -330,7 +330,7 @@ class DocumentService
         $baseQuery = DocumentVersion::where('entity_id', $documentEntityId)
             ->where('organization_id', $user->organizationMember->organization_id);
 
-        if (!$activeUserBranch) {
+        if (! $activeUserBranch) {
             // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
             return $baseQuery->where('status', DocumentStatus::MERGED->value)->first();
         }

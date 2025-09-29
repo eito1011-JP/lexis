@@ -158,7 +158,7 @@ class DocumentCategoryService
             ->where('entity_id', $categoryEntityId)
             ->where('organization_id', $user->organizationMember->organization_id);
 
-        if (!$activeUserBranch) {
+        if (! $activeUserBranch) {
             // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
             return $baseQuery->where('status', DocumentCategoryStatus::MERGED->value)->first();
         }

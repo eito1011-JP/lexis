@@ -10,7 +10,6 @@ use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\PullRequest;
-use App\Models\PullRequestEditSession;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\UseCases\Explorer\FetchNodesUseCase;
@@ -57,7 +56,7 @@ class FetchNodesUseCaseTest extends TestCase
      * マージ済みカテゴリとドキュメントを取得する（pullRequestEditSessionTokenなし）
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnMergedAndDraftNodesWhenHasActiveUserBranch(): void
+    public function execute_should_return_merged_and_draft_nodes_when_has_active_user_branch(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -74,7 +73,7 @@ class FetchNodesUseCaseTest extends TestCase
             'original_version_id' => $parentCategory->id,
             'current_version_id' => $parentCategory->id,
         ]);
-        
+
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
             pullRequestEditSessionToken: null
@@ -170,7 +169,7 @@ class FetchNodesUseCaseTest extends TestCase
      * ドラフト状態のカテゴリとドキュメントを取得する（pullRequestEditSessionTokenあり、編集セッション存在）
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnDraftNodesWhenEditMergedNodes(): void
+    public function execute_should_return_draft_nodes_when_edit_merged_nodes(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -180,7 +179,7 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
-        
+
         EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
@@ -256,7 +255,6 @@ class FetchNodesUseCaseTest extends TestCase
             'current_version_id' => $draftDocument->id,
         ]);
 
-
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -277,7 +275,7 @@ class FetchNodesUseCaseTest extends TestCase
      * 編集セッションが見つからない場合、マージ済みデータを取得する
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnMergedNodesWhenDoesNotHaveActiveUserBranch(): void
+    public function execute_should_return_merged_nodes_when_does_not_have_active_user_branch(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -287,7 +285,7 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
-        
+
         EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
@@ -297,7 +295,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         // アクティブなユーザーブランチを非アクティブにする
         $this->userBranch->update(['is_active' => false]);
-        
+
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
             pullRequestEditSessionToken: null
@@ -388,7 +386,7 @@ class FetchNodesUseCaseTest extends TestCase
      * アクティブなユーザーブランチが存在しない場合、マージ済みデータを取得する
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnMergedAndDraftNodesWhenHasPullRequestAndActiveUserBranch(): void
+    public function execute_should_return_merged_and_draft_nodes_when_has_pull_request_and_active_user_branch(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -398,7 +396,7 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
-        
+
         EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
@@ -462,7 +460,6 @@ class FetchNodesUseCaseTest extends TestCase
             'current_version_id' => $draftDocument->id,
         ]);
 
-
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -483,7 +480,7 @@ class FetchNodesUseCaseTest extends TestCase
      * カテゴリとドキュメントが空の場合のテスト
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnEmptyArraysWhenNoNodesExist(): void
+    public function execute_should_return_empty_arrays_when_no_nodes_exist(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -493,7 +490,7 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
             pullRequestEditSessionToken: null
@@ -513,7 +510,7 @@ class FetchNodesUseCaseTest extends TestCase
      * データの並び順をテスト（id昇順）
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnNodesOrderedByIdAscending(): void
+    public function execute_should_return_nodes_ordered_by_id_ascending(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -523,7 +520,7 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
-        
+
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
             pullRequestEditSessionToken: null
@@ -603,7 +600,7 @@ class FetchNodesUseCaseTest extends TestCase
      * ドラフトデータ取得時に正しいユーザーIDとブランチIDでフィルタリングされることをテスト
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldFilterDraftNodesByCorrectUserAndBranch(): void
+    public function execute_should_filter_draft_nodes_by_correct_user_and_branch(): void
     {
         // Arrange
         // 親カテゴリを作成
@@ -613,7 +610,7 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => 'merged',
             'organization_id' => $this->organization->id,
         ]);
-        
+
         // 別のユーザーとブランチを作成
         $otherUser = User::factory()->create();
         $otherUserBranch = UserBranch::factory()->create([
@@ -712,7 +709,7 @@ class FetchNodesUseCaseTest extends TestCase
      * アクティブなuser_branchが存在し、現在のactive user_branchとは違う非アクティブなbranchで作られたmergedなdocumentとカテゴリも表示されることを検証するテスト
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldReturnMergedDocumentAndCategoryFromDifferentBranches(): void
+    public function execute_should_return_merged_document_and_category_from_different_branches(): void
     {
         // Arrange
         // 別のユーザーを作成
@@ -743,7 +740,7 @@ class FetchNodesUseCaseTest extends TestCase
             'original_version_id' => $parentCategory->id,
             'current_version_id' => $parentCategory->id,
         ]);
-        
+
         $dto = new FetchNodesDto(
             categoryId: $parentCategory->id,
             pullRequestEditSessionToken: null
@@ -828,13 +825,12 @@ class FetchNodesUseCaseTest extends TestCase
             }
         }
     }
-    
 
     /**
      * 例外が発生した場合の処理をテスト
      */
     #[\PHPUnit\Framework\Attributes\Test]
-    public function executeShouldLogAndRethrowExceptionWhenErrorOccurs(): void
+    public function execute_should_log_and_rethrow_exception_when_error_occurs(): void
     {
         // Arrange
         Log::shouldReceive('error')->once();

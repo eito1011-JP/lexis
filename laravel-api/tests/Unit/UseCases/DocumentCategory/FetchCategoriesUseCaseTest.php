@@ -253,7 +253,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
         EditStartVersion::factory()->create([
-            'user_branch_id' => $otherUserBranch->id,   
+            'user_branch_id' => $otherUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $pushedCategoryByOtherUser->id,
             'current_version_id' => $pushedCategoryByOtherUser->id,
@@ -320,7 +320,7 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         // Assert
         $this->assertCount(3, $result);
-        
+
         // 他のユーザーのカテゴリが表示されていないことを確認
         $resultTitles = $result->pluck('title')->toArray();
         $this->assertContains('自分のプッシュ済みカテゴリ', $resultTitles);

@@ -60,7 +60,7 @@ class DocumentServiceTest extends TestCase
     }
 
     /** @test */
-    public function アクティブなユーザーブランチがない場合はMERGEDステータスのドキュメントを取得する(): void
+    public function アクティブなユーザーブランチがない場合は_merge_dステータスのドキュメントを取得する(): void
     {
         // Arrange
         // アクティブなユーザーブランチを削除
@@ -111,7 +111,7 @@ class DocumentServiceTest extends TestCase
     }
 
     /** @test */
-    public function EditStartVersionに登録されている場合は現在のバージョンを取得する(): void
+    public function edit_start_versionに登録されている場合は現在のバージョンを取得する(): void
     {
         // Arrange
         $mergedDocument = DocumentVersion::factory()->create([
@@ -154,7 +154,7 @@ class DocumentServiceTest extends TestCase
     }
 
     /** @test */
-    public function 再編集の場合はPUSHEDとDRAFTとMERGEDステータスのドキュメントを取得する(): void
+    public function 再編集の場合は_pushe_dと_draf_tと_merge_dステータスのドキュメントを取得する(): void
     {
         // Arrange
         $pullRequestEditSessionToken = 'test-token';
@@ -217,7 +217,7 @@ class DocumentServiceTest extends TestCase
     }
 
     /** @test */
-    public function 初回編集の場合はDRAFTとMERGEDステータスのドキュメントを取得する(): void
+    public function 初回編集の場合は_draf_tと_merge_dステータスのドキュメントを取得する(): void
     {
         // Arrange
         $mergedDocument = DocumentVersion::factory()->create([
@@ -278,7 +278,7 @@ class DocumentServiceTest extends TestCase
     }
 
     /** @test */
-    public function 初回編集でDRAFTがない場合はMERGEDステータスのドキュメントを取得する(): void
+    public function 初回編集で_draf_tがない場合は_merge_dステータスのドキュメントを取得する(): void
     {
         // Arrange
         $mergedDocument = DocumentVersion::factory()->create([
@@ -307,7 +307,7 @@ class DocumentServiceTest extends TestCase
     }
 
     /** @test */
-    public function 他のユーザーブランチのDRAFTは取得されない(): void
+    public function 他のユーザーブランチの_draf_tは取得されない(): void
     {
         // Arrange
         $otherUserBranch = UserBranch::factory()->create([

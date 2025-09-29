@@ -25,7 +25,7 @@ class GetCategoryUseCase
     {
         $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
 
-        if (!$categoryEntity) {
+        if (! $categoryEntity) {
             throw new NotFoundException('カテゴリエンティティが見つかりません。');
         }
 
@@ -36,7 +36,7 @@ class GetCategoryUseCase
             $dto->pullRequestEditSessionToken
         );
 
-        if (!$category) {
+        if (! $category) {
             throw new NotFoundException('カテゴリが見つかりません。');
         }
 
