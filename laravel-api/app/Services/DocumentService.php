@@ -335,27 +335,34 @@ class DocumentService
             return $baseQuery->where('status', DocumentStatus::MERGED->value)->first();
         }
 
-        // EditStartVersionから現在のバージョンIDを取得
-        $currentVersionId = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+        // EditStartVersionから最新の現在のバージョンIDを取得
+        // 同じentity_idに対するEditStartVersionチェーンの最新のcurrent_version_idを取得
+        $editStartVersions = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
             ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
-            ->where('original_version_id', function ($query) use ($documentEntityId) {
-                $query->select('id')
-                    ->from('document_versions')
-                    ->where('entity_id', $documentEntityId)
-                    ->where('status', DocumentStatus::MERGED->value);
+            ->whereHas('originalDocumentVersion', function ($query) use ($documentEntityId) {
+                $query->where('entity_id', $documentEntityId);
             })
-            ->value('current_version_id');
+            ->orWhere(function ($query) use ($activeUserBranch, $documentEntityId) {
+                $query->where('user_branch_id', $activeUserBranch->id)
+                    ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
+                    ->whereHas('currentDocumentVersion', function ($subQuery) use ($documentEntityId) {
+                        $subQuery->where('entity_id', $documentEntityId);
+                    });
+            })
+            ->orderBy('id', 'desc')
+            ->get();
 
-        if ($currentVersionId) {
-            // EditStartVersionに登録されている場合は、現在のバージョンを取得
-            $document = $baseQuery->where('id', $currentVersionId)->first();
+        if ($editStartVersions->isNotEmpty()) {
+            // 最新のEditStartVersionのcurrent_version_idを取得
+            $latestEditStartVersion = $editStartVersions->first();
+            $document = $baseQuery->where('id', $latestEditStartVersion->current_version_id)->first();
             if ($document) {
                 return $document;
             }
         }
 
         if ($pullRequestEditSessionToken) {
-            // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            // 再編集している場合：PUSHEDとDRAFTとMERGEDステータスを取得（最新のものを優先）
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
                     $q1->whereIn('status', [
@@ -366,7 +373,7 @@ class DocumentService
                 })->orWhere('status', DocumentStatus::MERGED->value);
             })->orderBy('created_at', 'desc')->first();
         } else {
-            // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            // 初回編集の場合：DRAFTとMERGEDステータスを取得（最新のものを優先）
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
                     $q1->where('status', DocumentStatus::DRAFT->value)

@@ -8,7 +8,6 @@ use App\Models\DocumentCategoryEntity;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use Http\Discovery\Exception\NotFoundException;
-use Illuminate\Support\Facades\Log;
 
 class FetchNodesUseCase
 {
@@ -32,32 +31,25 @@ class FetchNodesUseCase
             throw new NotFoundException('カテゴリエンティティが見つかりません。');
         }
 
-        Log::info('categoryEntity'.json_encode($categoryEntity));
-        Log::info('categoryEntityId'.json_encode($dto->categoryEntityId));
-        Log::info('documentcategorychildren'.json_encode($categoryEntity->documentCategoryChildren));
-        Log::info('documentversionchildren'.json_encode($categoryEntity->documentVersionChildren));
-
         // categoryEntityに従属しているcategoryEntityでforeach
         $categories = collect();
         foreach ($categoryEntity->documentCategoryChildren as $childCategory) {
             $categories->push($this->documentCategoryService->getCategoryByWorkContext(
-                $childCategory->id,
+                $childCategory->entity_id,
                 $user,
                 $dto->pullRequestEditSessionToken
             ));
         }
 
-        Log::info('categories'.json_encode($categories));
         // categoryEntityに従属しているdocumentEntityでforeach
         $documents = collect();
-        foreach ($categoryEntity->documentVersionChildren as $childCategory) {
+        foreach ($categoryEntity->documentVersionChildren as $childDocument) {
             $documents->push($this->documentService->getDocumentByWorkContext(
-                $childCategory->id,
+                $childDocument->entity_id,
                 $user,
                 $dto->pullRequestEditSessionToken
             ));
         }
-        Log::info('documents'.json_encode($documents));
 
         return [
             'categories' => $categories,
