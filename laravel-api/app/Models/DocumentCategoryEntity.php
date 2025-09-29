@@ -48,7 +48,7 @@ class DocumentCategoryEntity extends Model
         return $this->hasMany(DocumentCategory::class, 'parent_entity_id');
     }
 
-        /**
+    /**
      * 子カテゴリエンティティとのリレーション
      */
     public function documentVersionChildren()

@@ -5,12 +5,13 @@ namespace App\UseCases\Document;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Enums\PullRequestEditSessionDiffType;
 use App\Models\DocumentVersion;
+use App\Models\DocumentVersionEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
+use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,7 @@ class UpdateDocumentUseCase
 {
     public function __construct(
         private UserBranchService $userBranchService,
+        private DocumentService $documentService,
     ) {}
 
     /**
@@ -47,6 +49,12 @@ class UpdateDocumentUseCase
                 throw new NotFoundException;
             }
 
+            $documentEntity = DocumentVersionEntity::find($dto->document_entity_id);
+
+            if (! $documentEntity) {
+                throw new NotFoundException;
+            }
+
             // 3. fetchOrCreateActiveBranch
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
@@ -62,17 +70,15 @@ class UpdateDocumentUseCase
             );
 
             // 5. 編集対象のexistingDocumentを取得
-            $existingDocument = DocumentVersion::find($dto->document_entity_id);
-            $existingDocumentEntity = $existingDocument->entity;
-
-            // 6. if existingDocumentがない場合 throw new NotFoundException;
-            if (! $existingDocument || ! $existingDocumentEntity) {
-                throw new NotFoundException;
-            }
+            $existingDocument = $this->documentService->getDocumentByWorkContext(
+                $dto->document_entity_id,
+                $user,
+                $dto->pull_request_edit_token
+            );
 
             // 7. DocumentVersionを作成
             $newDocumentVersion = DocumentVersion::create([
-                'entity_id' => $existingDocumentEntity->id,
+                'entity_id' => $documentEntity->id,
                 'organization_id' => $organizationId,
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,

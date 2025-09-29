@@ -158,7 +158,7 @@ class DocumentCategory extends Model
         while ($current) {
             array_unshift($breadcrumbs, [
                 'id' => $current->id,
-                'title' => $current->title
+                'title' => $current->title,
             ]);
             $current = $current->parent;
         }

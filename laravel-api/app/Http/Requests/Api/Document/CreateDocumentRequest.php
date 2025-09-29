@@ -24,7 +24,7 @@ class CreateDocumentRequest extends FormRequest
         return [
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'category_entity_id' => 'required|integer|exists:document_categories,id',
+            'category_entity_id' => 'required|integer|exists:document_category_entities,id',
             'edit_pull_request_id' => 'nullable|integer',
             'pull_request_edit_token' => 'nullable|string',
         ];

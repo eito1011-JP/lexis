@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Api\DocumentCategory;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Log;
 
 /**
  * カテゴリ詳細取得リクエスト

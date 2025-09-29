@@ -24,7 +24,7 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_entity_id' => 'required|integer',
+            'document_entity_id' => 'required|integer|exists:document_version_entities,id',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'edit_pull_request_id' => 'nullable|integer',
@@ -52,7 +52,7 @@ class UpdateDocumentRequest extends FormRequest
     protected function passedValidation(): void
     {
         $this->merge([
-            'current_document_id' => (int) $this->current_document_id,
+            'document_entity_id' => (int) $this->document_entity_id,
             'edit_pull_request_id' => $this->edit_pull_request_id ? (int) $this->edit_pull_request_id : null,
         ]);
     }

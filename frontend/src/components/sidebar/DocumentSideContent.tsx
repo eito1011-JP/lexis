@@ -41,7 +41,7 @@ interface DocumentSideContentProps {
   onCategorySelect?: (categoryId: number) => void;
   onDocumentSelect?: (documentId: number) => void;
   selectedCategoryEntityId?: number;
-  selectedDocumentId?: number;
+  selectedDocumentEntityId?: number;
 }
 
 // カテゴリデータを取得するサービス関数（無制限表示）
@@ -55,7 +55,6 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
     const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(endpoint);
     
-    console.log('API Response for categories:', response);
     // すべてのカテゴリを返す（制限なし）
     return response.categories || [];
   } catch (error) {
@@ -68,7 +67,7 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
  * ドキュメント用サイドコンテンツコンポーネント
  * 株式会社Nexis配下の階層構造を無制限表示
  */
-export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentId }: DocumentSideContentProps) {
+export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentEntityId }: DocumentSideContentProps) {
   const navigate = useNavigate();
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
@@ -129,10 +128,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // 従属するカテゴリとドキュメントを取得する関数（無制限表示・深い階層対応）
   const handleFetchBelogingItems = async (categoryEntityId: number) => {
     try {
-      console.log('categoryEntityId: ', categoryEntityId);
       const response = await apiClient.get(`/api/nodes?category_entity_id=${categoryEntityId}`);
-
-      console.log('API Response for category', categoryEntityId, ':', response);
       
       // 既存のカテゴリデータを更新（深い階層まで対応）
       setCategories(prevCategories => {
@@ -148,7 +144,6 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
             children: [] // 子カテゴリには空の配列を初期化
           }));
         
-        console.log('categoryChildren: ', categoryChildren);
         const documentChildren: BaseItem[] = (response.documents || [])
           .filter((doc: any) => doc && doc.id && doc.entity_id && (doc.title || doc.sidebar_label)) // null/undefined要素をフィルタ
           .map((doc: any) => ({
@@ -291,9 +286,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // ドキュメント選択ハンドラ
-  const handleDocumentClick = (documentId: number) => {
+  const handleDocumentClick = (documentEntityId: number) => {
     if (onDocumentSelect) {
-      onDocumentSelect(documentId);
+      onDocumentSelect(documentEntityId);
     }
   };
 
@@ -307,7 +302,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
 
   // ドキュメントアイテムをレンダリング
   const renderDocumentItem = (document: DocumentItem, level: number = 0, categoryEntityId?: number) => {
-    const isSelected = selectedDocumentId === document.id;
+    const isSelected = selectedDocumentEntityId === document.entityId;
     const isHovered = hoveredItem === document.id;
 
     return (
@@ -317,7 +312,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
             isSelected ? 'bg-gray-800 text-white' : 'text-gray-300 hover:text-white'
           }`}
           style={{ paddingLeft: `${level * 0.8}rem` }}
-          onClick={() => handleDocumentClick(document.id)}
+          onClick={() => handleDocumentClick(document.entityId)}
           onMouseEnter={() => setHoveredItem(document.id)}
           onMouseLeave={() => setHoveredItem(null)}
         >
@@ -336,7 +331,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
                   e.preventDefault();
                   e.stopPropagation();
                   if (categoryEntityId) {
-                    handleDocumentEdit(document.id, categoryEntityId);
+                    handleDocumentEdit(document.entityId, categoryEntityId);
                   }
                 }}
               >
@@ -351,7 +346,6 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
 
   // カテゴリアイテムを再帰的にレンダリング
   const renderCategoryItem = (item: CategoryItem, level: number = 0) => {
-    console.log('item: ', item);
     const isExpanded = expandedItems.has(item.entityId);
     const hasChildren = item.children && item.children.length > 0;
     const isSelected = selectedCategoryEntityId === item.entityId;

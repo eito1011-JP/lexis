@@ -6,13 +6,9 @@ use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
 use App\Models\EditStartVersion;
 use App\Models\User;
 use App\Models\UserBranch;
-use Http\Discovery\Exception\NotFoundException;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Database\Eloquent\Collection;
 
 class FetchCategoriesUseCase
@@ -28,7 +24,7 @@ class FetchCategoriesUseCase
         // ユーザーのアクティブブランチを取得
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
 
-        if (!$activeUserBranch) {
+        if (! $activeUserBranch) {
             // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
             return DocumentCategory::select('id', 'entity_id', 'title')
                 ->where('parent_entity_id', $dto->parentEntityId)

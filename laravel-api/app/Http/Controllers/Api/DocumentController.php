@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
-use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
+use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\DetailRequest;
@@ -45,7 +45,6 @@ class DocumentController extends ApiBaseController
     protected DeleteDocumentUseCase $deleteDocumentUseCase;
 
     protected DocumentCategoryService $documentCategoryService;
-
 
     public function __construct(
         DocumentService $documentService,
@@ -151,7 +150,8 @@ class DocumentController extends ApiBaseController
             }
 
             // DTOを作成してUseCaseを実行
-            $dto = DetailDto::fromRequest($request->validated());
+            $validatedData = $request->validated();
+            $dto = DetailDto::fromRequest($validatedData);
             $result = $useCase->execute($dto, $user);
 
             return response()->json($result);
@@ -184,7 +184,7 @@ class DocumentController extends ApiBaseController
 
             $validatedRequest = $request->validated();
             $updateDocumentDto = new UpdateDocumentDto(
-                current_document_id: $validatedRequest['current_document_id'],
+                document_entity_id: $validatedRequest['document_entity_id'],
                 title: $validatedRequest['title'],
                 description: $validatedRequest['description'],
                 edit_pull_request_id: $validatedRequest['edit_pull_request_id'] ?? null,

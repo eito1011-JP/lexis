@@ -5,9 +5,9 @@ namespace Database\Factories;
 use App\Enums\DocumentStatus;
 use App\Models\DocumentVersion;
 use App\Models\DocumentVersionEntity;
+use App\Models\Organization;
 use App\Models\User;
 use App\Models\UserBranch;
-use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

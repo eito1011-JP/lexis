@@ -22,7 +22,8 @@ class DetailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => 'required|integer|exists:document_versions,id',
+            'entity_id' => 'required|integer|exists:document_version_entities,id',
+            'pull_request_edit_session_token' => 'nullable|string',
         ];
     }
 
@@ -32,7 +33,7 @@ class DetailRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'id' => $this->route('id'),
+            'entity_id' => $this->route('id'),
         ]);
     }
 }

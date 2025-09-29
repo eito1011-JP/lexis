@@ -380,7 +380,7 @@ class UpdateDocumentUseCaseTest extends TestCase
             pull_request_edit_token: null
         );
 
-        // Act & Assert  
+        // Act & Assert
         // organizationMemberがnullの場合はErrorExceptionが発生する
         $this->expectException(\ErrorException::class);
         $this->expectExceptionMessage('Attempt to read property "organization_id" on null');
