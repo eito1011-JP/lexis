@@ -56,10 +56,10 @@ export default function DocumentsPage(): JSX.Element {
   };
 
   // カテゴリ詳細を取得する関数
-  const loadCategoryDetail = async (categoryId: number) => {
+  const loadCategoryDetail = async (categoryEntityId: number) => {
     try {
       setLoading(true);
-      const detail = await fetchCategoryDetail(categoryId);
+      const detail = await fetchCategoryDetail(categoryEntityId);
       console.log('categoryDetail', detail);
       setCategoryDetail(detail);
     } catch (error) {
@@ -73,12 +73,12 @@ export default function DocumentsPage(): JSX.Element {
   };
 
   // サイドコンテンツのカテゴリ選択ハンドラ
-  const handleSideContentCategorySelect = (categoryId: number) => {
-    setSelectedSideContentCategory(categoryId);
+  const handleSideContentCategorySelect = (categoryEntityId: number) => {
+    setSelectedSideContentCategory(categoryEntityId);
     setSelectedDocumentId(null);
     setDocumentDetail(null);
-    console.log('Selected side content category:', categoryId);
-    loadCategoryDetail(categoryId);
+    console.log('Selected side content category:', categoryEntityId);
+    loadCategoryDetail(categoryEntityId);
   };
 
   // ドキュメント選択ハンドラ
@@ -86,12 +86,9 @@ export default function DocumentsPage(): JSX.Element {
     try {
       setLoading(true);
       const endpoint = API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentId);
-      console.log('API endpoint:', endpoint);
-      console.log('Document ID:', documentId);
       
       const response = await apiClient.get(endpoint);
       
-      console.log(response);
       // レスポンスからドキュメント詳細とパンクズリストを取得
       const documentDetail: DocumentDetail = {
         id: response.id,
@@ -100,20 +97,13 @@ export default function DocumentsPage(): JSX.Element {
         breadcrumbs: response.breadcrumbs
       };
 
-      console.log(documentDetail);
-      
       setSelectedDocumentId(documentDetail.id);
       setDocumentDetail(documentDetail);
       setSelectedSideContentCategory(null);
       setCategoryDetail(null);
-      console.log('Selected document:', documentDetail);
       
     } catch (error) {
       console.error('ドキュメント取得エラー:', error);
-      console.error('エラー詳細:', JSON.stringify(error, null, 2));
-      if (error instanceof Error && (error as any).response) {
-        console.error('レスポンス詳細:', (error as any).response);
-      }
       setToastMessage('ドキュメント詳細の取得に失敗しました');
       setToastType('error');
       setShowToast(true);
@@ -130,12 +120,12 @@ export default function DocumentsPage(): JSX.Element {
           // カテゴリリストを取得
           const categories = await fetchCategories(null);
           if (categories.length > 0) {
-            // IDが最も小さいカテゴリを選択
+            // entity_IDが最も小さいカテゴリを選択
             const minIdCategory = categories.reduce((min, current) => 
-              current.id < min.id ? current : min
+              current.entity_id < min.entity_id ? current : min
             );
-            setSelectedSideContentCategory(minIdCategory.id);
-            await loadCategoryDetail(minIdCategory.id);
+            setSelectedSideContentCategory(minIdCategory.entity_id);
+            await loadCategoryDetail(minIdCategory.entity_id);
           }
         } else {
           await loadCategoryDetail(selectedSideContentCategory);
@@ -167,7 +157,7 @@ export default function DocumentsPage(): JSX.Element {
       showDocumentSideContent={true}
       onCategorySelect={handleSideContentCategorySelect}
       onDocumentSelect={handleDocumentSelect}
-      selectedCategoryId={selectedSideContentCategory ? selectedSideContentCategory : undefined}
+      selectedCategoryEntityId={selectedSideContentCategory ? selectedSideContentCategory : undefined}
       selectedDocumentId={selectedDocumentId || undefined}
     >
          <div className="mb-6 align-left">

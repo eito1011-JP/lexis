@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Enums\DocumentStatus;
-use App\Models\DocumentCategory;
 use App\Models\DocumentVersion;
+use App\Models\DocumentVersionEntity;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Models\Organization;
@@ -32,12 +32,11 @@ class DocumentVersionFactory extends Factory
         return [
             'user_id' => User::factory(),
             'user_branch_id' => null,
+            'entity_id' => DocumentVersionEntity::factory(),
             'status' => DocumentStatus::DRAFT->value,
             'description' => $this->faker->text(),
-            'category_id' => DocumentCategory::factory(),
+            'category_entity_id' => null, // スキーマに合わせて修正
             'title' => $this->faker->sentence(),
-            'last_edited_by' => $this->faker->name(),
-            'last_reviewed_by' => null,
             'is_deleted' => false,
             'deleted_at' => null,
             'organization_id' => Organization::factory(),

@@ -114,7 +114,7 @@ export default function EditCategoryPage(): JSX.Element {
         sidebar={true}
         showDocumentSideContent={true}
         onCategorySelect={handleSideContentCategorySelect}
-        selectedCategoryId={selectedSideContentCategory}
+        selectedCategoryEntityId={selectedSideContentCategory}
         onNavigationRequest={handleControlledNavigation}
       >
         <div className="flex justify-center items-center h-64">
@@ -131,7 +131,7 @@ export default function EditCategoryPage(): JSX.Element {
         sidebar={true}
         showDocumentSideContent={true}
         onCategorySelect={handleSideContentCategorySelect}
-        selectedCategoryId={selectedSideContentCategory}
+        selectedCategoryEntityId={selectedSideContentCategory}
         onNavigationRequest={handleControlledNavigation}
       >
         <div className="flex justify-center items-center h-64">
@@ -147,7 +147,7 @@ export default function EditCategoryPage(): JSX.Element {
       sidebar={true}
       showDocumentSideContent={true}
       onCategorySelect={handleSideContentCategorySelect}
-      selectedCategoryId={selectedSideContentCategory}
+      selectedCategoryEntityId={selectedSideContentCategory}
       onNavigationRequest={handleControlledNavigation}
     >
       <div className="text-white">

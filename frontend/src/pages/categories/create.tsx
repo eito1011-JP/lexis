@@ -89,7 +89,7 @@ export default function CreateRootCategoryPage(): JSX.Element {
       sidebar={true}
       showDocumentSideContent={true}
       onCategorySelect={handleSideContentCategorySelect}
-      selectedCategoryId={selectedSideContentCategory}
+      selectedCategoryEntityId={selectedSideContentCategory}
       onNavigationRequest={handleControlledNavigation}
     >
       <CategoryForm
