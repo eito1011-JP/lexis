@@ -30,9 +30,9 @@ interface Document {
 
 export default function EditDocumentPage(): JSX.Element {
   const navigate = useNavigate();
-  const { categoryId: categoryIdParam, documentId: documentIdParam } = useParams<{ 
-    categoryId: string; 
-    documentId: string; 
+  const { categoryEntityId: categoryEntityIdParam, documentEntityId: documentEntityIdParam } = useParams<{ 
+    categoryEntityId: string; 
+    documentEntityId: string; 
   }>();
   const [isLoading, setIsLoading] = useState(true);
 
@@ -46,18 +46,17 @@ export default function EditDocumentPage(): JSX.Element {
   // URLパスからcategoryIdとdocumentIdを取得し、データを取得
   useEffect(() => {
     const fetchData = async () => {
-      if (!documentIdParam) {
+      if (!documentEntityIdParam) {
         console.error('documentId is missing from URL path');
         setIsLoading(false);
         return;
       }
 
-      const docId = parseInt(documentIdParam);
+      const documentEntityId = parseInt(documentEntityIdParam);
 
       try {
-        const documentResponse = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(docId));
+        const documentResponse = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentEntityId));
 
-        console.log('documentResponse', documentResponse);
         setTitle(documentResponse.title || '');
         setDescription(documentResponse.description || '');
         setDocumentBreadcrumbs(documentResponse.breadcrumbs || []);
@@ -69,7 +68,7 @@ export default function EditDocumentPage(): JSX.Element {
     };
 
     fetchData();
-  }, [categoryIdParam, documentIdParam]);
+  }, [categoryEntityIdParam, documentEntityIdParam]);
 
   const handleSave = async () => {
     if (isSubmitting) return;
@@ -82,7 +81,7 @@ export default function EditDocumentPage(): JSX.Element {
     if (!description.trim()) {
       errors.description = '本文を入力してください';
     }
-    if (!documentIdParam) {
+    if (!documentEntityIdParam) {
       alert('必要な情報が不足しています。');
       return;
     }
@@ -101,7 +100,7 @@ export default function EditDocumentPage(): JSX.Element {
       const payload: any = {
         title: title.trim(),
         description: description.trim(),
-        current_document_id: documentIdParam,
+        document_entity_id: documentEntityIdParam,
       };
 
       // プルリクエスト編集関連の処理（必要に応じて）

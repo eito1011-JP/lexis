@@ -184,7 +184,7 @@ class DocumentController extends ApiBaseController
 
             $validatedRequest = $request->validated();
             $updateDocumentDto = new UpdateDocumentDto(
-                document_entity_id: $validatedRequest['current_document_id'],
+                document_entity_id: $validatedRequest['document_entity_id'],
                 title: $validatedRequest['title'],
                 description: $validatedRequest['description'],
                 edit_pull_request_id: $validatedRequest['edit_pull_request_id'] ?? null,
