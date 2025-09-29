@@ -9,7 +9,7 @@ import DocumentSideContent from '../sidebar/DocumentSideContent';
  */
 // ドキュメント詳細の型定義
 export interface DocumentDetail {
-  id: number;
+  entityId: number;
   title: string;
   description: string;
   breadcrumbs?: Array<{
@@ -24,9 +24,9 @@ interface AdminLayoutProps {
   sidebar?: boolean;
   showDocumentSideContent?: boolean;
   onCategorySelect?: (categoryEntityId: number) => void;
-  onDocumentSelect?: (documentId: number) => void;
+  onDocumentSelect?: (documentEntityId: number) => void;
   selectedCategoryEntityId?: number;
-  selectedDocumentId?: number;
+  selectedDocumentEntityId?: number;
   onNavigationRequest?: (path: string) => void;
 }
 
@@ -38,7 +38,7 @@ export default function AdminLayout({
   onCategorySelect,
   onDocumentSelect,
   selectedCategoryEntityId,
-  selectedDocumentId,
+  selectedDocumentEntityId,
   onNavigationRequest,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
@@ -186,7 +186,7 @@ export default function AdminLayout({
                     onCategorySelect={onCategorySelect}
                     onDocumentSelect={onDocumentSelect}
                     selectedCategoryEntityId={selectedCategoryEntityId}
-                    selectedDocumentId={selectedDocumentId}
+                    selectedDocumentEntityId={selectedDocumentEntityId}
                   />
               )}
             </div>

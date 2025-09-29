@@ -44,9 +44,7 @@ export default function CreateDocumentPage(): JSX.Element {
       try {
         const id = parseInt(categoryEntityIdParam);
         setCategoryEntityId(id);
-        // 特定のカテゴリの詳細情報を取得
         const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
-        console.log('response', response);
         setSelectedCategory(response.category);
       } catch (error) {
         console.error('カテゴリ詳細取得エラー:', error);

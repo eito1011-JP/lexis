@@ -19,7 +19,7 @@ export default function DocumentsPage(): JSX.Element {
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number | null>(null);
   const [categoryDetail, setCategoryDetail] = useState<ApiCategoryDetailResponse | null>(null);
-  const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
+  const [selectedDocumentEntityId, setSelectedDocumentEntityId] = useState<number | null>(null);
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
@@ -75,29 +75,30 @@ export default function DocumentsPage(): JSX.Element {
   // サイドコンテンツのカテゴリ選択ハンドラ
   const handleSideContentCategorySelect = (categoryEntityId: number) => {
     setSelectedSideContentCategory(categoryEntityId);
-    setSelectedDocumentId(null);
+    setSelectedDocumentEntityId(null);
     setDocumentDetail(null);
     console.log('Selected side content category:', categoryEntityId);
     loadCategoryDetail(categoryEntityId);
   };
 
   // ドキュメント選択ハンドラ
-  const handleDocumentSelect = async (documentId: number) => {
+  const handleDocumentSelect = async (documentEntityId: number) => {
     try {
       setLoading(true);
-      const endpoint = API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentId);
+      console.log('documentEntityId', documentEntityId);
+      const endpoint = API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentEntityId);
       
       const response = await apiClient.get(endpoint);
       
       // レスポンスからドキュメント詳細とパンクズリストを取得
       const documentDetail: DocumentDetail = {
-        id: response.id,
+        entityId: response.entityId,
         title: response.title,
         description: response.description,
         breadcrumbs: response.breadcrumbs
       };
 
-      setSelectedDocumentId(documentDetail.id);
+      setSelectedDocumentEntityId(documentDetail.entityId);
       setDocumentDetail(documentDetail);
       setSelectedSideContentCategory(null);
       setCategoryDetail(null);
@@ -158,7 +159,7 @@ export default function DocumentsPage(): JSX.Element {
       onCategorySelect={handleSideContentCategorySelect}
       onDocumentSelect={handleDocumentSelect}
       selectedCategoryEntityId={selectedSideContentCategory ? selectedSideContentCategory : undefined}
-      selectedDocumentId={selectedDocumentId || undefined}
+      selectedDocumentEntityId={selectedDocumentEntityId || undefined}
     >
          <div className="mb-6 align-left">
            {/* パンくずリストと差分提出ボタン */}
