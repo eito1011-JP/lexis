@@ -5,7 +5,6 @@ namespace App\UseCases\Document;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Enums\PullRequestEditSessionDiffType;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;

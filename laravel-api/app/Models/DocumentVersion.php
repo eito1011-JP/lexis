@@ -98,6 +98,15 @@ class DocumentVersion extends Model
     }
 
     /**
+     * カテゴリとのリレーション
+     * category_entity_idに対応するDocumentCategoryを取得
+     */
+    public function category()
+    {
+        return $this->belongsTo(DocumentCategory::class, 'category_entity_id', 'entity_id');
+    }
+
+    /**
      * ステータスによるスコープ
      */
     public function scopeForStatus($query, int $status)

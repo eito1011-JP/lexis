@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
-use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
+use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\DetailRequest;
@@ -45,7 +45,6 @@ class DocumentController extends ApiBaseController
     protected DeleteDocumentUseCase $deleteDocumentUseCase;
 
     protected DocumentCategoryService $documentCategoryService;
-
 
     public function __construct(
         DocumentService $documentService,

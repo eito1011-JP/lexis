@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::table('document_categories', function (Blueprint $table) {
             // Add entity_id and parent_entity_id columns if they don't exist
-            if (!Schema::hasColumn('document_categories', 'entity_id')) {
+            if (! Schema::hasColumn('document_categories', 'entity_id')) {
                 $table->unsignedBigInteger('entity_id')->nullable()->after('id');
             }
-            if (!Schema::hasColumn('document_categories', 'parent_entity_id')) {
+            if (! Schema::hasColumn('document_categories', 'parent_entity_id')) {
                 $table->unsignedBigInteger('parent_entity_id')->nullable()->after('entity_id');
             }
         });
@@ -31,7 +31,7 @@ return new class extends Migration
             } catch (\Exception $e) {
                 // Foreign key already exists
             }
-            
+
             try {
                 $table->foreign('parent_entity_id', 'fk_dc_parent_entity')
                     ->references('id')->on('document_category_entities')
@@ -39,7 +39,7 @@ return new class extends Migration
             } catch (\Exception $e) {
                 // Foreign key already exists
             }
-            
+
             // Remove parent_id column (drop foreign key first)
             if (Schema::hasColumn('document_categories', 'parent_id')) {
                 $table->dropForeign('document_categories_parent_id_foreign');
@@ -57,7 +57,7 @@ return new class extends Migration
             $table->dropForeign('fk_dc_entity');
             $table->dropForeign('fk_dc_parent_entity');
             $table->dropColumn(['entity_id', 'parent_entity_id']);
-            
+
             // Restore parent_id column
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->foreign('parent_id')->references('id')->on('document_categories')->onDelete('restrict');

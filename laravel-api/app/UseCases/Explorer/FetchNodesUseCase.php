@@ -3,8 +3,8 @@
 namespace App\UseCases\Explorer;
 
 use App\Dto\UseCase\Explorer\FetchNodesDto;
-use App\Models\User;
 use App\Models\DocumentCategoryEntity;
+use App\Models\User;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use Http\Discovery\Exception\NotFoundException;
@@ -27,7 +27,7 @@ class FetchNodesUseCase
     {
         $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
 
-        if (!$categoryEntity) {
+        if (! $categoryEntity) {
             throw new NotFoundException('カテゴリエンティティが見つかりません。');
         }
 

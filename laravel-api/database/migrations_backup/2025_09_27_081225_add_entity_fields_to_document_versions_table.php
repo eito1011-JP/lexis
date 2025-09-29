@@ -21,7 +21,7 @@ return new class extends Migration
             $table->foreign('category_entity_id', 'fk_dv_category_entity')
                 ->references('id')->on('document_category_entities')
                 ->onDelete('restrict');
-            
+
             // Remove category_id column (drop foreign key first)
             $table->dropForeign('document_versions_category_id_foreign');
             $table->dropColumn('category_id');
@@ -37,7 +37,7 @@ return new class extends Migration
             $table->dropForeign('fk_dv_entity');
             $table->dropForeign('fk_dv_category_entity');
             $table->dropColumn(['entity_id', 'category_entity_id']);
-            
+
             // Restore category_id column
             $table->unsignedBigInteger('category_id')->nullable();
             $table->foreign('category_id')->references('id')->on('document_categories')->onDelete('restrict');

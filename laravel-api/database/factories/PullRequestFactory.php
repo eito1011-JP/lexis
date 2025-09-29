@@ -3,9 +3,9 @@
 namespace Database\Factories;
 
 use App\Enums\PullRequestStatus;
+use App\Models\Organization;
 use App\Models\PullRequest;
 use App\Models\UserBranch;
-use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
