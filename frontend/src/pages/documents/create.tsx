@@ -4,6 +4,7 @@ import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { useNavigate, useParams } from 'react-router-dom';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 // エラー型の定義
 interface ApiError {
@@ -16,6 +17,7 @@ interface Category {
   title: string;
   name?: string;
   path?: string;
+  breadcrumbs?: Array<{id: number; title: string}>;
 }
 
 export default function CreateDocumentPage(): JSX.Element {
@@ -44,17 +46,8 @@ export default function CreateDocumentPage(): JSX.Element {
         setCategoryEntityId(id);
         // 特定のカテゴリの詳細情報を取得
         const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
-        
-        // レスポンス構造に応じてカテゴリ情報を取得
-        let categoryData = null;
-        if (response.category) {
-          categoryData = response.category;
-        } else if (response.data) {
-          categoryData = response.data;
-        } else {
-          categoryData = response;
-        }
-        setSelectedCategory(categoryData);
+        console.log('response', response);
+        setSelectedCategory(response.category);
       } catch (error) {
         console.error('カテゴリ詳細取得エラー:', error);
       } finally {
@@ -137,15 +130,11 @@ export default function CreateDocumentPage(): JSX.Element {
       <div className="text-white min-h-full">
         {/* ヘッダー部分 */}
         <div className="border-b border-gray-700 p-6">
-          <div className="flex items-center text-sm text-gray-400 mb-4">
-            <span>🏠</span>
-            <span className="mx-2">›</span>
-            {selectedCategory && (
-              <>
-                <span>{selectedCategory.title || selectedCategory.name}</span>
-              </>
-            )}
-
+          <div className="mb-4">
+            <Breadcrumb 
+              breadcrumbs={selectedCategory?.breadcrumbs}
+              homeLink="/documents"
+            />
           </div>
           
           <div className="mb-6">
