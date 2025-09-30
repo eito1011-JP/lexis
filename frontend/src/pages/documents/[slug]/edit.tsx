@@ -64,16 +64,15 @@ export default function EditDocumentPage(): JSX.Element {
       if (!slug) return;
       try {
         setDocumentLoading(true);
-        const endpoint = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET_DOCUMENT_DETAIL}`;
-
-        // category_pathとslugの両方をクエリストリングとして送信
+        // RESTfulなエンドポイントでドキュメント詳細を取得
+        // まず、slugからドキュメントIDを取得する必要があります
         const params = new URLSearchParams();
         if (category) {
           params.append('category_path', category);
         }
         params.append('slug', slug);
 
-        const url = `${endpoint}?${params.toString()}`;
+        const url = `${API_CONFIG.ENDPOINTS.DOCUMENTS.GET}?${params.toString()}`;
         const response = await apiClient.get(url);
 
         // 取得したデータをフォームにセット
@@ -188,8 +187,8 @@ export default function EditDocumentPage(): JSX.Element {
         console.log('API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE', API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE);
       }
 
-      // ドキュメント編集APIを呼び出す
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}`, payload);
+      // RESTfulなドキュメント編集APIを呼び出す
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentId}`, payload);
 
       // 成功メッセージを表示
       setToastMessage('編集が完了しました');

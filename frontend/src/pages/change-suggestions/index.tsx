@@ -19,6 +19,7 @@ type Category = {
 
 // ドキュメントアイテムの型定義
 type DocumentItem = {
+  id: number;
   sidebar_label: string | null;
   slug: string | null;
   is_public: boolean;
@@ -125,14 +126,15 @@ export default function ChangeSuggestionsPage(): JSX.Element {
 
   // ドキュメント削除のハンドラー
   const handleDeleteDocument = async () => {
-    if (!documentToDelete || !documentToDelete.slug) return;
+    if (!documentToDelete || !documentToDelete.id) return;
 
     setIsDeleting(true);
     setDeleteError(null);
 
     try {
+      // RESTfulなドキュメント削除APIを呼び出す
       await apiClient.delete(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${documentToDelete.slug}`
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}/${documentToDelete.id}`
       );
 
       // 即座にページをリロード

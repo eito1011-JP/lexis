@@ -10,16 +10,16 @@ export const API_CONFIG = {
     PRE_USERS_IDENTIFY: '/api/auth/pre-users',
     ORGANIZATIONS_CREATE: '/api/organizations',
     DOCUMENTS: {
-      CREATE: '/api/documents/create',
-      UPDATE: '/api/documents/update',
-      DELETE: '/api/documents/delete',
-      GET: '/api/documents',
-      GET_DOCUMENT_DETAIL: '/api/documents/detail',
-      GET_DOCUMENT_CATEGORY_CONTENTS: '/api/documents/category-contents',
+      CREATE: '/api/document_version_entities',
+      UPDATE: '/api/document_version_entities',
+      DELETE: '/api/document_version_entities',
+      GET: '/api/document_version_entities',
+      GET_DOCUMENT_DETAIL: '/api/document_version_entities',
+      GET_DOCUMENT_CATEGORY_CONTENTS: '/api/document_version_entities/category-contents',
     },
     DOCUMENT_VERSIONS: {
-      CREATE: '/api/document_versions',
-      GET_DETAIL: (id: number) => `/api/document_versions/${id}`,
+      CREATE: '/api/document_version_entities',
+      GET_DETAIL: (id: number) => `/api/document_version_entities/${id}`,
     },
     CATEGORIES: {
       GET: '/api/document-categories',
@@ -52,8 +52,8 @@ export const API_CONFIG = {
       UPDATE_TITLE: '/api/pull-requests',
     },
     GIT: {
-      CHECK_DIFF: '/api/documents/git/check-diff',
-      GET_DIFF: '/api/documents/git/diff',
+      CHECK_DIFF: '/api/document_version_entities/git/check-diff',
+      GET_DIFF: '/api/document_version_entities/git/diff',
     },
     FIX_REQUESTS: {
       GET_DIFF: '/api/fix-requests/:token',

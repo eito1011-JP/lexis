@@ -28,7 +28,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
 
-class DocumentController extends ApiBaseController
+class DocumentVersionEntityController extends ApiBaseController
 {
     protected DocumentService $documentService;
 
@@ -102,7 +102,7 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントバージョンIDでドキュメントを取得
      */
-    public function detail(DetailRequest $request, DetailUseCase $useCase): JsonResponse
+    public function show(DetailRequest $request, DetailUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -173,7 +173,7 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを削除
      */
-    public function delete(DeleteDocumentRequest $request, DeleteDocumentUseCase $useCase): JsonResponse
+    public function destroy(DeleteDocumentRequest $request, DeleteDocumentUseCase $useCase): JsonResponse
     {
         try {
         $user = $this->user();
@@ -202,70 +202,6 @@ class DocumentController extends ApiBaseController
                 ErrorType::STATUS_INTERNAL_ERROR,
                 LogLevel::ERROR,
             );
-        }
-    }
-
-    /**
-     * カテゴリコンテンツを取得
-     */
-    public function getCategoryContents(Request $request): JsonResponse
-    {
-        try {
-            $slug = $request->query('slug');
-
-            if (! $slug) {
-                return response()->json([
-                    'error' => '有効なslugが必要です',
-                ], 400);
-            }
-
-            $category = DocumentCategory::where('slug', $slug)->first();
-            if (! $category) {
-                return response()->json([
-                    'error' => 'カテゴリが見つかりません',
-                ], 404);
-            }
-
-            // ドキュメントとサブカテゴリを取得
-            $documents = DocumentVersion::where('category_id', $category->id)
-                ->select('id', 'sidebar_label as name', 'slug', 'is_public')
-                ->get()
-                ->map(function ($doc) {
-                    return [
-                        'name' => $doc->name,
-                        'path' => $doc->slug,
-                        'type' => 'document',
-                        'label' => $doc->name,
-                        'isDraft' => ! $doc->is_public,
-                    ];
-                });
-
-            $subCategories = DocumentCategory::where('parent_entity_id', $category->id)
-                ->select('id', 'name', 'slug')
-                ->get()
-                ->map(function ($cat) {
-                    return [
-                        'name' => $cat->name,
-                        'path' => $cat->slug,
-                        'type' => 'category',
-                    ];
-                });
-
-            $items = $documents->concat($subCategories);
-
-            return response()->json([
-                'items' => $items,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('カテゴリコンテンツ取得エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'error' => 'カテゴリコンテンツの取得に失敗しました',
-            ], 500);
         }
     }
 }

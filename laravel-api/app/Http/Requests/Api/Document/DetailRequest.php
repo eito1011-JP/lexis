@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Document;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 
 class DetailRequest extends FormRequest
 {
@@ -21,6 +22,7 @@ class DetailRequest extends FormRequest
      */
     public function rules(): array
     {
+        Log::info(json_encode($this->all()));
         return [
             'entity_id' => 'required|integer|exists:document_version_entities,id',
             'pull_request_edit_session_token' => 'nullable|string',
@@ -33,7 +35,7 @@ class DetailRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'entity_id' => $this->route('id'),
+            'entity_id' => $this->route('document_version_entity'),
         ]);
     }
 }
