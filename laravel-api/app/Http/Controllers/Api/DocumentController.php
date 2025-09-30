@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
-use App\Dto\UseCase\Document\GetDocumentsDto;
+use App\Dto\UseCase\Document\DeleteDocumentDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
@@ -173,10 +173,9 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを削除
      */
-    public function delete(DeleteDocumentRequest $request): JsonResponse
+    public function delete(DeleteDocumentRequest $request, DeleteDocumentUseCase $useCase): JsonResponse
     {
         try {
-        // 認証チェック
         $user = $this->user();
 
         if (! $user) {
@@ -187,12 +186,13 @@ class DocumentController extends ApiBaseController
             );
         }
 
-        // UseCaseを実行
-        $this->deleteDocumentUseCase->execute([
-            'category_path_with_slug' => $request->category_path_with_slug,
-            'edit_pull_request_id' => $request->edit_pull_request_id,
-            'pull_request_edit_token' => $request->pull_request_edit_token,
-        ], $user);
+        $validatedData = $request->validated();
+        $dto = new DeleteDocumentDto(
+            document_entity_id: $validatedData['document_entity_id'],
+            edit_pull_request_id: $validatedData['edit_pull_request_id'] ?? null,
+            pull_request_edit_token: $validatedData['pull_request_edit_token'] ?? null,
+        );
+        $useCase->execute($dto, $user);
 
             return response()->json();
         } catch (Exception) {

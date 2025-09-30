@@ -22,7 +22,7 @@ class DeleteDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_path_with_slug' => 'required|string|max:255',
+            'document_entity_id' => 'required|integer|exists:document_version_entities,id',
             'edit_pull_request_id' => 'nullable|integer',
             'pull_request_edit_token' => 'nullable|string',
         ];
@@ -34,7 +34,7 @@ class DeleteDocumentRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'category_path_with_slug' => __('attributes.document.category_path_with_slug'),
+            'document_entity_id' => __('attributes.document.documentEntityId'),
             'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
             'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
