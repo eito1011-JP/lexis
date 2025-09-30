@@ -68,42 +68,9 @@ class DocumentController extends ApiBaseController
     }
 
     /**
-     * ドキュメント一覧を取得
-     */
-    public function getDocuments(GetDocumentsRequest $request): JsonResponse
-    {
-        $user = $this->user();
-
-        if (! $user) {
-            return response()->json([
-                'error' => '認証が必要です',
-            ], 401);
-        }
-
-        // DTOを作成してUseCaseを実行
-        $dto = GetDocumentsDto::fromArray($request->validated());
-        // $result = $this->getDocumentsUseCase->execute($dto, $user);
-
-        return response()->json([
-            'documents' => [],
-            'categories' => [],
-        ]);
-        // if (! $result['success']) {
-        //     return response()->json([
-        //         'error' => $result['error'],
-        //     ], 500);
-        // }
-
-        // return response()->json([
-        //     'documents' => $result['documents'],
-        //     'categories' => $result['categories'],
-        // ]);
-    }
-
-    /**
      * ドキュメントを作成
      */
-    public function createDocument(CreateDocumentRequest $request, CreateDocumentUseCase $useCase): JsonResponse
+    public function create(CreateDocumentRequest $request, CreateDocumentUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -168,7 +135,7 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを更新
      */
-    public function updateDocument(UpdateDocumentRequest $request): JsonResponse
+    public function update(UpdateDocumentRequest $request): JsonResponse
     {
         try {
             // 認証チェック
@@ -206,31 +173,36 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを削除
      */
-    public function deleteDocument(DeleteDocumentRequest $request): JsonResponse
+    public function delete(DeleteDocumentRequest $request): JsonResponse
     {
+        try {
         // 認証チェック
         $user = $this->user();
 
         if (! $user) {
-            return response()->json([
-                'error' => '認証が必要です',
-            ], 401);
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
         }
 
         // UseCaseを実行
-        $result = $this->deleteDocumentUseCase->execute([
+        $this->deleteDocumentUseCase->execute([
             'category_path_with_slug' => $request->category_path_with_slug,
             'edit_pull_request_id' => $request->edit_pull_request_id,
             'pull_request_edit_token' => $request->pull_request_edit_token,
         ], $user);
 
-        if (! $result['success']) {
-            return response()->json([
-                'error' => $result['error'],
-            ], 404);
+            return response()->json();
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
-
-        return response()->json();
     }
 
     /**

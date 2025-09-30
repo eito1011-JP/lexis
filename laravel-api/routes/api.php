@@ -108,10 +108,10 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('documents')->group(function () {
         // ドキュメント関連
         Route::get('/', [DocumentController::class, 'getDocuments']);
-        Route::get('/detail', [DocumentController::class, 'getDocumentDetail']);
-        Route::post('/create', [DocumentController::class, 'createDocument']);
-        Route::put('/update', [DocumentController::class, 'updateDocument']);
-        Route::delete('/delete', [DocumentController::class, 'deleteDocument']);
+        Route::get('/detail', [DocumentController::class, 'detail']);
+        Route::post('/create', [DocumentController::class, 'create']);
+        Route::put('/update', [DocumentController::class, 'update']);
+        Route::delete('/delete', [DocumentController::class, 'delete']);
         Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);
     });
 
