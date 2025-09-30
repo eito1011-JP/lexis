@@ -6,7 +6,7 @@ namespace App\Dto\UseCase\Document;
 
 use App\Dto\UseCase\UseCaseDto;
 
-final class DeleteDocumentDto extends UseCaseDto
+final class DestroyDocumentDto extends UseCaseDto
 {
     public function __construct(
         public readonly int $document_entity_id,

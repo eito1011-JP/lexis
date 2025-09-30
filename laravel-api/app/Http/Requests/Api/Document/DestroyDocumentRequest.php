@@ -5,7 +5,7 @@ namespace App\Http\Requests\Api\Document;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Log;
 
-class DeleteDocumentRequest extends FormRequest
+class DestroyDocumentRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,7 +22,6 @@ class DeleteDocumentRequest extends FormRequest
      */
     public function rules(): array
     {
-        Log::info(json_encode($this->all()));
         return [
             'document_entity_id' => 'required|integer|exists:document_version_entities,id',
             'edit_pull_request_id' => 'nullable|integer',

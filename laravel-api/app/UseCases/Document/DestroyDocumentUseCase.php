@@ -3,7 +3,7 @@
 namespace App\UseCases\Document;
 
 use App\Consts\Flag;
-use App\Dto\UseCase\Document\DeleteDocumentDto;
+use App\Dto\UseCase\Document\DestroyDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * ドキュメント削除のユースケース
  */
-class DeleteDocumentUseCase
+class DestroyDocumentUseCase
 {
     public function __construct(
         private UserBranchService $userBranchService,
@@ -31,13 +31,13 @@ class DeleteDocumentUseCase
     /**
      * ドキュメントを削除
      *
-     * @param  DeleteDocumentDto  $dto  ドキュメント削除DTO
+     * @param  DestroyDocumentDto  $dto  ドキュメント削除DTO
      * @param  User  $user  認証済みユーザー
-     * @return array{success: bool, error?: string}
+     * @return DocumentVersion
      *
      * @throws NotFoundException 組織またはドキュメントが見つからない場合
      */
-    public function execute(DeleteDocumentDto $dto, User $user): array
+    public function execute(DestroyDocumentDto $dto, User $user): DocumentVersion
     {
         try {
             DB::beginTransaction();
@@ -128,9 +128,7 @@ class DeleteDocumentUseCase
 
             DB::commit();
 
-            return [
-                'success' => true,
-            ];
+            return $newDocumentVersion;
 
         } catch (\Exception $e) {
             DB::rollBack();

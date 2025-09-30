@@ -4,18 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
-use App\Dto\UseCase\Document\DeleteDocumentDto;
+use App\Dto\UseCase\Document\DestroyDocumentDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
-use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\DetailRequest;
+use App\Http\Requests\Api\Document\DestroyDocumentRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
-use App\UseCases\Document\DeleteDocumentUseCase;
+use App\UseCases\Document\DestroyDocumentUseCase;
 use App\UseCases\Document\DetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
@@ -37,7 +37,7 @@ class DocumentVersionEntityController extends ApiBaseController
 
     protected DetailUseCase $getDocumentDetailUseCase;
 
-    protected DeleteDocumentUseCase $deleteDocumentUseCase;
+    protected DestroyDocumentUseCase $destroyDocumentUseCase;
 
     protected DocumentCategoryService $documentCategoryService;
 
@@ -48,7 +48,7 @@ class DocumentVersionEntityController extends ApiBaseController
         GetDocumentsUseCase $getDocumentsUseCase,
         UpdateDocumentUseCase $updateDocumentUseCase,
         DetailUseCase $getDocumentDetailUseCase,
-        DeleteDocumentUseCase $deleteDocumentUseCase,
+        DestroyDocumentUseCase $destroyDocumentUseCase,
         DocumentCategoryService $documentCategoryService
     ) {
         $this->documentService = $documentService;
@@ -57,7 +57,7 @@ class DocumentVersionEntityController extends ApiBaseController
         $this->getDocumentsUseCase = $getDocumentsUseCase;
         $this->updateDocumentUseCase = $updateDocumentUseCase;
         $this->getDocumentDetailUseCase = $getDocumentDetailUseCase;
-        $this->deleteDocumentUseCase = $deleteDocumentUseCase;
+        $this->destroyDocumentUseCase = $destroyDocumentUseCase;
 
         $this->documentCategoryService = $documentCategoryService;
     }
@@ -65,7 +65,7 @@ class DocumentVersionEntityController extends ApiBaseController
     /**
      * ドキュメントを作成
      */
-    public function create(CreateDocumentRequest $request, CreateDocumentUseCase $useCase): JsonResponse
+    public function store(CreateDocumentRequest $request, CreateDocumentUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -168,7 +168,7 @@ class DocumentVersionEntityController extends ApiBaseController
     /**
      * ドキュメントを削除
      */
-    public function destroy(DeleteDocumentRequest $request, DeleteDocumentUseCase $useCase): JsonResponse
+    public function destroy(DestroyDocumentRequest $request, DestroyDocumentUseCase $useCase): JsonResponse
     {
         try {
         $user = $this->user();
@@ -182,7 +182,7 @@ class DocumentVersionEntityController extends ApiBaseController
         }
 
         $validatedData = $request->validated();
-        $dto = new DeleteDocumentDto(
+        $dto = new DestroyDocumentDto(
             document_entity_id: $validatedData['document_entity_id'],
             edit_pull_request_id: $validatedData['edit_pull_request_id'] ?? null,
             pull_request_edit_token: $validatedData['pull_request_edit_token'] ?? null,
