@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Document;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Log;
 
 class DeleteDocumentRequest extends FormRequest
 {
@@ -21,6 +22,7 @@ class DeleteDocumentRequest extends FormRequest
      */
     public function rules(): array
     {
+        Log::info(json_encode($this->all()));
         return [
             'document_entity_id' => 'required|integer|exists:document_version_entities,id',
             'edit_pull_request_id' => 'nullable|integer',
@@ -38,5 +40,12 @@ class DeleteDocumentRequest extends FormRequest
             'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
             'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
+    }
+
+    public function prepareForValidation(): void
+    {
+        $this->merge([
+            'document_entity_id' => $this->route('document_version_entity'),
+        ]);
     }
 }

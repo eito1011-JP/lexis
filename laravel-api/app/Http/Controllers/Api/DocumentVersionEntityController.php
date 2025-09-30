@@ -10,10 +10,7 @@ use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\DetailRequest;
-use App\Http\Requests\Api\Document\GetDocumentsRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
-use App\Models\DocumentCategory;
-use App\Models\DocumentVersion;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
@@ -24,8 +21,6 @@ use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
 
 class DocumentVersionEntityController extends ApiBaseController
