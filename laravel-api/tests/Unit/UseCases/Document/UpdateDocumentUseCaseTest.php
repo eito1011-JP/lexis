@@ -6,7 +6,9 @@ use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
+use App\Models\DocumentCategoryEntity;
 use App\Models\DocumentVersion;
+use App\Models\DocumentVersionEntity;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -14,6 +16,7 @@ use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Http\Discovery\Exception\NotFoundException;
@@ -38,7 +41,11 @@ class UpdateDocumentUseCaseTest extends TestCase
 
     private DocumentCategory $category;
 
+    private DocumentCategoryEntity $categoryEntity;
+
     private DocumentVersion $existingDocument;
+
+    private DocumentVersionEntity $documentEntity;
 
     private EditStartVersion $existingDocumentCategoryEditStartVersion;
 
@@ -46,15 +53,19 @@ class UpdateDocumentUseCaseTest extends TestCase
 
     private $userBranchService;
 
+    private $documentService;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         // サービスのモック作成
         $this->userBranchService = Mockery::mock(UserBranchService::class);
+        $this->documentService = Mockery::mock(DocumentService::class);
 
         $this->useCase = new UpdateDocumentUseCase(
-            $this->userBranchService
+            $this->userBranchService,
+            $this->documentService
         );
 
         // テストデータの準備
@@ -74,10 +85,21 @@ class UpdateDocumentUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
+        // DocumentCategoryEntityの作成
+        $this->categoryEntity = DocumentCategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         // DocumentCategoryの作成
         $this->category = DocumentCategory::factory()->create([
+            'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'user_branch_id' => $this->userBranch->id,
+        ]);
+
+        // DocumentVersionEntityの作成
+        $this->documentEntity = DocumentVersionEntity::factory()->create([
+            'organization_id' => $this->organization->id,
         ]);
 
         // DocumentCategoryのediStartVersionを作成
@@ -90,15 +112,14 @@ class UpdateDocumentUseCaseTest extends TestCase
 
         // 既存のDocumentVersionを作成
         $this->existingDocument = DocumentVersion::factory()->create([
+            'entity_id' => $this->documentEntity->id,
             'organization_id' => $this->organization->id,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
-            'category_id' => $this->category->id,
+            'category_entity_id' => $this->categoryEntity->id,
             'status' => DocumentStatus::DRAFT->value,
             'title' => 'Original Title',
             'description' => 'Original Description',
-            'last_edited_by' => $this->user->email,
-            'last_reviewed_by' => null,
         ]);
 
         // DocumentVersionのediStartVersionを作成
@@ -121,7 +142,7 @@ class UpdateDocumentUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: null,
@@ -134,6 +155,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($this->userBranch->id);
 
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->existingDocument);
+
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -141,12 +168,11 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Updated Title', $result->title);
         $this->assertEquals('Updated Description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->categoryEntity->id, $result->category_entity_id);
         $this->assertEquals($this->user->id, $result->user_id);
         $this->assertEquals($this->userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertEquals($this->user->email, $result->last_edited_by);
         $this->assertNull($result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
@@ -177,7 +203,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->existingDocument->update(['status' => DocumentStatus::MERGED->value]);
 
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: null,
@@ -190,6 +216,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($this->userBranch->id);
 
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->existingDocument);
+
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -197,12 +229,11 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Updated Title', $result->title);
         $this->assertEquals('Updated Description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->categoryEntity->id, $result->category_entity_id);
         $this->assertEquals($this->user->id, $result->user_id);
         $this->assertEquals($this->userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertEquals($this->user->email, $result->last_edited_by);
         $this->assertNull($result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
@@ -243,7 +274,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: $pullRequest->id,
@@ -256,6 +287,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($this->userBranch->id);
 
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, $pullRequestEditToken)
+            ->andReturn($this->existingDocument);
+
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -263,12 +300,11 @@ class UpdateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Updated Title', $result->title);
         $this->assertEquals('Updated Description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->categoryEntity->id, $result->category_entity_id);
         $this->assertEquals($this->user->id, $result->user_id);
         $this->assertEquals($this->userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertEquals($this->user->email, $result->last_edited_by);
         $this->assertEquals($pullRequestEditSession->id, $result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
@@ -299,7 +335,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: $pullRequest->id,
@@ -311,6 +347,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($this->userBranch->id);
+
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->existingDocument);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -338,7 +380,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: $pullRequest->id,
@@ -350,6 +392,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($this->userBranch->id);
+
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, 'invalid-token')
+            ->andReturn($this->existingDocument);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -373,7 +421,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         $userWithoutOrganization = User::factory()->create();
 
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: null,
@@ -392,18 +440,15 @@ class UpdateDocumentUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new UpdateDocumentDto(
-            current_document_id: 999999, // 存在しないドキュメントID
+            document_entity_id: 999999, // 存在しないドキュメントエンティティID
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: null,
             pull_request_edit_token: null
         );
 
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, null)
-            ->andReturn($this->userBranch->id);
+        // DocumentVersionEntityが見つからない場合は、UserBranchServiceは呼び出されない
+        // （UseCaseの実装で、DocumentVersionEntity::findの後にNotFoundException が発生するため）
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -415,7 +460,7 @@ class UpdateDocumentUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: null,
@@ -455,7 +500,7 @@ class UpdateDocumentUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: null,
@@ -468,6 +513,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, null)
             ->andReturn(999999); // 存在しないユーザーブランチID
+
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->existingDocument);
 
         // Logのモック
         Log::shouldReceive('error')
@@ -509,7 +560,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: $pullRequest->id,
@@ -521,6 +572,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($this->userBranch->id);
+
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, $pullRequestEditToken)
+            ->andReturn($this->existingDocument);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -556,7 +613,7 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: $pullRequest->id,
@@ -568,6 +625,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->once()
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($this->userBranch->id);
+
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, $pullRequestEditToken)
+            ->andReturn($this->existingDocument);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -589,7 +652,7 @@ class UpdateDocumentUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new UpdateDocumentDto(
-            current_document_id: $this->existingDocument->id,
+            document_entity_id: $this->documentEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
             edit_pull_request_id: null,
@@ -602,6 +665,12 @@ class UpdateDocumentUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($this->userBranch->id);
 
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->existingDocument);
+
         // Act
         $result = $this->useCase->execute($dto, $this->user);
 
@@ -611,14 +680,14 @@ class UpdateDocumentUseCaseTest extends TestCase
         // DocumentVersionが正しいデータで作成されたことを確認
         $this->assertDatabaseHas('document_versions', [
             'id' => $result->id,
+            'entity_id' => $this->documentEntity->id,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
-            'category_id' => $this->category->id,
+            'category_entity_id' => $this->categoryEntity->id,
             'title' => 'Updated Title',
             'description' => 'Updated Description',
             'status' => DocumentStatus::DRAFT->value,
-            'last_edited_by' => $this->user->email,
             'pull_request_edit_session_id' => null,
         ]);
     }
