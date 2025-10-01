@@ -7,6 +7,7 @@ import { Edit } from '@/components/icon/common/Edit';
 import { apiClient } from '@/components/admin/api/client';
 import CategoryActionModal from '@/components/admin/CategoryActionModal';
 import CreateActionModal from '@/components/sidebar/CreateActionModal';
+import DocumentDeleteModal from '@/components/sidebar/DocumentDeleteModal';
 import { useNavigate } from 'react-router-dom';
 
 // APIから取得するカテゴリデータの型定義
@@ -86,6 +87,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [createTargetCategoryId, setCreateTargetCategoryId] = useState<number | null>(null);
   const [createModalButtonRef, setCreateModalButtonRef] = useState<React.RefObject<HTMLButtonElement> | undefined>(undefined);
+  // ドキュメント削除モーダル状態
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
 
   // APIデータをCategoryItem形式に変換する関数
   const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
@@ -300,6 +304,42 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     navigate(url);
   };
 
+  // ドキュメント削除モーダルを開くハンドラ
+  const handleDocumentDeleteClick = (document: DocumentItem) => {
+    setSelectedDocument(document);
+    setShowDeleteModal(true);
+  };
+
+  // ドキュメント削除モーダルを閉じるハンドラ
+  const handleCloseDeleteModal = () => {
+    setShowDeleteModal(false);
+    setSelectedDocument(null);
+  };
+
+  // ドキュメント削除実行ハンドラ
+  const handleDocumentDelete = async () => {
+    if (!selectedDocument) return;
+
+    try {
+      await apiClient.delete(`/api/document_version_entities/${selectedDocument.entityId}`);
+      
+      // 削除後にUIを更新 - 削除されたドキュメントを含むカテゴリを再読み込み
+      // ここでは簡易的に全体を再読み込みする
+      const apiCategories = await fetchCategories(null);
+      const transformedCategories = transformApiDataToCategories(apiCategories);
+      setCategories(transformedCategories);
+      
+      // 展開されているカテゴリの子要素も再読み込み
+      for (const entityId of expandedItems) {
+        await handleFetchBelogingItems(entityId);
+      }
+      
+    } catch (error) {
+      console.error('ドキュメントの削除に失敗しました:', error);
+      // TODO: エラートーストの表示
+    }
+  };
+
   // ドキュメントアイテムをレンダリング
   const renderDocumentItem = (document: DocumentItem, level: number = 0, categoryEntityId?: number) => {
     const isSelected = selectedDocumentEntityId === document.entityId;
@@ -322,9 +362,22 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
           {/* ドキュメントラベル */}
           <span className="text-sm truncate flex-1">{document.label}</span>
           
-          {/* 編集アイコン（ホバー時または選択時に表示） */}
+          {/* 削除・編集アイコン（ホバー時または選択時に表示） */}
           {(isHovered || isSelected) && (
             <div className="flex items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                className="p-1 hover:bg-gray-700 rounded transition-colors mr-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDocumentDeleteClick(document);
+                }}
+                title="削除"
+              >
+                <svg className="w-3 h-3 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
               <button
                 className="p-1 hover:bg-gray-700 rounded transition-colors"
                 onClick={(e) => {
@@ -334,6 +387,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
                     handleDocumentEdit(document.entityId, categoryEntityId);
                   }
                 }}
+                title="編集"
               >
                 <Edit className="w-3 h-3" />
               </button>
@@ -476,6 +530,14 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
         onCreateDocument={handleCreateDocument}
         onCreateCategory={handleCreateCategory}
         buttonRef={createModalButtonRef}
+      />
+
+      {/* ドキュメント削除モーダル */}
+      <DocumentDeleteModal
+        isOpen={showDeleteModal}
+        onClose={handleCloseDeleteModal}
+        onDelete={handleDocumentDelete}
+        documentName={selectedDocument?.label || ''}
       />
     </div>
   );

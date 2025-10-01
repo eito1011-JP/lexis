@@ -96,8 +96,8 @@ export default function CreateDocumentPage(): JSX.Element {
         payload.pull_request_edit_token = pullRequestEditToken;
       }
 
-      // ドキュメント作成APIを呼び出す（新エンドポイント）
-      await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.CREATE, payload);
+      // RESTfulなドキュメント作成APIを呼び出す
+      await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE, payload);
 
       alert('ドキュメントが作成されました');
       

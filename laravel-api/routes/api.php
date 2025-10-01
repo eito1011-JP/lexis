@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\ActivityLogOnPullRequestController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\DocumentCategoryController;
-use App\Http\Controllers\Api\DocumentController;
+use App\Http\Controllers\Api\DocumentVersionEntityController;
 use App\Http\Controllers\Api\EmailAuthnController;
 use App\Http\Controllers\Api\ExplorerController;
 use App\Http\Controllers\Api\FixRequestController;
@@ -105,15 +105,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // ドキュメント関連
-    Route::prefix('documents')->group(function () {
-        // ドキュメント関連
-        Route::get('/', [DocumentController::class, 'getDocuments']);
-        Route::get('/detail', [DocumentController::class, 'getDocumentDetail']);
-        Route::post('/create', [DocumentController::class, 'createDocument']);
-        Route::put('/update', [DocumentController::class, 'updateDocument']);
-        Route::delete('/delete', [DocumentController::class, 'deleteDocument']);
-        Route::get('/category-contents', [DocumentController::class, 'getCategoryContents']);
-    });
+    Route::resource('document_version_entities', DocumentVersionEntityController::class);
 
     // カテゴリ関連
     Route::prefix('document-categories')->group(function () {
@@ -139,12 +131,6 @@ Route::middleware('auth:api')->group(function () {
 
     // エクスプローラー関連
     Route::get('/nodes', [ExplorerController::class, 'fetchNodes']);
-
-    // ドキュメントバージョン関連（新仕様）
-    Route::prefix('document_versions')->group(function () {
-        Route::post('/', [DocumentController::class, 'createDocument']);
-        Route::get('/{id}', [DocumentController::class, 'detail']);
-    });
 });
 
 // 組織登録（プリサインアップフロー）

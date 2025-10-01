@@ -109,8 +109,8 @@ export default function EditDocumentPage(): JSX.Element {
         payload.pull_request_edit_token = pullRequestEditToken;
       }
 
-      // ドキュメント更新APIを呼び出す
-      await apiClient.put(API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE, payload);
+      // RESTfulなドキュメント更新APIを呼び出す
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentEntityIdParam}`, payload);
 
       alert('ドキュメントが更新されました');
       

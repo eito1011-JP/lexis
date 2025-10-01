@@ -4,31 +4,26 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
-use App\Dto\UseCase\Document\GetDocumentsDto;
+use App\Dto\UseCase\Document\DestroyDocumentDto;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Http\Requests\Api\Document\CreateDocumentRequest;
-use App\Http\Requests\Api\Document\DeleteDocumentRequest;
 use App\Http\Requests\Api\Document\DetailRequest;
-use App\Http\Requests\Api\Document\GetDocumentsRequest;
+use App\Http\Requests\Api\Document\DestroyDocumentRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
-use App\Models\DocumentCategory;
-use App\Models\DocumentVersion;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
-use App\UseCases\Document\DeleteDocumentUseCase;
+use App\UseCases\Document\DestroyDocumentUseCase;
 use App\UseCases\Document\DetailUseCase;
 use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
 
-class DocumentController extends ApiBaseController
+class DocumentVersionEntityController extends ApiBaseController
 {
     protected DocumentService $documentService;
 
@@ -42,7 +37,7 @@ class DocumentController extends ApiBaseController
 
     protected DetailUseCase $getDocumentDetailUseCase;
 
-    protected DeleteDocumentUseCase $deleteDocumentUseCase;
+    protected DestroyDocumentUseCase $destroyDocumentUseCase;
 
     protected DocumentCategoryService $documentCategoryService;
 
@@ -53,7 +48,7 @@ class DocumentController extends ApiBaseController
         GetDocumentsUseCase $getDocumentsUseCase,
         UpdateDocumentUseCase $updateDocumentUseCase,
         DetailUseCase $getDocumentDetailUseCase,
-        DeleteDocumentUseCase $deleteDocumentUseCase,
+        DestroyDocumentUseCase $destroyDocumentUseCase,
         DocumentCategoryService $documentCategoryService
     ) {
         $this->documentService = $documentService;
@@ -62,48 +57,15 @@ class DocumentController extends ApiBaseController
         $this->getDocumentsUseCase = $getDocumentsUseCase;
         $this->updateDocumentUseCase = $updateDocumentUseCase;
         $this->getDocumentDetailUseCase = $getDocumentDetailUseCase;
-        $this->deleteDocumentUseCase = $deleteDocumentUseCase;
+        $this->destroyDocumentUseCase = $destroyDocumentUseCase;
 
         $this->documentCategoryService = $documentCategoryService;
     }
 
     /**
-     * ドキュメント一覧を取得
-     */
-    public function getDocuments(GetDocumentsRequest $request): JsonResponse
-    {
-        $user = $this->user();
-
-        if (! $user) {
-            return response()->json([
-                'error' => '認証が必要です',
-            ], 401);
-        }
-
-        // DTOを作成してUseCaseを実行
-        $dto = GetDocumentsDto::fromArray($request->validated());
-        // $result = $this->getDocumentsUseCase->execute($dto, $user);
-
-        return response()->json([
-            'documents' => [],
-            'categories' => [],
-        ]);
-        // if (! $result['success']) {
-        //     return response()->json([
-        //         'error' => $result['error'],
-        //     ], 500);
-        // }
-
-        // return response()->json([
-        //     'documents' => $result['documents'],
-        //     'categories' => $result['categories'],
-        // ]);
-    }
-
-    /**
      * ドキュメントを作成
      */
-    public function createDocument(CreateDocumentRequest $request, CreateDocumentUseCase $useCase): JsonResponse
+    public function store(CreateDocumentRequest $request, CreateDocumentUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -135,7 +97,7 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントバージョンIDでドキュメントを取得
      */
-    public function detail(DetailRequest $request, DetailUseCase $useCase): JsonResponse
+    public function show(DetailRequest $request, DetailUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -168,7 +130,7 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを更新
      */
-    public function updateDocument(UpdateDocumentRequest $request): JsonResponse
+    public function update(UpdateDocumentRequest $request): JsonResponse
     {
         try {
             // 認証チェック
@@ -206,94 +168,35 @@ class DocumentController extends ApiBaseController
     /**
      * ドキュメントを削除
      */
-    public function deleteDocument(DeleteDocumentRequest $request): JsonResponse
+    public function destroy(DestroyDocumentRequest $request, DestroyDocumentUseCase $useCase): JsonResponse
     {
-        // 認証チェック
+        try {
         $user = $this->user();
 
         if (! $user) {
-            return response()->json([
-                'error' => '認証が必要です',
-            ], 401);
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
         }
 
-        // UseCaseを実行
-        $result = $this->deleteDocumentUseCase->execute([
-            'category_path_with_slug' => $request->category_path_with_slug,
-            'edit_pull_request_id' => $request->edit_pull_request_id,
-            'pull_request_edit_token' => $request->pull_request_edit_token,
-        ], $user);
+        $validatedData = $request->validated();
+        $dto = new DestroyDocumentDto(
+            document_entity_id: $validatedData['document_entity_id'],
+            edit_pull_request_id: $validatedData['edit_pull_request_id'] ?? null,
+            pull_request_edit_token: $validatedData['pull_request_edit_token'] ?? null,
+        );
+        $useCase->execute($dto, $user);
 
-        if (! $result['success']) {
-            return response()->json([
-                'error' => $result['error'],
-            ], 404);
-        }
-
-        return response()->json();
-    }
-
-    /**
-     * カテゴリコンテンツを取得
-     */
-    public function getCategoryContents(Request $request): JsonResponse
-    {
-        try {
-            $slug = $request->query('slug');
-
-            if (! $slug) {
-                return response()->json([
-                    'error' => '有効なslugが必要です',
-                ], 400);
-            }
-
-            $category = DocumentCategory::where('slug', $slug)->first();
-            if (! $category) {
-                return response()->json([
-                    'error' => 'カテゴリが見つかりません',
-                ], 404);
-            }
-
-            // ドキュメントとサブカテゴリを取得
-            $documents = DocumentVersion::where('category_id', $category->id)
-                ->select('id', 'sidebar_label as name', 'slug', 'is_public')
-                ->get()
-                ->map(function ($doc) {
-                    return [
-                        'name' => $doc->name,
-                        'path' => $doc->slug,
-                        'type' => 'document',
-                        'label' => $doc->name,
-                        'isDraft' => ! $doc->is_public,
-                    ];
-                });
-
-            $subCategories = DocumentCategory::where('parent_entity_id', $category->id)
-                ->select('id', 'name', 'slug')
-                ->get()
-                ->map(function ($cat) {
-                    return [
-                        'name' => $cat->name,
-                        'path' => $cat->slug,
-                        'type' => 'category',
-                    ];
-                });
-
-            $items = $documents->concat($subCategories);
-
-            return response()->json([
-                'items' => $items,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('カテゴリコンテンツ取得エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'error' => 'カテゴリコンテンツの取得に失敗しました',
-            ], 500);
+            return response()->json();
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 }

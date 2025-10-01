@@ -36,6 +36,7 @@ type Category = {
 };
 
 type Document = {
+  id: number;
   slug: string;
   sidebar_label: string;
   is_public: boolean;
@@ -263,14 +264,15 @@ export default function DocumentBySlugPage(): JSX.Element {
 
   // ドキュメント削除のハンドラー
   const handleDeleteDocument = async () => {
-    if (!documentToDelete) return;
+    if (!documentToDelete || !documentToDelete.id) return;
 
     setIsDeleting(true);
     setDeleteError(null);
 
     try {
+      // RESTfulなドキュメント削除APIを呼び出す
       await apiClient.delete(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}?category_path_with_slug=${pathAfterDocuments}/${documentToDelete.slug}`
+        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}/${documentToDelete.id}`
       );
 
       window.location.reload();
