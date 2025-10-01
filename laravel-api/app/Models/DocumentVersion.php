@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentStatus;
 use App\Models\CategoryEntity;
 use App\Models\CategoryVersion;
+use App\Traits\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class DocumentVersion extends Model
 {
