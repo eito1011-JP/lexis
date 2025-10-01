@@ -79,17 +79,6 @@ class DestroyDocumentCategoryUseCase
                 $user->id
             );
 
-            // 6. 編集対象のexistingCategoryを取得
-            $existingCategory = $this->CategoryService->getCategoryByWorkContext(
-                $dto->categoryEntityId,
-                $user,
-                $dto->pullRequestEditToken
-            );
-
-            if (! $existingCategory) {
-                throw new NotFoundException;
-            }
-
             // 7. category_entity_idで作業コンテキストに応じて、配下のdocument_versionsを再帰的に全て取得
             $documents = $this->DocumentService->getDescendantDocumentsByWorkContext(
                 $dto->categoryEntityId,
@@ -135,7 +124,7 @@ class DestroyDocumentCategoryUseCase
 
             // 11. カテゴリ自体を削除
             $deletedCategoryVersion = $this->createDeletedCategoryVersion(
-                $existingCategory,
+                $categoryEntity,
                 $user,
                 $organizationId,
                 $userBranchId,

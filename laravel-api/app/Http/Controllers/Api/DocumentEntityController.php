@@ -17,7 +17,6 @@ use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
 use App\UseCases\Document\DestroyDocumentUseCase;
 use App\UseCases\Document\DetailUseCase;
-use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -31,8 +30,6 @@ class DocumentEntityController extends ApiBaseController
 
     protected CreateDocumentUseCase $createDocumentUseCase;
 
-    protected GetDocumentsUseCase $getDocumentsUseCase;
-
     protected UpdateDocumentUseCase $updateDocumentUseCase;
 
     protected DetailUseCase $getDocumentDetailUseCase;
@@ -45,7 +42,6 @@ class DocumentEntityController extends ApiBaseController
         DocumentService $documentService,
         UserBranchService $userBranchService,
         CreateDocumentUseCase $createDocumentUseCase,
-        GetDocumentsUseCase $getDocumentsUseCase,
         UpdateDocumentUseCase $updateDocumentUseCase,
         DetailUseCase $getDocumentDetailUseCase,
         DestroyDocumentUseCase $destroyDocumentUseCase,
@@ -54,7 +50,6 @@ class DocumentEntityController extends ApiBaseController
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
         $this->createDocumentUseCase = $createDocumentUseCase;
-        $this->getDocumentsUseCase = $getDocumentsUseCase;
         $this->updateDocumentUseCase = $updateDocumentUseCase;
         $this->getDocumentDetailUseCase = $getDocumentDetailUseCase;
         $this->destroyDocumentUseCase = $destroyDocumentUseCase;
