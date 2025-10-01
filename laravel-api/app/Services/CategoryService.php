@@ -2,46 +2,16 @@
 
 namespace App\Services;
 
-use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
-use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Enums\FixRequestStatus;
 use App\Models\CategoryVersion;
-use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
-use App\Models\FixRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use Illuminate\Database\Eloquent\Collection;
 
 class CategoryService
 {
-    /**
-     * positionの重複処理・自動採番を行う
-     *
-     * @param  int|null  $requestedPosition  リクエストされたposition
-     * @param  int|null  $parentId  親カテゴリID
-     * @return int 正規化されたposition
-     */
-    public function normalizePosition(?int $requestedPosition, ?int $parentId = null): int
-    {
-        if ($requestedPosition) {
-            // position重複時、既存のposition >= 入力値を+1してずらす
-            CategoryVersion::where('parent_entity_id', $parentId)
-                ->where('position', '>=', $requestedPosition)
-                ->increment('position');
-
-            return $requestedPosition;
-        } else {
-            // position未入力時、親カテゴリ内最大値+1をセット
-            $maxPosition = CategoryVersion::where('parent_entity_id', $parentId)
-                ->max('position') ?? 0;
-
-            return $maxPosition + 1;
-        }
-    }
-
     /**
      * 親カテゴリのパスを取得
      */
