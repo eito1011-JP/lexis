@@ -2,21 +2,21 @@
 
 namespace Database\Factories;
 
-use App\Models\DocumentCategoryEntity;
+use App\Models\DocumentEntity;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\DocumentCategoryEntity>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\DocumentEntity>
  */
-class DocumentCategoryEntityFactory extends Factory
+class DocumentEntityFactory extends Factory
 {
     /**
      * The name of the factory's corresponding model.
      *
      * @var string
      */
-    protected $model = DocumentCategoryEntity::class;
+    protected $model = DocumentEntity::class;
 
     /**
      * Define the model's default state.

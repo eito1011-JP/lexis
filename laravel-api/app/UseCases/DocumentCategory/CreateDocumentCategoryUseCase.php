@@ -4,8 +4,8 @@ namespace App\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryVersion;
+use App\Models\CategoryEntity;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\PullRequestEditSession;
@@ -27,9 +27,9 @@ class CreateDocumentCategoryUseCase
      *
      * @param  CreateDocumentCategoryDto  $dto  カテゴリ作成DTO
      * @param  User  $user  認証済みユーザー
-     * @return DocumentCategory 作成されたカテゴリ
+     * @return CategoryVersion 作成されたカテゴリ
      */
-    public function execute(CreateDocumentCategoryDto $dto, User $user): DocumentCategory
+    public function execute(CreateDocumentCategoryDto $dto, User $user): CategoryVersion
     {
         try {
             DB::beginTransaction();
@@ -51,12 +51,12 @@ class CreateDocumentCategoryUseCase
             $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId($dto->editPullRequestId, $dto->pullRequestEditToken, $user->id);
 
             // カテゴリエンティティを作成
-            $categoryEntity = DocumentCategoryEntity::create([
+            $categoryEntity = CategoryEntity::create([
                 'organization_id' => $organizationId,
             ]);
 
             // カテゴリを作成
-            $category = DocumentCategory::create([
+            $category = CategoryVersion::create([
                 'entity_id' => $categoryEntity->id,
                 'title' => $dto->title,
                 'description' => $dto->description,

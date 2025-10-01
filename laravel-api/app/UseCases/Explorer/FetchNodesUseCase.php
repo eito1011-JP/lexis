@@ -3,7 +3,7 @@
 namespace App\UseCases\Explorer;
 
 use App\Dto\UseCase\Explorer\FetchNodesDto;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryEntity;
 use App\Models\User;
 use App\Services\DocumentCategoryService;
 use App\Services\DocumentService;
@@ -25,7 +25,7 @@ class FetchNodesUseCase
      */
     public function execute(FetchNodesDto $dto, User $user): array
     {
-        $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
+        $categoryEntity = CategoryEntity::find($dto->categoryEntityId);
 
         if (! $categoryEntity) {
             throw new NotFoundException('カテゴリエンティティが見つかりません。');
@@ -33,7 +33,7 @@ class FetchNodesUseCase
 
         // categoryEntityに従属しているcategoryEntityでforeach
         $categories = collect();
-        foreach ($categoryEntity->documentCategoryChildren as $childCategory) {
+        foreach ($categoryEntity->categoryVersionChildren as $childCategory) {
             $categories->push($this->documentCategoryService->getCategoryByWorkContext(
                 $childCategory->entity_id,
                 $user,

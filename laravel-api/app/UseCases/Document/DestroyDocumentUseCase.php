@@ -7,7 +7,7 @@ use App\Dto\UseCase\Document\DestroyDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
@@ -54,8 +54,8 @@ class DestroyDocumentUseCase
                 throw new NotFoundException;
             }
 
-            // 3. DocumentVersionEntityの存在確認
-            $documentEntity = DocumentVersionEntity::find($dto->document_entity_id);
+            // 3. DocumentEntityの存在確認
+            $documentEntity = DocumentEntity::find($dto->document_entity_id);
 
             if (! $documentEntity) {
                 throw new NotFoundException;

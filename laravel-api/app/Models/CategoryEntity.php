@@ -6,12 +6,12 @@ use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DocumentCategoryEntity extends Model
+class CategoryEntity extends Model
 {
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'document_category_entities';
+    protected $table = 'category_entities';
 
     protected $fillable = [
         'organization_id',
@@ -33,19 +33,19 @@ class DocumentCategoryEntity extends Model
     }
 
     /**
-     * ドキュメントカテゴリとのリレーション
+     * カテゴリバージョンとのリレーション
      */
-    public function documentCategories()
+    public function categoryVersions()
     {
-        return $this->hasMany(DocumentCategory::class, 'entity_id');
+        return $this->hasMany(CategoryVersion::class, 'entity_id');
     }
 
     /**
      * 子カテゴリエンティティとのリレーション
      */
-    public function documentCategoryChildren()
+    public function categoryVersionChildren()
     {
-        return $this->hasMany(DocumentCategory::class, 'parent_entity_id');
+        return $this->hasMany(CategoryVersion::class, 'parent_entity_id');
     }
 
     /**

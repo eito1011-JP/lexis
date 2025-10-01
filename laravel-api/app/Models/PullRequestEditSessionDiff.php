@@ -2,8 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\CategoryVersion;
 
 class PullRequestEditSessionDiff extends Model
 {
@@ -53,7 +52,7 @@ class PullRequestEditSessionDiff extends Model
      */
     public function originalCategoryVersion()
     {
-        return $this->belongsTo(DocumentCategory::class, 'original_version_id');
+        return $this->belongsTo(CategoryVersion::class, 'original_version_id');
     }
 
     /**
@@ -61,6 +60,6 @@ class PullRequestEditSessionDiff extends Model
      */
     public function currentCategoryVersion()
     {
-        return $this->belongsTo(DocumentCategory::class, 'current_version_id');
+        return $this->belongsTo(CategoryVersion::class, 'current_version_id');
     }
 }

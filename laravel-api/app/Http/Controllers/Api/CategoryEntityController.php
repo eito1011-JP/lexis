@@ -18,7 +18,7 @@ use App\Http\Requests\Api\DocumentCategory\GetCategoryRequest;
 use App\Http\Requests\Api\DocumentCategory\UpdateDocumentCategoryRequest;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
-use App\Models\DocumentCategory;
+use App\Models\CategoryVersion;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
@@ -32,12 +32,11 @@ use App\UseCases\DocumentCategory\UpdateDocumentCategoryUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
 
-class DocumentCategoryController extends ApiBaseController
+class CategoryEntityController extends ApiBaseController
 {
     protected $documentCategoryService;
 
@@ -54,7 +53,7 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリ一覧を取得
      */
-    public function fetchCategories(FetchCategoriesRequest $request, FetchCategoriesUseCase $useCase): JsonResponse
+    public function index(FetchCategoriesRequest $request, FetchCategoriesUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -89,7 +88,7 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリ詳細を取得
      */
-    public function detail(GetCategoryRequest $request, GetCategoryUseCase $useCase): JsonResponse
+    public function show(GetCategoryRequest $request, GetCategoryUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -106,9 +105,11 @@ class DocumentCategoryController extends ApiBaseController
             // DTOを作成してUseCaseを実行
             $data = $request->validated();
             $data['user'] = $user;
+            Log::info('data: '.json_encode($data));
             $dto = GetCategoryDto::fromRequest($data);
             $category = $useCase->execute($dto);
 
+            Log::info('category: '.json_encode($category));
             return response()->json([
                 'category' => $category,
             ]);
@@ -125,7 +126,13 @@ class DocumentCategoryController extends ApiBaseController
                 __('errors.MSG_NOT_FOUND'),
                 ErrorType::STATUS_NOT_FOUND,
             );
-        } catch (Exception) {
+        } catch (Exception $e) {
+            Log::error('カテゴリ詳細取得に失敗しました', [
+                'error' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
             return $this->sendError(
                 ErrorType::CODE_INTERNAL_ERROR,
                 __('errors.MSG_INTERNAL_ERROR'),
@@ -138,7 +145,7 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリを作成
      */
-    public function createCategory(CreateDocumentCategoryRequest $request, CreateDocumentCategoryUseCase $useCase): JsonResponse
+    public function store(CreateDocumentCategoryRequest $request, CreateDocumentCategoryUseCase $useCase): JsonResponse
     {
         try {
             // 認証チェック
@@ -190,7 +197,7 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリを更新
      */
-    public function updateCategory(UpdateDocumentCategoryRequest $request, UpdateDocumentCategoryUseCase $useCase): JsonResponse
+    public function update(UpdateDocumentCategoryRequest $request, UpdateDocumentCategoryUseCase $useCase): JsonResponse
     {
         try {
             // 1. 認証ユーザーか確認
@@ -241,7 +248,7 @@ class DocumentCategoryController extends ApiBaseController
     /**
      * カテゴリを削除
      */
-    public function deleteCategory(DeleteDocumentCategoryRequest $request): JsonResponse
+    public function destroy(DeleteDocumentCategoryRequest $request): JsonResponse
     {
         DB::beginTransaction();
 
@@ -266,7 +273,7 @@ class DocumentCategoryController extends ApiBaseController
             $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
 
             // 削除対象のルートカテゴリの存在確認
-            $rootCategory = DocumentCategory::where('slug', $slug)
+            $rootCategory = CategoryVersion::where('slug', $slug)
                 ->where('parent_entity_id', $parentCategoryId)
                 ->where(function ($query) use ($userBranchId) {
                     $query->where('status', DocumentCategoryStatus::MERGED->value)
@@ -286,16 +293,16 @@ class DocumentCategoryController extends ApiBaseController
             // 再帰CTEを使用して削除対象のカテゴリIDを取得
             $categoryIds = DB::select('
                 WITH RECURSIVE tree AS (
-                    SELECT id FROM document_categories
+                    SELECT id FROM category_versions
                     WHERE slug = ? AND parent_entity_id = ?
                     AND (status = ? OR (status != ? AND user_branch_id = ?))
                     
                     UNION ALL
                     
-                    SELECT dc.id
-                    FROM document_categories dc
-                    INNER JOIN tree t ON dc.parent_entity_id = t.id
-                    WHERE (dc.status = ? OR (dc.status != ? AND dc.user_branch_id = ?))
+                    SELECT cv.id
+                    FROM category_versions cv
+                    INNER JOIN tree t ON cv.parent_entity_id = t.id
+                    WHERE (cv.status = ? OR (cv.status != ? AND cv.user_branch_id = ?))
                 )
                 SELECT id FROM tree
             ', [$slug, $parentCategoryId, DocumentCategoryStatus::MERGED->value, DocumentCategoryStatus::MERGED->value, $userBranchId, DocumentCategoryStatus::MERGED->value, DocumentCategoryStatus::MERGED->value, $userBranchId]);
@@ -309,7 +316,7 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             // 削除対象のカテゴリを取得
-            $categories = DocumentCategory::whereIn('id', $categoryIdArray)->get();
+            $categories = CategoryVersion::whereIn('id', $categoryIdArray)->get();
 
             // 削除対象のドキュメントを取得
             $documents = DocumentVersion::whereIn('category_id', $categoryIdArray)
@@ -331,12 +338,12 @@ class DocumentCategoryController extends ApiBaseController
                 ->keyBy('original_version_id');
 
             // 論理削除前の件数を取得
-            $beforeCount = DocumentCategory::whereIn('id', $categoryIdArray)
+            $beforeCount = CategoryVersion::whereIn('id', $categoryIdArray)
                 ->where('is_deleted', Flag::FALSE)
                 ->count();
 
             // カテゴリを一括で論理削除(ここは消えている)
-            DocumentCategory::whereIn('id', $categoryIdArray)
+            CategoryVersion::whereIn('id', $categoryIdArray)
                 ->update([
                     'is_deleted' => Flag::TRUE,
                     'deleted_at' => $now,
@@ -370,10 +377,10 @@ class DocumentCategoryController extends ApiBaseController
             }
 
             // バルクインサートを実行
-            DocumentCategory::insert($newCategoryData);
+            CategoryVersion::insert($newCategoryData);
 
             // 挿入されたレコードのIDを取得
-            $insertedCategoryIds = DocumentCategory::where('user_branch_id', $userBranchId)
+            $insertedCategoryIds = CategoryVersion::where('user_branch_id', $userBranchId)
                 ->onlyTrashed()
                 ->orderBy('id', 'desc')
                 ->limit(count($newCategoryData))
@@ -483,65 +490,6 @@ class DocumentCategoryController extends ApiBaseController
 
             return response()->json([
                 'error' => 'カテゴリの削除に失敗しました',
-            ], 500);
-        }
-    }
-
-    /**
-     * カテゴリコンテンツを取得
-     */
-    public function getCategoryContents(Request $request): JsonResponse
-    {
-        try {
-            $slug = $request->query('slug');
-
-            if (! $slug) {
-                return response()->json([
-                    'error' => '有効なslugが必要です',
-                ], 400);
-            }
-
-            $category = DocumentCategory::where('slug', $slug)->first();
-            if (! $category) {
-                return response()->json([
-                    'error' => 'カテゴリが見つかりません',
-                ], 404);
-            }
-
-            // ドキュメントとサブカテゴリを取得
-            $documents = DocumentVersion::where('category_id', $category->id)
-                ->select('id', 'sidebar_label as name', 'slug', 'is_public')
-                ->get()
-                ->map(function ($doc) {
-                    return [
-                        'name' => $doc->name,
-                        'path' => $doc->slug,
-                        'type' => 'document',
-                        'label' => $doc->name,
-                        'isDraft' => ! $doc->is_public,
-                    ];
-                });
-
-            $subCategories = DocumentCategory::where('parent_entity_id', $category->id)
-                ->select('id', 'name', 'slug')
-                ->get()
-                ->map(function ($cat) {
-                    return [
-                        'name' => $cat->name,
-                        'path' => $cat->slug,
-                        'type' => 'category',
-                    ];
-                });
-
-            $items = $documents->concat($subCategories);
-
-            return response()->json([
-                'items' => $items,
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'カテゴリコンテンツの取得に失敗しました',
             ], 500);
         }
     }

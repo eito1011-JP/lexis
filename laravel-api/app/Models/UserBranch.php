@@ -69,9 +69,9 @@ class UserBranch extends Model
     /**
      * ドキュメントカテゴリとのリレーション
      */
-    public function documentCategories()
+    public function categoryVersions()
     {
-        return $this->hasMany(DocumentCategory::class);
+        return $this->hasMany(CategoryVersion::class);
     }
 
     /**

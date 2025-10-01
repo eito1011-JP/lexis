@@ -2,10 +2,8 @@
 
 namespace App\Models;
 
-use App\Enums\DocumentStatus;
-use App\Traits\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\CategoryEntity;
+use App\Models\CategoryVersion;
 
 class DocumentVersion extends Model
 {
@@ -38,15 +36,15 @@ class DocumentVersion extends Model
      */
     public function categoryEntity()
     {
-        return $this->belongsTo(DocumentCategoryEntity::class, 'category_entity_id');
+        return $this->belongsTo(CategoryEntity::class, 'category_entity_id');
     }
 
     /**
-     * ドキュメントバージョンエンティティとのリレーション
+     * ドキュメントエンティティとのリレーション
      */
     public function entity()
     {
-        return $this->belongsTo(DocumentVersionEntity::class, 'entity_id');
+        return $this->belongsTo(DocumentEntity::class, 'entity_id');
     }
 
     /**
@@ -103,7 +101,7 @@ class DocumentVersion extends Model
      */
     public function category()
     {
-        return $this->belongsTo(DocumentCategory::class, 'category_entity_id', 'entity_id');
+        return $this->belongsTo(CategoryVersion::class, 'category_entity_id', 'entity_id');
     }
 
     /**

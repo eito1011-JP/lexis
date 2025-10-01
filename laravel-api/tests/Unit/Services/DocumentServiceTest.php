@@ -5,7 +5,7 @@ namespace Tests\Unit\Services;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -30,7 +30,7 @@ class DocumentServiceTest extends TestCase
 
     private UserBranch $activeUserBranch;
 
-    private DocumentVersionEntity $documentEntity;
+    private DocumentEntity $documentEntity;
 
     protected function setUp(): void
     {
@@ -54,7 +54,7 @@ class DocumentServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->documentEntity = DocumentVersionEntity::factory()->create([
+        $this->documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
     }

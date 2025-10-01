@@ -10,7 +10,7 @@ use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentCategory;
 use App\Models\DocumentCategoryEntity;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -44,7 +44,7 @@ class DestroyDocumentUseCaseTest extends TestCase
 
     private DocumentCategoryEntity $documentCategoryEntity;
 
-    private DocumentVersionEntity $documentEntity;
+    private DocumentEntity $documentEntity;
 
     private DocumentVersion $existingDocument;
 
@@ -88,8 +88,8 @@ class DestroyDocumentUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        // DocumentVersionEntityの作成
-        $this->documentEntity = DocumentVersionEntity::factory()->create([
+        // DocumentEntityの作成
+        $this->documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 

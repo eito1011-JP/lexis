@@ -24,7 +24,7 @@ class UpdateDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_entity_id' => 'required|integer|exists:document_version_entities,id',
+            'document_entity_id' => 'required|integer|exists:document_entities,id',
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'edit_pull_request_id' => 'nullable|integer',

@@ -4,8 +4,8 @@ namespace Tests\Unit\Services;
 
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryVersion;
+use App\Models\CategoryEntity;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -27,9 +27,9 @@ class DocumentCategoryServiceTest extends TestCase
 
     private OrganizationMember $organizationMember;
 
-    private DocumentCategoryEntity $categoryEntity;
+    private CategoryEntity $categoryEntity;
 
-    private DocumentCategory $mergedCategory;
+    private CategoryVersion $mergedCategory;
 
     protected function setUp(): void
     {
@@ -48,11 +48,11 @@ class DocumentCategoryServiceTest extends TestCase
         ]);
 
         // 基本的なカテゴリエンティティとMERGEDカテゴリを作成
-        $this->categoryEntity = DocumentCategoryEntity::factory()->create([
+        $this->categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $this->mergedCategory = DocumentCategory::factory()->create([
+        $this->mergedCategory = CategoryVersion::factory()->create([
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::MERGED->value,

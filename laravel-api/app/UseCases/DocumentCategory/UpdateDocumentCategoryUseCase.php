@@ -5,8 +5,8 @@ namespace App\UseCases\DocumentCategory;
 use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryVersion;
+use App\Models\CategoryEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
@@ -32,11 +32,11 @@ class UpdateDocumentCategoryUseCase
      *
      * @param  UpdateDocumentCategoryDto  $dto  カテゴリ更新DTO
      * @param  User  $user  認証済みユーザー
-     * @return DocumentCategory 更新されたカテゴリ
+     * @return CategoryVersion 更新されたカテゴリ
      *
      * @throws NotFoundException 組織またはカテゴリが見つからない場合
      */
-    public function execute(UpdateDocumentCategoryDto $dto, User $user): DocumentCategory
+    public function execute(UpdateDocumentCategoryDto $dto, User $user): CategoryVersion
     {
         try {
             DB::beginTransaction();
@@ -49,7 +49,7 @@ class UpdateDocumentCategoryUseCase
                 throw new NotFoundException;
             }
 
-            $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
+            $categoryEntity = CategoryEntity::find($dto->categoryEntityId);
 
             if (! $categoryEntity) {
                 throw new NotFoundException;
@@ -81,8 +81,8 @@ class UpdateDocumentCategoryUseCase
                 throw new NotFoundException;
             }
 
-            // 7. DocumentCategoryを作成
-            $newCategory = DocumentCategory::create([
+            // 7. CategoryVersionを作成
+            $newCategory = CategoryVersion::create([
                 'entity_id' => $categoryEntity->id,
                 'title' => $dto->title,
                 'parent_entity_id' => $existingCategory->parent_entity_id,

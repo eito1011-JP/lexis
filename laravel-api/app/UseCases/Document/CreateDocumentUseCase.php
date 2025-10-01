@@ -7,7 +7,7 @@ use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestEditSessionDiffType;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
@@ -63,7 +63,7 @@ class CreateDocumentUseCase
             }
 
             // ドキュメントエンティティを作成
-            $documentEntity = DocumentVersionEntity::create([
+            $documentEntity = DocumentEntity::create([
                 'organization_id' => $organizationId,
             ]);
 

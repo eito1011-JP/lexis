@@ -6,7 +6,7 @@ use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\FixRequestStatus;
-use App\Models\DocumentCategory;
+use App\Models\CategoryVersion;
 use App\Models\EditStartVersion;
 use App\Models\FixRequest;
 use App\Models\User;
@@ -26,14 +26,14 @@ class DocumentCategoryService
     {
         if ($requestedPosition) {
             // position重複時、既存のposition >= 入力値を+1してずらす
-            DocumentCategory::where('parent_entity_id', $parentId)
+            CategoryVersion::where('parent_entity_id', $parentId)
                 ->where('position', '>=', $requestedPosition)
                 ->increment('position');
 
             return $requestedPosition;
         } else {
             // position未入力時、親カテゴリ内最大値+1をセット
-            $maxPosition = DocumentCategory::where('parent_entity_id', $parentId)
+            $maxPosition = CategoryVersion::where('parent_entity_id', $parentId)
                 ->max('position') ?? 0;
 
             return $maxPosition + 1;
@@ -89,7 +89,7 @@ class DocumentCategoryService
         ?int $userBranchId = null,
         ?int $editPullRequestId = null
     ): Collection {
-        $query = DocumentCategory::select('sidebar_label', 'position')
+        $query = CategoryVersion::select('sidebar_label', 'position')
             ->where('parent_entity_id', $parentId)
             ->where(function ($q) use ($userBranchId) {
                 $q->where('status', 'merged')
@@ -109,7 +109,7 @@ class DocumentCategoryService
             ->when($userBranchId, function ($query, $userBranchId) {
                 $appliedFixRequestCategoryIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
                     ->whereNotNull('document_category_id')
-                    ->whereHas('documentCategory', function ($q) use ($userBranchId) {
+                    ->whereHas('categoryVersion', function ($q) use ($userBranchId) {
                         $q->where('user_branch_id', $userBranchId);
                     })
                     ->pluck('document_category_id')
@@ -126,18 +126,18 @@ class DocumentCategoryService
     /**
      * 親カテゴリのパスを取得
      */
-    public function createCategoryPath(DocumentCategory $documentCategory): ?string
+    public function createCategoryPath(CategoryVersion $categoryVersion): ?string
     {
-        if (! $documentCategory->parent_entity_id) {
+        if (! $categoryVersion->parent_entity_id) {
             return null;
         }
 
         $path = [];
-        $parentCategory = DocumentCategory::find($documentCategory->parent_entity_id);
+        $parentCategory = CategoryVersion::find($categoryVersion->parent_entity_id);
 
         while ($parentCategory) {
             array_unshift($path, $parentCategory->title);
-            $parentCategory = $parentCategory->parent_entity_id ? DocumentCategory::find($parentCategory->parent_entity_id) : null;
+            $parentCategory = $parentCategory->parent_entity_id ? CategoryVersion::find($parentCategory->parent_entity_id) : null;
         }
 
         return implode('/', $path);
@@ -150,11 +150,11 @@ class DocumentCategoryService
         int $categoryEntityId,
         User $user,
         ?string $pullRequestEditSessionToken = null
-    ): ?DocumentCategory {
+    ): ?CategoryVersion {
         // ユーザーのアクティブブランチを取得
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
 
-        $baseQuery = DocumentCategory::with(['parent.parent.parent.parent.parent.parent.parent']) // 7階層まで親カテゴリを読み込み
+        $baseQuery = CategoryVersion::with(['parent.parent.parent.parent.parent.parent.parent']) // 7階層まで親カテゴリを読み込み
             ->where('entity_id', $categoryEntityId)
             ->where('organization_id', $user->organizationMember->organization_id);
 
@@ -168,7 +168,7 @@ class DocumentCategoryService
             ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
             ->where('original_version_id', function ($query) use ($categoryEntityId) {
                 $query->select('id')
-                    ->from('document_categories')
+                    ->from('category_versions')
                     ->where('entity_id', $categoryEntityId)
                     ->where('status', DocumentCategoryStatus::MERGED->value);
             })

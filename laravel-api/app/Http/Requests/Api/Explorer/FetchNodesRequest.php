@@ -20,7 +20,7 @@ class FetchNodesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_entity_id' => 'required|integer|exists:document_categories,entity_id',
+            'category_entity_id' => 'required|integer|exists:category_versions,entity_id',
             'pull_request_edit_session_token' => 'nullable|string',
         ];
     }

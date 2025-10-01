@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\DocumentStatus;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\UserBranch;
@@ -32,7 +32,7 @@ class DocumentVersionFactory extends Factory
         return [
             'user_id' => User::factory(),
             'user_branch_id' => null,
-            'entity_id' => DocumentVersionEntity::factory(),
+            'entity_id' => DocumentEntity::factory(),
             'status' => DocumentStatus::DRAFT->value,
             'description' => $this->faker->text(),
             'category_entity_id' => null, // スキーマに合わせて修正

@@ -3,7 +3,7 @@
 namespace App\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryEntity;
 use App\Services\DocumentCategoryService;
 use Http\Discovery\Exception\NotFoundException;
 
@@ -23,7 +23,7 @@ class GetCategoryUseCase
      */
     public function execute(GetCategoryDto $dto): array
     {
-        $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
+        $categoryEntity = CategoryEntity::find($dto->categoryEntityId);
 
         if (! $categoryEntity) {
             throw new NotFoundException('カテゴリエンティティが見つかりません。');

@@ -24,7 +24,7 @@ class DetailRequest extends FormRequest
     {
         Log::info(json_encode($this->all()));
         return [
-            'entity_id' => 'required|integer|exists:document_version_entities,id',
+            'entity_id' => 'required|integer|exists:document_entities,id',
             'pull_request_edit_session_token' => 'nullable|string',
         ];
     }
@@ -35,7 +35,7 @@ class DetailRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'entity_id' => $this->route('document_version_entity'),
+            'entity_id' => $this->route('document_entity'),
         ]);
     }
 }

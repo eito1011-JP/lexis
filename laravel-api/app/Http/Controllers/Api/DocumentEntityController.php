@@ -23,7 +23,7 @@ use Exception;
 use Illuminate\Http\JsonResponse;
 use Psr\Log\LogLevel;
 
-class DocumentVersionEntityController extends ApiBaseController
+class DocumentEntityController extends ApiBaseController
 {
     protected DocumentService $documentService;
 

@@ -3,8 +3,8 @@
 namespace Tests\Unit\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryVersion;
+use App\Models\CategoryEntity;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
@@ -29,7 +29,7 @@ class GetCategoryUseCaseTest extends TestCase
 
     private OrganizationMember $organizationMember;
 
-    private DocumentCategoryEntity $categoryEntity;
+    private CategoryEntity $categoryEntity;
 
     protected function setUp(): void
     {
@@ -49,7 +49,7 @@ class GetCategoryUseCaseTest extends TestCase
         ]);
 
         // 基本的なカテゴリエンティティを作成
-        $this->categoryEntity = DocumentCategoryEntity::factory()->create([
+        $this->categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
     }
@@ -60,7 +60,7 @@ class GetCategoryUseCaseTest extends TestCase
     public function test_get_category_successfully_returns_category_with_breadcrumbs(): void
     {
         // Arrange
-        $mockCategory = Mockery::mock(DocumentCategory::class);
+        $mockCategory = Mockery::mock(CategoryVersion::class);
         $mockCategory->shouldReceive('getAttribute')->with('id')->andReturn(1);
         $mockCategory->shouldReceive('getAttribute')->with('entity_id')->andReturn($this->categoryEntity->id);
         $mockCategory->shouldReceive('getAttribute')->with('title')->andReturn('Test Category');
@@ -136,7 +136,7 @@ class GetCategoryUseCaseTest extends TestCase
     public function test_get_category_with_pull_request_edit_session_token(): void
     {
         // Arrange
-        $mockCategory = Mockery::mock(DocumentCategory::class);
+        $mockCategory = Mockery::mock(CategoryVersion::class);
         $mockCategory->shouldReceive('getAttribute')->with('id')->andReturn(2);
         $mockCategory->shouldReceive('getAttribute')->with('entity_id')->andReturn($this->categoryEntity->id);
         $mockCategory->shouldReceive('getAttribute')->with('title')->andReturn('Pushed Category');

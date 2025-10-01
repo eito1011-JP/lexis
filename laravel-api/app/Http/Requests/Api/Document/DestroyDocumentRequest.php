@@ -23,7 +23,7 @@ class DestroyDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_entity_id' => 'required|integer|exists:document_version_entities,id',
+            'document_entity_id' => 'required|integer|exists:document_entities,id',
             'edit_pull_request_id' => 'nullable|integer',
             'pull_request_edit_token' => 'nullable|string',
         ];
@@ -44,7 +44,7 @@ class DestroyDocumentRequest extends FormRequest
     public function prepareForValidation(): void
     {
         $this->merge([
-            'document_entity_id' => $this->route('document_version_entity'),
+            'document_entity_id' => $this->route('document_entity'),
         ]);
     }
 }

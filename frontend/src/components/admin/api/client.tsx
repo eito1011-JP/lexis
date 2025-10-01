@@ -10,7 +10,7 @@ class ApiClient {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.API_URL || '/api';
+    this.baseUrl = process.env.API_URL || '';
   }
 
   async get(endpoint: string): Promise<ApiResponse> {

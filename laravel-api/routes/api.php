@@ -3,12 +3,11 @@
 use App\Http\Controllers\Api\ActivityLogOnPullRequestController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
-use App\Http\Controllers\Api\DocumentCategoryController;
-use App\Http\Controllers\Api\DocumentVersionEntityController;
+use App\Http\Controllers\Api\CategoryEntityController;
+use App\Http\Controllers\Api\DocumentEntityController;
 use App\Http\Controllers\Api\EmailAuthnController;
 use App\Http\Controllers\Api\ExplorerController;
 use App\Http\Controllers\Api\FixRequestController;
-use App\Http\Controllers\Api\HealthCheckController;
 use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\PullRequestEditSessionController;
@@ -105,17 +104,10 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // ドキュメント関連
-    Route::resource('document_version_entities', DocumentVersionEntityController::class);
+    Route::resource('document_entities', DocumentEntityController::class);
 
     // カテゴリ関連
-    Route::prefix('document-categories')->group(function () {
-        Route::get('/', [DocumentCategoryController::class, 'fetchCategories']);
-        Route::get('/{id}', [DocumentCategoryController::class, 'detail']);
-        Route::post('/', [DocumentCategoryController::class, 'createCategory']);
-        Route::put('/{id}', [DocumentCategoryController::class, 'updateCategory']);
-        Route::delete('/', [DocumentCategoryController::class, 'deleteCategory']);
-        Route::get('/category-contents', [DocumentCategoryController::class, 'getCategoryContents']);
-    });
+    Route::resource('category-entities', CategoryEntityController::class);
 
     // ユーザーブランチ関連
     Route::prefix('user-branches')->group(function () {

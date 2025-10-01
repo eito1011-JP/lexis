@@ -5,7 +5,7 @@ namespace App\UseCases\DocumentCategory;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
+use App\Models\CategoryVersion;
 use App\Models\EditStartVersion;
 use App\Models\User;
 use App\Models\UserBranch;
@@ -26,7 +26,7 @@ class FetchCategoriesUseCase
 
         if (! $activeUserBranch) {
             // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
-            return DocumentCategory::select('id', 'entity_id', 'title')
+            return CategoryVersion::select('id', 'entity_id', 'title')
                 ->where('parent_entity_id', $dto->parentEntityId)
                 ->where('organization_id', $user->organizationMember->organization_id)
                 ->where('status', DocumentCategoryStatus::MERGED->value)
@@ -41,7 +41,7 @@ class FetchCategoriesUseCase
 
         if ($dto->pullRequestEditSessionToken) {
             // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
-            return DocumentCategory::select('id', 'entity_id', 'title')
+            return CategoryVersion::select('id', 'entity_id', 'title')
                 ->where('parent_entity_id', $dto->parentEntityId)
                 ->where('organization_id', $user->organizationMember->organization_id)
                 ->whereIn('id', $currentVersionIds)
@@ -64,7 +64,7 @@ class FetchCategoriesUseCase
                 ->whereColumn('original_version_id', '!=', 'current_version_id')
                 ->pluck('original_version_id');
 
-            return DocumentCategory::select('id', 'entity_id', 'title')
+            return CategoryVersion::select('id', 'entity_id', 'title')
                 ->where('parent_entity_id', $dto->parentEntityId)
                 ->where('organization_id', $user->organizationMember->organization_id)
                 ->whereIn('id', $currentVersionIds)

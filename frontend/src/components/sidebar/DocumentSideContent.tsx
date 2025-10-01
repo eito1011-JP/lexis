@@ -53,7 +53,7 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
       params.append('parent_entity_id', parentEntityId.toString());
     }
     
-    const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
+    const endpoint = `/api/category-entities/${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(endpoint);
     
     // すべてのカテゴリを返す（制限なし）
@@ -321,7 +321,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     if (!selectedDocument) return;
 
     try {
-      await apiClient.delete(`/api/document_version_entities/${selectedDocument.entityId}`);
+      await apiClient.delete(`/api/document_entities/${selectedDocument.entityId}`);
       
       // 削除後にUIを更新 - 削除されたドキュメントを含むカテゴリを再読み込み
       // ここでは簡易的に全体を再読み込みする
