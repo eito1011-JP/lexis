@@ -14,7 +14,7 @@ use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Models\UserBranch;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\UpdateDocumentCategoryUseCase;
 use Http\Discovery\Exception\NotFoundException;
@@ -36,18 +36,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
 
     private $userBranchService;
 
-    private $documentCategoryService;
+    private $CategoryService;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->userBranchService = Mockery::mock(UserBranchService::class);
-        $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
+        $this->CategoryService = Mockery::mock(CategoryService::class);
 
         $this->useCase = new UpdateDocumentCategoryUseCase(
             $this->userBranchService,
-            $this->documentCategoryService
+            $this->CategoryService
         );
 
         $this->organization = Organization::factory()->create();
@@ -104,7 +104,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($categoryEntity->id, $this->user, null)
@@ -186,7 +186,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($categoryEntity->id, $this->user, $pullRequestEditSession->token)
@@ -266,7 +266,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($categoryEntity->id, $this->user, $pullRequestEditSession->token)
@@ -431,7 +431,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($categoryEntity->id, $this->user, null)
@@ -494,7 +494,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($categoryEntity->id, $this->user, null)
@@ -542,7 +542,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($categoryEntity->id, $this->user, null)
@@ -607,7 +607,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($categoryEntity->id, $this->user, null)

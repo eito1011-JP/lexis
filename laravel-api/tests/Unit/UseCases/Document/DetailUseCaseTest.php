@@ -9,7 +9,7 @@ use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\UseCases\Document\DetailUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -34,7 +34,7 @@ class DetailUseCaseTest extends TestCase
 
     private DocumentCategory $category;
 
-    private $documentCategoryService;
+    private $CategoryService;
 
     private $documentVersionRepository;
 
@@ -43,11 +43,11 @@ class DetailUseCaseTest extends TestCase
         parent::setUp();
 
         // サービスとリポジトリのモック作成
-        $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
+        $this->CategoryService = Mockery::mock(CategoryService::class);
         $this->documentVersionRepository = Mockery::mock(DocumentVersionRepositoryInterface::class);
 
         $this->useCase = new DetailUseCase(
-            $this->documentCategoryService,
+            $this->CategoryService,
             $this->documentVersionRepository
         );
 

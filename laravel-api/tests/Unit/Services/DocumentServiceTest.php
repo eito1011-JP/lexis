@@ -11,7 +11,7 @@ use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -36,8 +36,8 @@ class DocumentServiceTest extends TestCase
     {
         parent::setUp();
 
-        $documentCategoryService = $this->createMock(DocumentCategoryService::class);
-        $this->service = new DocumentService($documentCategoryService);
+        $CategoryService = $this->createMock(CategoryService::class);
+        $this->service = new DocumentService($CategoryService);
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();

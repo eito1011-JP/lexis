@@ -8,7 +8,7 @@ use App\Models\CategoryEntity;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\UseCases\DocumentCategory\GetCategoryUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -21,7 +21,7 @@ class GetCategoryUseCaseTest extends TestCase
 
     private GetCategoryUseCase $useCase;
 
-    private $documentCategoryService;
+    private $CategoryService;
 
     private User $user;
 
@@ -35,8 +35,8 @@ class GetCategoryUseCaseTest extends TestCase
     {
         parent::setUp();
 
-        $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
-        $this->useCase = new GetCategoryUseCase($this->documentCategoryService);
+        $this->CategoryService = Mockery::mock(CategoryService::class);
+        $this->useCase = new GetCategoryUseCase($this->CategoryService);
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
@@ -67,7 +67,7 @@ class GetCategoryUseCaseTest extends TestCase
         $mockCategory->shouldReceive('getAttribute')->with('description')->andReturn('Test description');
         $mockCategory->shouldReceive('getBreadcrumbs')->andReturn(['Test Parent', 'Test Category']);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->with($this->categoryEntity->id, $this->user, null)
             ->andReturn($mockCategory);
@@ -114,7 +114,7 @@ class GetCategoryUseCaseTest extends TestCase
     public function test_get_category_throws_not_found_exception_when_service_returns_null(): void
     {
         // Arrange
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->with($this->categoryEntity->id, $this->user, null)
             ->andReturn(null);
@@ -143,7 +143,7 @@ class GetCategoryUseCaseTest extends TestCase
         $mockCategory->shouldReceive('getAttribute')->with('description')->andReturn('Pushed description');
         $mockCategory->shouldReceive('getBreadcrumbs')->andReturn(['Pushed Category']);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->with($this->categoryEntity->id, $this->user, 'test-token')
             ->andReturn($mockCategory);

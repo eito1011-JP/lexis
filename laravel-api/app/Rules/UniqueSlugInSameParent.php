@@ -3,7 +3,7 @@
 namespace App\Rules;
 
 use App\Models\DocumentCategory;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -32,9 +32,9 @@ class UniqueSlugInSameParent implements ValidationRule
     {
         $categoryPath = $this->categoryPath ? array_filter(explode('/', $this->categoryPath)) : [];
 
-        // LaravelのサービスコンテナからDocumentCategoryServiceを取得
-        $documentCategoryService = app(DocumentCategoryService::class);
-        $parentId = $documentCategoryService->getIdFromPath(implode('/', $categoryPath));
+        // LaravelのサービスコンテナからCategoryServiceを取得
+        $CategoryService = app(CategoryService::class);
+        $parentId = $CategoryService->getIdFromPath(implode('/', $categoryPath));
 
         $duplicateSlug = DocumentCategory::where('slug', $value)
             ->where('parent_entity_id', $parentId)

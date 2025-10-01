@@ -24,7 +24,7 @@ use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
 use App\UseCases\DocumentCategory\DestroyDocumentCategoryUseCase;
@@ -40,15 +40,15 @@ use Psr\Log\LogLevel;
 
 class CategoryEntityController extends ApiBaseController
 {
-    protected $documentCategoryService;
+    protected $CategoryService;
 
     protected $userBranchService;
 
     public function __construct(
-        DocumentCategoryService $documentCategoryService,
+        CategoryService $CategoryService,
         UserBranchService $userBranchService
     ) {
-        $this->documentCategoryService = $documentCategoryService;
+        $this->CategoryService = $CategoryService;
         $this->userBranchService = $userBranchService;
     }
 

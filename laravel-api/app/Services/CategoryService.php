@@ -15,7 +15,7 @@ use App\Models\User;
 use App\Models\UserBranch;
 use Illuminate\Database\Eloquent\Collection;
 
-class DocumentCategoryService
+class CategoryService
 {
     /**
      * positionの重複処理・自動採番を行う

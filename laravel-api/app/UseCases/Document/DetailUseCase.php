@@ -5,7 +5,7 @@ namespace App\UseCases\Document;
 use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Models\User;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 class DetailUseCase
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService,
+        private CategoryService $CategoryService,
         private DocumentVersionRepositoryInterface $documentVersionRepository,
         private DocumentService $documentService
     ) {}

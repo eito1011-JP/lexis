@@ -5,14 +5,14 @@ namespace App\UseCases\Explorer;
 use App\Dto\UseCase\Explorer\FetchNodesDto;
 use App\Models\CategoryEntity;
 use App\Models\User;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use Http\Discovery\Exception\NotFoundException;
 
 class FetchNodesUseCase
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService,
+        private CategoryService $CategoryService,
         private DocumentService $documentService
     ) {}
 
@@ -34,7 +34,7 @@ class FetchNodesUseCase
         // categoryEntityに従属しているcategoryEntityでforeach
         $categories = collect();
         foreach ($categoryEntity->categoryVersionChildren as $childCategory) {
-            $categories->push($this->documentCategoryService->getCategoryByWorkContext(
+            $categories->push($this->CategoryService->getCategoryByWorkContext(
                 $childCategory->entity_id,
                 $user,
                 $dto->pullRequestEditSessionToken

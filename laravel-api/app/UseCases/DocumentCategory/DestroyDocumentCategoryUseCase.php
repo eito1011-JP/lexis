@@ -14,7 +14,7 @@ use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +27,7 @@ class DestroyDocumentCategoryUseCase
 {
     public function __construct(
         private UserBranchService $userBranchService,
-        private DocumentCategoryService $documentCategoryService,
+        private CategoryService $CategoryService,
     ) {}
 
     /**
@@ -78,7 +78,7 @@ class DestroyDocumentCategoryUseCase
             );
 
             // 6. 編集対象のexistingCategoryを取得
-            $existingCategory = $this->documentCategoryService->getCategoryByWorkContext(
+            $existingCategory = $this->CategoryService->getCategoryByWorkContext(
                 $dto->categoryEntityId,
                 $user,
                 $dto->pullRequestEditToken
@@ -89,14 +89,14 @@ class DestroyDocumentCategoryUseCase
             }
 
             // 7. category_entity_idで作業コンテキストに応じて、配下のdocument_versionsを再帰的に全て取得
-            $documents = $this->documentCategoryService->getDescendantDocumentsByWorkContext(
+            $documents = $this->CategoryService->getDescendantDocumentsByWorkContext(
                 $dto->categoryEntityId,
                 $user,
                 $dto->pullRequestEditToken
             );
 
             // 8. category_entity_idで作業コンテキストに応じて、配下のcategory_versionsを再帰的に全て取得
-            $categories = $this->documentCategoryService->getDescendantCategoriesByWorkContext(
+            $categories = $this->CategoryService->getDescendantCategoriesByWorkContext(
                 $dto->categoryEntityId,
                 $user,
                 $dto->pullRequestEditToken

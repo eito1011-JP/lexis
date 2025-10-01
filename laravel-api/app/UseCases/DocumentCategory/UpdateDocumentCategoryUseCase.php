@@ -11,7 +11,7 @@ use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +24,7 @@ class UpdateDocumentCategoryUseCase
 {
     public function __construct(
         private UserBranchService $userBranchService,
-        private DocumentCategoryService $documentCategoryService,
+        private CategoryService $CategoryService,
     ) {}
 
     /**
@@ -70,7 +70,7 @@ class UpdateDocumentCategoryUseCase
             );
 
             // 5. 編集対象のexistingCategoryを取得
-            $existingCategory = $this->documentCategoryService->getCategoryByWorkContext(
+            $existingCategory = $this->CategoryService->getCategoryByWorkContext(
                 $dto->categoryEntityId,
                 $user,
                 $dto->pullRequestEditToken

@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class DocumentService
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService
+        private CategoryService $CategoryService
     ) {}
 
     /**

@@ -19,7 +19,7 @@ use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Models\UserBranch;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\DestroyDocumentCategoryUseCase;
 use Http\Discovery\Exception\NotFoundException;
@@ -46,7 +46,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
     private CategoryVersion $existingCategory;
 
-    private $documentCategoryService;
+    private $CategoryService;
 
     private $userBranchService;
 
@@ -55,12 +55,12 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         parent::setUp();
 
         // サービスのモック作成
-        $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
+        $this->CategoryService = Mockery::mock(CategoryService::class);
         $this->userBranchService = Mockery::mock(UserBranchService::class);
 
         $this->useCase = new DestroyDocumentCategoryUseCase(
             $this->userBranchService,
-            $this->documentCategoryService
+            $this->CategoryService
         );
 
         // テストデータの準備
@@ -120,19 +120,19 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, null)
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($this->categoryEntity->id, $this->user, null)
             ->andReturn($this->existingCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->with($this->categoryEntity->id, $this->user, null)
             ->andReturn(new Collection());
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->with($this->categoryEntity->id, $this->user, null)
@@ -195,19 +195,19 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->with($this->user, $this->organization->id, $pullRequest->id)
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->with($this->categoryEntity->id, $this->user, $pullRequestEditToken)
             ->andReturn($this->existingCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->with($this->categoryEntity->id, $this->user, $pullRequestEditToken)
             ->andReturn(new Collection());
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->with($this->categoryEntity->id, $this->user, $pullRequestEditToken)
@@ -274,17 +274,17 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn($this->existingCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->andReturn(new Collection([$document]));
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->andReturn(new Collection([$childCategory]));
@@ -343,17 +343,17 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn($draftCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->andReturn(new Collection());
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->andReturn(new Collection());
@@ -388,17 +388,17 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn($this->existingCategory); // MERGEDステータス
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->andReturn(new Collection());
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->andReturn(new Collection());
@@ -445,17 +445,17 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn($this->existingCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->andReturn(new Collection([$draftDocument]));
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->andReturn(new Collection());
@@ -501,17 +501,17 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn($this->existingCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->andReturn(new Collection([$mergedDocument]));
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->andReturn(new Collection());
@@ -606,7 +606,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn(null); // カテゴリが見つからない
@@ -638,17 +638,17 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn($this->existingCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->andReturn(new Collection());
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->andReturn(new Collection());
@@ -757,17 +757,17 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->once()
             ->andReturn($this->userBranch->id);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
             ->andReturn($this->existingCategory);
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
             ->andReturn(new Collection([$document]));
 
-        $this->documentCategoryService
+        $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
             ->andReturn(new Collection([$childCategory]));

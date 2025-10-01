@@ -11,7 +11,7 @@ use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DetailRequest;
 use App\Http\Requests\Api\Document\DestroyDocumentRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
@@ -39,7 +39,7 @@ class DocumentEntityController extends ApiBaseController
 
     protected DestroyDocumentUseCase $destroyDocumentUseCase;
 
-    protected DocumentCategoryService $documentCategoryService;
+    protected CategoryService $CategoryService;
 
     public function __construct(
         DocumentService $documentService,
@@ -49,7 +49,7 @@ class DocumentEntityController extends ApiBaseController
         UpdateDocumentUseCase $updateDocumentUseCase,
         DetailUseCase $getDocumentDetailUseCase,
         DestroyDocumentUseCase $destroyDocumentUseCase,
-        DocumentCategoryService $documentCategoryService
+        CategoryService $CategoryService
     ) {
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
@@ -59,7 +59,7 @@ class DocumentEntityController extends ApiBaseController
         $this->getDocumentDetailUseCase = $getDocumentDetailUseCase;
         $this->destroyDocumentUseCase = $destroyDocumentUseCase;
 
-        $this->documentCategoryService = $documentCategoryService;
+        $this->CategoryService = $CategoryService;
     }
 
     /**

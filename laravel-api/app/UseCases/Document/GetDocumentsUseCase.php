@@ -4,7 +4,7 @@ namespace App\UseCases\Document;
 
 use App\Dto\UseCase\Document\GetDocumentsDto;
 use App\Models\PullRequest;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use Illuminate\Support\Facades\Log;
 
@@ -12,7 +12,7 @@ class GetDocumentsUseCase
 {
     public function __construct(
         private DocumentService $documentService,
-        private DocumentCategoryService $documentCategoryService
+        private CategoryService $CategoryService
     ) {}
 
     /**
@@ -28,7 +28,7 @@ class GetDocumentsUseCase
             $categoryPath = array_filter(explode('/', $dto->category_path ?? ''));
 
             // カテゴリIDを取得（パスから）
-            $parentId = $this->documentCategoryService->getIdFromPath(implode('/', $categoryPath));
+            $parentId = $this->CategoryService->getIdFromPath(implode('/', $categoryPath));
 
             $userBranchId = $user->userBranches()->active()->orderBy('id', 'desc')->first()->id ?? null;
 
@@ -41,7 +41,7 @@ class GetDocumentsUseCase
             }
 
             // サブカテゴリを取得
-            $subCategories = $this->documentCategoryService->getSubCategories(
+            $subCategories = $this->CategoryService->getSubCategories(
                 $parentId,
                 $userBranchId,
                 $dto->edit_pull_request_id
