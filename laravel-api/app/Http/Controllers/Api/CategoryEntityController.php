@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Consts\ErrorType;
 use App\Consts\Flag;
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
+use App\Dto\UseCase\DocumentCategory\DestroyDocumentCategoryDto;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
 use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
@@ -26,6 +27,7 @@ use App\Models\PullRequestEditSessionDiff;
 use App\Services\DocumentCategoryService;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
+use App\UseCases\DocumentCategory\DestroyDocumentCategoryUseCase;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
 use App\UseCases\DocumentCategory\GetCategoryUseCase;
 use App\UseCases\DocumentCategory\UpdateDocumentCategoryUseCase;
@@ -248,268 +250,48 @@ class CategoryEntityController extends ApiBaseController
     /**
      * カテゴリを削除
      */
-    public function destroy(DeleteDocumentCategoryRequest $request): JsonResponse
+    public function destroy(DeleteDocumentCategoryRequest $request, DestroyDocumentCategoryUseCase $useCase): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
             // 認証チェック
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証が必要です',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
-            // ユーザーのアクティブブランチ確認
-            $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch($user, $request->edit_pull_request_id);
+            // DTOを作成
+            $validatedData = $request->validated();
+            $dto = DestroyDocumentCategoryDto::fromRequest($validatedData);
 
-            $pullRequestEditSessionId = $this->getPullRequestEditSessionId($user, $request->edit_pull_request_id, $request->pull_request_edit_token);
-            // カテゴリパスの取得と処理
-            $pathParts = array_filter(explode('/', $request->category_path_with_slug));
-            $slug = array_pop($pathParts);
-            $categoryPath = implode('/', $pathParts);
-            $parentCategoryId = $this->documentCategoryService->getIdFromPath($categoryPath);
-
-            // 削除対象のルートカテゴリの存在確認
-            $rootCategory = CategoryVersion::where('slug', $slug)
-                ->where('parent_entity_id', $parentCategoryId)
-                ->where(function ($query) use ($userBranchId) {
-                    $query->where('status', DocumentCategoryStatus::MERGED->value)
-                        ->orWhere(function ($subQuery) use ($userBranchId) {
-                            $subQuery->where('status', '!=', DocumentCategoryStatus::MERGED->value)
-                                ->where('user_branch_id', $userBranchId);
-                        });
-                })
-                ->first();
-
-            if (! $rootCategory) {
-                return response()->json([
-                    'error' => 'カテゴリが見つかりません',
-                ], 404);
-            }
-
-            // 再帰CTEを使用して削除対象のカテゴリIDを取得
-            $categoryIds = DB::select('
-                WITH RECURSIVE tree AS (
-                    SELECT id FROM category_versions
-                    WHERE slug = ? AND parent_entity_id = ?
-                    AND (status = ? OR (status != ? AND user_branch_id = ?))
-                    
-                    UNION ALL
-                    
-                    SELECT cv.id
-                    FROM category_versions cv
-                    INNER JOIN tree t ON cv.parent_entity_id = t.id
-                    WHERE (cv.status = ? OR (cv.status != ? AND cv.user_branch_id = ?))
-                )
-                SELECT id FROM tree
-            ', [$slug, $parentCategoryId, DocumentCategoryStatus::MERGED->value, DocumentCategoryStatus::MERGED->value, $userBranchId, DocumentCategoryStatus::MERGED->value, DocumentCategoryStatus::MERGED->value, $userBranchId]);
-
-            $categoryIdArray = array_column($categoryIds, 'id');
-
-            if (empty($categoryIdArray)) {
-                return response()->json([
-                    'error' => 'カテゴリが見つかりません',
-                ], 404);
-            }
-
-            // 削除対象のカテゴリを取得
-            $categories = CategoryVersion::whereIn('id', $categoryIdArray)->get();
-
-            // 削除対象のドキュメントを取得
-            $documents = DocumentVersion::whereIn('category_id', $categoryIdArray)
-                ->where(function ($query) use ($userBranchId) {
-                    $query->where('status', DocumentStatus::MERGED->value)
-                        ->orWhere(function ($subQuery) use ($userBranchId) {
-                            $subQuery->where('status', '!=', DocumentStatus::MERGED->value)
-                                ->where('user_branch_id', $userBranchId);
-                        });
-                })
-                ->get();
-
-            $now = now();
-
-            // 既存のedit_start_versionsレコードを取得
-            $existingEditVersions = EditStartVersion::where('target_type', 'category')
-                ->whereIn('original_version_id', $categoryIdArray)
-                ->get()
-                ->keyBy('original_version_id');
-
-            // 論理削除前の件数を取得
-            $beforeCount = CategoryVersion::whereIn('id', $categoryIdArray)
-                ->where('is_deleted', Flag::FALSE)
-                ->count();
-
-            // カテゴリを一括で論理削除(ここは消えている)
-            CategoryVersion::whereIn('id', $categoryIdArray)
-                ->update([
-                    'is_deleted' => Flag::TRUE,
-                    'deleted_at' => $now,
-                ]);
-
-            // ドキュメントを論理削除
-            if ($documents->isNotEmpty()) {
-                DocumentVersion::whereIn('id', $documents->pluck('id'))
-                    ->update([
-                        'is_deleted' => Flag::TRUE,
-                        'deleted_at' => $now,
-                    ]);
-            }
-
-            // 削除されたカテゴリの新しいバージョンをバルク作成
-            $newCategoryData = [];
-
-            foreach ($categories as $category) {
-                $newCategoryData[] = [
-                    'sidebar_label' => $category->sidebar_label,
-                    'slug' => $category->slug,
-                    'parent_entity_id' => $category->parent_entity_id,
-                    'position' => $category->position,
-                    'description' => $category->description,
-                    'user_branch_id' => $userBranchId,
-                    'is_deleted' => Flag::TRUE,
-                    'deleted_at' => $now,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
-
-            // バルクインサートを実行
-            CategoryVersion::insert($newCategoryData);
-
-            // 挿入されたレコードのIDを取得
-            $insertedCategoryIds = CategoryVersion::where('user_branch_id', $userBranchId)
-                ->onlyTrashed()
-                ->orderBy('id', 'desc')
-                ->limit(count($newCategoryData))
-                ->pluck('id')
-                ->reverse()
-                ->values()
-                ->toArray();
-
-            // カテゴリのマッピングを作成
-            foreach ($categories as $index => $category) {
-                $deletedCategory[$category->id] = $insertedCategoryIds[$index];
-            }
-
-            // 削除されたドキュメントの新しいバージョンをバルク作成
-            if ($documents->isNotEmpty()) {
-                $newDocumentData = [];
-                foreach ($documents as $document) {
-                    $newDocumentData[] = [
-                        'user_id' => $user->id,
-                        'user_branch_id' => $userBranchId,
-                        'file_path' => $document->file_path,
-                        'status' => $document->status,
-                        'content' => $document->content,
-                        'slug' => $document->slug,
-                        'sidebar_label' => $document->sidebar_label,
-                        'file_order' => $document->file_order,
-                        'last_edited_by' => $user->email,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                        'is_deleted' => Flag::TRUE,
-                        'is_public' => $document->is_public,
-                        'category_id' => $document->category_id,
-                    ];
-                }
-
-                // バルクインサートを実行
-                DocumentVersion::insert($newDocumentData);
-            }
-
-            // edit_start_versionsの更新・作成
-            $editVersionsToCreate = [];
-            $existingEditVersionIds = [];
-
-            foreach ($categories as $index => $category) {
-                $newCategoryId = $insertedCategoryIds[$index];
-
-                if (isset($existingEditVersions[$category->id])) {
-                    // 既存レコードのIDを収集
-                    $existingEditVersionIds[] = $existingEditVersions[$category->id]->id;
-                }
-
-                // 全ての更新操作を表す新しいレコードを作成
-                $editVersionsToCreate[] = [
-                    'user_branch_id' => $userBranchId,
-                    'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                    'original_version_id' => $category->id,
-                    'current_version_id' => $newCategoryId,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
-
-            // 既存のedit_start_versionsを一括で論理削除
-            if (! empty($existingEditVersionIds)) {
-                EditStartVersion::whereIn('id', $existingEditVersionIds)
-                    ->update([
-                        'is_deleted' => Flag::TRUE,
-                        'deleted_at' => $now,
-                    ]);
-            }
-
-            // バルク作成
-            if (! empty($editVersionsToCreate)) {
-                EditStartVersion::insert($editVersionsToCreate);
-            }
-
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                foreach ($categories as $index => $category) {
-                    $newCategoryId = $insertedCategoryIds[$index];
-                    PullRequestEditSessionDiff::updateOrCreate(
-                        [
-                            'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                            'current_version_id' => $category->id,
-                        ],
-                        [
-                            'current_version_id' => $newCategoryId,
-                            'diff_type' => 'deleted',
-                        ]
-                    );
-                }
-            }
-
-            DB::commit();
+            // UseCaseを実行
+            $useCase->execute($dto, $user);
 
             return response()->json();
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('カテゴリの削除に失敗しました', [
-                'error' => $e->getMessage(),
-                'stack_trace' => $e->getTraceAsString(),
-                'line' => $e->getLine(),
-                'file' => $e->getFile(),
-            ]);
-
-            return response()->json([
-                'error' => 'カテゴリの削除に失敗しました',
-            ], 500);
+        } catch (AuthenticationException) {
+            return $this->sendError(
+                ErrorType::CODE_AUTHENTICATION_FAILED,
+                __('errors.MSG_AUTHENTICATION_FAILED'),
+                ErrorType::STATUS_AUTHENTICATION_FAILED,
+            );
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+            );
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
-    }
-
-    /**
-     * プルリクエスト編集セッションIDを取得する
-     */
-    private function getPullRequestEditSessionId($user, ?int $editPullRequestId): ?int
-    {
-        if (! $editPullRequestId) {
-            return null;
-        }
-
-        // 指定されたプルリクエストで現在進行中の編集セッションを取得
-        $editSession = PullRequestEditSession::where('pull_request_id', $editPullRequestId)
-            ->where('user_id', $user->id)
-            ->whereNull('finished_at')
-            ->orderBy('created_at', 'desc')
-            ->first();
-
-        return $editSession?->id;
     }
 }
