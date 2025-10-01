@@ -88,158 +88,63 @@ class DestroyDocumentCategoryUseCase
                 throw new NotFoundException;
             }
 
+            // 7. category_entity_idで作業コンテキストに応じて、配下のdocument_versionsを再帰的に全て取得
+            $documents = $this->documentCategoryService->getDescendantDocumentsByWorkContext(
+                $dto->categoryEntityId,
+                $user,
+                $dto->pullRequestEditToken
+            );
+
+            // 8. category_entity_idで作業コンテキストに応じて、配下のcategory_versionsを再帰的に全て取得
+            $categories = $this->documentCategoryService->getDescendantCategoriesByWorkContext(
+                $dto->categoryEntityId,
+                $user,
+                $dto->pullRequestEditToken
+            );
+
             $deletedDocumentVersions = [];
             $deletedCategoryVersions = [];
 
-            // 7. category_entity_idでwhereしたdocを元にis_deleted = 1なdocument_versions, edit_start_versionsを生成
-            $documents = DocumentVersion::where('category_entity_id', $dto->categoryEntityId)
-                ->get();
-
+            // 9. $documentsを削除したversionsレコードとedit_start_versionsを一括作成
             foreach ($documents as $document) {
-                // DocumentVersionを作成（削除用）
-                $newDocumentVersion = DocumentVersion::create([
-                    'entity_id' => $document->entity_id,
-                    'organization_id' => $organizationId,
-                    'user_id' => $user->id,
-                    'user_branch_id' => $userBranchId,
-                    'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                    'status' => DocumentStatus::DRAFT->value,
-                    'description' => $document->description,
-                    'category_entity_id' => $document->category_entity_id,
-                    'title' => $document->title,
-                    'deleted_at' => now(),
-                    'is_deleted' => Flag::TRUE,
-                ]);
-
-                // EditStartVersionを作成
-                EditStartVersion::create([
-                    'user_branch_id' => $userBranchId,
-                    'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                    'original_version_id' => $document->id,
-                    'current_version_id' => $newDocumentVersion->id,
-                ]);
-
-                // 既存ドキュメントがDRAFTステータスの場合は削除
-                if ($document->status === DocumentStatus::DRAFT->value) {
-                    $document->delete();
-                }
-
-                // プルリクエストを編集している処理を考慮
-                if ($pullRequestEditSessionId) {
-                    PullRequestEditSessionDiff::updateOrCreate(
-                        [
-                            'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                            'original_version_id' => $document->id,
-                        ],
-                        [
-                            'current_version_id' => $newDocumentVersion->id,
-                            'diff_type' => 'deleted',
-                        ]
-                    );
-                }
-
-                $deletedDocumentVersions[] = $newDocumentVersion;
-            }
-
-            // 8. categories where parent_entity_id = category_entity_idを元にis_deleted = 1なcategory_versions, edit_start_versionsを生成
-            $childCategories = CategoryVersion::where('parent_entity_id', $dto->categoryEntityId)
-                ->where('is_deleted', Flag::FALSE)
-                ->get();
-
-            foreach ($childCategories as $childCategory) {
-                // CategoryVersionを作成（削除用）
-                $newCategoryVersion = CategoryVersion::create([
-                    'entity_id' => $childCategory->entity_id,
-                    'parent_entity_id' => $childCategory->parent_entity_id,
-                    'title' => $childCategory->title,
-                    'description' => $childCategory->description,
-                    'status' => DocumentCategoryStatus::DRAFT->value,
-                    'user_branch_id' => $userBranchId,
-                    'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                    'organization_id' => $organizationId,
-                    'deleted_at' => now(),
-                    'is_deleted' => Flag::TRUE,
-                ]);
-
-                // EditStartVersionを作成
-                EditStartVersion::create([
-                    'user_branch_id' => $userBranchId,
-                    'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                    'original_version_id' => $childCategory->id,
-                    'current_version_id' => $newCategoryVersion->id,
-                ]);
-
-                // 既存カテゴリがDRAFTステータスの場合は削除
-                if ($childCategory->status === DocumentCategoryStatus::DRAFT->value) {
-                    $childCategory->delete();
-                }
-
-                // プルリクエストを編集している処理を考慮
-                if ($pullRequestEditSessionId) {
-                    PullRequestEditSessionDiff::updateOrCreate(
-                        [
-                            'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                            'original_version_id' => $childCategory->id,
-                        ],
-                        [
-                            'current_version_id' => $newCategoryVersion->id,
-                            'diff_type' => 'deleted',
-                        ]
-                    );
-                }
-
-                $deletedCategoryVersions[] = $newCategoryVersion;
-            }
-
-            // 9. カテゴリ自体を削除
-            $newCategoryVersion = CategoryVersion::create([
-                'entity_id' => $existingCategory->entity_id,
-                'parent_entity_id' => $existingCategory->parent_entity_id,
-                'title' => $existingCategory->title,
-                'description' => $existingCategory->description,
-                'status' => DocumentCategoryStatus::DRAFT->value,
-                'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                'organization_id' => $organizationId,
-                'deleted_at' => now(),
-                'is_deleted' => Flag::TRUE,
-            ]);
-
-            // EditStartVersionを作成
-            EditStartVersion::create([
-                'user_branch_id' => $userBranchId,
-                'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                'original_version_id' => $existingCategory->id,
-                'current_version_id' => $newCategoryVersion->id,
-            ]);
-
-            // 既存カテゴリがDRAFTステータスの場合は削除
-            if ($existingCategory->status === DocumentCategoryStatus::DRAFT->value) {
-                $existingCategory->delete();
-            }
-
-            // プルリクエストを編集している処理を考慮
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                        'original_version_id' => $existingCategory->id,
-                    ],
-                    [
-                        'current_version_id' => $newCategoryVersion->id,
-                        'diff_type' => 'deleted',
-                    ]
+                $deletedVersion = $this->createDeletedDocumentVersion(
+                    $document,
+                    $user,
+                    $organizationId,
+                    $userBranchId,
+                    $pullRequestEditSessionId
                 );
+
+                $deletedDocumentVersions[] = $deletedVersion;
             }
 
-            $deletedCategoryVersions[] = $newCategoryVersion;
+            // 10. $categoriesを削除したversionsレコードとedit_start_versionsを一括作成
+            foreach ($categories as $category) {
+                $deletedVersion = $this->createDeletedCategoryVersion(
+                    $category,
+                    $user,
+                    $organizationId,
+                    $userBranchId,
+                    $pullRequestEditSessionId
+                );
+
+                $deletedCategoryVersions[] = $deletedVersion;
+            }
+
+            // 11. カテゴリ自体を削除
+            $deletedCategoryVersion = $this->createDeletedCategoryVersion(
+                $existingCategory,
+                $user,
+                $organizationId,
+                $userBranchId,
+                $pullRequestEditSessionId
+            );
+
+            $deletedCategoryVersions[] = $deletedCategoryVersion;
 
             DB::commit();
 
-            // 10. 削除したdoc & categoryのversionsデータを返却
+            // 12. 削除したdoc & categoryのversionsデータを全て返却
             return [
                 'document_versions' => $deletedDocumentVersions,
                 'category_versions' => $deletedCategoryVersions,
@@ -252,5 +157,115 @@ class DestroyDocumentCategoryUseCase
             throw $e;
         }
     }
-}
 
+    /**
+     * 削除用のドキュメントバージョンを作成
+     */
+    private function createDeletedDocumentVersion(
+        DocumentVersion $document,
+        User $user,
+        int $organizationId,
+        int $userBranchId,
+        ?int $pullRequestEditSessionId
+    ): DocumentVersion {
+        // DocumentVersionを作成（削除用）
+        $newDocumentVersion = DocumentVersion::create([
+            'entity_id' => $document->entity_id,
+            'organization_id' => $organizationId,
+            'user_id' => $user->id,
+            'user_branch_id' => $userBranchId,
+            'pull_request_edit_session_id' => $pullRequestEditSessionId,
+            'status' => DocumentStatus::DRAFT->value,
+            'description' => $document->description,
+            'category_entity_id' => $document->category_entity_id,
+            'title' => $document->title,
+            'deleted_at' => now(),
+            'is_deleted' => Flag::TRUE,
+        ]);
+
+        // EditStartVersionを作成
+        EditStartVersion::create([
+            'user_branch_id' => $userBranchId,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $document->id,
+            'current_version_id' => $newDocumentVersion->id,
+        ]);
+
+        // 既存ドキュメントがDRAFTステータスの場合は削除
+        if ($document->status === DocumentStatus::DRAFT->value) {
+            $document->delete();
+        }
+
+        // プルリクエストを編集している処理を考慮
+        if ($pullRequestEditSessionId) {
+            PullRequestEditSessionDiff::updateOrCreate(
+                [
+                    'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                    'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+                    'original_version_id' => $document->id,
+                ],
+                [
+                    'current_version_id' => $newDocumentVersion->id,
+                    'diff_type' => 'deleted',
+                ]
+            );
+        }
+
+        return $newDocumentVersion;
+    }
+
+    /**
+     * 削除用のカテゴリバージョンを作成
+     */
+    private function createDeletedCategoryVersion(
+        CategoryVersion $category,
+        User $user,
+        int $organizationId,
+        int $userBranchId,
+        ?int $pullRequestEditSessionId
+    ): CategoryVersion {
+        // CategoryVersionを作成（削除用）
+        $newCategoryVersion = CategoryVersion::create([
+            'entity_id' => $category->entity_id,
+            'parent_entity_id' => $category->parent_entity_id,
+            'title' => $category->title,
+            'description' => $category->description,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => $userBranchId,
+            'pull_request_edit_session_id' => $pullRequestEditSessionId,
+            'organization_id' => $organizationId,
+            'deleted_at' => now(),
+            'is_deleted' => Flag::TRUE,
+        ]);
+
+        // EditStartVersionを作成
+        EditStartVersion::create([
+            'user_branch_id' => $userBranchId,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $category->id,
+            'current_version_id' => $newCategoryVersion->id,
+        ]);
+
+        // 既存カテゴリがDRAFTステータスの場合は削除
+        if ($category->status === DocumentCategoryStatus::DRAFT->value) {
+            $category->delete();
+        }
+
+        // プルリクエストを編集している処理を考慮
+        if ($pullRequestEditSessionId) {
+            PullRequestEditSessionDiff::updateOrCreate(
+                [
+                    'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                    'target_type' => EditStartVersionTargetType::CATEGORY->value,
+                    'original_version_id' => $category->id,
+                ],
+                [
+                    'current_version_id' => $newCategoryVersion->id,
+                    'diff_type' => 'deleted',
+                ]
+            );
+        }
+
+        return $newCategoryVersion;
+    }
+}

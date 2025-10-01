@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentCategoryStatus;
+use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\FixRequestStatus;
 use App\Models\CategoryVersion;
+use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\FixRequest;
 use App\Models\User;
@@ -38,89 +40,6 @@ class DocumentCategoryService
 
             return $maxPosition + 1;
         }
-    }
-
-    // /**
-    //  * カテゴリパスからparentとなるcategory idを再帰的に取得
-    //  *
-    //  * @param  string|null  $categoryPath
-    //  *                                     parent/child/grandchildのカテゴリパスの場合、'parent/child/grandchild'の文字列を期待
-    //  * @return int カテゴリID
-    //  *
-    //  * @throws InvalidArgumentException 不正なパス形式または存在しないカテゴリの場合
-    //  */
-    // public function getIdFromPath(?string $categoryPath): int
-    // {
-    //     if (empty($categoryPath)) {
-    //         return DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-    //     }
-
-    //     // 正しいパス形式（英数字、ハイフン、アンダースコアのセグメントをスラッシュで区切った形式）以外は無効
-    //     if (! preg_match('/^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/', $categoryPath)) {
-    //         throw new InvalidArgumentException('Invalid path format: path must contain only alphanumeric characters, hyphens, and underscores separated by single slashes');
-    //     }
-
-    //     // スラッシュでパスを分割
-    //     $pathSegments = explode('/', $categoryPath);
-
-    //     // デフォルトカテゴリ（uncategorized）から開始
-    //     $currentParentCategoryId = DocumentCategoryConstants::DEFAULT_CATEGORY_ID;
-
-    //     foreach ($pathSegments as $slug) {
-    //         $category = DocumentCategory::where('slug', $slug)
-    //             ->where('parent_entity_id', $currentParentCategoryId)
-    //             ->first();
-
-    //         if (! $category) {
-    //             throw new InvalidArgumentException("Category not found: {$slug}");
-    //         }
-
-    //         $currentParentCategoryId = $category->id;
-    //     }
-
-    //     return $currentParentCategoryId;
-    // }
-
-    /**
-     * サブカテゴリを取得（ブランチ別）
-     */
-    public function getSubCategories(
-        int $parentId,
-        ?int $userBranchId = null,
-        ?int $editPullRequestId = null
-    ): Collection {
-        $query = CategoryVersion::select('sidebar_label', 'position')
-            ->where('parent_entity_id', $parentId)
-            ->where(function ($q) use ($userBranchId) {
-                $q->where('status', 'merged')
-                    ->orWhere(function ($subQ) use ($userBranchId) {
-                        $subQ->where('user_branch_id', $userBranchId)
-                            ->where('status', DocumentCategoryStatus::DRAFT->value);
-                    });
-            })
-            ->when($editPullRequestId, function ($query, $editPullRequestId) {
-                return $query->orWhere(function ($subQ) use ($editPullRequestId) {
-                    $subQ->whereHas('userBranch.pullRequests', function ($prQ) use ($editPullRequestId) {
-                        $prQ->where('id', $editPullRequestId);
-                    })
-                        ->where('status', DocumentCategoryStatus::PUSHED->value);
-                });
-            })
-            ->when($userBranchId, function ($query, $userBranchId) {
-                $appliedFixRequestCategoryIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
-                    ->whereNotNull('document_category_id')
-                    ->whereHas('categoryVersion', function ($q) use ($userBranchId) {
-                        $q->where('user_branch_id', $userBranchId);
-                    })
-                    ->pluck('document_category_id')
-                    ->toArray();
-
-                if (! empty($appliedFixRequestCategoryIds)) {
-                    $query->orWhereIn('id', $appliedFixRequestCategoryIds);
-                }
-            });
-
-        return $query->orderBy('position', 'asc')->get();
     }
 
     /**
@@ -201,6 +120,167 @@ class DocumentCategoryService
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentCategoryStatus::MERGED->value);
             })->orderBy('created_at', 'desc')->first();
+        }
+    }
+
+    /**
+     * 作業コンテキストに応じて配下の全カテゴリを再帰的に取得
+     *
+     * @param  int  $categoryEntityId  対象カテゴリのエンティティID
+     * @param  User  $user  認証済みユーザー
+     * @param  ?string  $pullRequestEditSessionToken  プルリクエスト編集トークン
+     * @return Collection カテゴリバージョンのコレクション
+     */
+    public function getDescendantCategoriesByWorkContext(
+        int $categoryEntityId,
+        User $user,
+        ?string $pullRequestEditSessionToken = null
+    ): Collection {
+        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+        $organizationId = $user->organizationMember->organization_id;
+        $descendants = new Collection();
+
+        // 直下の子カテゴリを取得
+        $childCategories = $this->getChildCategoriesByWorkContext(
+            $categoryEntityId,
+            $organizationId,
+            $activeUserBranch,
+            $pullRequestEditSessionToken
+        );
+
+        foreach ($childCategories as $childCategory) {
+            $descendants->push($childCategory);
+
+            // 再帰的に孫カテゴリを取得
+            $grandChildren = $this->getDescendantCategoriesByWorkContext(
+                $childCategory->entity_id,
+                $user,
+                $pullRequestEditSessionToken
+            );
+
+            $descendants = $descendants->merge($grandChildren);
+        }
+
+        return $descendants;
+    }
+
+    /**
+     * 作業コンテキストに応じて配下の全ドキュメントを再帰的に取得
+     *
+     * @param  int  $categoryEntityId  対象カテゴリのエンティティID
+     * @param  User  $user  認証済みユーザー
+     * @param  ?string  $pullRequestEditSessionToken  プルリクエスト編集トークン
+     * @return Collection ドキュメントバージョンのコレクション
+     */
+    public function getDescendantDocumentsByWorkContext(
+        int $categoryEntityId,
+        User $user,
+        ?string $pullRequestEditSessionToken = null
+    ): Collection {
+        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+        $organizationId = $user->organizationMember->organization_id;
+        $documents = new Collection();
+
+        // 直下のドキュメントを取得
+        $directDocuments = $this->getDocumentsByWorkContext(
+            $categoryEntityId,
+            $organizationId,
+            $activeUserBranch,
+            $pullRequestEditSessionToken
+        );
+
+        $documents = $documents->merge($directDocuments);
+
+        // 子カテゴリ配下のドキュメントを再帰的に取得
+        $childCategories = $this->getChildCategoriesByWorkContext(
+            $categoryEntityId,
+            $organizationId,
+            $activeUserBranch,
+            $pullRequestEditSessionToken
+        );
+
+        foreach ($childCategories as $childCategory) {
+            $childDocuments = $this->getDescendantDocumentsByWorkContext(
+                $childCategory->entity_id,
+                $user,
+                $pullRequestEditSessionToken
+            );
+
+            $documents = $documents->merge($childDocuments);
+        }
+
+        return $documents;
+    }
+
+    /**
+     * 作業コンテキストに応じて直下の子カテゴリを取得
+     */
+    private function getChildCategoriesByWorkContext(
+        int $parentEntityId,
+        int $organizationId,
+        ?UserBranch $activeUserBranch,
+        ?string $pullRequestEditSessionToken
+    ): Collection {
+        $baseQuery = CategoryVersion::where('parent_entity_id', $parentEntityId)
+            ->where('organization_id', $organizationId);
+
+        if (! $activeUserBranch) {
+            return $baseQuery->where('status', DocumentCategoryStatus::MERGED->value)->get();
+        }
+
+        if ($pullRequestEditSessionToken) {
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->whereIn('status', [
+                        DocumentCategoryStatus::PUSHED->value,
+                        DocumentCategoryStatus::DRAFT->value,
+                    ])
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentCategoryStatus::MERGED->value);
+            })->get();
+        } else {
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->where('status', DocumentCategoryStatus::DRAFT->value)
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentCategoryStatus::MERGED->value);
+            })->get();
+        }
+    }
+
+    /**
+     * 作業コンテキストに応じて直下のドキュメントを取得
+     */
+    private function getDocumentsByWorkContext(
+        int $categoryEntityId,
+        int $organizationId,
+        ?UserBranch $activeUserBranch,
+        ?string $pullRequestEditSessionToken
+    ): Collection {
+        $baseQuery = DocumentVersion::where('category_entity_id', $categoryEntityId)
+            ->where('organization_id', $organizationId);
+
+        if (! $activeUserBranch) {
+            return $baseQuery->where('status', DocumentStatus::MERGED->value)->get();
+        }
+
+        if ($pullRequestEditSessionToken) {
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->whereIn('status', [
+                        DocumentStatus::PUSHED->value,
+                        DocumentStatus::DRAFT->value,
+                    ])
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentStatus::MERGED->value);
+            })->get();
+        } else {
+            return $baseQuery->where(function ($query) use ($activeUserBranch) {
+                $query->where(function ($q1) use ($activeUserBranch) {
+                    $q1->where('status', DocumentStatus::DRAFT->value)
+                        ->where('user_branch_id', $activeUserBranch->id);
+                })->orWhere('status', DocumentStatus::MERGED->value);
+            })->get();
         }
     }
 }
