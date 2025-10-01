@@ -43,6 +43,10 @@ class DestroyDocumentUseCase
             DB::beginTransaction();
 
             // 1. 組織メンバー確認
+            if (! $user->organizationMember) {
+                throw new NotFoundException;
+            }
+            
             $organizationId = $user->organizationMember->organization_id;
 
             // 2. 組織が存在しない場合はエラー
@@ -93,7 +97,6 @@ class DestroyDocumentUseCase
                 'description' => $existingDocument->description,
                 'category_entity_id' => $existingDocument->category_entity_id,
                 'title' => $existingDocument->title,
-                'last_edited_by' => $user->email,
                 'deleted_at' => now(),
                 'is_deleted' => Flag::TRUE,
             ]);

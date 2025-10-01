@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 class EditStartVersion extends Model
 {
     use HasFactory;
-    use SoftDeletes;
 
     protected $table = 'edit_start_versions';
 

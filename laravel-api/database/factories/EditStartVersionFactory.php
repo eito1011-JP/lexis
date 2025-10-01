@@ -32,8 +32,6 @@ class EditStartVersionFactory extends Factory
             'target_type' => 'document',
             'original_version_id' => DocumentVersion::factory(),
             'current_version_id' => DocumentVersion::factory(),
-            'is_deleted' => false,
-            'deleted_at' => null,
         ];
     }
 
