@@ -15,6 +15,7 @@ use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Services\CategoryService;
+use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ class DestroyDocumentCategoryUseCase
     public function __construct(
         private UserBranchService $userBranchService,
         private CategoryService $CategoryService,
+        private DocumentService $DocumentService,
     ) {}
 
     /**
@@ -89,7 +91,7 @@ class DestroyDocumentCategoryUseCase
             }
 
             // 7. category_entity_idで作業コンテキストに応じて、配下のdocument_versionsを再帰的に全て取得
-            $documents = $this->CategoryService->getDescendantDocumentsByWorkContext(
+            $documents = $this->DocumentService->getDescendantDocumentsByWorkContext(
                 $dto->categoryEntityId,
                 $user,
                 $dto->pullRequestEditToken

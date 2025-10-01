@@ -14,6 +14,7 @@ use App\Models\UserBranch;
 use App\Services\CategoryService;
 use App\Services\DocumentService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class DocumentServiceTest extends TestCase
@@ -385,5 +386,207 @@ class DocumentServiceTest extends TestCase
 
         // Assert
         $this->assertNull($result);
+    }
+
+    #[Test]
+    public function get_descendant_documents_by_work_context_without_active_user_branch(): void
+    {
+        // Arrange
+        $this->activeUserBranch->delete();
+
+        $categoryEntityId = 1;
+
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $categoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        // CategoryServiceのモックを設定
+        $categoryServiceMock = $this->createMock(CategoryService::class);
+        $categoryServiceMock->method('getChildCategoriesByWorkContext')
+            ->willReturn(new \Illuminate\Database\Eloquent\Collection());
+
+        $service = new DocumentService($categoryServiceMock);
+
+        // Act
+        $result = $service->getDescendantDocumentsByWorkContext(
+            $categoryEntityId,
+            $this->user,
+            null
+        );
+
+        // Assert
+        $this->assertCount(1, $result);
+        $this->assertEquals(DocumentStatus::MERGED->value, $result->first()->status);
+    }
+
+    #[Test]
+    public function get_descendant_documents_by_work_context_with_initial_edit(): void
+    {
+        // Arrange
+        $categoryEntityId = 1;
+
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $categoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::DRAFT->value,
+            'user_branch_id' => $this->activeUserBranch->id,
+        ]);
+
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $categoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        // CategoryServiceのモックを設定
+        $categoryServiceMock = $this->createMock(CategoryService::class);
+        $categoryServiceMock->method('getChildCategoriesByWorkContext')
+            ->willReturn(new \Illuminate\Database\Eloquent\Collection());
+
+        $service = new DocumentService($categoryServiceMock);
+
+        // Act
+        $result = $service->getDescendantDocumentsByWorkContext(
+            $categoryEntityId,
+            $this->user,
+            null
+        );
+
+        // Assert
+        $this->assertCount(2, $result);
+        $this->assertTrue($result->contains(fn($doc) => $doc->status === DocumentStatus::DRAFT->value));
+        $this->assertTrue($result->contains(fn($doc) => $doc->status === DocumentStatus::MERGED->value));
+    }
+
+    #[Test]
+    public function get_descendant_documents_by_work_context_with_pr_edit_session(): void
+    {
+        // Arrange
+        $categoryEntityId = 1;
+        $pullRequestEditSessionToken = 'test-token';
+
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $categoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::PUSHED->value,
+            'user_branch_id' => $this->activeUserBranch->id,
+        ]);
+
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $categoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::DRAFT->value,
+            'user_branch_id' => $this->activeUserBranch->id,
+        ]);
+
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $categoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        // CategoryServiceのモックを設定
+        $categoryServiceMock = $this->createMock(CategoryService::class);
+        $categoryServiceMock->method('getChildCategoriesByWorkContext')
+            ->willReturn(new \Illuminate\Database\Eloquent\Collection());
+
+        $service = new DocumentService($categoryServiceMock);
+
+        // Act
+        $result = $service->getDescendantDocumentsByWorkContext(
+            $categoryEntityId,
+            $this->user,
+            $pullRequestEditSessionToken
+        );
+
+        // Assert
+        $this->assertCount(3, $result);
+        $this->assertTrue($result->contains(fn($doc) => $doc->status === DocumentStatus::PUSHED->value));
+        $this->assertTrue($result->contains(fn($doc) => $doc->status === DocumentStatus::DRAFT->value));
+        $this->assertTrue($result->contains(fn($doc) => $doc->status === DocumentStatus::MERGED->value));
+    }
+
+    #[Test]
+    public function get_descendant_documents_by_work_context_with_child_categories(): void
+    {
+        // Arrange
+        $parentCategoryEntityId = 1;
+        $childCategoryEntityId = 2;
+
+        // 親カテゴリの直下のドキュメント
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $parentCategoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        // 子カテゴリのドキュメント
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $childCategoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        // 子カテゴリのモックオブジェクト
+        $childCategory = (object) ['entity_id' => $childCategoryEntityId];
+
+        // CategoryServiceのモックを設定
+        $categoryServiceMock = $this->createMock(CategoryService::class);
+        
+        // 親カテゴリに対する呼び出し
+        $categoryServiceMock->method('getChildCategoriesByWorkContext')
+            ->willReturnCallback(function($entityId) use ($parentCategoryEntityId, $childCategory) {
+                if ($entityId === $parentCategoryEntityId) {
+                    // 親カテゴリには子カテゴリが1つ存在
+                    return new \Illuminate\Database\Eloquent\Collection([$childCategory]);
+                } else {
+                    // 子カテゴリには子カテゴリが存在しない
+                    return new \Illuminate\Database\Eloquent\Collection();
+                }
+            });
+
+        $service = new DocumentService($categoryServiceMock);
+
+        // Act
+        $result = $service->getDescendantDocumentsByWorkContext(
+            $parentCategoryEntityId,
+            $this->user,
+            null
+        );
+
+        // Assert
+        $this->assertCount(2, $result);
+    }
+
+    #[Test]
+    public function get_descendant_documents_by_work_context_without_child_categories(): void
+    {
+        // Arrange
+        $categoryEntityId = 1;
+
+        DocumentVersion::factory()->create([
+            'category_entity_id' => $categoryEntityId,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        // CategoryServiceのモックを設定（子カテゴリなし）
+        $categoryServiceMock = $this->createMock(CategoryService::class);
+        $categoryServiceMock->method('getChildCategoriesByWorkContext')
+            ->willReturn(new \Illuminate\Database\Eloquent\Collection());
+
+        $service = new DocumentService($categoryServiceMock);
+
+        // Act
+        $result = $service->getDescendantDocumentsByWorkContext(
+            $categoryEntityId,
+            $this->user,
+            null
+        );
+
+        // Assert
+        $this->assertCount(1, $result);
     }
 }
