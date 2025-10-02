@@ -20,6 +20,7 @@ export const API_CONFIG = {
     DOCUMENT_VERSIONS: {
       CREATE: '/api/document_entities',
       GET_DETAIL: (id: number) => `/api/document_entities/${id}`,
+      DELETE: '/api/document_entities',
     },
     CATEGORIES: {
       GET: '/api/category-entities/',

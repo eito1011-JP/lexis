@@ -179,26 +179,27 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     }
   };
 
+  // カテゴリデータを取得する関数
+  const loadCategories = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // parent_entity_id=nullですべてのルートカテゴリを取得（制限なし）
+      const apiCategories = await fetchCategories(null);
+      const transformedCategories = transformApiDataToCategories(apiCategories);
+      
+      setCategories(transformedCategories);
+    } catch (err) {
+      console.error('カテゴリの取得に失敗しました:', err);
+      setError('カテゴリの取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // カテゴリデータを取得するuseEffect（無制限表示）
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // parent_entity_id=nullですべてのルートカテゴリを取得（制限なし）
-        const apiCategories = await fetchCategories(null);
-        const transformedCategories = transformApiDataToCategories(apiCategories);
-        
-        setCategories(transformedCategories);
-      } catch (err) {
-        console.error('カテゴリの取得に失敗しました:', err);
-        setError('カテゴリの取得に失敗しました');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadCategories();
   }, []);
 
@@ -289,6 +290,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     if (selectedCategory) {
         try {
         await apiClient.delete(API_CONFIG.ENDPOINTS.CATEGORIES.DELETE + selectedCategory.entityId);
+
+        loadCategories();
+
       } catch (error) {
         console.error('カテゴリの削除に失敗しました:', error);
         setToastMessage('カテゴリの削除に失敗しました');
@@ -332,7 +336,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     if (!selectedDocument) return;
 
     try {
-      await apiClient.delete(`/api/document_entities/${selectedDocument.entityId}`);
+      await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE + selectedDocument.entityId);
       
       // 削除後にUIを更新 - 削除されたドキュメントを含むカテゴリを再読み込み
       // ここでは簡易的に全体を再読み込みする
