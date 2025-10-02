@@ -5,6 +5,8 @@ namespace Tests\Unit\UseCases\DocumentCategory;
 use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
+use App\Models\CategoryEntity;
+use App\Models\CategoryVersion;
 use App\Models\DocumentCategory;
 use App\Models\DocumentCategoryEntity;
 use App\Models\Organization;
@@ -78,11 +80,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $existingCategory = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'title' => 'Original Title',
             'description' => 'Original Description',
@@ -114,7 +116,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertInstanceOf(DocumentCategory::class, $result);
+        $this->assertInstanceOf(CategoryVersion::class, $result);
         $this->assertEquals('Updated Title', $result->title);
         $this->assertEquals('Updated Description', $result->description);
         $this->assertEquals($existingCategory->parent_entity_id, $result->parent_entity_id);
@@ -132,7 +134,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         ]);
 
         // 既存カテゴリがMERGEDステータスなので削除されていないことを確認
-        $this->assertDatabaseHas('document_categories', [
+        $this->assertDatabaseHas('category_versions', [
             'id' => $existingCategory->id,
             'deleted_at' => null,
         ]);
@@ -160,11 +162,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'finished_at' => null,
         ]);
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $existingCategory = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'title' => 'Original Title',
             'description' => 'Original Description',
@@ -196,7 +198,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertInstanceOf(DocumentCategory::class, $result);
+        $this->assertInstanceOf(CategoryVersion::class, $result);
         $this->assertEquals('Updated Title', $result->title);
         $this->assertEquals('Updated Description', $result->description);
         $this->assertEquals($pullRequestEditSession->id, $result->pull_request_edit_session_id);
@@ -232,11 +234,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'finished_at' => null,
         ]);
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $existingCategory = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'title' => 'Original Title',
             'description' => 'Original Description',
@@ -297,7 +299,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             ->where('organization_id', $this->organization->id)
             ->delete();
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
@@ -343,7 +345,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     public function test_update_category_handles_user_branch_service_exception(): void
     {
         // Arrange
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
@@ -372,7 +374,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     public function test_update_category_handles_database_exception_and_rolls_back_transaction(): void
     {
         // Arrange
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
@@ -408,11 +410,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $existingCategory = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
         ]);
@@ -461,20 +463,20 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $parentCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $parentCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $parentCategory = DocumentCategory::factory()->create([
+        $parentCategory = CategoryVersion::factory()->create([
             'entity_id' => $parentCategoryEntity->id,
             'organization_id' => $this->organization->id,
         ]);
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $existingCategory = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'parent_entity_id' => $parentCategoryEntity->id,
             'organization_id' => $this->organization->id,
@@ -518,11 +520,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $existingCategory = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::DRAFT->value, // DRAFTステータスで作成
@@ -553,12 +555,12 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
 
         // Assert
         // DRAFTステータスの既存カテゴリが削除されていることを確認
-        $this->assertSoftDeleted('document_categories', [
+        $this->assertSoftDeleted('category_versions', [
             'id' => $existingCategory->id,
         ]);
 
         // 新しいカテゴリが作成されていることを確認
-        $this->assertDatabaseHas('document_categories', [
+        $this->assertDatabaseHas('category_versions', [
             'id' => $result->id,
             'title' => 'Updated Title',
             'description' => 'Updated Description',
@@ -583,11 +585,11 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $existingCategory = DocumentCategory::factory()->create([
+        $existingCategory = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::MERGED->value, // MERGEDステータスで作成
@@ -618,13 +620,13 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
 
         // Assert
         // MERGEDステータスの既存カテゴリが削除されていないことを確認
-        $this->assertDatabaseHas('document_categories', [
+        $this->assertDatabaseHas('category_versions', [
             'id' => $existingCategory->id,
             'deleted_at' => null,
         ]);
 
         // 新しいカテゴリが作成されていることを確認
-        $this->assertDatabaseHas('document_categories', [
+        $this->assertDatabaseHas('category_versions', [
             'id' => $result->id,
             'title' => 'Updated Title',
             'description' => 'Updated Description',

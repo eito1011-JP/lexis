@@ -5,8 +5,8 @@ namespace Tests\Unit\UseCases\DocumentCategory;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryEntity;
+use App\Models\CategoryVersion;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -26,7 +26,7 @@ class FetchCategoriesUseCaseTest extends TestCase
 
     private Organization $organization;
 
-    private DocumentCategoryEntity $firstEntity;
+    private CategoryEntity $firstEntity;
 
     protected function setUp(): void
     {
@@ -44,7 +44,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // firstEntityを作成
-        $this->firstEntity = DocumentCategoryEntity::factory()->create([
+        $this->firstEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
     }
@@ -64,11 +64,11 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 最初のエンティティに関連するマージ済みカテゴリ（表示される）
-        $mergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $mergedCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $mergedCategory = DocumentCategory::factory()->create([
+        $mergedCategory = CategoryVersion::factory()->create([
             'title' => 'マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -85,10 +85,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 他のエンティティに関連するドラフトカテゴリ（表示されない）
-        $draftCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $draftCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $draftCategory = DocumentCategory::factory()->create([
+        $draftCategory = CategoryVersion::factory()->create([
             'title' => 'ドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -130,10 +130,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
 
         // 編集対象になっていないマージ済みカテゴリ（表示される）
-        $unEditedMergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $unEditedMergedCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $unEditedMergedCategory = DocumentCategory::factory()->create([
+        $unEditedMergedCategory = CategoryVersion::factory()->create([
             'title' => '未編集マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -148,10 +148,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 編集対象になったマージ済みカテゴリ（表示されない）
-        $editedMergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $editedMergedCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $editedMergedCategory = DocumentCategory::factory()->create([
+        $editedMergedCategory = CategoryVersion::factory()->create([
             'title' => '編集済みマージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -166,7 +166,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 編集されたドラフトカテゴリ（表示される）
-        $editedDraftCategory = DocumentCategory::factory()->create([
+        $editedDraftCategory = CategoryVersion::factory()->create([
             'title' => '編集後ドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -222,10 +222,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
 
         // 他のユーザーが作成したドラフトカテゴリ用のエンティティ（表示されない）
-        $draftCategoryEntityByOtherUser = DocumentCategoryEntity::factory()->create([
+        $draftCategoryEntityByOtherUser = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $draftCategoryByOtherUser = DocumentCategory::factory()->create([
+        $draftCategoryByOtherUser = CategoryVersion::factory()->create([
             'title' => '他ユーザーのドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -241,10 +241,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 他のユーザーが作成したプッシュ済みカテゴリ用のエンティティ（表示されない）
-        $pushedCategoryEntityByOtherUser = DocumentCategoryEntity::factory()->create([
+        $pushedCategoryEntityByOtherUser = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $pushedCategoryByOtherUser = DocumentCategory::factory()->create([
+        $pushedCategoryByOtherUser = CategoryVersion::factory()->create([
             'title' => '他ユーザーのプッシュ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
@@ -260,10 +260,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 現在のユーザーのドラフトカテゴリ（表示される）
-        $draftCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $draftCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $draftCategory = DocumentCategory::factory()->create([
+        $draftCategory = CategoryVersion::factory()->create([
             'title' => '自分のドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -279,10 +279,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 現在のユーザーのプッシュ済みカテゴリ（表示される）
-        $pushedCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $pushedCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $pushedCategory = DocumentCategory::factory()->create([
+        $pushedCategory = CategoryVersion::factory()->create([
             'title' => '自分のプッシュ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
@@ -298,10 +298,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 未編集のマージ済みカテゴリ（表示される）
-        $mergedCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $mergedCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $mergedCategory = DocumentCategory::factory()->create([
+        $mergedCategory = CategoryVersion::factory()->create([
             'title' => 'マージ済みカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -345,10 +345,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
 
         // 同じエンティティに関連するカテゴリ（表示される）
-        $category1Entity = DocumentCategoryEntity::factory()->create([
+        $category1Entity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category1 = DocumentCategory::factory()->create([
+        $category1 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ1',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -363,10 +363,10 @@ class FetchCategoriesUseCaseTest extends TestCase
             'original_version_id' => $category1->id,
             'current_version_id' => $category1->id,
         ]);
-        $category2Entity = DocumentCategoryEntity::factory()->create([
+        $category2Entity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category2 = DocumentCategory::factory()->create([
+        $category2 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ2',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -383,10 +383,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // 3つ目のカテゴリ（表示される）
-        $category3Entity = DocumentCategoryEntity::factory()->create([
+        $category3Entity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category3 = DocumentCategory::factory()->create([
+        $category3 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ3',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::PUSHED->value,
@@ -427,10 +427,10 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
 
-        $category3Entity = DocumentCategoryEntity::factory()->create([
+        $category3Entity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category3 = DocumentCategory::factory()->create([
+        $category3 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ3',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -446,10 +446,10 @@ class FetchCategoriesUseCaseTest extends TestCase
             'current_version_id' => $category3->id,
         ]);
 
-        $category1Entity = DocumentCategoryEntity::factory()->create([
+        $category1Entity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category1 = DocumentCategory::factory()->create([
+        $category1 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ1',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -465,10 +465,10 @@ class FetchCategoriesUseCaseTest extends TestCase
             'current_version_id' => $category1->id,
         ]);
 
-        $category2Entity = DocumentCategoryEntity::factory()->create([
+        $category2Entity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category2 = DocumentCategory::factory()->create([
+        $category2 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ2',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -508,10 +508,10 @@ class FetchCategoriesUseCaseTest extends TestCase
         $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
 
         // ケース1: ドラフトカテゴリ（表示されない）
-        $originalDraftCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $originalDraftCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $originalDraftCategory = DocumentCategory::factory()->create([
+        $originalDraftCategory = CategoryVersion::factory()->create([
             'title' => '元のドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -527,7 +527,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // ケース2: draftカテゴリを再編集したカテゴリ(表示される)
-        $editedDraftCategory = DocumentCategory::factory()->create([
+        $editedDraftCategory = CategoryVersion::factory()->create([
             'title' => '編集後ドラフトカテゴリ',
             'parent_entity_id' => null,
             'status' => DocumentCategoryStatus::DRAFT->value,

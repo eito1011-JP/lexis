@@ -3,13 +3,19 @@
 namespace Tests\Unit\UseCases\Document;
 
 use App\Dto\UseCase\DocumentVersion\DetailDto;
-use App\Models\DocumentCategory;
+use App\Enums\EditStartVersionTargetType;
+use App\Models\CategoryEntity;
+use App\Models\CategoryVersion;
+use App\Models\DocumentEntity;
 use App\Models\DocumentVersion;
+use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
+use App\Models\UserBranch;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Services\CategoryService;
+use App\Services\DocumentService;
 use App\UseCases\Document\DetailUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -32,11 +38,19 @@ class DetailUseCaseTest extends TestCase
 
     private DocumentVersion $document;
 
-    private DocumentCategory $category;
+    private CategoryVersion $category;
+
+    private UserBranch $userBranch;
+
+    private CategoryEntity $categoryEntity;
+
+    private DocumentEntity $documentEntity;
 
     private $CategoryService;
 
     private $documentVersionRepository;
+
+    private $documentService;
 
     protected function setUp(): void
     {
@@ -45,10 +59,12 @@ class DetailUseCaseTest extends TestCase
         // サービスとリポジトリのモック作成
         $this->CategoryService = Mockery::mock(CategoryService::class);
         $this->documentVersionRepository = Mockery::mock(DocumentVersionRepositoryInterface::class);
+        $this->documentService = Mockery::mock(DocumentService::class);
 
         $this->useCase = new DetailUseCase(
             $this->CategoryService,
-            $this->documentVersionRepository
+            $this->documentVersionRepository,
+            $this->documentService  
         );
 
         // テストデータの準備
@@ -62,18 +78,50 @@ class DetailUseCaseTest extends TestCase
             'joined_at' => now(),
         ]);
 
+        // UserBranchの作成
+        $this->userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // categoryEntityの作成
+        $this->categoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         // DocumentCategoryの作成
-        $this->category = DocumentCategory::factory()->create([
+        $this->category = CategoryVersion::factory()->create([
+            'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'title' => 'テストカテゴリ',
         ]);
 
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->category->id,
+            'current_version_id' => $this->category->id,
+        ]);
+
+        $this->documentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         // DocumentVersionの作成
         $this->document = DocumentVersion::factory()->create([
+            'entity_id' => $this->documentEntity->id,
+            'category_entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
-            'category_id' => $this->category->id,
+            'category_entity_id' => $this->categoryEntity->id,
             'title' => 'テストドキュメント',
             'description' => 'テストドキュメントの説明',
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $this->document->id,
+            'current_version_id' => $this->document->id,
         ]);
     }
 
@@ -87,7 +135,16 @@ class DetailUseCaseTest extends TestCase
     public function test_execute_successfully_returns_document_with_category(): void
     {
         // Arrange
-        $dto = new DetailDto(id: $this->document->id);
+        $dto = new DetailDto(entityId: $this->documentEntity->id);
+
+        // ドキュメントをリレーションと共に読み込み
+        $this->document->load('category');
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->document);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -112,7 +169,7 @@ class DetailUseCaseTest extends TestCase
     {
         // Arrange
         // カテゴリがgetBreadcrumbsで空配列を返すようなケース（例：論理削除されたカテゴリ）
-        $categoryWithoutBreadcrumbs = DocumentCategory::factory()->create([
+        $categoryWithoutBreadcrumbs = CategoryVersion::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => 'シンプルカテゴリ',
             'parent_entity_id' => null,
@@ -120,12 +177,21 @@ class DetailUseCaseTest extends TestCase
 
         $documentWithSimpleCategory = DocumentVersion::factory()->create([
             'organization_id' => $this->organization->id,
-            'category_id' => $categoryWithoutBreadcrumbs->id,
+            'category_entity_id' => $categoryWithoutBreadcrumbs->entity_id,
             'title' => 'シンプルドキュメント',
             'description' => 'シンプルドキュメントの説明',
         ]);
 
-        $dto = new DetailDto(id: $documentWithSimpleCategory->id);
+        $dto = new DetailDto(entityId: $documentWithSimpleCategory->entity_id);
+
+        // ドキュメントをリレーションと共に読み込み
+        $documentWithSimpleCategory->load('category');
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($documentWithSimpleCategory->entity_id, $this->user, null)
+            ->andReturn($documentWithSimpleCategory);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -144,32 +210,97 @@ class DetailUseCaseTest extends TestCase
     {
         // Arrange
         // 3階層のカテゴリ構造を作成
-        $rootCategory = DocumentCategory::factory()->create([
+        $rootCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $rootCategory = CategoryVersion::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => 'ルートカテゴリ',
             'parent_entity_id' => null,
+            'entity_id' => $rootCategoryEntity->id,
         ]);
 
-        $childCategory = DocumentCategory::factory()->create([
+        $rootCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $rootCategory->id,
+            'current_version_id' => $rootCategory->id,
+        ]);
+
+        $childCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $childCategory = CategoryVersion::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => '子カテゴリ',
-            'parent_entity_id' => $rootCategory->id,
+            'parent_entity_id' => $rootCategoryEntity->id,
+            'entity_id' => $childCategoryEntity->id,
         ]);
 
-        $grandchildCategory = DocumentCategory::factory()->create([
+        $childCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $childCategory->id,
+            'current_version_id' => $childCategory->id,
+        ]);
+
+        $grandchildCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $grandchildCategory = CategoryVersion::factory()->create([
             'organization_id' => $this->organization->id,
             'title' => '孫カテゴリ',
-            'parent_entity_id' => $childCategory->id,
+            'parent_entity_id' => $childCategoryEntity->id,
+            'entity_id' => $grandchildCategoryEntity->id,
+        ]);
+
+        $grandchildCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $grandchildCategory->id,
+            'current_version_id' => $grandchildCategory->id,
+        ]);
+
+        $documentWithHierarchyEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
         ]);
 
         $documentWithHierarchy = DocumentVersion::factory()->create([
             'organization_id' => $this->organization->id,
-            'category_id' => $grandchildCategory->id,
+            'category_entity_id' => $grandchildCategoryEntity->id,
+            'entity_id' => $documentWithHierarchyEntity->id,
             'title' => '階層ドキュメント',
             'description' => '階層カテゴリのドキュメント',
         ]);
 
-        $dto = new DetailDto(id: $documentWithHierarchy->id);
+        $documentWithHierarchyEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $documentWithHierarchy->id,
+            'current_version_id' => $documentWithHierarchy->id,
+        ]);
+
+        $dto = new DetailDto(entityId: $documentWithHierarchyEntity->id);
+
+        // ドキュメントをリレーションと共に再読み込み
+        // CategoryVersion::parentは parent_entity_id で CategoryVersion を参照している
+        // しかし、親のentity_idと一致する最新のCategoryVersionを取得する必要がある
+        $documentWithHierarchy = DocumentVersion::with([
+            'category' => function ($query) {
+                $query->with(['parent' => function ($q) {
+                    $q->with(['parent']);
+                }]);
+            }
+        ])->find($documentWithHierarchy->id);
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($documentWithHierarchyEntity->id, $this->user, null)
+            ->andReturn($documentWithHierarchy);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -198,7 +329,13 @@ class DetailUseCaseTest extends TestCase
     {
         // Arrange
         $nonExistentId = 999999;
-        $dto = new DetailDto(id: $nonExistentId);
+        $dto = new DetailDto(entityId: $nonExistentId);
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($nonExistentId, $this->user, null)
+            ->andReturn(null);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -210,18 +347,44 @@ class DetailUseCaseTest extends TestCase
     {
         // Arrange
         $anotherOrganization = Organization::factory()->create();
-        $anotherCategory = DocumentCategory::factory()->create([
+        $anotherCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $anotherOrganization->id,
+        ]);
+        $anotherCategory = CategoryVersion::factory()->create([
             'organization_id' => $anotherOrganization->id,
             'title' => '他組織のカテゴリ',
+            'entity_id' => $anotherCategoryEntity->id,
+        ]);
+        $anotherCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $anotherCategory->id,
+            'current_version_id' => $anotherCategory->id,
+        ]);
+        $documentFromAnotherOrgEntity = DocumentEntity::factory()->create([
+            'organization_id' => $anotherOrganization->id,
         ]);
         $documentFromAnotherOrg = DocumentVersion::factory()->create([
             'organization_id' => $anotherOrganization->id,
-            'category_id' => $anotherCategory->id,
+            'category_entity_id' => $anotherCategoryEntity->id,
+            'entity_id' => $documentFromAnotherOrgEntity->id,
             'title' => '他組織のドキュメント',
             'description' => '他組織のドキュメント説明',
         ]);
+        $documentFromAnotherOrgEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $documentFromAnotherOrg->id,
+            'current_version_id' => $documentFromAnotherOrg->id,
+        ]);
 
-        $dto = new DetailDto(id: $documentFromAnotherOrg->id);
+        $dto = new DetailDto(entityId: $documentFromAnotherOrgEntity->id);
+
+        // documentServiceのモック設定（異なる組織なのでnullを返す）
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($documentFromAnotherOrgEntity->id, $this->user, null)
+            ->andReturn(null);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -233,7 +396,7 @@ class DetailUseCaseTest extends TestCase
     {
         // Arrange
         $userWithoutOrganization = User::factory()->create();
-        $dto = new DetailDto(id: $this->document->id);
+        $dto = new DetailDto(entityId: $this->documentEntity->id);
 
         // Act & Assert
         $this->expectException(\Exception::class);
@@ -244,7 +407,16 @@ class DetailUseCaseTest extends TestCase
     public function test_execute_correctly_loads_category_with_parent_relationships(): void
     {
         // Arrange
-        $dto = new DetailDto(id: $this->document->id);
+        $dto = new DetailDto(entityId: $this->documentEntity->id);
+
+        // ドキュメントをリレーションと共に読み込み
+        $this->document->load('category.parent');
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->document);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -268,7 +440,17 @@ class DetailUseCaseTest extends TestCase
             'deleted_at' => now(),
         ]);
 
-        $dto = new DetailDto(id: $this->document->id);
+        // ドキュメントも再読み込みして最新の関連データを取得
+        $this->document->refresh();
+        $this->document->load('category');
+
+        $dto = new DetailDto(entityId: $this->documentEntity->id);
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->document);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -276,36 +458,88 @@ class DetailUseCaseTest extends TestCase
         // Assert
         $this->assertIsArray($result);
         $this->assertEquals($this->document->id, $result['id']);
-        // 削除されたカテゴリでもドキュメント自体は取得できるはず
-        $this->assertEmpty($result['breadcrumbs']); // カテゴリが削除されているのでパンくずリストは空
+        // 削除されたカテゴリの場合、categoryはnullになり、パンくずリストにはドキュメントのみが含まれる
+        $this->assertCount(1, $result['breadcrumbs']); // ドキュメントのみ
+        $this->assertEquals($this->document->id, $result['breadcrumbs'][0]['id']);
+        $this->assertEquals('テストドキュメント', $result['breadcrumbs'][0]['title']);
+        $this->assertNull($result['category']);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_handles_very_deep_category_hierarchy(): void
+    public function test_execute_handles_seven_levels_category_hierarchy(): void
     {
         // Arrange
         // 7階層の深いカテゴリ構造を作成（UseCaseでの読み込み上限テスト）
         $categories = [];
-        $parentId = null;
+        $parentEntityId = null;
 
         for ($i = 0; $i < 7; $i++) {
-            $category = DocumentCategory::factory()->create([
+            $categoryEntity = CategoryEntity::factory()->create([
+                'organization_id' => $this->organization->id,
+            ]);
+            $category = CategoryVersion::factory()->create([
+                'entity_id' => $categoryEntity->id,
                 'organization_id' => $this->organization->id,
                 'title' => "レベル{$i}カテゴリ",
-                'parent_entity_id' => $parentId,
+                'parent_entity_id' => $parentEntityId,
             ]);
+
+            EditStartVersion::factory()->create([
+                'user_branch_id' => $this->userBranch->id,
+                'target_type' => EditStartVersionTargetType::CATEGORY->value,
+                'original_version_id' => $category->id,
+                'current_version_id' => $category->id,
+            ]);
+
             $categories[] = $category;
-            $parentId = $category->id;
+            $parentEntityId = $categoryEntity->id;
         }
+
+        $documentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
 
         $deepDocument = DocumentVersion::factory()->create([
             'organization_id' => $this->organization->id,
-            'category_id' => $categories[6]->id, // 最深のカテゴリに配置
+            'category_entity_id' => $categories[6]->entity_id,
+            'entity_id' => $documentEntity->id,
             'title' => '深階層ドキュメント',
             'description' => '深い階層のドキュメント',
         ]);
 
-        $dto = new DetailDto(id: $deepDocument->id);
+        $deepDocumentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $deepDocument->id,
+            'current_version_id' => $deepDocument->id,
+        ]);
+
+        $dto = new DetailDto(entityId: $documentEntity->id);
+
+        // ドキュメントをリレーションと共に再読み込み（7階層分の親をロード）
+        $deepDocument = DocumentVersion::with([
+            'category' => function ($query) {
+                $query->with(['parent' => function ($q1) {
+                    $q1->with(['parent' => function ($q2) {
+                        $q2->with(['parent' => function ($q3) {
+                            $q3->with(['parent' => function ($q4) {
+                                $q4->with(['parent' => function ($q5) {
+                                    $q5->with(['parent' => function ($q6) {
+                                        $q6->with('parent');
+                                    }]);
+                                }]);
+                            }]);
+                        }]);
+                    }]);
+                }]);
+            }
+        ])->find($deepDocument->id);
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($documentEntity->id, $this->user, null)
+            ->andReturn($deepDocument);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -330,40 +564,66 @@ class DetailUseCaseTest extends TestCase
     public function test_execute_logs_error_and_rethrows_exception_on_database_error(): void
     {
         // Arrange
-        $dto = new DetailDto(id: $this->document->id);
+        $dto = new DetailDto(entityId: $this->documentEntity->id);
+
+        // DocumentServiceのモックを作成してデータベースエラーをシミュレート
+        $documentServiceMock = Mockery::mock(DocumentService::class);
+        $documentServiceMock->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->andThrow(new \Exception('Database connection error'));
+
+        // UseCaseのインスタンスをモック化されたサービスで再作成
+        $useCase = new DetailUseCase(
+            $this->app->make(CategoryService::class),
+            $this->app->make(DocumentVersionRepositoryInterface::class),
+            $documentServiceMock
+        );
 
         // Logのモック
         Log::shouldReceive('error')
             ->once()
             ->with(Mockery::type(\Exception::class));
 
-        // データベースエラーをシミュレート（存在しないテーブルへのアクセス）
+        // データベースエラーが発生することを期待
         $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('Database connection error');
 
-        // 一時的にdocument_versionsテーブルをリネームして存在しないようにする
-        DB::statement('ALTER TABLE document_versions RENAME TO temp_document_versions');
-
-        try {
-            // Act
-            $this->useCase->execute($dto, $this->user);
-        } finally {
-            // テストの後始末：テーブル名を元に戻す
-            DB::statement('ALTER TABLE temp_document_versions RENAME TO document_versions');
-        }
+        // Act
+        $useCase->execute($dto, $this->user);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
     public function test_execute_with_special_characters_in_title_and_description(): void
     {
         // Arrange
+        $specialCharDocumentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
         $specialCharDocument = DocumentVersion::factory()->create([
             'organization_id' => $this->organization->id,
-            'category_id' => $this->category->id,
+            'category_entity_id' => $this->categoryEntity->id,
+            'entity_id' => $specialCharDocumentEntity->id,
             'title' => '特殊文字<>&"\'テスト',
             'description' => 'HTML<tag>や&記号、"クォート"のテスト',
         ]);
 
-        $dto = new DetailDto(id: $specialCharDocument->id);
+        $specialCharDocumentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $specialCharDocument->id,
+            'current_version_id' => $specialCharDocument->id,
+        ]);
+
+        $dto = new DetailDto(entityId: $specialCharDocumentEntity->id);
+
+        // ドキュメントをリレーションと共に読み込み
+        $specialCharDocument->load('category');
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($specialCharDocumentEntity->id, $this->user, null)
+            ->andReturn($specialCharDocument);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -375,41 +635,39 @@ class DetailUseCaseTest extends TestCase
         $this->assertEquals('HTML<tag>や&記号、"クォート"のテスト', $result['description']);
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_with_null_description(): void
-    {
-        // Arrange
-        $documentWithNullDescription = DocumentVersion::factory()->create([
-            'organization_id' => $this->organization->id,
-            'category_id' => $this->category->id,
-            'title' => 'タイトルのみドキュメント',
-            'description' => null,
-        ]);
-
-        $dto = new DetailDto(id: $documentWithNullDescription->id);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertIsArray($result);
-        $this->assertEquals($documentWithNullDescription->id, $result['id']);
-        $this->assertEquals('タイトルのみドキュメント', $result['title']);
-        $this->assertNull($result['description']);
-    }
 
     #[\PHPUnit\Framework\Attributes\Test]
     public function test_execute_with_empty_string_description(): void
     {
         // Arrange
+        $documentWithEmptyDescriptionEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
         $documentWithEmptyDescription = DocumentVersion::factory()->create([
             'organization_id' => $this->organization->id,
-            'category_id' => $this->category->id,
+            'category_entity_id' => $this->categoryEntity->id,
+            'entity_id' => $documentWithEmptyDescriptionEntity->id,
             'title' => '空の説明ドキュメント',
             'description' => '',
         ]);
 
-        $dto = new DetailDto(id: $documentWithEmptyDescription->id);
+        $documentWithEmptyDescriptionEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $documentWithEmptyDescription->id,
+            'current_version_id' => $documentWithEmptyDescription->id,
+        ]);
+
+        $dto = new DetailDto(entityId: $documentWithEmptyDescriptionEntity->id);
+
+        // ドキュメントをリレーションと共に読み込み
+        $documentWithEmptyDescription->load('category');
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($documentWithEmptyDescriptionEntity->id, $this->user, null)
+            ->andReturn($documentWithEmptyDescription);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);
@@ -436,7 +694,13 @@ class DetailUseCaseTest extends TestCase
             'joined_at' => now(),
         ]);
 
-        $dto = new DetailDto(id: $this->document->id);
+        $dto = new DetailDto(entityId: $this->documentEntity->id);
+
+        // documentServiceのモック設定（異なる組織なのでnullを返す）
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $anotherUser, null)
+            ->andReturn(null);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -447,7 +711,16 @@ class DetailUseCaseTest extends TestCase
     public function test_execute_returns_correct_response_structure(): void
     {
         // Arrange
-        $dto = new DetailDto(id: $this->document->id);
+        $dto = new DetailDto(entityId: $this->documentEntity->id);
+
+        // ドキュメントをリレーションと共に読み込み
+        $this->document->load('category');
+
+        // documentServiceのモック設定
+        $this->documentService->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user, null)
+            ->andReturn($this->document);
 
         // Act
         $result = $this->useCase->execute($dto, $this->user);

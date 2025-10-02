@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Api\Document;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Support\Facades\Log;
 
 class DetailRequest extends FormRequest
 {
@@ -22,7 +21,6 @@ class DetailRequest extends FormRequest
      */
     public function rules(): array
     {
-        Log::info(json_encode($this->all()));
         return [
             'entity_id' => 'required|integer|exists:document_entities,id',
             'pull_request_edit_session_token' => 'nullable|string',

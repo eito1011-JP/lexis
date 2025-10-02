@@ -87,7 +87,7 @@ class CategoryVersion extends Model
      */
     public function parent()
     {
-        return $this->belongsTo(CategoryVersion::class, 'parent_entity_id');
+        return $this->belongsTo(CategoryVersion::class, 'parent_entity_id', 'entity_id');
     }
 
     /**
