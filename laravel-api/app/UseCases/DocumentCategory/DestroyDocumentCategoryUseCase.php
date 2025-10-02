@@ -104,6 +104,13 @@ class DestroyDocumentCategoryUseCase
                 $dto->pullRequestEditToken
             );
 
+            // 9. 既存のEditStartVersionを取得（original_version_idを取得するため）
+            $existingEditStartVersions = EditStartVersion::where('user_branch_id', $userBranchId)
+                ->get()
+                ->keyBy(function ($item) {
+                    return $item->target_type.'_'.$item->current_version_id;
+                });
+
             // 10. documentsとcategoriesのデータを元にis_deleted = 1でbulk insert
             $now = now();
             $documentVersionsData = [];
@@ -206,10 +213,16 @@ class DestroyDocumentCategoryUseCase
                 foreach ($documents as $index => $document) {
                     $newVersion = $deletedDocumentVersions->where('entity_id', $document->entity_id)->first();
                     if ($newVersion) {
+                        // 既存のEditStartVersionがある場合はその original_version_id を使用
+                        $existingKey = EditStartVersionTargetType::DOCUMENT->value.'_'.$document->id;
+                        $originalVersionId = $existingEditStartVersions->has($existingKey)
+                            ? $existingEditStartVersions->get($existingKey)->original_version_id
+                            : $document->id;
+
                         $editStartVersionsData[] = [
                             'user_branch_id' => $userBranchId,
                             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                            'original_version_id' => $document->id,
+                            'original_version_id' => $originalVersionId,
                             'current_version_id' => $newVersion->id,
                             'created_at' => $now,
                             'updated_at' => $now,
@@ -243,10 +256,16 @@ class DestroyDocumentCategoryUseCase
                 foreach ($categories as $index => $category) {
                     $newVersion = $deletedCategoryVersions->where('entity_id', $category->entity_id)->first();
                     if ($newVersion) {
+                        // 既存のEditStartVersionがある場合はその original_version_id を使用
+                        $existingKey = EditStartVersionTargetType::CATEGORY->value.'_'.$category->id;
+                        $originalVersionId = $existingEditStartVersions->has($existingKey)
+                            ? $existingEditStartVersions->get($existingKey)->original_version_id
+                            : $category->id;
+
                         $editStartVersionsData[] = [
                             'user_branch_id' => $userBranchId,
                             'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                            'original_version_id' => $category->id,
+                            'original_version_id' => $originalVersionId,
                             'current_version_id' => $newVersion->id,
                             'created_at' => $now,
                             'updated_at' => $now,
@@ -270,10 +289,16 @@ class DestroyDocumentCategoryUseCase
                 // EditStartVersionsのデータ準備（削除対象のカテゴリ自体）
                 $newCategoryVersion = $deletedCategoryVersions->where('entity_id', $existingCategory->entity_id)->first();
                 if ($newCategoryVersion) {
+                    // 既存のEditStartVersionがある場合はその original_version_id を使用
+                    $existingKey = EditStartVersionTargetType::CATEGORY->value.'_'.$existingCategory->id;
+                    $originalVersionId = $existingEditStartVersions->has($existingKey)
+                        ? $existingEditStartVersions->get($existingKey)->original_version_id
+                        : $existingCategory->id;
+
                     $editStartVersionsData[] = [
                         'user_branch_id' => $userBranchId,
                         'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                        'original_version_id' => $existingCategory->id,
+                        'original_version_id' => $originalVersionId,
                         'current_version_id' => $newCategoryVersion->id,
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -294,9 +319,13 @@ class DestroyDocumentCategoryUseCase
                 }
             }
 
-            // 14. EditStartVersionsを一括作成
+            // 14. EditStartVersionsを一括作成（既存のものは更新）
             if (! empty($editStartVersionsData)) {
-                EditStartVersion::insert($editStartVersionsData);
+                EditStartVersion::upsert(
+                    $editStartVersionsData,
+                    ['user_branch_id', 'target_type', 'original_version_id'],
+                    ['current_version_id', 'updated_at']
+                );
             }
 
             // 15. PullRequestEditSessionDiffsを一括作成（upsert使用）

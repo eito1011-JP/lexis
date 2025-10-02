@@ -16,7 +16,6 @@ use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
-use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\CategoryService;
@@ -46,6 +45,8 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     private CategoryEntity $categoryEntity;
 
     private CategoryVersion $existingCategory;
+
+    private EditStartVersion $existingCategoryEditStartVersion;
 
     private $CategoryService;
 
@@ -85,7 +86,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        // CategoryEntityの作成
+        // 親となるCategoryEntityの作成
         $this->categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -98,6 +99,13 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::MERGED->value,
             'title' => 'Existing Category',
             'description' => 'Existing description',
+        ]);
+
+        $this->existingCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->existingCategory->id,
+            'current_version_id' => $this->existingCategory->id,
         ]);
     }
 
@@ -256,6 +264,13 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::MERGED->value,
         ]);
 
+        $childCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $childCategory->id,
+            'current_version_id' => $childCategory->id,
+        ]);
+
         // ドキュメントを作成
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
@@ -266,6 +281,13 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'category_entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        $documentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $document->id,
+            'current_version_id' => $document->id,
         ]);
 
         $dto = new DestroyCategoryEntityDto(
@@ -303,25 +325,42 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         // ドキュメントが削除されていることを確認
         $deletedDocument = $result['document_versions'][0];
+        $this->assertEquals($document->entity_id, $deletedDocument->entity_id);
         $this->assertEquals(Flag::TRUE, $deletedDocument->is_deleted);
         $this->assertNotNull($deletedDocument->deleted_at);
 
         // 子カテゴリが削除されていることを確認
         $deletedChildCategory = $result['category_versions'][0];
+        $this->assertEquals($childCategory->entity_id, $deletedChildCategory->entity_id);
         $this->assertEquals(Flag::TRUE, $deletedChildCategory->is_deleted);
         $this->assertNotNull($deletedChildCategory->deleted_at);
+
+        // カテゴリ自体が削除されていることを確認
+        $deletedCategory = $result['category_versions'][1];
+        $this->assertEquals($this->categoryEntity->id, $deletedCategory->entity_id);
+        $this->assertEquals(Flag::TRUE, $deletedCategory->is_deleted);
+        $this->assertNotNull($deletedCategory->deleted_at);
 
         // EditStartVersionsが作成されていることを確認
         $this->assertDatabaseHas('edit_start_versions', [
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $document->id,
+            'current_version_id' => $deletedDocument->id,
         ]);
 
         $this->assertDatabaseHas('edit_start_versions', [
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $childCategory->id,
+            'current_version_id' => $deletedChildCategory->id,
+        ]);
+
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->existingCategory->id,
+            'current_version_id' => $deletedCategory->id,
         ]);
     }
 
@@ -335,6 +374,13 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::DRAFT->value,
+        ]);
+
+        $draftCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->existingCategory->id,
+            'current_version_id' => $draftCategory->id,
         ]);
 
         $dto = new DestroyCategoryEntityDto(
@@ -379,7 +425,8 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         $this->assertDatabaseHas('edit_start_versions', [
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $draftCategory->id,
+            'original_version_id' => $this->existingCategory->id,
+            'current_version_id' => $deletedCategory->id,
         ]);
     }
 
@@ -419,7 +466,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        // MERGEDステータスのカテゴリは物理削除されていないことを確認
+        // MERGEDステータスのカテゴリは削除されていないことを確認
         $this->assertDatabaseHas('category_versions', [
             'id' => $this->existingCategory->id,
             'deleted_at' => null,
@@ -427,6 +474,19 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         // 新しい削除バージョンが作成されていることを確認
         $this->assertCount(1, $result['category_versions']);
+        $deletedCategory = $result['category_versions'][0];
+        $this->assertEquals($this->existingCategory->entity_id, $deletedCategory->entity_id);
+        $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $deletedCategory->status);
+        $this->assertEquals(Flag::TRUE, $deletedCategory->is_deleted);
+        $this->assertNotNull($deletedCategory->deleted_at);
+
+        // EditStartVersionが作成されていることを確認
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->existingCategory->id,
+            'current_version_id' => $deletedCategory->id,
+        ]);
     }
 
     /**
@@ -444,6 +504,13 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'category_entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentStatus::DRAFT->value,
+        ]);
+
+        $draftDocumentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $draftDocument->id,
+            'current_version_id' => $draftDocument->id,
         ]);
 
         $dto = new DestroyCategoryEntityDto(
@@ -476,11 +543,20 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        // 新しい削除バージョンが作成されていることを確認
+        // カテゴリが削除されていることを確認
+        $this->assertCount(1, $result['category_versions']);
+        $deletedCategory = $result['category_versions'][0];
+        $this->assertEquals($this->categoryEntity->id, $deletedCategory->entity_id);
+        $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $deletedCategory->status);
+        $this->assertEquals(Flag::TRUE, $deletedCategory->is_deleted);
+        $this->assertNotNull($deletedCategory->deleted_at);
+
+        // ドキュメントが削除されていることを確認
         $this->assertCount(1, $result['document_versions']);
         
         $deletedDocument = $result['document_versions'][0];
         $this->assertEquals($documentEntity->id, $deletedDocument->entity_id);
+        $this->assertEquals(DocumentStatus::DRAFT->value, $deletedDocument->status);
         $this->assertEquals(Flag::TRUE, $deletedDocument->is_deleted);
         $this->assertNotNull($deletedDocument->deleted_at);
         
@@ -489,6 +565,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $draftDocument->id,
+            'current_version_id' => $deletedDocument->id,
         ]);
     }
 
@@ -507,6 +584,13 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'category_entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentStatus::MERGED->value,
+        ]);
+
+        $mergedDocumentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $mergedDocument->id,
         ]);
 
         $dto = new DestroyCategoryEntityDto(
@@ -539,14 +623,35 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        // MERGEDステータスのドキュメントは物理削除されていないことを確認
-        $this->assertDatabaseHas('document_versions', [
-            'id' => $mergedDocument->id,
-            'deleted_at' => null,
+        // カテゴリが削除されていることを確認
+        $deletedCategory = $result['category_versions'][0];
+        $this->assertEquals($this->categoryEntity->id, $deletedCategory->entity_id);
+        $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $deletedCategory->status);
+        $this->assertEquals(Flag::TRUE, $deletedCategory->is_deleted);
+        $this->assertNotNull($deletedCategory->deleted_at);
+
+        // EditStartVersionが作成されていることを確認
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->existingCategory->id,
+            'current_version_id' => $deletedCategory->id,
         ]);
 
-        // 新しい削除バージョンが作成されていることを確認
-        $this->assertCount(1, $result['document_versions']);
+        // ドキュメントが削除されていることを確認
+        $deletedDocument = $result['document_versions'][0];
+        $this->assertEquals($mergedDocument->entity_id, $deletedDocument->entity_id);
+        $this->assertEquals(DocumentStatus::DRAFT->value, $deletedDocument->status);
+        $this->assertEquals(Flag::TRUE, $deletedDocument->is_deleted);
+        $this->assertNotNull($deletedDocument->deleted_at);
+
+        // EditStartVersionが作成されていることを確認
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $deletedDocument->id,
+        ]);
     }
 
     /**
@@ -582,6 +687,19 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         // 別の組織のカテゴリエンティティを作成
         $anotherCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $anotherOrganization->id,
+        ]);
+
+        $anotherCategory = CategoryVersion::factory()->create([
+            'entity_id' => $anotherCategoryEntity->id,
+            'organization_id' => $anotherOrganization->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+        ]);
+
+        $anotherCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $anotherCategory->id,
+            'current_version_id' => $anotherCategory->id,
         ]);
 
         $dto = new DestroyCategoryEntityDto(
@@ -706,7 +824,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function test_execute_handles_exception_and_rolls_back_transaction(): void
+    public function test_execute_handles_exception_and_roll_back_transaction(): void
     {
         // Arrange
         $dto = new DestroyCategoryEntityDto(
