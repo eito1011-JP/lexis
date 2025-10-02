@@ -26,7 +26,7 @@ class GetCategoryUseCase
         $categoryEntity = CategoryEntity::find($dto->categoryEntityId);
 
         if (! $categoryEntity) {
-            throw new NotFoundException('カテゴリエンティティが見つかりません。');
+            throw new NotFoundException();
         }
 
         // 作業コンテキストに応じて適切なカテゴリを取得
@@ -37,7 +37,7 @@ class GetCategoryUseCase
         );
 
         if (! $category) {
-            throw new NotFoundException('カテゴリが見つかりません。');
+            throw new NotFoundException();
         }
 
         // パンクズリストを生成

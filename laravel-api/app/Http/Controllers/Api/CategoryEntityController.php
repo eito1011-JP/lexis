@@ -97,11 +97,10 @@ class CategoryEntityController extends ApiBaseController
             // DTOを作成してUseCaseを実行
             $data = $request->validated();
             $data['user'] = $user;
-            Log::info('data: '.json_encode($data));
+
             $dto = GetCategoryDto::fromRequest($data);
             $category = $useCase->execute($dto);
 
-            Log::info('category: '.json_encode($category));
             return response()->json([
                 'category' => $category,
             ]);
