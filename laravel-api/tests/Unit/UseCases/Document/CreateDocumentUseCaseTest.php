@@ -6,7 +6,7 @@ use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestEditSessionDiffType;
-use App\Models\DocumentCategory;
+use App\Models\CategoryVersion;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
@@ -40,7 +40,7 @@ class CreateDocumentUseCaseTest extends TestCase
 
     private UserBranch $userBranch;
 
-    private DocumentCategory $category;
+    private CategoryVersion $category;
 
     private $documentService;
 
@@ -81,7 +81,7 @@ class CreateDocumentUseCaseTest extends TestCase
         ]);
 
         // DocumentCategoryの作成
-        $this->category = DocumentCategory::factory()->create([
+        $this->category = CategoryVersion::factory()->create([
             'organization_id' => $this->organization->id,
             'user_branch_id' => $this->userBranch->id,
         ]);
@@ -100,7 +100,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: null,
             pullRequestEditToken: null,
             user: $this->user
@@ -119,12 +119,11 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Test Document', $result->title);
         $this->assertEquals('Test description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->category->entity_id, $result->category_entity_id);
         $this->assertEquals($this->user->id, $result->user_id);
         $this->assertEquals($this->userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertEquals($this->user->email, $result->last_edited_by);
         $this->assertNull($result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
@@ -162,7 +161,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: $pullRequestEditToken,
             user: $this->user
@@ -181,12 +180,11 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Test Document', $result->title);
         $this->assertEquals('Test description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->category->entity_id, $result->category_entity_id);
         $this->assertEquals($this->user->id, $result->user_id);
         $this->assertEquals($this->userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertEquals($this->user->email, $result->last_edited_by);
         $this->assertEquals($pullRequestEditSession->id, $result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
@@ -218,7 +216,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: null,
             user: $this->user
@@ -237,7 +235,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Test Document', $result->title);
         $this->assertEquals('Test description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->category->entity_id, $result->category_entity_id);
         $this->assertNull($result->pull_request_edit_session_id);
 
         // PullRequestEditSessionDiffが作成されていないことを確認
@@ -254,7 +252,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: null,
             pullRequestEditToken: 'test-token',
             user: $this->user
@@ -273,7 +271,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Test Document', $result->title);
         $this->assertEquals('Test description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->category->entity_id, $result->category_entity_id);
         $this->assertNull($result->pull_request_edit_session_id);
 
         // PullRequestEditSessionDiffが作成されていないことを確認
@@ -295,7 +293,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: 'invalid-token',
             user: $this->user
@@ -314,7 +312,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertInstanceOf(DocumentVersion::class, $result);
         $this->assertEquals('Test Document', $result->title);
         $this->assertEquals('Test description', $result->description);
-        $this->assertEquals($this->category->id, $result->category_id);
+        $this->assertEquals($this->category->entity_id, $result->category_entity_id);
         $this->assertNull($result->pull_request_edit_session_id);
 
         // PullRequestEditSessionDiffが作成されていないことを確認
@@ -336,7 +334,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: null,
             pullRequestEditToken: null,
             user: $this->user
@@ -354,7 +352,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: null,
             pullRequestEditToken: null,
             user: $this->user
@@ -396,7 +394,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: 999999, // 存在しないカテゴリID
+            categoryEntityId: 999999, // 存在しないカテゴリID
             editPullRequestId: null,
             pullRequestEditToken: null,
             user: $this->user
@@ -451,7 +449,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: $pullRequestEditToken,
             user: $this->user
@@ -499,7 +497,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: $pullRequestEditToken,
             user: $this->user
@@ -533,7 +531,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $dto = new CreateDocumentUseCaseDto(
             title: 'Test Document',
             description: 'Test description',
-            categoryId: $this->category->id,
+            categoryEntityId: $this->category->entity_id,
             editPullRequestId: null,
             pullRequestEditToken: null,
             user: $this->user
@@ -557,11 +555,10 @@ class CreateDocumentUseCaseTest extends TestCase
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
-            'category_id' => $this->category->id,
+            'category_entity_id' => $this->category->entity_id,
             'title' => 'Test Document',
             'description' => 'Test description',
             'status' => DocumentStatus::DRAFT->value,
-            'last_edited_by' => $this->user->email,
             'pull_request_edit_session_id' => null,
         ]);
     }

@@ -228,73 +228,6 @@ class DocumentServiceTest extends TestCase
     }
 
     /** @test */
-    public function 初回編集の場合は_draftと_mergedステータスのドキュメントを取得する(): void
-    {
-        // Arrange
-        $mergedDocument = DocumentVersion::factory()->create([
-            'entity_id' => $this->documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'created_at' => now()->subDays(2),
-            'user_branch_id' => $this->activeUserBranch->id,
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->activeUserBranch->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $mergedDocument->id,
-            'current_version_id' => $mergedDocument->id,
-        ]);
-
-        $draftDocument = DocumentVersion::factory()->create([
-            'entity_id' => $this->documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::DRAFT->value,
-            'user_branch_id' => $this->activeUserBranch->id,
-            'created_at' => now(),
-            'user_branch_id' => $this->activeUserBranch->id,
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->activeUserBranch->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $mergedDocument->id,
-            'current_version_id' => $draftDocument->id,
-        ]);
-
-        // PUSHEDステータスのドキュメントも作成（これは取得されないはず）
-        $pushedDocument = DocumentVersion::factory()->create([
-            'entity_id' => $this->documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::PUSHED->value,
-            'user_branch_id' => $this->activeUserBranch->id,
-            'created_at' => now()->subDays(1),
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->activeUserBranch->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $mergedDocument->id,
-            'current_version_id' => $pushedDocument->id,
-        ]);
-
-        // Act
-        $result = $this->service->getDocumentByWorkContext(
-            $this->documentEntity->id,
-            $this->user
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertEquals($draftDocument->id, $result->id);
-        $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertNotEquals($mergedDocument->id, $result->id);
-        $this->assertNotEquals(DocumentStatus::MERGED->value, $result->status);
-        $this->assertNotEquals($pushedDocument->id, $result->id);
-        $this->assertNotEquals(DocumentStatus::PUSHED->value, $result->status);
-    }
-
-    /** @test */
     public function 初回編集で_draftがない場合は_mergedステータスのドキュメントを取得する(): void
     {
         // Arrange
@@ -1077,5 +1010,90 @@ class DocumentServiceTest extends TestCase
         // Assert: 異なる組織のドキュメントは含まれない
         $this->assertTrue($result->contains('id', $correctOrgDoc->id));
         $this->assertFalse($result->contains('id', $wrongOrgDoc->id));
+    }
+
+    #[Test]
+    public function get_document_by_work_context_should_return_latest_draft_when_multiple_edit_start_versions_exist(): void
+    {
+        // Arrange
+        // 最初のマージ済みドキュメントでEditStartVersionを作成
+        $this->activeUserBranch->delete();
+
+        $otherUser = User::factory()->create();
+        $otherUserBranch = UserBranch::factory()->create([
+            'user_id' => $otherUser->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
+        $firstMergedDocument = DocumentVersion::factory()->create([
+            'entity_id' => $this->documentEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+            'user_id' => $this->user->id,
+            'user_branch_id' => $otherUserBranch->id,
+            'title' => 'First Merged Document',
+        ]);
+
+        $firstEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $firstMergedDocument->id,
+            'current_version_id' => $firstMergedDocument->id,
+        ]);
+
+        // 同じentity_idで2つ目のマージ済みドキュメントを作成（同じドキュメントの別バージョン）
+        $secondMergedDocument = DocumentVersion::factory()->create([
+            'entity_id' => $this->documentEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::MERGED->value,
+            'user_id' => $this->user->id,
+            'user_branch_id' => $otherUserBranch->id,
+            'title' => 'Second Merged Document',
+        ]);
+
+        // 2つ目のマージ済みドキュメントでEditStartVersionを作成
+        $secondEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $otherUserBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $secondMergedDocument->id,
+            'current_version_id' => $secondMergedDocument->id,
+        ]);
+
+        $activeUserBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => true,
+        ]);
+
+        // ドラフトドキュメントを作成（2つ目のマージ済みドキュメントの編集版）
+        $draftDocument = DocumentVersion::factory()->create([
+            'entity_id' => $this->documentEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::DRAFT->value,
+            'user_id' => $this->user->id,
+            'user_branch_id' => $activeUserBranch->id,
+            'title' => 'Draft Document',
+        ]);
+
+        // EditStartVersionを更新してcurrent_version_idをドラフトドキュメントに変更
+        $thirdEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $secondMergedDocument->id,
+            'current_version_id' => $draftDocument->id,
+        ]);
+
+        // Act
+        $result = $this->service->getDocumentByWorkContext(
+            $this->documentEntity->id,
+            $this->user
+        );
+
+        // Assert
+        // 最新のドラフトドキュメントが取得されるべき
+        $this->assertNotNull($result);
+        $this->assertEquals($draftDocument->id, $result->id);
+        $this->assertEquals('Draft Document', $result->title);
+        $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
     }
 }

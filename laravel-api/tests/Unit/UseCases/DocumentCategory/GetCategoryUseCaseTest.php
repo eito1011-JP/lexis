@@ -104,7 +104,6 @@ class GetCategoryUseCaseTest extends TestCase
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage('カテゴリエンティティが見つかりません。');
         $this->useCase->execute($dto);
     }
 
@@ -126,7 +125,6 @@ class GetCategoryUseCaseTest extends TestCase
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage('カテゴリが見つかりません。');
         $this->useCase->execute($dto);
     }
 

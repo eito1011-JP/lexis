@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\CategoryService;
 use App\Services\DocumentService;
 use Http\Discovery\Exception\NotFoundException;
+use Illuminate\Support\Facades\Log;
 
 class FetchNodesUseCase
 {
@@ -25,35 +26,50 @@ class FetchNodesUseCase
      */
     public function execute(FetchNodesDto $dto, User $user): array
     {
-        $categoryEntity = CategoryEntity::find($dto->categoryEntityId);
+        try {
+            $categoryEntity = CategoryEntity::find($dto->categoryEntityId);
 
-        if (! $categoryEntity) {
-            throw new NotFoundException('カテゴリエンティティが見つかりません。');
+            if (! $categoryEntity) {
+                throw new NotFoundException('カテゴリエンティティが見つかりません。');
+            }
+
+            // categoryEntityに従属しているcategoryEntityでforeach
+            // 同じentity_idの重複を除外
+            $categoryEntityIds = $categoryEntity->categoryVersionChildren
+                ->pluck('entity_id')
+                ->unique();
+            
+            $categories = collect();
+            foreach ($categoryEntityIds as $entityId) {
+                $categories->push($this->CategoryService->getCategoryByWorkContext(
+                    $entityId,
+                    $user,
+                    $dto->pullRequestEditSessionToken
+                ));
+            }
+
+            // categoryEntityに従属しているdocumentEntityでforeach
+            // 同じentity_idの重複を除外
+            $documentEntityIds = $categoryEntity->documentVersionChildren
+                ->pluck('entity_id')
+                ->unique();
+
+            $documents = collect();
+            foreach ($documentEntityIds as $entityId) {
+                $documents->push($this->documentService->getDocumentByWorkContext(
+                    $entityId,
+                    $user,
+                    $dto->pullRequestEditSessionToken
+                ));
+            }
+
+            return [
+                'categories' => $categories->filter()->values()->toArray(),
+                'documents' => $documents->filter()->values()->toArray(),
+            ];
+        } catch (\Exception $e) {
+            Log::error($e);
+            throw $e;
         }
-
-        // categoryEntityに従属しているcategoryEntityでforeach
-        $categories = collect();
-        foreach ($categoryEntity->categoryVersionChildren as $childCategory) {
-            $categories->push($this->CategoryService->getCategoryByWorkContext(
-                $childCategory->entity_id,
-                $user,
-                $dto->pullRequestEditSessionToken
-            ));
-        }
-
-        // categoryEntityに従属しているdocumentEntityでforeach
-        $documents = collect();
-        foreach ($categoryEntity->documentVersionChildren as $childDocument) {
-            $documents->push($this->documentService->getDocumentByWorkContext(
-                $childDocument->entity_id,
-                $user,
-                $dto->pullRequestEditSessionToken
-            ));
-        }
-
-        return [
-            'categories' => $categories,
-            'documents' => $documents,
-        ];
     }
 }
