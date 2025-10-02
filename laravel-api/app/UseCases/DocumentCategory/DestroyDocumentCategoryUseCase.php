@@ -79,6 +79,17 @@ class DestroyDocumentCategoryUseCase
                 $user->id
             );
 
+            // 6. 削除対象のカテゴリ自体を取得
+            $existingCategory = $this->CategoryService->getCategoryByWorkContext(
+                $dto->categoryEntityId,
+                $user,
+                $dto->pullRequestEditToken
+            );
+
+            if (! $existingCategory) {
+                throw new NotFoundException;
+            }
+
             // 7. category_entity_idで作業コンテキストに応じて、配下のdocument_versionsを再帰的に全て取得
             $documents = $this->DocumentService->getDescendantDocumentsByWorkContext(
                 $dto->categoryEntityId,
@@ -126,7 +137,7 @@ class DestroyDocumentCategoryUseCase
                 }
             }
 
-            // カテゴリバージョンのデータ準備
+            // カテゴリバージョンのデータ準備（子カテゴリ）
             foreach ($categories as $category) {
                 $categoryVersionsData[] = [
                     'entity_id' => $category->entity_id,
@@ -149,6 +160,27 @@ class DestroyDocumentCategoryUseCase
                 }
             }
 
+            // 削除対象のカテゴリ自体のデータ準備
+            $categoryVersionsData[] = [
+                'entity_id' => $existingCategory->entity_id,
+                'parent_entity_id' => $existingCategory->parent_entity_id,
+                'title' => $existingCategory->title,
+                'description' => $existingCategory->description,
+                'status' => DocumentCategoryStatus::DRAFT->value,
+                'user_branch_id' => $userBranchId,
+                'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                'organization_id' => $organizationId,
+                'deleted_at' => $now,
+                'is_deleted' => Flag::TRUE,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            // DRAFTステータスの場合は削除対象に追加
+            if ($existingCategory->status === DocumentCategoryStatus::DRAFT->value) {
+                $draftCategoryIds[] = $existingCategory->id;
+            }
+
             // 11. DocumentVersionsを一括作成
             if (! empty($documentVersionsData)) {
                 DocumentVersion::insert($documentVersionsData);
@@ -166,12 +198,13 @@ class DestroyDocumentCategoryUseCase
             if (! empty($documentVersionsData)) {
                 $deletedDocumentVersions = DocumentVersion::withTrashed()
                     ->where('user_branch_id', $userBranchId)
-                    ->whereIn('id', array_column($documentVersionsData, 'id'))
+                    ->whereIn('entity_id', array_column($documentVersionsData, 'entity_id'))
+                    ->where('created_at', $now)
                     ->get();
 
                 // EditStartVersionsのデータ準備
                 foreach ($documents as $index => $document) {
-                    $newVersion = $deletedDocumentVersions->where('id', $document->id)->first();
+                    $newVersion = $deletedDocumentVersions->where('entity_id', $document->entity_id)->first();
                     if ($newVersion) {
                         $editStartVersionsData[] = [
                             'user_branch_id' => $userBranchId,
@@ -201,12 +234,14 @@ class DestroyDocumentCategoryUseCase
             if (! empty($categoryVersionsData)) {
                 $deletedCategoryVersions = CategoryVersion::withTrashed()
                     ->where('user_branch_id', $userBranchId)
-                    ->whereIn('id', array_column($categoryVersionsData, 'id'))
+                    ->where('is_deleted', Flag::TRUE)
+                    ->whereIn('entity_id', array_column($categoryVersionsData, 'entity_id'))
+                    ->where('created_at', $now)
                     ->get();
 
-                // EditStartVersionsのデータ準備
+                // EditStartVersionsのデータ準備（子カテゴリ）
                 foreach ($categories as $index => $category) {
-                    $newVersion = $deletedCategoryVersions->where('id', $category->id)->first();
+                    $newVersion = $deletedCategoryVersions->where('entity_id', $category->entity_id)->first();
                     if ($newVersion) {
                         $editStartVersionsData[] = [
                             'user_branch_id' => $userBranchId,
@@ -229,6 +264,32 @@ class DestroyDocumentCategoryUseCase
                                 'updated_at' => $now,
                             ];
                         }
+                    }
+                }
+
+                // EditStartVersionsのデータ準備（削除対象のカテゴリ自体）
+                $newCategoryVersion = $deletedCategoryVersions->where('entity_id', $existingCategory->entity_id)->first();
+                if ($newCategoryVersion) {
+                    $editStartVersionsData[] = [
+                        'user_branch_id' => $userBranchId,
+                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
+                        'original_version_id' => $existingCategory->id,
+                        'current_version_id' => $newCategoryVersion->id,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+
+                    // PullRequestEditSessionDiffのデータ準備
+                    if ($pullRequestEditSessionId) {
+                        $pullRequestEditSessionDiffsData[] = [
+                            'pull_request_edit_session_id' => $pullRequestEditSessionId,
+                            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+                            'original_version_id' => $existingCategory->id,
+                            'current_version_id' => $newCategoryVersion->id,
+                            'diff_type' => 'deleted',
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
                     }
                 }
             }

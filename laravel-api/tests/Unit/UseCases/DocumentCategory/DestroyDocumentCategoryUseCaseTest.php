@@ -3,7 +3,7 @@
 namespace Tests\Unit\UseCases\DocumentCategory;
 
 use App\Consts\Flag;
-use App\Dto\UseCase\DocumentCategory\DestroyDocumentCategoryDto;
+use App\Dto\UseCase\DocumentCategory\DestroyCategoryEntityDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
@@ -113,7 +113,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     public function test_execute_successfully_destroys_category_without_pull_request(): void
     {
         // Arrange
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -188,7 +188,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'finished_at' => null,
         ]);
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: $pullRequestEditToken
@@ -268,7 +268,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentStatus::MERGED->value,
         ]);
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -337,7 +337,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
         ]);
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -367,13 +367,20 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        // DRAFTステータスのカテゴリが物理削除されていることを確認
-        $this->assertSoftDeleted('category_versions', [
-            'id' => $draftCategory->id,
-        ]);
-
         // 新しい削除バージョンが作成されていることを確認
         $this->assertCount(1, $result['category_versions']);
+        
+        $deletedCategory = $result['category_versions'][0];
+        $this->assertEquals($this->categoryEntity->id, $deletedCategory->entity_id);
+        $this->assertEquals(Flag::TRUE, $deletedCategory->is_deleted);
+        $this->assertNotNull($deletedCategory->deleted_at);
+        
+        // EditStartVersionが作成されていることを確認
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $draftCategory->id,
+        ]);
     }
 
     /**
@@ -382,7 +389,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     public function test_execute_does_not_delete_merged_status_category(): void
     {
         // Arrange
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -439,7 +446,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentStatus::DRAFT->value,
         ]);
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -469,13 +476,20 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        // DRAFTステータスのドキュメントが物理削除されていることを確認
-        $this->assertSoftDeleted('document_versions', [
-            'id' => $draftDocument->id,
-        ]);
-
         // 新しい削除バージョンが作成されていることを確認
         $this->assertCount(1, $result['document_versions']);
+        
+        $deletedDocument = $result['document_versions'][0];
+        $this->assertEquals($documentEntity->id, $deletedDocument->entity_id);
+        $this->assertEquals(Flag::TRUE, $deletedDocument->is_deleted);
+        $this->assertNotNull($deletedDocument->deleted_at);
+        
+        // EditStartVersionが作成されていることを確認
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $draftDocument->id,
+        ]);
     }
 
     /**
@@ -495,7 +509,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentStatus::MERGED->value,
         ]);
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -545,7 +559,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             ->where('organization_id', $this->organization->id)
             ->delete();
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -559,17 +573,34 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function test_execute_throws_not_found_exception_when_organization_id_is_null(): void
+    public function test_execute_throws_not_found_exception_when_category_entity_belongs_to_different_organization(): void
     {
         // Arrange
-        // organizationMemberのorganization_idをnullに設定
-        $this->organizationMember->update(['organization_id' => null]);
+        // 別の組織を作成
+        $anotherOrganization = Organization::factory()->create();
+        
+        // 別の組織のカテゴリエンティティを作成
+        $anotherCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $anotherOrganization->id,
+        ]);
 
-        $dto = new DestroyDocumentCategoryDto(
-            categoryEntityId: $this->categoryEntity->id,
+        $dto = new DestroyCategoryEntityDto(
+            categoryEntityId: $anotherCategoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
         );
+
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->with($this->user, $this->organization->id, null)
+            ->andReturn($this->userBranch->id);
+
+        $this->CategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->with($anotherCategoryEntity->id, $this->user, null)
+            ->andReturn(null); // 別組織のカテゴリなのでnull
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -583,7 +614,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     {
         // Arrange
         $nonExistentEntityId = 999999;
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $nonExistentEntityId,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -600,7 +631,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     public function test_execute_throws_not_found_exception_when_existing_category_not_found(): void
     {
         // Arrange
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -632,7 +663,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: 'invalid-token'
@@ -678,7 +709,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     public function test_execute_handles_exception_and_rolls_back_transaction(): void
     {
         // Arrange
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: null,
             pullRequestEditToken: null
@@ -751,7 +782,7 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'status' => DocumentStatus::MERGED->value,
         ]);
 
-        $dto = new DestroyDocumentCategoryDto(
+        $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->categoryEntity->id,
             editPullRequestId: $pullRequest->id,
             pullRequestEditToken: $pullRequestEditToken

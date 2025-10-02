@@ -7,8 +7,8 @@ use App\Dto\UseCase\Document\DestroyDocumentDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryEntity;
+use App\Models\CategoryVersion;
 use App\Models\DocumentVersion;
 use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
@@ -42,15 +42,15 @@ class DestroyDocumentUseCaseTest extends TestCase
 
     private UserBranch $userBranch;
 
-    private DocumentCategoryEntity $documentCategoryEntity;
+    private CategoryEntity $categoryEntity;
 
     private DocumentEntity $documentEntity;
 
     private DocumentVersion $existingDocument;
 
-    private DocumentCategory $existingDocumentCategory;
+    private CategoryVersion $existingCategory;
 
-    private EditStartVersion $existingDocumentCategoryEditStartVersion;
+    private EditStartVersion $existingCategoryEditStartVersion;
 
     private EditStartVersion $existingDocumentEditStartVersion;
 
@@ -94,23 +94,23 @@ class DestroyDocumentUseCaseTest extends TestCase
         ]);
 
         // DocumentCategoryEntityの作成
-        $this->documentCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $this->categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
         // DocumentCategoryの作成
-        $this->existingDocumentCategory = DocumentCategory::factory()->create([
-            'entity_id' => $this->documentCategoryEntity->id,
+        $this->existingCategory = CategoryVersion::factory()->create([
+            'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'user_branch_id' => $this->userBranch->id,
             'status' => DocumentCategoryStatus::MERGED->value,
         ]);
 
-        $this->existingDocumentCategoryEditStartVersion = EditStartVersion::factory()->create([
+        $this->existingCategoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $this->existingDocumentCategory->id,
-            'current_version_id' => $this->existingDocumentCategory->id,
+            'original_version_id' => $this->existingCategory->id,
+            'current_version_id' => $this->existingCategory->id,
         ]);
 
         // 既存のDocumentVersionを作成
@@ -119,7 +119,7 @@ class DestroyDocumentUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
-            'category_entity_id' => $this->documentCategoryEntity->id,
+            'category_entity_id' => $this->categoryEntity->id,
             'status' => DocumentStatus::MERGED->value,
             'title' => 'Existing Document',
             'description' => 'Existing description',
@@ -274,7 +274,7 @@ class DestroyDocumentUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
-            'category_entity_id' => $this->documentCategoryEntity->id,
+            'category_entity_id' => $this->categoryEntity->id,
             'status' => DocumentStatus::DRAFT->value,
             'title' => 'Draft Document',
             'description' => 'Draft description',
