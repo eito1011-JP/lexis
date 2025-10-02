@@ -38,7 +38,7 @@ export const fetchCategoryDetail = async (
   categoryId: number
 ): Promise<ApiCategoryDetailResponse> => {
   try {
-    const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${categoryId}`);
+    const response = await apiClient.get(API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL(categoryId));
     // APIレスポンスから category オブジェクトを取得
     return response.category;
   } catch (error: any) {

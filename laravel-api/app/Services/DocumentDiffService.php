@@ -10,7 +10,7 @@ use Illuminate\Support\Collection;
 class DocumentDiffService
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService
+        private CategoryService $CategoryService
     ) {}
 
     /**
@@ -43,7 +43,7 @@ class DocumentDiffService
                     $documentVersions->push($currentObject);
                 } else {
                     // parent_entity_idから階層構造を取得して、document_categoriesに追加
-                    $currentObject->category_path = $this->documentCategoryService->createCategoryPath($currentObject);
+                    $currentObject->category_path = $this->CategoryService->createCategoryPath($currentObject);
                     $documentCategories->push($currentObject);
                 }
             }
@@ -53,7 +53,7 @@ class DocumentDiffService
                 if ($isDocument) {
                     $originalDocumentVersions->push($originalObject);
                 } else {
-                    $originalObject->category_path = $this->documentCategoryService->createCategoryPath($originalObject);
+                    $originalObject->category_path = $this->CategoryService->createCategoryPath($originalObject);
                     $originalDocumentCategories->push($originalObject);
                 }
             }

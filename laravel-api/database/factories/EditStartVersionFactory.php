@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\DocumentCategory;
+use App\Models\CategoryVersion;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\UserBranch;
@@ -53,7 +53,7 @@ class EditStartVersionFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'target_type' => 'category',
-            'original_version_id' => DocumentCategory::factory(),
+            'original_version_id' => CategoryVersion::factory(),
         ]);
     }
 
@@ -76,6 +76,6 @@ class EditStartVersionFactory extends Factory
             return DocumentVersion::factory()->create()->id;
         }
 
-        return DocumentCategory::factory()->create()->id;
+        return CategoryVersion::factory()->create()->id;
     }
 }

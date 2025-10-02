@@ -3,8 +3,8 @@
 namespace App\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
-use App\Models\DocumentCategoryEntity;
-use App\Services\DocumentCategoryService;
+use App\Models\CategoryEntity;
+use App\Services\CategoryService;
 use Http\Discovery\Exception\NotFoundException;
 
 /**
@@ -13,7 +13,7 @@ use Http\Discovery\Exception\NotFoundException;
 class GetCategoryUseCase
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService
+        private CategoryService $CategoryService
     ) {}
 
     /**
@@ -23,14 +23,14 @@ class GetCategoryUseCase
      */
     public function execute(GetCategoryDto $dto): array
     {
-        $categoryEntity = DocumentCategoryEntity::find($dto->categoryEntityId);
+        $categoryEntity = CategoryEntity::find($dto->categoryEntityId);
 
         if (! $categoryEntity) {
             throw new NotFoundException('カテゴリエンティティが見つかりません。');
         }
 
         // 作業コンテキストに応じて適切なカテゴリを取得
-        $category = $this->documentCategoryService->getCategoryByWorkContext(
+        $category = $this->CategoryService->getCategoryByWorkContext(
             $dto->categoryEntityId,
             $dto->user,
             $dto->pullRequestEditSessionToken

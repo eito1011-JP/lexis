@@ -5,7 +5,7 @@ namespace App\UseCases\Document;
 use App\Dto\UseCase\DocumentVersion\DetailDto;
 use App\Models\User;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\Log;
@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 class DetailUseCase
 {
     public function __construct(
-        private DocumentCategoryService $documentCategoryService,
+        private CategoryService $CategoryService,
         private DocumentVersionRepositoryInterface $documentVersionRepository,
         private DocumentService $documentService
     ) {}
@@ -39,22 +39,32 @@ class DetailUseCase
 
             // パンクズリストを生成
             $breadcrumbs = [];
-            $categoryBreadcrumbs = $document->category->getBreadcrumbs();
-            $breadcrumbs = array_merge($categoryBreadcrumbs, [
-                [
-                    'id' => $document->id,
-                    'title' => $document->title,
-                ],
-            ]);
+            if ($document->category) {
+                $categoryBreadcrumbs = $document->category->getBreadcrumbs();
+                $breadcrumbs = array_merge($categoryBreadcrumbs, [
+                    [
+                        'id' => $document->id,
+                        'title' => $document->title,
+                    ],
+                ]);
+            } else {
+                // カテゴリがnull（削除済み）の場合は、ドキュメントのみ
+                $breadcrumbs = [
+                    [
+                        'id' => $document->id,
+                        'title' => $document->title,
+                    ],
+                ];
+            }
 
             return [
                 'id' => $document->id,
                 'title' => $document->title,
                 'description' => $document->description,
-                'category' => [
+                'category' => $document->category ? [
                     'id' => $document->category->id,
                     'title' => $document->category->title,
-                ],
+                ] : null,
                 'breadcrumbs' => $breadcrumbs,
             ];
         } catch (\Exception $e) {

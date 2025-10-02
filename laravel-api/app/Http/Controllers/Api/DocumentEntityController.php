@@ -11,19 +11,18 @@ use App\Http\Requests\Api\Document\CreateDocumentRequest;
 use App\Http\Requests\Api\Document\DetailRequest;
 use App\Http\Requests\Api\Document\DestroyDocumentRequest;
 use App\Http\Requests\Api\Document\UpdateDocumentRequest;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
 use App\UseCases\Document\DestroyDocumentUseCase;
 use App\UseCases\Document\DetailUseCase;
-use App\UseCases\Document\GetDocumentsUseCase;
 use App\UseCases\Document\UpdateDocumentUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
 use Psr\Log\LogLevel;
 
-class DocumentVersionEntityController extends ApiBaseController
+class DocumentEntityController extends ApiBaseController
 {
     protected DocumentService $documentService;
 
@@ -31,35 +30,31 @@ class DocumentVersionEntityController extends ApiBaseController
 
     protected CreateDocumentUseCase $createDocumentUseCase;
 
-    protected GetDocumentsUseCase $getDocumentsUseCase;
-
     protected UpdateDocumentUseCase $updateDocumentUseCase;
 
     protected DetailUseCase $getDocumentDetailUseCase;
 
     protected DestroyDocumentUseCase $destroyDocumentUseCase;
 
-    protected DocumentCategoryService $documentCategoryService;
+    protected CategoryService $CategoryService;
 
     public function __construct(
         DocumentService $documentService,
         UserBranchService $userBranchService,
         CreateDocumentUseCase $createDocumentUseCase,
-        GetDocumentsUseCase $getDocumentsUseCase,
         UpdateDocumentUseCase $updateDocumentUseCase,
         DetailUseCase $getDocumentDetailUseCase,
         DestroyDocumentUseCase $destroyDocumentUseCase,
-        DocumentCategoryService $documentCategoryService
+        CategoryService $CategoryService
     ) {
         $this->documentService = $documentService;
         $this->userBranchService = $userBranchService;
         $this->createDocumentUseCase = $createDocumentUseCase;
-        $this->getDocumentsUseCase = $getDocumentsUseCase;
         $this->updateDocumentUseCase = $updateDocumentUseCase;
         $this->getDocumentDetailUseCase = $getDocumentDetailUseCase;
         $this->destroyDocumentUseCase = $destroyDocumentUseCase;
 
-        $this->documentCategoryService = $documentCategoryService;
+        $this->CategoryService = $CategoryService;
     }
 
     /**

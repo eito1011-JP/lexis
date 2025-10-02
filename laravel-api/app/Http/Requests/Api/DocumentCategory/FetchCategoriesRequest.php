@@ -20,7 +20,7 @@ class FetchCategoriesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'parent_entity_id' => 'nullable|integer|exists:document_categories,id',
+            'parent_entity_id' => 'nullable|integer|exists:category_entities,id',
             'pull_request_edit_session_token' => 'nullable|string|size:32',
         ];
     }

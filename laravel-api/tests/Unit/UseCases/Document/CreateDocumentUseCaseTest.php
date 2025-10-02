@@ -15,7 +15,7 @@ use App\Models\PullRequest;
 use App\Models\PullRequestEditSession;
 use App\Models\User;
 use App\Models\UserBranch;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use App\UseCases\Document\CreateDocumentUseCase;
@@ -46,7 +46,7 @@ class CreateDocumentUseCaseTest extends TestCase
 
     private $userBranchService;
 
-    private $documentCategoryService;
+    private $CategoryService;
 
     protected function setUp(): void
     {
@@ -55,12 +55,12 @@ class CreateDocumentUseCaseTest extends TestCase
         // サービスのモック作成
         $this->documentService = Mockery::mock(DocumentService::class);
         $this->userBranchService = Mockery::mock(UserBranchService::class);
-        $this->documentCategoryService = Mockery::mock(DocumentCategoryService::class);
+        $this->CategoryService = Mockery::mock(CategoryService::class);
 
         $this->useCase = new CreateDocumentUseCase(
             $this->documentService,
             $this->userBranchService,
-            $this->documentCategoryService
+            $this->CategoryService
         );
 
         // テストデータの準備

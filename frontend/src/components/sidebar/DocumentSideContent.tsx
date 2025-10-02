@@ -9,6 +9,7 @@ import CategoryActionModal from '@/components/admin/CategoryActionModal';
 import CreateActionModal from '@/components/sidebar/CreateActionModal';
 import DocumentDeleteModal from '@/components/sidebar/DocumentDeleteModal';
 import { useNavigate } from 'react-router-dom';
+import { API_CONFIG } from '../admin/api/config';
 
 // APIから取得するカテゴリデータの型定義
 interface ApiCategoryData {
@@ -53,7 +54,7 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
       params.append('parent_entity_id', parentEntityId.toString());
     }
     
-    const endpoint = `/api/document-categories${params.toString() ? `?${params.toString()}` : ''}`;
+    const endpoint = `/api/category-entities/${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await apiClient.get(endpoint);
     
     // すべてのカテゴリを返す（制限なし）
@@ -90,6 +91,10 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // ドキュメント削除モーダル状態
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
+  // トースト状態
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // APIデータをCategoryItem形式に変換する関数
   const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
@@ -174,26 +179,27 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     }
   };
 
+  // カテゴリデータを取得する関数
+  const loadCategories = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // parent_entity_id=nullですべてのルートカテゴリを取得（制限なし）
+      const apiCategories = await fetchCategories(null);
+      const transformedCategories = transformApiDataToCategories(apiCategories);
+      
+      setCategories(transformedCategories);
+    } catch (err) {
+      console.error('カテゴリの取得に失敗しました:', err);
+      setError('カテゴリの取得に失敗しました');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // カテゴリデータを取得するuseEffect（無制限表示）
   useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // parent_entity_id=nullですべてのルートカテゴリを取得（制限なし）
-        const apiCategories = await fetchCategories(null);
-        const transformedCategories = transformApiDataToCategories(apiCategories);
-        
-        setCategories(transformedCategories);
-      } catch (err) {
-        console.error('カテゴリの取得に失敗しました:', err);
-        setError('カテゴリの取得に失敗しました');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadCategories();
   }, []);
 
@@ -280,11 +286,20 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // 削除のハンドラ
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedCategory) {
-      // 削除処理をここに実装
-      console.log('削除:', selectedCategory.label);
-      // TODO: 削除APIの実装
+        try {
+        await apiClient.delete(API_CONFIG.ENDPOINTS.CATEGORIES.DELETE + selectedCategory.entityId);
+
+        loadCategories();
+
+      } catch (error) {
+        console.error('カテゴリの削除に失敗しました:', error);
+        setToastMessage('カテゴリの削除に失敗しました');
+        setToastType('error');
+        setShowToast(true);
+      }
+        // TODO: 削除APIの実装
     }
     handleCloseModal();
   };
@@ -321,7 +336,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     if (!selectedDocument) return;
 
     try {
-      await apiClient.delete(`/api/document_version_entities/${selectedDocument.entityId}`);
+      await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE + selectedDocument.entityId);
       
       // 削除後にUIを更新 - 削除されたドキュメントを含むカテゴリを再読み込み
       // ここでは簡易的に全体を再読み込みする

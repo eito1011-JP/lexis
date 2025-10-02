@@ -28,7 +28,7 @@ class SendFixRequest extends FormRequest
             'document_versions.*.sidebar_label' => 'required|string|max:255',
             'document_versions.*.slug' => 'required|string',
             'document_categories' => 'nullable|array',
-            'document_categories.*.id' => 'required|integer|exists:document_categories,id',
+            'document_categories.*.id' => 'required|integer|exists:category_versions,id',
             'document_categories.*.sidebar_label' => 'required|string|max:255',
             'document_categories.*.description' => 'required|string',
             'document_categories.*.slug' => 'required|string',

@@ -22,7 +22,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_entity_id' => 'required|integer|exists:document_category_entities,id',
+            'category_entity_id' => 'required|integer|exists:category_entities,id',
             'title' => 'required|string',
             'description' => 'nullable|string',
             'edit_pull_request_id' => 'nullable|integer',

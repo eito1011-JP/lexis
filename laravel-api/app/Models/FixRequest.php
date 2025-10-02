@@ -2,8 +2,7 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Models\CategoryVersion;
 
 class FixRequest extends Model
 {
@@ -45,17 +44,17 @@ class FixRequest extends Model
     /**
      * ドキュメントカテゴリとのリレーション
      */
-    public function documentCategory()
+    public function categoryVersion()
     {
-        return $this->belongsTo(DocumentCategory::class);
+        return $this->belongsTo(CategoryVersion::class, 'document_category_id');
     }
 
     /**
      * ベースとなるドキュメントカテゴリとのリレーション
      */
-    public function baseCategory()
+    public function baseCategoryVersion()
     {
-        return $this->belongsTo(DocumentCategory::class, 'base_category_version_id');
+        return $this->belongsTo(CategoryVersion::class, 'base_category_version_id');
     }
 
     /**

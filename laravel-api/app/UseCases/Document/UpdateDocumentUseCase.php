@@ -6,7 +6,7 @@ use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
@@ -49,7 +49,7 @@ class UpdateDocumentUseCase
                 throw new NotFoundException;
             }
 
-            $documentEntity = DocumentVersionEntity::find($dto->document_entity_id);
+            $documentEntity = DocumentEntity::find($dto->document_entity_id);
 
             if (! $documentEntity) {
                 throw new NotFoundException;

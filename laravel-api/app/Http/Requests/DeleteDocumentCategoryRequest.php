@@ -22,21 +22,16 @@ class DeleteDocumentCategoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'category_path_with_slug' => 'nullable|string|max:255',
+            'category_entity_id' => 'required|integer|exists:category_entities,id',
             'edit_pull_request_id' => 'nullable|integer',
             'pull_request_edit_token' => 'nullable|string|max:255',
         ];
     }
 
-    /**
-     * Get custom attribute names for validator errors.
-     */
-    public function attributes(): array
+    public function prepareForValidation(): void
     {
-        return [
-            'category_path_with_slug' => __('attributes.document.category_path_with_slug'),
-            'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
-            'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
-        ];
+        $this->merge([
+            'category_entity_id' => intval($this->route('category_entity')),
+        ]);
     }
 }

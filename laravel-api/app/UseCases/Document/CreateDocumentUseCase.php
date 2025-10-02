@@ -7,11 +7,11 @@ use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestEditSessionDiffType;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\PullRequestEditSession;
 use App\Models\PullRequestEditSessionDiff;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
@@ -23,7 +23,7 @@ class CreateDocumentUseCase
     public function __construct(
         private DocumentService $documentService,
         private UserBranchService $userBranchService,
-        private DocumentCategoryService $documentCategoryService
+        private CategoryService $CategoryService
     ) {}
 
     /**
@@ -63,7 +63,7 @@ class CreateDocumentUseCase
             }
 
             // ドキュメントエンティティを作成
-            $documentEntity = DocumentVersionEntity::create([
+            $documentEntity = DocumentEntity::create([
                 'organization_id' => $organizationId,
             ]);
 

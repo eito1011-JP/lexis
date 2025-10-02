@@ -3,8 +3,8 @@
 namespace Tests\Unit\UseCases\DocumentCategory;
 
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryVersion;
+use App\Models\CategoryEntity;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\PullRequest;
@@ -88,7 +88,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertInstanceOf(DocumentCategory::class, $result);
+        $this->assertInstanceOf(CategoryVersion::class, $result);
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
@@ -97,8 +97,8 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertNull($result->pull_request_edit_session_id);
         $this->assertNotNull($result->entity_id);
 
-        // DocumentCategoryEntityが作成されていることを確認
-        $this->assertDatabaseHas('document_category_entities', [
+        // CategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('category_entities', [
             'id' => $result->entity_id,
             'organization_id' => $this->organization->id,
         ]);
@@ -158,7 +158,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertInstanceOf(DocumentCategory::class, $result);
+        $this->assertInstanceOf(CategoryVersion::class, $result);
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
@@ -166,8 +166,8 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertNotNull($result->entity_id);
 
-        // DocumentCategoryEntityが作成されていることを確認
-        $this->assertDatabaseHas('document_category_entities', [
+        // CategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('category_entities', [
             'id' => $result->entity_id,
             'organization_id' => $this->organization->id,
         ]);
@@ -194,12 +194,12 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         ]);
 
         // 親カテゴリエンティティを作成
-        $parentCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $parentCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
         // 親カテゴリを実際に作成
-        $parentCategory = DocumentCategory::factory()->create([
+        $parentCategory = CategoryVersion::factory()->create([
             'entity_id' => $parentCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
@@ -223,7 +223,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertInstanceOf(DocumentCategory::class, $result);
+        $this->assertInstanceOf(CategoryVersion::class, $result);
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
@@ -231,8 +231,8 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertNotNull($result->entity_id);
 
-        // DocumentCategoryEntityが作成されていることを確認
-        $this->assertDatabaseHas('document_category_entities', [
+        // CategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('category_entities', [
             'id' => $result->entity_id,
             'organization_id' => $this->organization->id,
         ]);
@@ -320,15 +320,15 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertInstanceOf(DocumentCategory::class, $result);
+        $this->assertInstanceOf(CategoryVersion::class, $result);
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertNotNull($result->entity_id);
 
-        // DocumentCategoryEntityが作成されていることを確認
-        $this->assertDatabaseHas('document_category_entities', [
+        // CategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('category_entities', [
             'id' => $result->entity_id,
             'organization_id' => $this->organization->id,
         ]);
@@ -367,7 +367,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        $this->assertInstanceOf(DocumentCategory::class, $result);
+        $this->assertInstanceOf(CategoryVersion::class, $result);
         $this->assertEquals('Test Category', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($userBranch->id, $result->user_branch_id);
@@ -375,8 +375,8 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertNotNull($result->entity_id);
 
-        // DocumentCategoryEntityが作成されていることを確認
-        $this->assertDatabaseHas('document_category_entities', [
+        // CategoryEntityが作成されていることを確認
+        $this->assertDatabaseHas('category_entities', [
             'id' => $result->entity_id,
             'organization_id' => $this->organization->id,
         ]);

@@ -5,10 +5,10 @@ namespace Tests\Unit\UseCases\Document;
 use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryEntity;
+use App\Models\CategoryVersion;
 use App\Models\DocumentVersion;
-use App\Models\DocumentVersionEntity;
+use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -39,13 +39,13 @@ class UpdateDocumentUseCaseTest extends TestCase
 
     private UserBranch $userBranch;
 
-    private DocumentCategory $category;
+    private CategoryVersion $category;
 
-    private DocumentCategoryEntity $categoryEntity;
+    private CategoryEntity $categoryEntity;
 
     private DocumentVersion $existingDocument;
 
-    private DocumentVersionEntity $documentEntity;
+    private DocumentEntity $documentEntity;
 
     private EditStartVersion $existingDocumentCategoryEditStartVersion;
 
@@ -86,19 +86,19 @@ class UpdateDocumentUseCaseTest extends TestCase
         ]);
 
         // DocumentCategoryEntityの作成
-        $this->categoryEntity = DocumentCategoryEntity::factory()->create([
+        $this->categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
         // DocumentCategoryの作成
-        $this->category = DocumentCategory::factory()->create([
+        $this->category = CategoryVersion::factory()->create([
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'user_branch_id' => $this->userBranch->id,
         ]);
 
-        // DocumentVersionEntityの作成
-        $this->documentEntity = DocumentVersionEntity::factory()->create([
+        // DocumentEntityの作成
+        $this->documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 

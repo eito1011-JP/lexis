@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -65,7 +64,7 @@ class EditStartVersion extends Model
      */
     public function originalCategory()
     {
-        return $this->belongsTo(DocumentCategory::class, 'original_version_id')->withTrashed();
+        return $this->belongsTo(CategoryVersion::class, 'original_version_id')->withTrashed();
     }
 
     /**
@@ -73,7 +72,7 @@ class EditStartVersion extends Model
      */
     public function currentCategory()
     {
-        return $this->belongsTo(DocumentCategory::class, 'current_version_id')->withTrashed();
+        return $this->belongsTo(CategoryVersion::class, 'current_version_id')->withTrashed();
     }
 
     /**
@@ -84,7 +83,7 @@ class EditStartVersion extends Model
         if ($this->target_type === 'document') {
             return DocumentVersion::withTrashed()->find($this->original_version_id);
         } elseif ($this->target_type === 'category') {
-            return DocumentCategory::withTrashed()->find($this->original_version_id);
+            return CategoryVersion::withTrashed()->find($this->original_version_id);
         }
 
         return null;
@@ -98,7 +97,7 @@ class EditStartVersion extends Model
         if ($this->target_type === 'document') {
             return DocumentVersion::withTrashed()->find($this->current_version_id);
         } elseif ($this->target_type === 'category') {
-            return DocumentCategory::withTrashed()->find($this->current_version_id);
+            return CategoryVersion::withTrashed()->find($this->current_version_id);
         }
 
         return null;

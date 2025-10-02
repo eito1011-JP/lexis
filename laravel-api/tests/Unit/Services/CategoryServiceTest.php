@@ -3,23 +3,26 @@
 namespace Tests\Unit\Services;
 
 use App\Enums\DocumentCategoryStatus;
+use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Models\DocumentCategory;
-use App\Models\DocumentCategoryEntity;
+use App\Models\CategoryVersion;
+use App\Models\CategoryEntity;
+use App\Models\DocumentEntity;
+use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
-use App\Services\DocumentCategoryService;
+use App\Services\CategoryService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
-class DocumentCategoryServiceTest extends TestCase
+class CategoryServiceTest extends TestCase
 {
     use DatabaseTransactions;
 
-    private DocumentCategoryService $service;
+    private CategoryService $service;
 
     private User $user;
 
@@ -27,15 +30,15 @@ class DocumentCategoryServiceTest extends TestCase
 
     private OrganizationMember $organizationMember;
 
-    private DocumentCategoryEntity $categoryEntity;
+    private CategoryEntity $categoryEntity;
 
-    private DocumentCategory $mergedCategory;
+    private CategoryVersion $mergedCategory;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->service = new DocumentCategoryService;
+        $this->service = new CategoryService;
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
@@ -48,11 +51,11 @@ class DocumentCategoryServiceTest extends TestCase
         ]);
 
         // 基本的なカテゴリエンティティとMERGEDカテゴリを作成
-        $this->categoryEntity = DocumentCategoryEntity::factory()->create([
+        $this->categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
 
-        $this->mergedCategory = DocumentCategory::factory()->create([
+        $this->mergedCategory = CategoryVersion::factory()->create([
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -87,10 +90,10 @@ class DocumentCategoryServiceTest extends TestCase
     {
         // Arrange
         $otherOrganization = Organization::factory()->create();
-        $otherCategoryEntity = DocumentCategoryEntity::factory()->create([
+        $otherCategoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $otherOrganization->id,
         ]);
-        DocumentCategory::factory()->create([
+        CategoryVersion::factory()->create([
             'entity_id' => $otherCategoryEntity->id,
             'organization_id' => $otherOrganization->id,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -114,10 +117,10 @@ class DocumentCategoryServiceTest extends TestCase
     public function test_get_category_by_work_context_with_null_description(): void
     {
         // Arrange
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category = DocumentCategory::factory()->create([
+        $category = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -145,10 +148,10 @@ class DocumentCategoryServiceTest extends TestCase
     public function test_get_category_by_work_context_with_empty_description(): void
     {
         // Arrange
-        $categoryEntity = DocumentCategoryEntity::factory()->create([
+        $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $category = DocumentCategory::factory()->create([
+        $category = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::MERGED->value,
@@ -182,7 +185,7 @@ class DocumentCategoryServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $draftCategory = DocumentCategory::factory()->create([
+        $draftCategory = CategoryVersion::factory()->create([
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -229,7 +232,7 @@ class DocumentCategoryServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $draftCategory = DocumentCategory::factory()->create([
+        $draftCategory = CategoryVersion::factory()->create([
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -270,7 +273,7 @@ class DocumentCategoryServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $currentCategory = DocumentCategory::factory()->create([
+        $currentCategory = CategoryVersion::factory()->create([
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::DRAFT->value,
@@ -311,7 +314,7 @@ class DocumentCategoryServiceTest extends TestCase
             'is_active' => true,
         ]);
 
-        $pushedCategory = DocumentCategory::factory()->create([
+        $pushedCategory = CategoryVersion::factory()->create([
             'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::PUSHED->value,

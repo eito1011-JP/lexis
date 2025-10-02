@@ -8,10 +8,12 @@ use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DocumentCategory extends Model
+class CategoryVersion extends Model
 {
     use HasFactory;
     use SoftDeletes;
+
+    protected $table = 'category_versions';
 
     protected $fillable = [
         'entity_id',
@@ -58,7 +60,7 @@ class DocumentCategory extends Model
             ->when($userBranchId, function ($query, $userBranchId) {
                 $appliedFixRequestCategoryIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
                     ->whereNotNull('document_category_id')
-                    ->whereHas('documentCategory', function ($q) use ($userBranchId) {
+                    ->whereHas('categoryVersion', function ($q) use ($userBranchId) {
                         $q->where('user_branch_id', $userBranchId);
                     })
                     ->pluck('document_category_id')
@@ -85,7 +87,7 @@ class DocumentCategory extends Model
      */
     public function parent()
     {
-        return $this->belongsTo(DocumentCategory::class, 'parent_entity_id');
+        return $this->belongsTo(CategoryVersion::class, 'parent_entity_id', 'entity_id');
     }
 
     /**
@@ -93,7 +95,7 @@ class DocumentCategory extends Model
      */
     public function children()
     {
-        return $this->hasMany(DocumentCategory::class, 'parent_entity_id');
+        return $this->hasMany(CategoryVersion::class, 'parent_entity_id');
     }
 
     /**
@@ -117,7 +119,7 @@ class DocumentCategory extends Model
      */
     public function entity()
     {
-        return $this->belongsTo(DocumentCategoryEntity::class, 'entity_id');
+        return $this->belongsTo(CategoryEntity::class, 'entity_id');
     }
 
     /**

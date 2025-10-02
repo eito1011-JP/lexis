@@ -6,12 +6,12 @@ use App\Traits\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DocumentVersionEntity extends Model
+class DocumentEntity extends Model
 {
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'document_version_entities';
+    protected $table = 'document_entities';
 
     protected $fillable = [
         'organization_id',
