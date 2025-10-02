@@ -3,12 +3,9 @@
 namespace Tests\Unit\Services;
 
 use App\Enums\DocumentCategoryStatus;
-use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\CategoryVersion;
 use App\Models\CategoryEntity;
-use App\Models\DocumentEntity;
-use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
@@ -34,6 +31,8 @@ class CategoryServiceTest extends TestCase
 
     private CategoryVersion $mergedCategory;
 
+    private EditStartVersion $mergedCategoryEditStartVersion;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -50,7 +49,7 @@ class CategoryServiceTest extends TestCase
             'joined_at' => now(),
         ]);
 
-        // 基本的なカテゴリエンティティとMERGEDカテゴリを作成
+        // MERGEDカテゴリを作成
         $this->categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -61,6 +60,12 @@ class CategoryServiceTest extends TestCase
             'status' => DocumentCategoryStatus::MERGED->value,
             'title' => 'Test Category',
             'description' => 'Test description',
+        ]);
+
+        $this->mergedCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->mergedCategory->id,
+            'current_version_id' => $this->mergedCategory->id,
         ]);
     }
 
@@ -343,5 +348,138 @@ class CategoryServiceTest extends TestCase
         $this->assertEquals($pushedCategory->id, $result->id);
         $this->assertEquals('Pushed Category', $result->title);
         $this->assertEquals('Pushed description', $result->description);
+    }
+
+        /**
+     * @test
+     */
+    public function test_get_category_by_work_context_with_edit_start_version_returns_descendant_current_version(): void
+    {
+        // Arrange
+        $userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => true,
+        ]);
+
+        $parentCategory = CategoryVersion::factory()->create([
+            'entity_id' => $this->categoryEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'user_branch_id' => $userBranch->id,
+            'title' => 'Pushed Category',
+            'description' => 'Pushed description',
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->mergedCategory->id,
+            'current_version_id' => $parentCategory->id,
+        ]);
+
+        $childCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $childCategory = CategoryVersion::factory()->create([
+            'parent_entity_id' => $parentCategory->entity_id,
+            'entity_id' => $childCategoryEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => $userBranch->id,
+            'title' => 'Child Category',
+            'description' => 'Child description',
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $childCategory->id,
+            'current_version_id' => $childCategory->id,
+        ]);
+
+        // Act
+        $result = $this->service->getCategoryByWorkContext(
+            $childCategoryEntity->id,
+            $this->user,
+            null
+        );
+
+        // Assert
+        $this->assertNotNull($result);
+        // PUSHEDカテゴリが取得される
+        $this->assertEquals($childCategory->id, $result->id);
+        $this->assertEquals('Child Category', $result->title);
+        $this->assertEquals('Child description', $result->description);
+    }
+
+    /**
+     * @test
+     */
+    public function test_get_category_by_work_context_should_return_latest_draft_when_multiple_edit_start_versions_exist(): void
+    {
+        // Arrange
+        $previousUserBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => false,
+        ]);
+        // アクティブなユーザーブランチを作成
+        $userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'organization_id' => $this->organization->id,
+            'is_active' => true,
+        ]);
+
+        // 同じentity_idで2つ目のマージ済みカテゴリを作成（同じカテゴリの別バージョン）
+        $secondMergedCategory = CategoryVersion::factory()->create([
+            'entity_id' => $this->categoryEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'user_branch_id' => $previousUserBranch->id,
+            'title' => 'Second Merged Category',
+            'description' => 'Second merged description',
+        ]);
+
+        // 2つ目のマージ済みカテゴリでEditStartVersionを作成
+        $secondEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $previousUserBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->mergedCategory->id,
+            'current_version_id' => $secondMergedCategory->id,
+        ]);
+
+        // ドラフトカテゴリを作成（2つ目のマージ済みカテゴリの編集版）
+        $draftCategory = CategoryVersion::factory()->create([
+            'entity_id' => $this->categoryEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => $userBranch->id,
+            'title' => 'Draft Category',
+            'description' => 'Draft description',
+        ]);
+
+        // EditStartVersionを更新してcurrent_version_idをドラフトカテゴリに変更
+        $thirdEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $secondMergedCategory->id,
+            'current_version_id' => $draftCategory->id,
+        ]);
+
+        // Act
+        $result = $this->service->getCategoryByWorkContext(
+            $this->categoryEntity->id,
+            $this->user
+        );
+
+        // Assert
+        // 最新のドラフトカテゴリが取得されるべき
+        $this->assertNotNull($result);
+        $this->assertEquals($draftCategory->id, $result->id);
+        $this->assertEquals('Draft Category', $result->title);
+        $this->assertEquals('Draft description', $result->description);
+        $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $result->status);
     }
 }

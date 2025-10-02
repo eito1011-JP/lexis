@@ -53,19 +53,21 @@ class CategoryService
         }
 
         // EditStartVersionから現在のバージョンIDを取得
-        $currentVersionId = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+        // entity_idに基づいて検索し、最新のEditStartVersionレコードを取得
+        $editStartVersion = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
             ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
-            ->where('original_version_id', function ($query) use ($categoryEntityId) {
+            ->whereIn('original_version_id', function ($query) use ($categoryEntityId) {
                 $query->select('id')
                     ->from('category_versions')
                     ->where('entity_id', $categoryEntityId)
                     ->where('status', DocumentCategoryStatus::MERGED->value);
             })
-            ->value('current_version_id');
+            ->orderBy('id', 'desc')
+            ->first();
 
-        if ($currentVersionId) {
+        if ($editStartVersion) {
             // EditStartVersionに登録されている場合は、現在のバージョンを取得
-            $category = $baseQuery->where('id', $currentVersionId)->first();
+            $category = $baseQuery->where('id', $editStartVersion->current_version_id)->first();
             if ($category) {
                 return $category;
             }

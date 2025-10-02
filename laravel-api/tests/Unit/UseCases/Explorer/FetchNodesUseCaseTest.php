@@ -38,9 +38,11 @@ class FetchNodesUseCaseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $categoryService = new CategoryService();
+        $documentService = new DocumentService($categoryService);
         $this->useCase = new FetchNodesUseCase(
-            $this->createMock(CategoryService::class),
-            $this->createMock(DocumentService::class)
+            $categoryService,
+            $documentService
         );
 
         // 組織とユーザーを作成
@@ -120,7 +122,7 @@ class FetchNodesUseCaseTest extends TestCase
             'category_entity_id' => $parentCategoryEntity->id,
             'entity_id' => $mergedDocumentEntity->id,
             'status' => DocumentStatus::MERGED->value,
-            'last_edited_by' => $this->user->id,
+            'user_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -248,14 +250,10 @@ class FetchNodesUseCaseTest extends TestCase
             'current_version_id' => $mergedCategory->id,
         ]);
 
-        $draftCategoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
         $draftCategory = CategoryVersion::factory()->create([
             'title' => 'アップデートカテゴリ',
             'parent_entity_id' => $parentCategoryEntity->id,
-            'entity_id' => $draftCategoryEntity->id,
+            'entity_id' => $mergedCategoryEntity->id,
             'status' => DocumentCategoryStatus::DRAFT->value,
             'user_branch_id' => $this->userBranch->id,
             'organization_id' => $this->organization->id,
@@ -317,6 +315,7 @@ class FetchNodesUseCaseTest extends TestCase
         $this->assertCount(1, $result['categories']);
         $this->assertCount(1, $result['documents']);
 
+        Log::info($result['categories']);
         $this->assertEquals($draftCategory->id, $result['categories'][0]['id']);
         $this->assertEquals('アップデートカテゴリ', $result['categories'][0]['title']);
         $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $result['categories'][0]['status']);
@@ -367,7 +366,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         $mergedCategory = CategoryVersion::factory()->create([
             'title' => 'マージ済みカテゴリ',
-            'parent_entity_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategoryEntity->id,
             'entity_id' => $mergedCategoryEntity->id,
             'status' => DocumentCategoryStatus::MERGED->value,
             'organization_id' => $this->organization->id,
@@ -503,7 +502,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         $mergedCategory = CategoryVersion::factory()->create([
             'title' => 'マージ済みカテゴリ',
-            'parent_entity_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategoryEntity->id,
             'entity_id' => $mergedCategoryEntity->id,
             'status' => DocumentCategoryStatus::MERGED->value,
             'organization_id' => $this->organization->id,
@@ -648,7 +647,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
         $category2 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ2',
-            'parent_entity_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategoryEntity->id,
             'entity_id' => $category2Entity->id,
             'status' => DocumentCategoryStatus::MERGED->value,
             'organization_id' => $this->organization->id,
@@ -668,7 +667,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         $category1 = CategoryVersion::factory()->create([
             'title' => 'カテゴリ1',
-            'parent_entity_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategoryEntity->id,
             'entity_id' => $category1Entity->id,
             'status' => DocumentCategoryStatus::MERGED->value,
             'organization_id' => $this->organization->id,
@@ -774,7 +773,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
         $correctCategory = CategoryVersion::factory()->create([
             'title' => '正しいユーザーのカテゴリ',
-            'parent_entity_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategoryEntity->id,
             'entity_id' => $correctCategoryEntity->id,
             'status' => DocumentCategoryStatus::DRAFT->value,
             'user_branch_id' => $this->userBranch->id,
@@ -799,7 +798,6 @@ class FetchNodesUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
-            'last_edited_by' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -816,7 +814,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
         $otherCategory = CategoryVersion::factory()->create([
             'title' => '他のユーザーのカテゴリ',
-            'parent_entity_id' => $parentCategory->id,
+            'parent_entity_id' => $parentCategoryEntity->id,
             'entity_id' => $otherCategoryEntity->id,
             'status' => DocumentCategoryStatus::DRAFT->value,
             'user_branch_id' => $otherUserBranch->id,
@@ -1007,18 +1005,60 @@ class FetchNodesUseCaseTest extends TestCase
         // Arrange
         Log::shouldReceive('error')->once();
 
-        // ユーザーのuserBranchesリレーションをモックして例外を発生させる
-        $mockUser = $this->createMock(User::class);
-        $mockUser->method('userBranches')->willThrowException(new \Exception('Database error'));
+        // CategoryServiceをモックして例外を発生させる
+        $mockCategoryService = $this->createMock(CategoryService::class);
+        $mockCategoryService->method('getCategoryByWorkContext')
+            ->willThrowException(new \Exception('Database error'));
+
+        $mockDocumentService = $this->createMock(DocumentService::class);
+
+        // モックされたサービスを持つUseCaseインスタンスを作成
+        $useCase = new FetchNodesUseCase($mockCategoryService, $mockDocumentService);
+
+        // 親カテゴリを作成
+        $parentCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $parentCategory = CategoryVersion::factory()->create([
+            'title' => '親カテゴリ',
+            'parent_entity_id' => null,
+            'entity_id' => $parentCategoryEntity->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'organization_id' => $this->organization->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
+        ]);
+
+        // 子カテゴリを作成（例外を発生させるため）
+        $childCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $childCategory = CategoryVersion::factory()->create([
+            'title' => '子カテゴリ',
+            'parent_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $childCategoryEntity->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'organization_id' => $this->organization->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $childCategory->id,
+            'current_version_id' => $childCategory->id,
+        ]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: 1,
+            categoryEntityId: $parentCategoryEntity->id,
             pullRequestEditSessionToken: null
         );
 
         // Act & Assert
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Database error');
-        $this->useCase->execute($dto, $mockUser);
+        $useCase->execute($dto, $this->user);
     }
 }
