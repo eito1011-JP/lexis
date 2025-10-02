@@ -3,7 +3,7 @@
 namespace App\UseCases\DocumentCategory;
 
 use App\Consts\Flag;
-use App\Dto\UseCase\DocumentCategory\DestroyDocumentCategoryDto;
+use App\Dto\UseCase\DocumentCategory\DestroyCategoryEntityDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
@@ -35,13 +35,13 @@ class DestroyDocumentCategoryUseCase
     /**
      * カテゴリを削除
      *
-     * @param  DestroyDocumentCategoryDto  $dto  カテゴリ削除DTO
+     * @param  DestroyCategoryEntityDto  $dto  カテゴリ削除DTO
      * @param  User  $user  認証済みユーザー
      * @return array 削除されたドキュメントとカテゴリのバージョンデータ
      *
      * @throws NotFoundException カテゴリが見つからない場合
      */
-    public function execute(DestroyDocumentCategoryDto $dto, User $user): array
+    public function execute(DestroyCategoryEntityDto $dto, User $user): array
     {
         try {
             DB::beginTransaction();

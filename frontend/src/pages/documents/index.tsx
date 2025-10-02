@@ -60,7 +60,6 @@ export default function DocumentsPage(): JSX.Element {
     try {
       setLoading(true);
       const detail = await fetchCategoryDetail(categoryEntityId);
-      console.log('detail', detail);
       setCategoryDetail(detail);
     } catch (error) {
       console.error('カテゴリ詳細の取得に失敗しました:', error);
@@ -85,7 +84,6 @@ export default function DocumentsPage(): JSX.Element {
   const handleDocumentSelect = async (documentEntityId: number) => {
     try {
       setLoading(true);
-      console.log('documentEntityId', documentEntityId);
       const endpoint = API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentEntityId);
       
       const response = await apiClient.get(endpoint);

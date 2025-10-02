@@ -9,6 +9,7 @@ import CategoryActionModal from '@/components/admin/CategoryActionModal';
 import CreateActionModal from '@/components/sidebar/CreateActionModal';
 import DocumentDeleteModal from '@/components/sidebar/DocumentDeleteModal';
 import { useNavigate } from 'react-router-dom';
+import { API_CONFIG } from '../admin/api/config';
 
 // APIから取得するカテゴリデータの型定義
 interface ApiCategoryData {
@@ -90,6 +91,10 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // ドキュメント削除モーダル状態
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
+  // トースト状態
+  const [showToast, setShowToast] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // APIデータをCategoryItem形式に変換する関数
   const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
@@ -280,11 +285,17 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   };
 
   // 削除のハンドラ
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedCategory) {
-      // 削除処理をここに実装
-      console.log('削除:', selectedCategory.label);
-      // TODO: 削除APIの実装
+        try {
+        await apiClient.delete(API_CONFIG.ENDPOINTS.CATEGORIES.DELETE + selectedCategory.entityId);
+      } catch (error) {
+        console.error('カテゴリの削除に失敗しました:', error);
+        setToastMessage('カテゴリの削除に失敗しました');
+        setToastType('error');
+        setShowToast(true);
+      }
+        // TODO: 削除APIの実装
     }
     handleCloseModal();
   };

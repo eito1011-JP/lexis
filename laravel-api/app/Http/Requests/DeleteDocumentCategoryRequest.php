@@ -31,7 +31,7 @@ class DeleteDocumentCategoryRequest extends FormRequest
     public function prepareForValidation(): void
     {
         $this->merge([
-            'category_entity_id' => $this->route('category_entity'),
+            'category_entity_id' => intval($this->route('category_entity')),
         ]);
     }
 }

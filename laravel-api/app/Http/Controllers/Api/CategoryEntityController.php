@@ -3,15 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
-use App\Consts\Flag;
 use App\Dto\UseCase\DocumentCategory\CreateDocumentCategoryDto;
-use App\Dto\UseCase\DocumentCategory\DestroyDocumentCategoryDto;
+use App\Dto\UseCase\DocumentCategory\DestroyCategoryEntityDto;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Dto\UseCase\DocumentCategory\GetCategoryDto;
 use App\Dto\UseCase\DocumentCategory\UpdateDocumentCategoryDto;
-use App\Enums\DocumentCategoryStatus;
-use App\Enums\DocumentStatus;
-use App\Enums\EditStartVersionTargetType;
 use App\Exceptions\AuthenticationException;
 use App\Exceptions\DuplicateExecutionException;
 use App\Http\Requests\Api\DocumentCategory\FetchCategoriesRequest;
@@ -19,11 +15,6 @@ use App\Http\Requests\Api\DocumentCategory\GetCategoryRequest;
 use App\Http\Requests\Api\DocumentCategory\UpdateDocumentCategoryRequest;
 use App\Http\Requests\CreateDocumentCategoryRequest;
 use App\Http\Requests\DeleteDocumentCategoryRequest;
-use App\Models\CategoryVersion;
-use App\Models\DocumentVersion;
-use App\Models\EditStartVersion;
-use App\Models\PullRequestEditSession;
-use App\Models\PullRequestEditSessionDiff;
 use App\Services\CategoryService;
 use App\Services\UserBranchService;
 use App\UseCases\DocumentCategory\CreateDocumentCategoryUseCase;
@@ -34,7 +25,6 @@ use App\UseCases\DocumentCategory\UpdateDocumentCategoryUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Psr\Log\LogLevel;
 
@@ -266,7 +256,7 @@ class CategoryEntityController extends ApiBaseController
 
             // DTOを作成
             $validatedData = $request->validated();
-            $dto = DestroyDocumentCategoryDto::fromRequest($validatedData);
+            $dto = DestroyCategoryEntityDto::fromRequest($validatedData);
 
             // UseCaseを実行
             $useCase->execute($dto, $user);

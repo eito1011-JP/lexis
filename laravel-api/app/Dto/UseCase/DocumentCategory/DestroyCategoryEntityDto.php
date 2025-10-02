@@ -9,7 +9,7 @@ use App\Dto\UseCase\UseCaseDto;
 /**
  * カテゴリ削除のDTOクラス
  */
-final class DestroyDocumentCategoryDto extends UseCaseDto
+final class DestroyCategoryEntityDto extends UseCaseDto
 {
     public function __construct(
         public readonly int $categoryEntityId,
