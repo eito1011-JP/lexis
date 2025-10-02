@@ -8,6 +8,7 @@ use App\Enums\OrganizationRoleBindingRole;
 use App\Enums\PullRequestStatus;
 use App\Enums\DocumentCategoryStatus;
 use App\Models\CategoryVersion;
+use App\Models\CategoryEntity;
 use App\Models\DocumentVersion;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
@@ -46,7 +47,9 @@ class MergePullRequestUseCaseTest extends TestCase
 
     private DocumentVersion $documentVersion;
 
-    private CategoryVersion $documentCategory;
+    private CategoryVersion $categoryVersion;
+
+    private CategoryEntity $categoryEntity;
 
     private EditStartVersion $documentEditStartVersion;
 
@@ -150,9 +153,14 @@ class MergePullRequestUseCaseTest extends TestCase
             'status' => PullRequestStatus::OPENED->value,
         ]);
 
+        $this->categoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
         // ドキュメントカテゴリの作成
-        $this->documentCategory = CategoryVersion::factory()->create([
+        $this->categoryVersion = CategoryVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
+            'entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentCategoryStatus::PUSHED->value,
         ]);
@@ -161,15 +169,15 @@ class MergePullRequestUseCaseTest extends TestCase
         $this->categoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $this->documentCategory->id,
-            'current_version_id' => $this->documentCategory->id,
+            'original_version_id' => $this->categoryVersion->id,
+            'current_version_id' => $this->categoryVersion->id,
         ]);
 
         // ドキュメントバージョンの作成
         $this->documentVersion = DocumentVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'user_id' => $this->adminUser->id,
-            'category_id' => $this->documentCategory->id,
+            'category_entity_id' => $this->categoryEntity->id,
             'organization_id' => $this->organization->id,
             'status' => DocumentStatus::PUSHED->value,
         ]);
