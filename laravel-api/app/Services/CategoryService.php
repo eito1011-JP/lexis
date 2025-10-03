@@ -12,25 +12,6 @@ use Illuminate\Database\Eloquent\Collection;
 
 class CategoryService
 {
-    /**
-     * 親カテゴリのパスを取得
-     */
-    public function createCategoryPath(CategoryVersion $categoryVersion): ?string
-    {
-        if (! $categoryVersion->parent_entity_id) {
-            return null;
-        }
-
-        $path = [];
-        $parentCategory = CategoryVersion::find($categoryVersion->parent_entity_id);
-
-        while ($parentCategory) {
-            array_unshift($path, $parentCategory->title);
-            $parentCategory = $parentCategory->parent_entity_id ? CategoryVersion::find($parentCategory->parent_entity_id) : null;
-        }
-
-        return implode('/', $path);
-    }
 
     /**
      * 作業コンテキストに応じて適切なカテゴリを取得

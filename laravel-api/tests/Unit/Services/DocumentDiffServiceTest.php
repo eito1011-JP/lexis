@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\UseCases\UserBranch;
+namespace Tests\Unit\Services;
 
 use App\Consts\Flag;
 use App\Enums\EditStartVersionTargetType;
@@ -14,23 +14,22 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
+use App\Services\CategoryService;
 use App\Services\DocumentDiffService;
-use App\UseCases\UserBranch\FetchDiffUseCase;
-use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-class FetchDiffUseCaseTest extends TestCase
+class DocumentDiffServiceTest extends TestCase
 {
     use DatabaseTransactions;
 
-    /** @var \Mockery\MockInterface&DocumentDiffService */
-    private DocumentDiffService $documentDiffService;
+    /** @var \Mockery\MockInterface&CategoryService */
+    private CategoryService $categoryService;
 
-    private FetchDiffUseCase $useCase;
+    private DocumentDiffService $service;
 
     private User $user;
 
@@ -49,8 +48,8 @@ class FetchDiffUseCaseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->documentDiffService = Mockery::mock(DocumentDiffService::class);
-        $this->useCase = new FetchDiffUseCase($this->documentDiffService);
+        $this->categoryService = Mockery::mock(CategoryService::class);
+        $this->service = new DocumentDiffService($this->categoryService);
 
         // 組織とユーザーを作成
         $this->organization = Organization::factory()->create();
@@ -62,12 +61,12 @@ class FetchDiffUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-                // 非アクティブなユーザーブランチを作成
-                $this->inactiveUserBranch = UserBranch::factory()->create([
-                    'user_id' => $this->user->id,
-                    'is_active' => false,
-                    'organization_id' => $this->organization->id,
-                ]);
+        // 非アクティブなユーザーブランチを作成
+        $this->inactiveUserBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => false,
+            'organization_id' => $this->organization->id,
+        ]);
 
         // アクティブなユーザーブランチを作成
         $this->activeUserBranch = UserBranch::factory()->create([
@@ -103,7 +102,7 @@ class FetchDiffUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function execute_returns_diff_data_with_created_category_operation(): void
+    public function generateDiffData_returns_created_category_operation(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create([
@@ -118,50 +117,39 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '新規カテゴリ',
             'description' => '新規カテゴリの説明',
         ]);
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $category->id,
             'current_version_id' => $category->id,
         ]);
-
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [
-                            $category,
-                        ],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $category->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $category->description, 'original' => null],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->with(Mockery::type(Collection::class))
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals($expectedDiffData['diff'], $result['diff']);
-        $this->assertEquals($this->activeUserBranch->id, $result['user_branch_id']);
-        $this->assertEquals($this->organization->id, $result['organization_id']);
+        $this->assertCount(1, $result['diff']);
+        
+        // diffの構造を詳細に検証
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($category->id, $diffItem['id']);
+        $this->assertEquals('category', $diffItem['type']);
+        $this->assertEquals('created', $diffItem['operation']);
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        
+        // changed_fieldsの検証
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('added', $diffItem['changed_fields']['title']['status']);
+        $this->assertEquals($category->title, $diffItem['changed_fields']['title']['current']);
+        $this->assertNull($diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('added', $diffItem['changed_fields']['description']['status']);
+        $this->assertEquals($category->description, $diffItem['changed_fields']['description']['current']);
+        $this->assertNull($diffItem['changed_fields']['description']['original']);
     }
 
-
     #[Test]
-    public function execute_returns_diff_data_with_created_document_and_category_operation(): void
+    public function generateDiffData_returns_created_document_and_category_operation(): void
     {
         // Arrange
         $parentCategoryEntity = CategoryEntity::factory()->create([
@@ -176,12 +164,13 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '親カテゴリ',
             'description' => '親カテゴリの説明',
         ]);
-        EditStartVersion::factory()->create([
+        $categoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $parentCategory->id,
             'current_version_id' => $parentCategory->id,
         ]);
+
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -194,63 +183,40 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '新規ドキュメント',
             'description' => '新規ドキュメントの説明',
         ]);
-        EditStartVersion::factory()->create([
+        $documentEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $document->id,
             'current_version_id' => $document->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [
-                            $parentCategory,
-                        ],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $parentCategory->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $parentCategory->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [
-                            $document,
-                        ],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $document->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $document->description, 'original' => null],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->with(Mockery::type(Collection::class))
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$categoryEditStartVersion, $documentEditStartVersion]));
 
         // Assert
-        $this->assertEquals($expectedDiffData['diff'], $result['diff']);
-        $this->assertEquals($this->activeUserBranch->id, $result['user_branch_id']);
-        $this->assertEquals($this->organization->id, $result['organization_id']);
+        $this->assertCount(2, $result['diff']);
+        
+        // カテゴリのdiff検証
+        $categoryDiff = $result['diff'][0];
+        $this->assertEquals($parentCategory->id, $categoryDiff['id']);
+        $this->assertEquals('category', $categoryDiff['type']);
+        $this->assertEquals('created', $categoryDiff['operation']);
+        $this->assertArrayHasKey('title', $categoryDiff['changed_fields']);
+        $this->assertEquals('added', $categoryDiff['changed_fields']['title']['status']);
+        
+        // ドキュメントのdiff検証
+        $documentDiff = $result['diff'][1];
+        $this->assertEquals($document->id, $documentDiff['id']);
+        $this->assertEquals('document', $documentDiff['type']);
+        $this->assertEquals('created', $documentDiff['operation']);
+        $this->assertArrayHasKey('title', $documentDiff['changed_fields']);
+        $this->assertEquals('added', $documentDiff['changed_fields']['title']['status']);
+        $this->assertArrayHasKey('description', $documentDiff['changed_fields']);
+        $this->assertEquals('added', $documentDiff['changed_fields']['description']['status']);
     }
 
     #[Test]
-    public function execute_returns_diff_data_with_created_document_operation(): void
+    public function generateDiffData_returns_created_document_operation(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create([
@@ -265,46 +231,34 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '新規ドキュメント',
             'description' => '新規ドキュメントの説明',
         ]);
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $document->id,
             'current_version_id' => $document->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$document],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $document->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $document->description, 'original' => null],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->with(Mockery::type(Collection::class))
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals($expectedDiffData['diff'], $result['diff']);
-        $this->assertEquals($this->activeUserBranch->id, $result['user_branch_id']);
+        $this->assertCount(1, $result['diff']);
+        
+        // diffの構造を詳細に検証
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($document->id, $diffItem['id']);
+        $this->assertEquals('document', $diffItem['type']);
+        $this->assertEquals('created', $diffItem['operation']);
+        
+        // ドキュメントのchanged_fields検証
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('added', $diffItem['changed_fields']['title']['status']);
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('added', $diffItem['changed_fields']['description']['status']);
     }
 
     #[Test]
-    public function execute_returns_diff_data_with_multiple_created_categories_and_documents(): void
+    public function generateDiffData_returns_multiple_created_categories_and_documents(): void
     {
         // Arrange - 2つのカテゴリを作成
         $category1Entity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -317,7 +271,7 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => 'カテゴリ1',
             'description' => 'カテゴリ1の説明',
         ]);
-        EditStartVersion::factory()->create([
+        $categoryEditStartVersion1 = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $category1->id,
@@ -334,7 +288,7 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => 'カテゴリ2',
             'description' => 'カテゴリ2の説明',
         ]);
-        EditStartVersion::factory()->create([
+        $categoryEditStartVersion2 = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $category2->id,
@@ -352,7 +306,7 @@ class FetchDiffUseCaseTest extends TestCase
             'category_entity_id' => $this->mergedCategoryEntity->id,
             'description' => 'ドキュメント1の説明',
         ]);
-        EditStartVersion::factory()->create([
+        $documentEditStartVersion1 = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $document1->id,
@@ -369,73 +323,20 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => 'ドキュメント2',
             'description' => 'ドキュメント2の説明',
         ]);
-        EditStartVersion::factory()->create([
+        $documentEditStartVersion2 = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $document2->id,
             'current_version_id' => $document2->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$category1],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $category1->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $category1->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'category',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$category2],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $category2->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $category2->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$document1],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $document1->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $document1->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$document2],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $document2->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $document2->description, 'original' => null],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([
+            $categoryEditStartVersion1,
+            $categoryEditStartVersion2,
+            $documentEditStartVersion1,
+            $documentEditStartVersion2
+        ]));
 
         // Assert
         $this->assertCount(4, $result['diff']);
@@ -446,7 +347,7 @@ class FetchDiffUseCaseTest extends TestCase
     }
 
     #[Test]
-    public function execute_returns_updated_diff_when_editing_merged_category(): void
+    public function generateDiffData_returns_updated_diff_when_editing_merged_category(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -480,44 +381,40 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '編集後の説明',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $currentCategory->title, 'original' => $originalCategory->title],
-                        'description' => ['status' => 'modified', 'current' => $currentCategory->description, 'original' => $originalCategory->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('updated', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        // diffの構造を詳細に検証
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentCategory->id, $diffItem['id']);
+        $this->assertEquals('category', $diffItem['type']);
+        $this->assertEquals('updated', $diffItem['operation']);
+        
+        // updated操作のchanged_fields検証
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('modified', $diffItem['changed_fields']['title']['status']);
+        $this->assertEquals($currentCategory->title, $diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalCategory->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('modified', $diffItem['changed_fields']['description']['status']);
+        $this->assertEquals($currentCategory->description, $diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalCategory->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_updated_diff_when_editing_pushed_category(): void
+    public function generateDiffData_returns_updated_diff_when_editing_pushed_category(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -549,44 +446,23 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '編集後の説明',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $currentCategory->title, 'original' => $originalCategory->title],
-                        'description' => ['status' => 'modified', 'current' => $currentCategory->description, 'original' => $originalCategory->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
     }
 
     #[Test]
-    public function execute_returns_created_diff_when_editing_draft_category(): void
+    public function generateDiffData_returns_created_diff_when_editing_draft_category(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -601,44 +477,21 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => 'ドラフトカテゴリの説明',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $currentCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
-
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $currentCategory->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $currentCategory->description, 'original' => null],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
         $this->assertEquals('created', $result['diff'][0]['operation']);
     }
 
     #[Test]
-    public function execute_returns_updated_diff_when_editing_merged_document(): void
+    public function generateDiffData_returns_updated_diff_when_editing_merged_document(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -663,44 +516,37 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '編集後のドキュメント説明',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $currentDocument->title, 'original' => $originalDocument->title],
-                        'description' => ['status' => 'modified', 'current' => $currentDocument->description, 'original' => $originalDocument->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('updated', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        // diffの構造を詳細に検証
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentDocument->id, $diffItem['id']);
+        $this->assertEquals('document', $diffItem['type']);
+        $this->assertEquals('updated', $diffItem['operation']);
+        
+        // updated操作のchanged_fields検証（変更されたフィールドのみ存在）
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        // タイトルや説明など、変更されたフィールドがmodifiedになっていることを検証
+        foreach ($diffItem['changed_fields'] as $field => $change) {
+            $this->assertEquals('modified', $change['status']);
+            $this->assertArrayHasKey('current', $change);
+            $this->assertArrayHasKey('original', $change);
+        }
     }
 
     #[Test]
-    public function execute_returns_updated_diff_when_editing_pushed_document(): void
+    public function generateDiffData_returns_updated_diff_when_editing_pushed_document(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -732,44 +578,22 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '編集後のドキュメント説明',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $currentDocument->title, 'original' => $originalDocument->title],
-                        'description' => ['status' => 'modified', 'current' => $currentDocument->description, 'original' => $originalDocument->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
     }
 
     #[Test]
-    public function execute_returns_created_diff_when_editing_draft_document(): void
+    public function generateDiffData_returns_created_diff_when_editing_draft_document(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -784,44 +608,22 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => 'ドラフトドキュメントの説明',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $currentDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $currentDocument->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $currentDocument->description, 'original' => null],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
         $this->assertEquals('created', $result['diff'][0]['operation']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_deleting_merged_category(): void
+    public function generateDiffData_returns_deleted_diff_when_deleting_merged_category(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -851,40 +653,39 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        // diffの構造を詳細に検証
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentCategory->id, $diffItem['id']);
+        $this->assertEquals('category', $diffItem['type']);
+        $this->assertEquals('deleted', $diffItem['operation']);
+        
+        // deleted操作のchanged_fields検証
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['title']['status']);
+        $this->assertNull($diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalCategory->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['description']['status']);
+        $this->assertNull($diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalCategory->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_deleting_pushed_category(): void
+    public function generateDiffData_returns_deleted_diff_when_deleting_pushed_category(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -914,40 +715,41 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentCategory->id, $diffItem['id']);
+        $this->assertEquals('category', $diffItem['type']);
+        $this->assertEquals('deleted', $diffItem['operation']);
+        
+        // deleted操作のchanged_fields検証
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        
+        // 各フィールドを詳細に検証
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['title']['status']);
+        $this->assertNull($diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalCategory->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['description']['status']);
+        $this->assertNull($diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalCategory->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_empty_diff_when_deleting_draft_category(): void
+    public function generateDiffData_returns_empty_diff_when_deleting_draft_category(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -961,29 +763,22 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $currentCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
 
-        $expectedDiffData = ['diff' => []];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
         $this->assertEmpty($result['diff']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_deleting_merged_document(): void
+    public function generateDiffData_returns_deleted_diff_when_deleting_merged_document(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1017,44 +812,38 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->title],
-                        'description' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        // diffの構造を詳細に検証
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentDocument->id, $diffItem['id']);
+        $this->assertEquals('document', $diffItem['type']);
+        $this->assertEquals('deleted', $diffItem['operation']);
+        
+        // deleted操作のchanged_fields検証
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['title']['status']);
+        $this->assertNull($diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalDocument->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['description']['status']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_deleting_pushed_document(): void
+    public function generateDiffData_returns_deleted_diff_when_deleting_pushed_document(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1088,44 +877,41 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->title],
-                        'description' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentDocument->id, $diffItem['id']);
+        $this->assertEquals('document', $diffItem['type']);
+        $this->assertEquals('deleted', $diffItem['operation']);
+        
+        // deleted操作のchanged_fields検証
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        
+        // 各フィールドを詳細に検証
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['title']['status']);
+        $this->assertNull($diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalDocument->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['description']['status']);
+        $this->assertNull($diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalDocument->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_empty_diff_when_deleting_draft_document(): void
+    public function generateDiffData_returns_empty_diff_when_deleting_draft_document(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1159,29 +945,22 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = ['diff' => []];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
         $this->assertEmpty($result['diff']);
     }
 
     #[Test]
-    public function execute_returns_mixed_diff_when_creating_and_updating_categories(): void
+    public function generateDiffData_returns_mixed_diff_when_creating_and_updating_categories(): void
     {
         // Arrange - ドラフトカテゴリを作成
         $draftCategoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1192,7 +971,7 @@ class FetchDiffUseCaseTest extends TestCase
             'entity_id' => $draftCategoryEntity->id,
             'parent_entity_id' => null,
         ]);
-        EditStartVersion::factory()->create([
+        $draftEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $draftCategory->id,
@@ -1221,58 +1000,54 @@ class FetchDiffUseCaseTest extends TestCase
             'entity_id' => $mergedCategoryEntity->id,
             'parent_entity_id' => null,
         ]);
-        EditStartVersion::factory()->create([
+        $updatedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalMergedCategory->id,
             'current_version_id' => $updatedCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$draftCategory],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $draftCategory->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $draftCategory->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'category',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$updatedCategory],
-                        'original' => [$originalMergedCategory],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $updatedCategory->title, 'original' => $originalMergedCategory->title],
-                        'description' => ['status' => 'modified', 'current' => $updatedCategory->description, 'original' => $originalMergedCategory->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$draftEditStartVersion, $updatedEditStartVersion]));
 
         // Assert
         $this->assertCount(2, $result['diff']);
-        $this->assertEquals('created', $result['diff'][0]['operation']);
-        $this->assertEquals('updated', $result['diff'][1]['operation']);
+        
+        // 作成操作の検証
+        $createdDiff = $result['diff'][0];
+        $this->assertEquals($draftCategory->id, $createdDiff['id']);
+        $this->assertEquals('category', $createdDiff['type']);
+        $this->assertEquals('created', $createdDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['title']['status']);
+        $this->assertEquals($draftCategory->title, $createdDiff['changed_fields']['title']['current']);
+        $this->assertNull($createdDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['description']['status']);
+        $this->assertEquals($draftCategory->description, $createdDiff['changed_fields']['description']['current']);
+        $this->assertNull($createdDiff['changed_fields']['description']['original']);
+        
+        // 更新操作の検証
+        $updatedDiff = $result['diff'][1];
+        $this->assertEquals($updatedCategory->id, $updatedDiff['id']);
+        $this->assertEquals('category', $updatedDiff['type']);
+        $this->assertEquals('updated', $updatedDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['title']['status']);
+        $this->assertEquals($updatedCategory->title, $updatedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalMergedCategory->title, $updatedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['description']['status']);
+        $this->assertEquals($updatedCategory->description, $updatedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalMergedCategory->description, $updatedDiff['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_mixed_diff_when_updating_and_deleting_categories(): void
+    public function generateDiffData_returns_mixed_diff_when_updating_and_deleting_categories(): void
     {
         // Arrange - マージ済みカテゴリを更新
         $updateCategoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1294,7 +1069,7 @@ class FetchDiffUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $updateCategoryEntity->id,
         ]);
-        EditStartVersion::factory()->create([
+        $updatedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalUpdateCategory->id,
@@ -1322,54 +1097,54 @@ class FetchDiffUseCaseTest extends TestCase
             'entity_id' => $deleteCategoryEntity->id,
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $deletedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalDeleteCategory->id,
             'current_version_id' => $deletedCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$updatedCategory],
-                        'original' => [$originalUpdateCategory],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $updatedCategory->title, 'original' => $originalUpdateCategory->title],
-                        'description' => ['status' => 'modified', 'current' => $updatedCategory->description, 'original' => $originalUpdateCategory->description],
-                    ],
-                ],
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedCategory],
-                        'original' => [$originalDeleteCategory],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$updatedEditStartVersion, $deletedEditStartVersion]));
 
         // Assert
         $this->assertCount(2, $result['diff']);
-        $this->assertEquals('updated', $result['diff'][0]['operation']);
-        $this->assertEquals('deleted', $result['diff'][1]['operation']);
+        
+        // 更新操作の検証
+        $updatedDiff = $result['diff'][0];
+        $this->assertEquals($updatedCategory->id, $updatedDiff['id']);
+        $this->assertEquals('category', $updatedDiff['type']);
+        $this->assertEquals('updated', $updatedDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['title']['status']);
+        $this->assertEquals($updatedCategory->title, $updatedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalUpdateCategory->title, $updatedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['description']['status']);
+        $this->assertEquals($updatedCategory->description, $updatedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalUpdateCategory->description, $updatedDiff['changed_fields']['description']['original']);
+        
+        // 削除操作の検証
+        $deletedDiff = $result['diff'][1];
+        $this->assertEquals($deletedCategory->id, $deletedDiff['id']);
+        $this->assertEquals('category', $deletedDiff['type']);
+        $this->assertEquals('deleted', $deletedDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['title']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalDeleteCategory->title, $deletedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['description']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalDeleteCategory->description, $deletedDiff['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_mixed_diff_when_creating_updating_and_deleting_categories(): void
+    public function generateDiffData_returns_mixed_diff_when_creating_updating_and_deleting_categories(): void
     {
         // Arrange - ドラフトカテゴリを作成
         $draftCategoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1379,7 +1154,7 @@ class FetchDiffUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $draftCategoryEntity->id,
         ]);
-        EditStartVersion::factory()->create([
+        $draftEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $draftCategory->id,
@@ -1406,7 +1181,7 @@ class FetchDiffUseCaseTest extends TestCase
             'status' => DocumentCategoryStatus::DRAFT->value,
             'entity_id' => $updateCategoryEntity->id,
         ]);
-        EditStartVersion::factory()->create([
+        $updatedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalUpdateCategory->id,
@@ -1434,67 +1209,75 @@ class FetchDiffUseCaseTest extends TestCase
             'entity_id' => $deleteCategoryEntity->id,
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $deletedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalDeleteCategory->id,
             'current_version_id' => $deletedCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$draftCategory],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $draftCategory->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $draftCategory->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'category',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$updatedCategory],
-                        'original' => [$originalUpdateCategory],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $updatedCategory->title, 'original' => $originalUpdateCategory->title],
-                        'description' => ['status' => 'modified', 'current' => $updatedCategory->description, 'original' => $originalUpdateCategory->description],
-                    ],
-                ],
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedCategory],
-                        'original' => [$originalDeleteCategory],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([
+            $draftEditStartVersion,
+            $updatedEditStartVersion,
+            $deletedEditStartVersion
+        ]));
 
         // Assert
         $this->assertCount(3, $result['diff']);
-        $this->assertEquals('created', $result['diff'][0]['operation']);
-        $this->assertEquals('updated', $result['diff'][1]['operation']);
-        $this->assertEquals('deleted', $result['diff'][2]['operation']);
+        
+        // 作成操作の検証
+        $createdDiff = $result['diff'][0];
+        $this->assertEquals($draftCategory->id, $createdDiff['id']);
+        $this->assertEquals('created', $createdDiff['operation']);
+        $this->assertEquals('category', $createdDiff['type']);
+        
+        $this->assertArrayHasKey('title', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['title']['status']);
+        $this->assertEquals($draftCategory->title, $createdDiff['changed_fields']['title']['current']);
+        $this->assertNull($createdDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['description']['status']);
+        $this->assertEquals($draftCategory->description, $createdDiff['changed_fields']['description']['current']);
+        $this->assertNull($createdDiff['changed_fields']['description']['original']);
+        
+        // 更新操作の検証
+        $updatedDiff = $result['diff'][1];
+        $this->assertEquals($updatedCategory->id, $updatedDiff['id']);
+        $this->assertEquals('updated', $updatedDiff['operation']);
+        $this->assertEquals('category', $updatedDiff['type']);
+        
+        $this->assertArrayHasKey('title', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['title']['status']);
+        $this->assertEquals($updatedCategory->title, $updatedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalUpdateCategory->title, $updatedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['description']['status']);
+        $this->assertEquals($updatedCategory->description, $updatedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalUpdateCategory->description, $updatedDiff['changed_fields']['description']['original']);
+        
+        // 削除操作の検証
+        $deletedDiff = $result['diff'][2];
+        $this->assertEquals($deletedCategory->id, $deletedDiff['id']);
+        $this->assertEquals('deleted', $deletedDiff['operation']);
+        $this->assertEquals('category', $deletedDiff['type']);
+        
+        $this->assertArrayHasKey('title', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['title']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalDeleteCategory->title, $deletedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['description']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalDeleteCategory->description, $deletedDiff['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_mixed_diff_when_creating_and_updating_documents(): void
+    public function generateDiffData_returns_mixed_diff_when_creating_and_updating_documents(): void
     {
         // Arrange - ドラフトドキュメントを作成
         $draftDocumentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1507,7 +1290,7 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '新規ドキュメント',
             'description' => '新規ドキュメント説明',
         ]);
-        EditStartVersion::factory()->create([
+        $draftEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $draftDocument->id,
@@ -1540,58 +1323,54 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '更新したドキュメント',
             'description' => '更新したドキュメント説明',
         ]);
-        EditStartVersion::factory()->create([
+        $updatedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalMergedDocument->id,
             'current_version_id' => $updatedDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$draftDocument],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $draftDocument->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $draftDocument->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$updatedDocument],
-                        'original' => [$originalMergedDocument],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $updatedDocument->title, 'original' => $originalMergedDocument->title],
-                        'description' => ['status' => 'modified', 'current' => $updatedDocument->description, 'original' => $originalMergedDocument->description],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$draftEditStartVersion, $updatedEditStartVersion]));
 
         // Assert
         $this->assertCount(2, $result['diff']);
-        $this->assertEquals('created', $result['diff'][0]['operation']);
-        $this->assertEquals('updated', $result['diff'][1]['operation']);
+        
+        // 作成操作の検証
+        $createdDiff = $result['diff'][0];
+        $this->assertEquals($draftDocument->id, $createdDiff['id']);
+        $this->assertEquals('created', $createdDiff['operation']);
+        $this->assertEquals('document', $createdDiff['type']);
+        
+        $this->assertArrayHasKey('title', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['title']['status']);
+        $this->assertEquals($draftDocument->title, $createdDiff['changed_fields']['title']['current']);
+        $this->assertNull($createdDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['description']['status']);
+        $this->assertEquals($draftDocument->description, $createdDiff['changed_fields']['description']['current']);
+        $this->assertNull($createdDiff['changed_fields']['description']['original']);
+        
+        // 更新操作の検証
+        $updatedDiff = $result['diff'][1];
+        $this->assertEquals($updatedDocument->id, $updatedDiff['id']);
+        $this->assertEquals('updated', $updatedDiff['operation']);
+        $this->assertEquals('document', $updatedDiff['type']);
+        
+        $this->assertArrayHasKey('title', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['title']['status']);
+        $this->assertEquals($updatedDocument->title, $updatedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalMergedDocument->title, $updatedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['description']['status']);
+        $this->assertEquals($updatedDocument->description, $updatedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalMergedDocument->description, $updatedDiff['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_mixed_diff_when_updating_and_deleting_documents(): void
+    public function generateDiffData_returns_mixed_diff_when_updating_and_deleting_documents(): void
     {
         // Arrange - マージ済みドキュメントを更新
         $updateDocumentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1619,7 +1398,7 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '更新したドキュメント',
             'description' => '更新したドキュメント説明',
         ]);
-        EditStartVersion::factory()->create([
+        $updatedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalUpdateDocument->id,
@@ -1653,54 +1432,54 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '削除するドキュメント説明',
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $deletedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDeleteDocument->id,
             'current_version_id' => $deletedDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$updatedDocument],
-                        'original' => [$originalUpdateDocument],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $updatedDocument->title, 'original' => $originalUpdateDocument->title],
-                        'description' => ['status' => 'modified', 'current' => $updatedDocument->description, 'original' => $originalUpdateDocument->description],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedDocument],
-                        'original' => [$originalDeleteDocument],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$updatedEditStartVersion, $deletedEditStartVersion]));
 
         // Assert
         $this->assertCount(2, $result['diff']);
-        $this->assertEquals('updated', $result['diff'][0]['operation']);
-        $this->assertEquals('deleted', $result['diff'][1]['operation']);
+        
+        // 更新操作の検証
+        $updatedDiff = $result['diff'][0];
+        $this->assertEquals($updatedDocument->id, $updatedDiff['id']);
+        $this->assertEquals('updated', $updatedDiff['operation']);
+        $this->assertEquals('document', $updatedDiff['type']);
+        
+        $this->assertArrayHasKey('title', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['title']['status']);
+        $this->assertEquals($updatedDocument->title, $updatedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalUpdateDocument->title, $updatedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['description']['status']);
+        $this->assertEquals($updatedDocument->description, $updatedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalUpdateDocument->description, $updatedDiff['changed_fields']['description']['original']);
+        
+        // 削除操作の検証
+        $deletedDiff = $result['diff'][1];
+        $this->assertEquals($deletedDocument->id, $deletedDiff['id']);
+        $this->assertEquals('deleted', $deletedDiff['operation']);
+        $this->assertEquals('document', $deletedDiff['type']);
+        
+        $this->assertArrayHasKey('title', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['title']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalDeleteDocument->title, $deletedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['description']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalDeleteDocument->description, $deletedDiff['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_mixed_diff_when_creating_updating_and_deleting_documents(): void
+    public function generateDiffData_returns_mixed_diff_when_creating_updating_and_deleting_documents(): void
     {
         // Arrange - ドラフトドキュメントを作成
         $draftDocumentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1713,7 +1492,7 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '新規ドキュメント',
             'description' => '新規ドキュメント説明',
         ]);
-        EditStartVersion::factory()->create([
+        $draftEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $draftDocument->id,
@@ -1746,7 +1525,7 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '更新したドキュメント',
             'description' => '更新したドキュメント説明',
         ]);
-        EditStartVersion::factory()->create([
+        $updatedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalUpdateDocument->id,
@@ -1780,67 +1559,74 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '削除するドキュメント説明',
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $deletedEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDeleteDocument->id,
             'current_version_id' => $deletedDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'created',
-                    'snapshots' => [
-                        'current' => [$draftDocument],
-                        'original' => [],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'added', 'current' => $draftDocument->title, 'original' => null],
-                        'description' => ['status' => 'added', 'current' => $draftDocument->description, 'original' => null],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$updatedDocument],
-                        'original' => [$originalUpdateDocument],
-                    ],
-                    'changed_fields' => [
-                        'title' => ['status' => 'modified', 'current' => $updatedDocument->title, 'original' => $originalUpdateDocument->title],
-                        'description' => ['status' => 'modified', 'current' => $updatedDocument->description, 'original' => $originalUpdateDocument->description],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedDocument],
-                        'original' => [$originalDeleteDocument],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([
+            $draftEditStartVersion,
+            $updatedEditStartVersion,
+            $deletedEditStartVersion
+        ]));
 
         // Assert
         $this->assertCount(3, $result['diff']);
-        $this->assertEquals('created', $result['diff'][0]['operation']);
-        $this->assertEquals('updated', $result['diff'][1]['operation']);
-        $this->assertEquals('deleted', $result['diff'][2]['operation']);
+        
+        // 作成操作の検証
+        $createdDiff = $result['diff'][0];
+        $this->assertEquals($draftDocument->id, $createdDiff['id']);
+        $this->assertEquals('created', $createdDiff['operation']);
+        $this->assertEquals('document', $createdDiff['type']);
+        
+        $this->assertArrayHasKey('title', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['title']['status']);
+        $this->assertEquals($draftDocument->title, $createdDiff['changed_fields']['title']['current']);
+        $this->assertNull($createdDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $createdDiff['changed_fields']);
+        $this->assertEquals('added', $createdDiff['changed_fields']['description']['status']);
+        $this->assertEquals($draftDocument->description, $createdDiff['changed_fields']['description']['current']);
+        $this->assertNull($createdDiff['changed_fields']['description']['original']);
+        
+        // 更新操作の検証
+        $updatedDiff = $result['diff'][1];
+        $this->assertEquals($updatedDocument->id, $updatedDiff['id']);
+        $this->assertEquals('updated', $updatedDiff['operation']);
+        $this->assertEquals('document', $updatedDiff['type']);
+        
+        $this->assertArrayHasKey('title', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['title']['status']);
+        $this->assertEquals($updatedDocument->title, $updatedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalUpdateDocument->title, $updatedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $updatedDiff['changed_fields']);
+        $this->assertEquals('modified', $updatedDiff['changed_fields']['description']['status']);
+        $this->assertEquals($updatedDocument->description, $updatedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalUpdateDocument->description, $updatedDiff['changed_fields']['description']['original']);
+        
+        // 削除操作の検証
+        $deletedDiff = $result['diff'][2];
+        $this->assertEquals($deletedDocument->id, $deletedDiff['id']);
+        $this->assertEquals('deleted', $deletedDiff['operation']);
+        $this->assertEquals('document', $deletedDiff['type']);
+        
+        $this->assertArrayHasKey('title', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['title']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalDeleteDocument->title, $deletedDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $deletedDiff['changed_fields']);
+        $this->assertEquals('deleted', $deletedDiff['changed_fields']['description']['status']);
+        $this->assertNull($deletedDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalDeleteDocument->description, $deletedDiff['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_updated_diff_when_editing_same_category_entity_twice(): void
+    public function generateDiffData_returns_updated_diff_when_editing_same_category_entity_twice(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1869,41 +1655,42 @@ class FetchDiffUseCaseTest extends TestCase
             'title' => '2回目の編集',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('updated', $result['diff'][0]['operation']);
-        $this->assertEquals('2回目の編集', $result['diff'][0]['snapshots']['current'][0]->title);
+        $this->assertCount(1, $result['diff']);
+        
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentCategory->id, $diffItem['id']);
+        $this->assertEquals('category', $diffItem['type']);
+        $this->assertEquals('updated', $diffItem['operation']);
+        $this->assertEquals('2回目の編集', $diffItem['changed_fields']['title']['current']);
+        
+        // changed_fieldsの検証
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('modified', $diffItem['changed_fields']['title']['status']);
+        $this->assertEquals($currentCategory->title, $diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalCategory->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('modified', $diffItem['changed_fields']['description']['status']);
+        $this->assertEquals($currentCategory->description, $diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalCategory->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_editing_then_deleting_same_category_entity(): void
+    public function generateDiffData_returns_deleted_diff_when_editing_then_deleting_same_category_entity(): void
     {
         // Arrange
         $categoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1931,40 +1718,41 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalCategory->id,
             'current_version_id' => $currentCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentCategory->id, $diffItem['id']);
+        $this->assertEquals('category', $diffItem['type']);
+        $this->assertEquals('deleted', $diffItem['operation']);
+        
+        // deleted操作のchanged_fields検証
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['title']['status']);
+        $this->assertNull($diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalCategory->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['description']['status']);
+        $this->assertNull($diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalCategory->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_updated_diff_when_editing_same_document_entity_twice(): void
+    public function generateDiffData_returns_updated_diff_when_editing_same_document_entity_twice(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -1996,41 +1784,41 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '2回目の編集説明',
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'updated',
-                    'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('updated', $result['diff'][0]['operation']);
-        $this->assertEquals('2回目の編集', $result['diff'][0]['snapshots']['current'][0]->title);
+        $this->assertCount(1, $result['diff']);
+        
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentDocument->id, $diffItem['id']);
+        $this->assertEquals('document', $diffItem['type']);
+        $this->assertEquals('updated', $diffItem['operation']);
+        $this->assertEquals('2回目の編集', $diffItem['changed_fields']['title']['current']);
+        
+        // updated操作のchanged_fields検証
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('modified', $diffItem['changed_fields']['title']['status']);
+        $this->assertEquals($currentDocument->title, $diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalDocument->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('modified', $diffItem['changed_fields']['description']['status']);
+        $this->assertEquals($currentDocument->description, $diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalDocument->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_editing_then_deleting_same_document_entity(): void
+    public function generateDiffData_returns_deleted_diff_when_editing_then_deleting_same_document_entity(): void
     {
         // Arrange
         $documentEntity = DocumentEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -2064,40 +1852,40 @@ class FetchDiffUseCaseTest extends TestCase
             'is_deleted' => 1,
         ]);
 
-        EditStartVersion::factory()->create([
+        $editStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $currentDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'document',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
-
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([$editStartVersion]));
 
         // Assert
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
+        $this->assertCount(1, $result['diff']);
+        
+        $diffItem = $result['diff'][0];
+        $this->assertEquals($currentDocument->id, $diffItem['id']);
+        $this->assertEquals('document', $diffItem['type']);
+        $this->assertEquals('deleted', $diffItem['operation']);
+        
+        // deleted操作のchanged_fields検証
+        $this->assertArrayHasKey('changed_fields', $diffItem);
+        
+        $this->assertArrayHasKey('title', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['title']['status']);
+        $this->assertNull($diffItem['changed_fields']['title']['current']);
+        $this->assertEquals($originalDocument->title, $diffItem['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $diffItem['changed_fields']);
+        $this->assertEquals('deleted', $diffItem['changed_fields']['description']['status']);
+        $this->assertNull($diffItem['changed_fields']['description']['current']);
+        $this->assertEquals($originalDocument->description, $diffItem['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_deleting_parent_category_with_child_document(): void
+    public function generateDiffData_returns_deleted_diff_when_deleting_parent_category_with_child_document(): void
     {
         // Arrange - 親カテゴリ
         $parentCategoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -2124,7 +1912,7 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '親カテゴリ説明',
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $categoryEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalParentCategory->id,
@@ -2158,50 +1946,58 @@ class FetchDiffUseCaseTest extends TestCase
             'description' => '子ドキュメント説明',
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $documentEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $originalDocument->id,
             'current_version_id' => $deletedDocument->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedParentCategory],
-                        'original' => [$originalParentCategory],
-                    ],
-                ],
-                [
-                    'type' => 'document',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedDocument],
-                        'original' => [$originalDocument],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([
+            $categoryEditStartVersion,
+            $documentEditStartVersion
+        ]));
 
         // Assert
         $this->assertCount(2, $result['diff']);
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
-        $this->assertEquals('deleted', $result['diff'][1]['operation']);
+        
+        // 親カテゴリの削除検証
+        $categoryDiff = $result['diff'][0];
+        $this->assertEquals($deletedParentCategory->id, $categoryDiff['id']);
+        $this->assertEquals('category', $categoryDiff['type']);
+        $this->assertEquals('deleted', $categoryDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $categoryDiff['changed_fields']);
+        $this->assertEquals('deleted', $categoryDiff['changed_fields']['title']['status']);
+        $this->assertNull($categoryDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalParentCategory->title, $categoryDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $categoryDiff['changed_fields']);
+        $this->assertEquals('deleted', $categoryDiff['changed_fields']['description']['status']);
+        $this->assertNull($categoryDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalParentCategory->description, $categoryDiff['changed_fields']['description']['original']);
+        
+        // 子ドキュメントの削除検証
+        $documentDiff = $result['diff'][1];
+        $this->assertEquals($deletedDocument->id, $documentDiff['id']);
+        $this->assertEquals('document', $documentDiff['type']);
+        $this->assertEquals('deleted', $documentDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $documentDiff['changed_fields']);
+        $this->assertEquals('deleted', $documentDiff['changed_fields']['title']['status']);
+        $this->assertNull($documentDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalDocument->title, $documentDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $documentDiff['changed_fields']);
+        $this->assertEquals('deleted', $documentDiff['changed_fields']['description']['status']);
+        $this->assertNull($documentDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalDocument->description, $documentDiff['changed_fields']['description']['original']);
     }
 
     #[Test]
-    public function execute_returns_deleted_diff_when_deleting_parent_category_with_child_and_grandchild_categories(): void
+    public function generateDiffData_returns_deleted_diff_when_deleting_parent_category_with_child_and_grandchild_categories(): void
     {
         // Arrange - 親カテゴリ
         $parentCategoryEntity = CategoryEntity::factory()->create(['organization_id' => $this->organization->id]);
@@ -2224,7 +2020,7 @@ class FetchDiffUseCaseTest extends TestCase
             'entity_id' => $parentCategoryEntity->id,
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $parentEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalParentCategory->id,
@@ -2254,7 +2050,7 @@ class FetchDiffUseCaseTest extends TestCase
             'parent_entity_id' => $parentCategoryEntity->id,
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $childEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalChildCategory->id,
@@ -2284,67 +2080,71 @@ class FetchDiffUseCaseTest extends TestCase
             'parent_entity_id' => $childCategoryEntity->id,
             'is_deleted' => 1,
         ]);
-        EditStartVersion::factory()->create([
+        $grandchildEditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->activeUserBranch->id,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $originalGrandchildCategory->id,
             'current_version_id' => $deletedGrandchildCategory->id,
         ]);
 
-        $expectedDiffData = [
-            'diff' => [
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedParentCategory],
-                        'original' => [$originalParentCategory],
-                    ],
-                ],
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedChildCategory],
-                        'original' => [$originalChildCategory],
-                    ],
-                ],
-                [
-                    'type' => 'category',
-                    'operation' => 'deleted',
-                    'snapshots' => [
-                        'current' => [$deletedGrandchildCategory],
-                        'original' => [$originalGrandchildCategory],
-                    ],
-                ],
-            ],
-        ];
-
-        $this->documentDiffService
-            ->shouldReceive('generateDiffData')
-            ->once()
-            ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->service->generateDiffData(collect([
+            $parentEditStartVersion,
+            $childEditStartVersion,
+            $grandchildEditStartVersion
+        ]));
 
         // Assert
         $this->assertCount(3, $result['diff']);
-        $this->assertEquals('deleted', $result['diff'][0]['operation']);
-        $this->assertEquals('deleted', $result['diff'][1]['operation']);
-        $this->assertEquals('deleted', $result['diff'][2]['operation']);
-    }
-
-    #[Test]
-    public function execute_throws_not_found_exception_when_active_user_branch_does_not_exist(): void
-    {
-        // Arrange - アクティブなブランチを削除
-        $this->activeUserBranch->update(['is_active' => false]);
-
-        // Assert
-        $this->expectException(NotFoundException::class);
-
-        // Act
-        $this->useCase->execute($this->user);
+        
+        // 親カテゴリの削除検証
+        $parentDiff = $result['diff'][0];
+        $this->assertEquals($deletedParentCategory->id, $parentDiff['id']);
+        $this->assertEquals('category', $parentDiff['type']);
+        $this->assertEquals('deleted', $parentDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $parentDiff['changed_fields']);
+        $this->assertEquals('deleted', $parentDiff['changed_fields']['title']['status']);
+        $this->assertNull($parentDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalParentCategory->title, $parentDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $parentDiff['changed_fields']);
+        $this->assertEquals('deleted', $parentDiff['changed_fields']['description']['status']);
+        $this->assertNull($parentDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalParentCategory->description, $parentDiff['changed_fields']['description']['original']);
+        
+        // 子カテゴリの削除検証
+        $childDiff = $result['diff'][1];
+        $this->assertEquals($deletedChildCategory->id, $childDiff['id']);
+        $this->assertEquals('category', $childDiff['type']);
+        $this->assertEquals('deleted', $childDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $childDiff['changed_fields']);
+        $this->assertEquals('deleted', $childDiff['changed_fields']['title']['status']);
+        $this->assertNull($childDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalChildCategory->title, $childDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $childDiff['changed_fields']);
+        $this->assertEquals('deleted', $childDiff['changed_fields']['description']['status']);
+        $this->assertNull($childDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalChildCategory->description, $childDiff['changed_fields']['description']['original']);
+        
+        // 孫カテゴリの削除検証
+        $grandchildDiff = $result['diff'][2];
+        $this->assertEquals($deletedGrandchildCategory->id, $grandchildDiff['id']);
+        $this->assertEquals('category', $grandchildDiff['type']);
+        $this->assertEquals('deleted', $grandchildDiff['operation']);
+        
+        $this->assertArrayHasKey('title', $grandchildDiff['changed_fields']);
+        $this->assertEquals('deleted', $grandchildDiff['changed_fields']['title']['status']);
+        $this->assertNull($grandchildDiff['changed_fields']['title']['current']);
+        $this->assertEquals($originalGrandchildCategory->title, $grandchildDiff['changed_fields']['title']['original']);
+        
+        $this->assertArrayHasKey('description', $grandchildDiff['changed_fields']);
+        $this->assertEquals('deleted', $grandchildDiff['changed_fields']['description']['status']);
+        $this->assertNull($grandchildDiff['changed_fields']['description']['current']);
+        $this->assertEquals($originalGrandchildCategory->description, $grandchildDiff['changed_fields']['description']['original']);
     }
 }
+
