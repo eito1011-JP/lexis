@@ -2,9 +2,9 @@
 
 namespace App\UseCases\UserBranch;
 
-use App\Exceptions\TargetDocumentNotFoundException;
 use App\Models\User;
 use App\Services\DocumentDiffService;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\Log;
 
 class FetchDiffUseCase
@@ -16,7 +16,7 @@ class FetchDiffUseCase
     /**
      * ユーザーブランチの差分データを取得
      *
-     * @throws TargetDocumentNotFoundException
+     * @throws NotFoundException
      */
     public function execute(User $user): array
     {
@@ -33,11 +33,7 @@ class FetchDiffUseCase
                 ->first();
 
             if (! $userBranch) {
-                throw new TargetDocumentNotFoundException(
-                    'アクティブなユーザーブランチが見つかりません',
-                    'MSG_USER_BRANCH_NOT_FOUND',
-                    404
-                );
+                throw new NotFoundException();
             }
 
             // 差分データを生成
@@ -46,15 +42,13 @@ class FetchDiffUseCase
             $diffResult['user_branch_id'] = $userBranch->id;
             $diffResult['organization_id'] = $userBranch->organization->id;
 
+
+            // 返すもの
+            // 該当のuser_branchで編集されたoriginalとcurrentのドキュメントとカテゴリバージョン
+            
             return $diffResult;
-
-        } catch (TargetDocumentNotFoundException $e) {
-            Log::error('ユーザーブランチが見つかりません: '.$e->getMessage());
-
-            throw $e;
         } catch (\Exception $e) {
-            Log::error('Git差分の取得に失敗しました: '.$e->getMessage());
-
+            Log::error($e);
             throw $e;
         }
     }
