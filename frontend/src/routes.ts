@@ -19,6 +19,7 @@ export const ROUTES = {
   CHANGE_SUGGESTION_CONFLICTS: 'change-suggestion-conflicts',
   CHANGE_SUGGESTION_FIX_REQUEST: 'change-suggestion-fix-request',
   CHANGE_SUGGESTION_EDIT_SESSION: 'change-suggestion-edit-session',
+  USER_BRANCHES_DIFF: 'user-branches-diff',
 } as const;
 
 export const ROUTE_PATHS = {
@@ -42,6 +43,7 @@ export const ROUTE_PATHS = {
   [ROUTES.CHANGE_SUGGESTION_FIX_REQUEST]: '/change-suggestions/:id/fix-request',
   [ROUTES.CHANGE_SUGGESTION_EDIT_SESSION]:
     '/change-suggestions/:id/pull_request_edit_sessions/:token',
+  [ROUTES.USER_BRANCHES_DIFF]: '/documents/diff',
 } as const;
 
 export const generatePath = (
