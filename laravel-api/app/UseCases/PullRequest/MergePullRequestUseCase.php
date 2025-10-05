@@ -6,12 +6,12 @@ use App\Dto\UseCase\PullRequest\MergePullRequestDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestStatus;
-use App\Models\ActivityLogOnPullRequest;
 use App\Models\EditStartVersion;
 use App\Models\PullRequest;
+use App\Models\User;
 use App\Policies\PullRequestPolicy;
+use App\Services\PullRequestActivityLogService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +22,8 @@ class MergePullRequestUseCase
     protected PullRequestPolicy $pullRequestPolicy;
 
     public function __construct(
-        PullRequestPolicy $pullRequestPolicy
+        PullRequestPolicy $pullRequestPolicy,
+        private PullRequestActivityLogService $activityLogService
     ) {
         $this->pullRequestPolicy = $pullRequestPolicy;
     }
@@ -74,11 +75,8 @@ class MergePullRequestUseCase
             ]);
 
             // 6. action = mergedでactivity logを作成
-            ActivityLogOnPullRequest::create([
-                'user_id' => $dto->userId,
-                'pull_request_id' => $pullRequest->id,
-                'action' => PullRequestActivityAction::PULL_REQUEST_MERGED->value,
-            ]);
+            $user = User::findOrFail($dto->userId);
+            $this->activityLogService->createMergeLog($user, $pullRequest);
 
             DB::commit();
 

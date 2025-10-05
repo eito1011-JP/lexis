@@ -7,9 +7,9 @@ namespace App\Dto\UseCase\PullRequest;
 use App\Dto\UseCase\UseCaseDto;
 
 /**
- * プルリクエストタイトル更新DTO
+ * プルリクエスト更新DTO
  */
-class UpdatePullRequestTitleDto extends UseCaseDto
+class UpdatePullRequestDto extends UseCaseDto
 {
     /**
      * @param  int  $pullRequestId  プルリクエストID
