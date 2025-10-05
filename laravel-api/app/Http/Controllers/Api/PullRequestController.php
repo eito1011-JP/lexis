@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Consts\ErrorType;
 use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
 use App\Dto\UseCase\PullRequest\MergePullRequestDto;
+use App\Dto\UseCase\PullRequest\UpdatePullRequestTitleDto;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestReviewerActionStatus;
 use App\Enums\PullRequestStatus;
@@ -13,7 +14,7 @@ use App\Http\Requests\Api\PullRequest\ClosePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\ShowRequest;
-use App\Http\Requests\Api\PullRequest\UpdatePullRequestTitleRequest;
+use App\Http\Requests\Api\PullRequest\UpdateRequest;
 use App\Http\Requests\CreatePullRequestRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
 use App\Models\ActivityLogOnPullRequest;
@@ -28,6 +29,7 @@ use App\UseCases\PullRequest\CreatePullRequestUseCase;
 use App\UseCases\PullRequest\IsConflictResolvedUseCase;
 use App\UseCases\PullRequest\MergePullRequestUseCase;
 use App\UseCases\PullRequest\ShowPullRequestUseCase;
+use App\UseCases\PullRequest\UpdatePullRequestTitleUseCase;
 use App\Dto\UseCase\PullRequest\ShowDto;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
@@ -56,6 +58,8 @@ class PullRequestController extends ApiBaseController
 
     protected ShowPullRequestUseCase $showPullRequestUseCase;
 
+    protected UpdatePullRequestTitleUseCase $updatePullRequestTitleUseCase;
+
     public function __construct(
         DocumentDiffService $documentDiffService,
         GitService $gitService,
@@ -64,7 +68,8 @@ class PullRequestController extends ApiBaseController
         PullRequestConflictService $pullRequestConflictService,
         IsConflictResolvedUseCase $isConflictResolvedUseCase,
         CreatePullRequestUseCase $createPullRequestUseCase,
-        ShowPullRequestUseCase $showPullRequestUseCase
+        ShowPullRequestUseCase $showPullRequestUseCase,
+        UpdatePullRequestTitleUseCase $updatePullRequestTitleUseCase
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->gitService = $gitService;
@@ -74,6 +79,7 @@ class PullRequestController extends ApiBaseController
         $this->isConflictResolvedUseCase = $isConflictResolvedUseCase;
         $this->createPullRequestUseCase = $createPullRequestUseCase;
         $this->showPullRequestUseCase = $showPullRequestUseCase;
+        $this->updatePullRequestTitleUseCase = $updatePullRequestTitleUseCase;
     }
 
     /**
@@ -445,56 +451,39 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエストのタイトルを更新する
      */
-    public function update(UpdatePullRequestTitleRequest $request, int $id): JsonResponse
+    public function update(UpdateRequest $request): JsonResponse
     {
-        DB::beginTransaction();
-
         try {
             // 1. 認証ユーザーか確認
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証されていません',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
-            // 2. pull_requestsテーブルをpull_request_idにてfirstOrFail
-            $pullRequest = PullRequest::findOrFail($id);
+            // 2. DTOを作成
+            $dto = new UpdatePullRequestTitleDto(
+                pullRequestId: $request->validated('pull_request_id'),
+                title: $request->validated('title'),
+                description: $request->validated('description'),
+            );
 
-            // 3. 新しいタイトルを取得
-            $newTitle = $request->validated('title');
-
-            // 4. activity_log_on_pull_requestsテーブルにレコードを作成
-            ActivityLogOnPullRequest::create([
-                'user_id' => $user->id,
-                'pull_request_id' => $pullRequest->id,
-                'action' => PullRequestActivityAction::PULL_REQUEST_TITLE_EDITED->value,
-                'old_pull_request_title' => $pullRequest->title,
-                'new_pull_request_title' => $newTitle,
-            ]);
-
-            // 5. プルリクエストレコードのtitleをrequest.titleにupdate
-            $pullRequest->update([
-                'title' => $newTitle,
-            ]);
-
-            DB::commit();
+            // 3. UseCaseを実行
+            $this->updatePullRequestTitleUseCase->execute($dto, $user);
 
             return response()->json();
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('プルリクエストタイトル更新エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-                'pull_request_id' => $id,
-                'user_id' => $user->id ?? null,
-            ]);
-
-            return response()->json([
-                'error' => 'プルリクエストタイトルの更新に失敗しました',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 

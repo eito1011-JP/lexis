@@ -80,68 +80,6 @@ type DiffDataInfo = {
   changed_fields: Record<string, DiffFieldInfo>;
 };
 
-// SmartDiffValueコンポーネント
-const SmartDiffValue: React.FC<{
-  label: string;
-  fieldInfo: DiffFieldInfo;
-  isMarkdown?: boolean;
-}> = ({ label, fieldInfo, isMarkdown = false }) => {
-  const renderValue = (value: any) => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
-    return String(value);
-  };
-
-  const renderContent = (content: string, isMarkdown: boolean) => {
-    if (!isMarkdown || !content) return content;
-
-    try {
-      return (
-        <div className="markdown-content prose prose-invert max-w-none">
-          <MarkdownRenderer>{content}</MarkdownRenderer>
-        </div>
-      );
-    } catch (error) {
-      return content;
-    }
-  };
-
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-
-      {fieldInfo.status === 'added' && (
-        <div className="bg-green-900/30 border rounded-md p-3 text-sm text-green-200">
-          {renderContent(renderValue(fieldInfo.current), isMarkdown)}
-        </div>
-      )}
-
-      {fieldInfo.status === 'deleted' && (
-        <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
-          {renderContent(renderValue(fieldInfo.original), isMarkdown)}
-        </div>
-      )}
-
-      {fieldInfo.status === 'modified' && (
-        <div className="space-y-1">
-          <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
-            {renderContent(renderValue(fieldInfo.original), isMarkdown)}
-          </div>
-          <div className="bg-green-900/30 border rounded-md p-3 text-sm text-green-200">
-            {renderContent(renderValue(fieldInfo.current), isMarkdown)}
-          </div>
-        </div>
-      )}
-
-      {fieldInfo.status === 'unchanged' && (
-        <div className="bg-gray-800 border border-gray-600 rounded-md p-3 text-sm text-gray-300">
-          {renderContent(renderValue(fieldInfo.current || fieldInfo.original), isMarkdown)}
-        </div>
-      )}
-    </div>
-  );
-};
-
 // タブ定義
 type TabType = 'activity' | 'changes';
 
