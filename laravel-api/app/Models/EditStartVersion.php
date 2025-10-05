@@ -48,7 +48,7 @@ class EditStartVersion extends Model
      */
     public function originalDocumentVersion()
     {
-        return $this->belongsTo(DocumentVersion::class, 'original_version_id')->withTrashed();
+        return $this->belongsTo(DocumentVersion::class, 'original_version_id');
     }
 
     /**
@@ -56,35 +56,42 @@ class EditStartVersion extends Model
      */
     public function currentDocumentVersion()
     {
-        return $this->belongsTo(DocumentVersion::class, 'current_version_id')->withTrashed();
+        return $this->belongsTo(DocumentVersion::class, 'current_version_id');
     }
 
     /**
-     * オリジナルカテゴリとのリレーション
+     * オリジナルカテゴリバージョンとのリレーション
      */
-    public function originalCategory()
+    public function originalCategoryVersion()
     {
-        return $this->belongsTo(CategoryVersion::class, 'original_version_id')->withTrashed();
+        return $this->belongsTo(CategoryVersion::class, 'original_version_id');
     }
 
     /**
-     * 現在のカテゴリとのリレーション
+     * 現在のカテゴリバージョンとのリレーション
      */
-    public function currentCategory()
+    public function currentCategoryVersion()
     {
-        return $this->belongsTo(CategoryVersion::class, 'current_version_id')->withTrashed();
+        return $this->belongsTo(CategoryVersion::class, 'current_version_id');
     }
 
     /**
-     * target_typeに基づいてオリジナルオブジェクトを動的に取得
+     * target_typeに基づいて元のオブジェクトを動的に取得
      */
     public function getOriginalObject()
     {
-        return match ($this->target_type) {
-            'document' => DocumentVersion::withTrashed()->find($this->original_version_id),
-            'category' => CategoryVersion::withTrashed()->find($this->original_version_id),
-            default => null,
-        };
+        if ($this->original_version_id === null) {
+            return null;
+        }
+        
+        switch ($this->target_type) {
+            case 'document':
+                return $this->originalDocumentVersion()->withTrashed()->first();
+            case 'category':
+                return $this->originalCategoryVersion()->withTrashed()->first();
+            default:
+                return null;
+        }
     }
 
     /**
@@ -92,10 +99,13 @@ class EditStartVersion extends Model
      */
     public function getCurrentObject()
     {
-        return match ($this->target_type) {
-            'document' => DocumentVersion::withTrashed()->find($this->current_version_id),
-            'category' => CategoryVersion::withTrashed()->find($this->current_version_id),
-            default => null,
-        };
+        switch ($this->target_type) {
+            case 'document':
+                return $this->currentDocumentVersion()->withTrashed()->first();
+            case 'category':
+                return $this->currentCategoryVersion()->withTrashed()->first();
+            default:
+                return null;
+        }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
+use App\Http\Requests\Api\UserBranch\FetchDiffRequest;
 use App\Services\DocumentDiffService;
 use App\UseCases\UserBranch\FetchDiffUseCase;
 use Exception;
@@ -63,7 +64,7 @@ class UserBranchController extends ApiBaseController
     /**
      * Git差分取得
      */
-    public function fetchDiff(): JsonResponse
+    public function fetchDiff(FetchDiffRequest $request): JsonResponse
     {
         try {
             $user = $this->user();
@@ -77,7 +78,7 @@ class UserBranchController extends ApiBaseController
             }
 
             // UseCaseを実行
-            $diffResult = $this->fetchDiffUseCase->execute($user);
+            $diffResult = $this->fetchDiffUseCase->execute($user, $request->validated()['user_branch_id']);
 
             return response()->json($diffResult);
 

@@ -18,33 +18,29 @@ class FetchDiffUseCase
      *
      * @throws NotFoundException
      */
-    public function execute(User $user): array
+    public function execute(User $user, int $userBranchId): array
     {
         try {
-            // ユーザーブランチと関連データを一括取得
-            $userBranch = $user->userBranches()->active()
-                ->with([
-                    'editStartVersions',
-                    'editStartVersions.originalDocumentVersion',
-                    'editStartVersions.currentDocumentVersion',
-                    'editStartVersions.originalCategory',
-                    'editStartVersions.currentCategory',
-                ])
-                ->first();
+            $userBranch = $user->userBranches()->active()->where('id', $userBranchId)->first();
 
             if (! $userBranch) {
                 throw new NotFoundException();
             }
+
+            // ユーザーブランチと関連データを一括取得
+            $userBranch->with([
+                'editStartVersions',
+                'editStartVersions.originalDocumentVersion',
+                'editStartVersions.currentDocumentVersion',
+                'editStartVersions.originalCategory',
+                'editStartVersions.currentCategory',
+            ]);
 
             // 差分データを生成
             $diffResult = $this->documentDiffService->generateDiffData($userBranch->editStartVersions);
 
             $diffResult['user_branch_id'] = $userBranch->id;
             $diffResult['organization_id'] = $userBranch->organization->id;
-
-
-            // 返すもの
-            // 該当のuser_branchで編集されたoriginalとcurrentのドキュメントとカテゴリバージョン
             
             return $diffResult;
         } catch (\Exception $e) {

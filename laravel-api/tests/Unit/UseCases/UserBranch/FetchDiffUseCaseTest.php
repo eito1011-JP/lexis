@@ -151,7 +151,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals($expectedDiffData['diff'], $result['diff']);
@@ -241,7 +241,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals($expectedDiffData['diff'], $result['diff']);
@@ -296,7 +296,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals($expectedDiffData['diff'], $result['diff']);
@@ -435,7 +435,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(4, $result['diff']);
@@ -510,7 +510,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
@@ -579,7 +579,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
@@ -631,7 +631,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('created', $result['diff'][0]['operation']);
@@ -693,7 +693,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
@@ -762,7 +762,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
@@ -814,7 +814,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('created', $result['diff'][0]['operation']);
@@ -877,7 +877,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('deleted', $result['diff'][0]['operation']);
@@ -940,7 +940,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('deleted', $result['diff'][0]['operation']);
@@ -976,7 +976,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEmpty($result['diff']);
@@ -1047,7 +1047,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('deleted', $result['diff'][0]['operation']);
@@ -1118,7 +1118,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user,  $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('deleted', $result['diff'][0]['operation']);
@@ -1174,7 +1174,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEmpty($result['diff']);
@@ -1263,7 +1263,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(2, $result['diff']);
@@ -1360,7 +1360,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(2, $result['diff']);
@@ -1484,7 +1484,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(3, $result['diff']);
@@ -1582,7 +1582,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(2, $result['diff']);
@@ -1691,7 +1691,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(2, $result['diff']);
@@ -1830,7 +1830,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(3, $result['diff']);
@@ -1895,7 +1895,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
@@ -1957,7 +1957,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('deleted', $result['diff'][0]['operation']);
@@ -2022,7 +2022,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
@@ -2090,7 +2090,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertEquals('deleted', $result['diff'][0]['operation']);
@@ -2192,7 +2192,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(2, $result['diff']);
@@ -2326,7 +2326,7 @@ class FetchDiffUseCaseTest extends TestCase
             ->andReturn($expectedDiffData);
 
         // Act
-        $result = $this->useCase->execute($this->user);
+        $result = $this->useCase->execute($this->user, $this->activeUserBranch->id);
 
         // Assert
         $this->assertCount(3, $result['diff']);
@@ -2345,6 +2345,6 @@ class FetchDiffUseCaseTest extends TestCase
         $this->expectException(NotFoundException::class);
 
         // Act
-        $this->useCase->execute($this->user);
+        $this->useCase->execute($this->user, $this->activeUserBranch->id);
     }
 }

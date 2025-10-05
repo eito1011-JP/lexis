@@ -6,6 +6,7 @@ use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class DocumentDiffService
 {
@@ -24,15 +25,19 @@ class DocumentDiffService
             $currentObject = $editStartVersion->getCurrentObject();
             $originalObject = $editStartVersion->getOriginalObject();
 
+            // currentObjectが存在しない場合はスキップ（データ整合性エラー）
+            if (!$currentObject) {
+                continue;
+            }
+
             // 同一ブランチで作成されたデータかどうかを判定
             $isNewCreation = $this->isNewCreation($editStartVersion, $currentObject);
             $isDocument = $editStartVersion->target_type === EditStartVersionTargetType::DOCUMENT->value;
 
             // 同一ブランチで作成されたデータが削除された場合は差分から除外
-            if ($isNewCreation && $currentObject && $currentObject->is_deleted) {
+            if ($isNewCreation && $currentObject->is_deleted) {
                 continue;
             }
-
 
             // 差分情報を生成
             $diffInfo = $this->generateDiffInfo($currentObject, $originalObject, $isDocument, $isNewCreation);
