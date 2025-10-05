@@ -76,7 +76,6 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/{id}/conflict/diff', [PullRequestController::class, 'fetchConflictDiff']);
         Route::post('/{id}/conflict/temporary', [PullRequestController::class, 'isConflictResolved']);
         Route::get('/{id}/comments', [CommentController::class, 'index']);
-        Route::get('/{id}/activity-log-on-pull-request', [PullRequestController::class, 'fetchActivityLog']);
         Route::post('/{id}/fix-request', [FixRequestController::class, 'sendFixRequest']);
         Route::put('/{id}', [PullRequestController::class, 'merge']);
         Route::patch('/{id}/close', [PullRequestController::class, 'close']);

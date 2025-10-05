@@ -3,6 +3,7 @@
 namespace App\UseCases\PullRequest;
 
 use App\Dto\UseCase\PullRequest\ShowDto;
+use App\Models\ActivityLogOnPullRequest;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Services\DocumentDiffService;
@@ -30,7 +31,6 @@ class ShowPullRequestUseCase
     public function execute(ShowDto $dto, User $user): array
     {
         try {
-        Log::info('プルリクエスト詳細取得UseCase'.json_encode($dto));
         // 1. プルリクエストを取得（status = opened or conflict）
         $pullRequest = PullRequest::with([
             'userBranch.user',
@@ -60,6 +60,51 @@ class ShowPullRequestUseCase
         $authorName = $pullRequest->userBranch->user->name ?? null;
         $authorEmail = $pullRequest->userBranch->user->email ?? null;
 
+        // 5. アクティビティログを取得
+        $activityLogs = ActivityLogOnPullRequest::with([
+            'user:id,name,email',
+            'comment:id,content,created_at',
+            'fixRequest:id,token,created_at',
+            'reviewer:id,name,email',
+            'pullRequestEditSession:id,token,created_at',
+        ])
+            ->where('pull_request_id', $dto->pullRequestId)
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // 6. アクティビティログをレスポンス形式に変換
+        $activityLogsData = $activityLogs->map(function ($log) {
+            return [
+                'id' => $log->id,
+                'pull_request_id' => $log->pull_request_id,
+                'action' => $log->action,
+                'actor' => $log->user ? [
+                    'id' => $log->user->id,
+                    'name' => $log->user->name ?? $log->user->email,
+                    'email' => $log->user->email,
+                ] : null,
+                'comment' => $log->comment ? [
+                    'id' => $log->comment->id,
+                    'content' => $log->comment->content,
+                    'created_at' => $log->comment->created_at->toISOString(),
+                ] : null,
+                'fix_request' => $log->fixRequest ? [
+                    'id' => $log->fixRequest->id,
+                    'token' => $log->fixRequest->token,
+                    'created_at' => $log->fixRequest->created_at->toISOString(),
+                ] : null,
+                'pull_request_edit_session' => $log->pullRequestEditSession ? [
+                    'id' => $log->pullRequestEditSession->id,
+                    'token' => $log->pullRequestEditSession->token,
+                    'created_at' => $log->pullRequestEditSession->created_at->toISOString(),
+                ] : null,
+                'old_pull_request_title' => $log->old_pull_request_title,
+                'new_pull_request_title' => $log->new_pull_request_title,
+                'fix_request_token' => $log->fix_request_token,
+                'created_at' => $log->created_at->toISOString(),
+            ];
+        })->toArray();
+
         return [
             ...$diffResult,
             'title' => $pullRequest->title,
@@ -68,7 +113,8 @@ class ShowPullRequestUseCase
             'author_name' => $authorName,
             'author_email' => $authorEmail,
             'reviewers' => $reviewers,
-                'created_at' => $pullRequest->created_at,
+            'created_at' => $pullRequest->created_at,
+            'activity_logs' => $activityLogsData,
             ];
         } catch (\Exception $e) {
             Log::error($e);

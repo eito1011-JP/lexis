@@ -4,7 +4,6 @@ import type { JSX } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   fetchPullRequestDetail,
-  fetchActivityLog,
   type PullRequestDetailResponse,
   type ActivityLog,
 } from '@/api/pullRequest';
@@ -531,25 +530,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     }
   }, [id]);
 
-  // ActivityLog取得API呼び出し関数
-  const fetchActivityLogs = useCallback(async () => {
-    if (!id) return;
-
-    setLoadingActivityLogs(true);
-    try {
-      const logs = await fetchActivityLog(id);
-      setActivityLogs(logs);
-    } catch (error) {
-      console.error('アクティビティログ取得エラー:', error);
-      setToast({
-        message: 'アクティビティログの取得に失敗しました',
-        type: 'error',
-      });
-    } finally {
-      setLoadingActivityLogs(false);
-    }
-  }, [id]);
-
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
   }, [id, isCheckingConflict, conflictStatus.mergeable]);
@@ -636,13 +616,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     fetchData();
   }, [id]);
 
-  // アクティビティタブの時にコメントとActivityLogを取得
-  useEffect(() => {
-    if (activeTab === 'activity' && id) {
-      // fetchComments();
-      fetchActivityLogs();
-    }
-  }, [activeTab, id, fetchActivityLogs]);
 
   useEffect(() => {
     if (!showReviewerModal) return;
@@ -821,9 +794,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
       setToast({ message: 'タイトルを更新しました', type: 'success' });
       setShowTitleEditModal(false);
-
-      // アクティビティログを再取得
-      fetchActivityLogs();
     } catch (error) {
       console.error('タイトル更新エラー:', error);
       setToast({
@@ -876,9 +846,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       );
 
       setToast({ message: 'レビュー依頼を送信しました', type: 'success' });
-
-      // アクティビティログを再取得
-      fetchActivityLogs();
     } catch (error) {
       console.error('レビュー依頼送信エラー:', error);
       setToast({
