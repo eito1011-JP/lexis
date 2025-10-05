@@ -56,16 +56,12 @@ class ShowPullRequestUseCase
             ];
         })->toArray();
 
-        // 4. プルリクエスト作成者の名前とメールアドレスを取得
-        $authorName = $pullRequest->userBranch->user->name ?? null;
-        $authorEmail = $pullRequest->userBranch->user->email ?? null;
-
         // 5. アクティビティログを取得
         $activityLogs = ActivityLogOnPullRequest::with([
-            'user:id,name,email',
+            'user:id,nickname,email',
             'comment:id,content,created_at',
             'fixRequest:id,token,created_at',
-            'reviewer:id,name,email',
+            'reviewer:id,nickname,email',
             'pullRequestEditSession:id,token,created_at',
         ])
             ->where('pull_request_id', $dto->pullRequestId)
@@ -80,7 +76,7 @@ class ShowPullRequestUseCase
                 'action' => $log->action,
                 'actor' => $log->user ? [
                     'id' => $log->user->id,
-                    'name' => $log->user->name ?? $log->user->email,
+                    'name' => $log->user->nickname ?? $log->user->email,
                     'email' => $log->user->email,
                 ] : null,
                 'comment' => $log->comment ? [
@@ -110,8 +106,8 @@ class ShowPullRequestUseCase
             'title' => $pullRequest->title,
             'description' => $pullRequest->description,
             'status' => $pullRequest->status,
-            'author_name' => $authorName,
-            'author_email' => $authorEmail,
+            'author_nickname' => $pullRequest->userBranch->user->nickname,
+            'author_email' => $pullRequest->userBranch->user->email,
             'reviewers' => $reviewers,
             'created_at' => $pullRequest->created_at,
             'activity_logs' => $activityLogsData,

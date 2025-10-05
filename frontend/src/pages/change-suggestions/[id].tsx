@@ -26,46 +26,9 @@ import { Closed } from '@/components/icon/common/Closed';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
-import { MarkdownRenderer } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { CheckMark } from '@/components/icon/common/CheckMark';
 import SendReview from '@/components/icon/common/SendReview';
-
-// 差分データの型定義
-type DiffItem = {
-  id: number;
-  slug: string;
-  sidebar_label: string;
-  description?: string;
-  title?: string;
-  content?: string;
-  position?: number;
-  file_order?: number;
-  parent_entity_id?: number;
-  category_id?: number;
-  status: string;
-  user_branch_id: number;
-  created_at: string;
-  updated_at: string;
-};
-
-// ユーザーオブジェクトの型定義
-type User = {
-  id: number;
-  email: string;
-  role?: string;
-  created_at?: string;
-};
-
-// コメントの型定義
-type Comment = {
-  id: number;
-  author: string | null;
-  content: string;
-  is_resolved: boolean;
-  created_at: string;
-  updated_at: string;
-};
 
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -379,67 +342,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('activity');
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loadingActivityLogs, setLoadingActivityLogs] = useState(false);
   const [showTitleEditModal, setShowTitleEditModal] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
-
-  // フィールド情報を取得する関数
-  const getFieldInfo = (
-    diffInfo: DiffDataInfo | null,
-    fieldName: string,
-    currentValue: any,
-    originalValue?: any
-  ): DiffFieldInfo => {
-    if (!diffInfo) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-
-    if (diffInfo.operation === 'deleted') {
-      return {
-        status: 'deleted',
-        current: null,
-        original: originalValue,
-      };
-    }
-
-    if (!diffInfo.changed_fields[fieldName]) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-    return diffInfo.changed_fields[fieldName];
-  };
-
-  // コメント取得API呼び出し関数
-  const fetchComments = useCallback(async () => {
-    if (!id) return;
-
-    setLoadingComments(true);
-    try {
-      const response = await apiClient.get(
-        `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET_DETAIL}/${id}/comments`
-      );
-      setComments(response || []);
-    } catch (error) {
-      console.error('コメント取得エラー:', error);
-      setToast({
-        message: 'コメントの取得に失敗しました',
-        type: 'error',
-      });
-    } finally {
-      setLoadingComments(false);
-    }
-  }, [id]);
 
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
@@ -502,6 +409,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         const data = await fetchPullRequestDetail(id);
         setPullRequestData(data);
 
+        // アクティビティログをstateにセット
+        if (data.activity_logs) {
+          setActivityLogs(data.activity_logs);
+        }
+
         // プルリクエストデータが取得できた場合、レビュアー設定のためにユーザー一覧を取得
         if (data.reviewers && data.reviewers.length > 0) {
           try {
@@ -560,6 +472,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         fetchPullRequestDetail(id)
           .then(data => {
             setPullRequestData(data);
+            // アクティビティログも更新
+            if (data.activity_logs) {
+              setActivityLogs(data.activity_logs);
+            }
           })
           .catch(error => {
             console.error('プルリクエスト詳細再取得エラー:', error);
@@ -642,8 +558,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
       setToast({ message: 'コメントを投稿しました', type: 'success' });
       setComment('');
-      // コメント投稿後にコメントリストを再取得
-      // fetchComments();
+      
+      // コメント投稿後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
     } catch (error) {
       console.error('コメント投稿エラー:', error);
       setToast({
@@ -691,20 +612,19 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
     setIsUpdatingTitle(true);
     try {
-      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE_TITLE}/${id}/title`, {
+      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE}/${id}/`, {
         title: editingTitle.trim(),
       });
 
-      // プルリクエストデータを更新
-      if (pullRequestData) {
-        setPullRequestData({
-          ...pullRequestData,
-          title: editingTitle.trim(),
-        });
-      }
-
       setToast({ message: 'タイトルを更新しました', type: 'success' });
       setShowTitleEditModal(false);
+
+      // タイトル更新後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
     } catch (error) {
       console.error('タイトル更新エラー:', error);
       setToast({
@@ -757,6 +677,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       );
 
       setToast({ message: 'レビュー依頼を送信しました', type: 'success' });
+
+      // レビュー依頼再送後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
     } catch (error) {
       console.error('レビュー依頼送信エラー:', error);
       setToast({
@@ -996,7 +923,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 </div>
               </div>
               {/* アクティビティログリスト（コメント以外） */}
-              {loadingActivityLogs ? (
+              {loading || loadingActivityLogs ? (
                 <div className="timeline-item">
                   <div className="timeline-avatar">
                     <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
@@ -1008,68 +935,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   </div>
                 </div>
               ) : (
-                activityLogs
-                  .filter(log => log.action !== 'commented') // コメント以外のActivityLogのみ表示
-                  .map((log, index) => (
-                    <ActivityLogItem key={log.id} log={log} pullRequestId={id || ''} />
-                  ))
-              )}
-
-              {/* コメントリスト */}
-              {loadingComments ? (
-                <div className="timeline-item">
-                  <div className="timeline-avatar">
-                    <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
-                  </div>
-                  <div className="timeline-content timeline-content-with-line">
-                    <div className="border border-gray-600 rounded-lg p-6 flex-1">
-                      <p className="text-gray-400">コメントを読み込み中...</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                comments.map((commentItem, index) => (
-                  <div key={commentItem.id} className="timeline-item">
-                    <div className="timeline-avatar">
-                      <span className="text-white text-sm">👤</span>
-                    </div>
-                    <div
-                      className={`timeline-content ${index < comments.length - 1 ? 'timeline-content-with-line' : ''}`}
-                    >
-                      <div className="relative border border-gray-600 rounded-lg p-6 w-full max-w-none pt-1">
-                        {/* 吹き出しの三角形 */}
-                        <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
-                        <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
-
-                        {/* コメントヘッダー */}
-                        <div className="flex items-center justify-between mb-2 ml-[-0.7rem]">
-                          <div className="flex items-center gap-3">
-                            <span className="text-white font-semibold">
-                              {commentItem.author || '不明なユーザー'}
-                            </span>
-                            <span className="text-gray-400 text-sm">
-                              {formatDistanceToNow(new Date(commentItem.created_at), {
-                                addSuffix: true,
-                                locale: ja,
-                              })}
-                            </span>
-                          </div>
-                          {commentItem.is_resolved && (
-                            <span className="text-green-400 text-sm px-2 py-1 bg-green-900/30 border rounded">
-                              解決済み
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 白い区切り線 */}
-                        <div className="w-full h-px bg-white mb-3 mx-[-24px]"></div>
-                        {/* コメント内容 */}
-                        <div className="text-white text-base leading-relaxed whitespace-pre-wrap ml-[-0.7rem]">
-                          {commentItem.content}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                activityLogs.map((log, index) => (
+                  <ActivityLogItem key={log.id} log={log} pullRequestId={id || ''} />
                 ))
               )}
             </div>
@@ -1308,6 +1175,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);
                                         setPullRequestData(updatedData);
+                                        // アクティビティログも更新
+                                        if (updatedData.activity_logs) {
+                                          setActivityLogs(updatedData.activity_logs);
+                                        }
                                       } catch (error) {
                                         console.error('レビュアー設定エラー:', error);
                                       }
@@ -1335,6 +1206,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);
                                         setPullRequestData(updatedData);
+                                        // アクティビティログも更新
+                                        if (updatedData.activity_logs) {
+                                          setActivityLogs(updatedData.activity_logs);
+                                        }
                                       } catch (error) {
                                         console.error('レビュアー設定エラー:', error);
                                       }
