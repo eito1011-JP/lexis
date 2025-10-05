@@ -3,10 +3,11 @@
 namespace App\UseCases\PullRequest;
 
 use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
+use App\Consts\Flag;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\PullRequestStatus;
-use App\Models\DocumentCategory;
+use App\Models\CategoryVersion;
 use App\Models\DocumentVersion;
 use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
@@ -37,7 +38,7 @@ class CreatePullRequestUseCase
      *
      * @throws \Exception
      */
-    public function execute(CreatePullRequestDto $dto, User $user): array
+    public function execute(CreatePullRequestDto $dto, User $user): PullRequest
     {
         DB::beginTransaction();
 
@@ -49,16 +50,17 @@ class CreatePullRequestUseCase
             $userBranch = $this->userBranchService->findActiveUserBranch($dto->userBranchId);
 
             // 3. document_versionsをactiveなuser_branch_idで絞り込んでstatus = pushedにupdate
-            $this->updateDocumentVersionsStatus($dto->userBranchId);
+            $this->updateDocumentVersionStatus($dto->userBranchId);
 
             // 4. document_categoriesをactiveなuser_branch_idで絞り込んでstatus = pushedにupdate
-            $this->updateDocumentCategoriesStatus($dto->userBranchId);
+            $this->updateCategoryVersionStatus($dto->userBranchId);
 
             // 5. pull_requestテーブルにレコードを作成（status = opened）
             $pullRequest = $this->createPullRequest($dto, $userBranch);
 
             // 6. user_branchを非アクティブにする
-            $this->userBranchService->deactivateUserBranch($dto->userBranchId);
+            $userBranch->update(['is_active' => Flag::FALSE]);
+            $userBranch->save();
 
             // 7. レビュアーのuser_idを取得してpull_request_reviewersテーブルに一括insert
             if (! empty($dto->reviewers)) {
@@ -67,9 +69,7 @@ class CreatePullRequestUseCase
 
             DB::commit();
 
-            return [
-                'pull_request_id' => $pullRequest->id,
-            ];
+            return $pullRequest;
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -82,7 +82,7 @@ class CreatePullRequestUseCase
     /**
      * document_versionsのステータスをpushedに更新
      */
-    private function updateDocumentVersionsStatus(int $userBranchId): void
+    private function updateDocumentVersionStatus(int $userBranchId): void
     {
         DocumentVersion::where('user_branch_id', $userBranchId)
             ->update(['status' => DocumentStatus::PUSHED->value]);
@@ -91,9 +91,9 @@ class CreatePullRequestUseCase
     /**
      * document_categoriesのステータスをpushedに更新
      */
-    private function updateDocumentCategoriesStatus(int $userBranchId): void
+    private function updateCategoryVersionStatus(int $userBranchId): void
     {
-        DocumentCategory::where('user_branch_id', $userBranchId)
+        CategoryVersion::where('user_branch_id', $userBranchId)
             ->update(['status' => DocumentCategoryStatus::PUSHED->value]);
     }
 

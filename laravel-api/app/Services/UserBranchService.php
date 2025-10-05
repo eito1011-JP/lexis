@@ -77,21 +77,4 @@ class UserBranchService extends BaseService
 
         return $userBranch;
     }
-
-    /**
-     * ユーザーブランチを非アクティブにする
-     *
-     * @param  int  $userBranchId  ユーザーブランチID
-     * @return bool 更新が成功した場合はtrue
-     */
-    public function deactivateUserBranch(int $userBranchId): bool
-    {
-        $userBranch = UserBranch::query()->active()->find($userBranchId);
-
-        if (! $userBranch) {
-            throw new NotFoundException;
-        }
-
-        return $userBranch->update(['is_active' => Flag::FALSE]);
-    }
 }
