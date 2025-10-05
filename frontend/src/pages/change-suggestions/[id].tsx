@@ -142,23 +142,6 @@ const SmartDiffValue: React.FC<{
   );
 };
 
-// SlugBreadcrumbコンポーネント
-const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
-  const parts = slug.split('/').filter(Boolean);
-
-  return (
-    <div className="mb-4 text-sm text-gray-400">
-      <span>/</span>
-      {parts.map((part, index) => (
-        <span key={index}>
-          <span className="text-gray-300">{part}</span>
-          {index < parts.length - 1 && <span>/</span>}
-        </span>
-      ))}
-    </div>
-  );
-};
-
 // タブ定義
 type TabType = 'activity' | 'changes';
 
@@ -465,16 +448,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [showTitleEditModal, setShowTitleEditModal] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
-
-  // 差分データをIDでマップ化する関数
-  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
-    if (!pullRequestData?.diff_data) return null;
-    return (
-      pullRequestData.diff_data.find(
-        (diff: DiffDataInfo) => diff.id === id && diff.type === type
-      ) || null
-    );
-  };
 
   // フィールド情報を取得する関数
   const getFieldInfo = (
@@ -1221,14 +1194,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 <div className="text-white text-sm mb-4">
                   {pullRequestData && (
                     <>
-                      {pullRequestData.document_versions?.length > 0 && (
+                      {pullRequestData.diff.filter(item => item.type === 'document').length > 0 && (
                         <div className="mb-2">
-                          📝 ドキュメント: {pullRequestData.document_versions.length}件の変更
+                          📝 ドキュメント: {pullRequestData.diff.filter(item => item.type === 'document').length}件の変更
                         </div>
                       )}
-                      {pullRequestData.category_versions?.length > 0 && (
+                      {pullRequestData.diff.filter(item => item.type === 'category').length > 0 && (
                         <div className="mb-2">
-                          📁 カテゴリ: {pullRequestData.category_versions.length}件の変更
+                          📁 カテゴリ: {pullRequestData.diff.filter(item => item.type === 'category').length}件の変更
                         </div>
                       )}
                     </>
