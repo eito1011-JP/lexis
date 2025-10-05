@@ -15,40 +15,6 @@ import { useToast } from '@/contexts/ToastContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type BreadcrumbItem } from '@/api/category';
 
-// 差分データの型定義
-type CategoryVersion = {
-  id: number;
-  entity_id: number;
-  parent_entity_id?: number;
-  organization_id: number;
-  title: string;
-  description?: string;
-  status: string;
-  user_branch_id?: number;
-  pull_request_edit_session_id?: number;
-  is_deleted: number;
-  deleted_at?: string;
-  created_at: string;
-  updated_at: string;
-};
-
-type DocumentVersion = {
-  id: number;
-  entity_id: number;
-  organization_id: number;
-  user_id?: number;
-  user_branch_id?: number;
-  pull_request_edit_session_id?: number;
-  status: string;
-  description: string;
-  title: string;
-  category_entity_id?: number;
-  is_deleted: number;
-  deleted_at?: string;
-  created_at: string;
-  updated_at: string;
-};
-
 type FieldChangeInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
   current: any;
