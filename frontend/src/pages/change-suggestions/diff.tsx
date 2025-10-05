@@ -7,19 +7,17 @@ import {
   approvePullRequest,
   startPullRequestEditSession,
   type PullRequestDetailResponse,
+  type DiffData,
+  type DiffFieldInfo,
 } from '@/api/pullRequest';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Folder } from '@/components/icon/common/Folder';
 import { markdownStyles } from '@/styles/markdownContent';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
-import { mapBySlug } from '@/utils/diffUtils';
 import { diffStyles } from '@/styles/diffStyles';
 import { StatusBanner } from '@/components/diff/StatusBanner';
 import { ConfirmationActionDropdown } from '@/components/diff/ConfirmationActionDropdown';
 import type {
-  DiffItem,
-  DiffFieldInfo,
-  DiffDataInfo,
   TabType,
   ConfirmationAction,
 } from '@/types/diff';
@@ -386,7 +384,7 @@ const SmartDiffValue = ({
   };
 
   // マークダウンの本文フィールドには行ベース差分を使用
-  if (isMarkdown && label === '本文') {
+  if (isMarkdown && label === '説明') {
     if (fieldInfo.status === 'modified') {
       return (
         <div className="mb-6">
@@ -471,19 +469,9 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     'create_correction_request'
   );
 
-  // 差分データをIDでマップ化する関数
-  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
-    if (!pullRequestData?.diff_data) return null;
-    return (
-      pullRequestData.diff_data.find(
-        (diff: DiffDataInfo) => diff.id === id && diff.type === type
-      ) || null
-    );
-  };
-
   // フィールド情報を取得する関数
   const getFieldInfo = (
-    diffInfo: DiffDataInfo | null,
+    diffInfo: DiffData | null,
     fieldName: string,
     currentValue: any,
     originalValue?: any
@@ -573,7 +561,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
       <AdminLayout 
         title="変更内容詳細"
         sidebar={true}
-        showDocumentSideContent={true}
+        showDocumentSideContent={false}
       >
         <div className="flex flex-col items-center justify-center h-full">
           <p className="text-gray-400">データが見つかりません</p>
@@ -629,7 +617,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     <AdminLayout 
       title="変更内容詳細"
       sidebar={true}
-      showDocumentSideContent={true}
+      showDocumentSideContent={false}
     >
       <style>{markdownStyles}</style>
       <style>{diffStyles}</style>
@@ -690,43 +678,46 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
         {pullRequestData && (
           <>
             {(() => {
-              const originalDocs = mapBySlug(pullRequestData.original_document_versions || []);
-              const originalCats = mapBySlug(pullRequestData.original_document_categories || []);
+              // diffデータからカテゴリとドキュメントを分離
+              const categoryDiffs = pullRequestData.diff.filter(d => d.type === 'category');
+              const documentDiffs = pullRequestData.diff.filter(d => d.type === 'document');
 
               return (
                 <>
                   {/* カテゴリの変更 */}
-                  {pullRequestData.document_categories.length > 0 && (
+                  {categoryDiffs.length > 0 && (
                     <div className="mb-10">
                       <h2 className="text-xl font-bold mb-6 flex items-center border-b border-gray-700 pb-3">
                         <Folder className="w-5 h-5 mr-2" />
-                        カテゴリの変更 × {pullRequestData.document_categories.length}
+                        カテゴリの変更 × {categoryDiffs.length}
                       </h2>
                       <div className="space-y-6 mr-20">
-                        {pullRequestData.document_categories.map((category: DiffItem) => {
-                          const diffInfo = getDiffInfoById(category.id, 'category');
-                          const originalCategory = originalCats[category.slug];
+                        {categoryDiffs.map((diffItem) => {
+                          const currentCategory = diffItem.snapshots.current.data;
+                          const originalCategory = Array.isArray(diffItem.snapshots.original) 
+                            ? null 
+                            : diffItem.snapshots.original.data;
 
                           return (
                             <div
-                              key={category.id}
+                              key={diffItem.id}
                               className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                             >
                               <SmartDiffValue
                                 label="カテゴリ名"
                                 fieldInfo={getFieldInfo(
-                                  diffInfo,
+                                  diffItem,
                                   'title',
-                                  category.title,
+                                  currentCategory?.title,
                                   originalCategory?.title
                                 )}
                               />
                               <SmartDiffValue
                                 label="説明"
                                 fieldInfo={getFieldInfo(
-                                  diffInfo,
+                                  diffItem,
                                   'description',
-                                  category.description,
+                                  currentCategory?.description,
                                   originalCategory?.description
                                 )}
                                 isMarkdown={true}
@@ -741,58 +732,42 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                   {/* ドキュメントの変更数表示 */}
                   <h2 className="text-xl font-bold mb-6 flex items-center">
                     <DocumentDetailed className="w-6 h-6 mr-2" />
-                    ドキュメントの変更 × {pullRequestData.document_versions.length}
+                    ドキュメントの変更 × {documentDiffs.length}
                   </h2>
 
                   {/* ドキュメントの変更 */}
-                  {pullRequestData.document_versions.length > 0 && (
+                  {documentDiffs.length > 0 && (
                     <div className="mb-8 mr-20">
                       <div className="space-y-6">
-                        {pullRequestData.document_versions.map((document: DiffItem) => {
-                          const diffInfo = getDiffInfoById(document.id, 'document');
-                          const originalDocument = originalDocs[document.slug];
+                        {documentDiffs.map((diffItem) => {
+                          const currentDocument = diffItem.snapshots.current.data;
+                          const originalDocument = Array.isArray(diffItem.snapshots.original)
+                            ? null
+                            : diffItem.snapshots.original.data;
 
                           return (
                             <div
-                              key={document.id}
+                              key={diffItem.id}
                               className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                             >
                               <SmartDiffValue
-                                label="Slug"
-                                fieldInfo={getFieldInfo(
-                                  diffInfo,
-                                  'slug',
-                                  document.slug,
-                                  originalDocument?.slug
-                                )}
-                              />
-                              <SmartDiffValue
                                 label="タイトル"
                                 fieldInfo={getFieldInfo(
-                                  diffInfo,
-                                  'sidebar_label',
-                                  document.sidebar_label,
-                                  originalDocument?.sidebar_label
+                                  diffItem,
+                                  'title',
+                                  currentDocument?.status === 'title',
+                                  originalDocument?.status === 'title'
                                 )}
                               />
                               <SmartDiffValue
-                                label="公開設定"
+                                label="説明"
                                 fieldInfo={getFieldInfo(
-                                  diffInfo,
-                                  'is_public',
-                                  document.status === 'published',
-                                  originalDocument?.status === 'published'
+                                  diffItem,
+                                  'description',
+                                  currentDocument?.description,
+                                  originalDocument?.description
                                 )}
-                              />
-                              <SmartDiffValue
-                                label="本文"
-                                fieldInfo={getFieldInfo(
-                                  diffInfo,
-                                  'content',
-                                  document.content,
-                                  originalDocument?.content
-                                )}
-                                isMarkdown
+                                isMarkdown={true}
                               />
                             </div>
                           );

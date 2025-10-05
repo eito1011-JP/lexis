@@ -75,20 +75,42 @@ export interface ActivityLog {
   fix_request_token: string | null;
 }
 
+// 差分フィールド情報の型定義
+export interface DiffFieldInfo {
+  status: 'added' | 'deleted' | 'modified' | 'unchanged';
+  current: any;
+  original: any;
+}
+
+// 差分アイテムの型定義
+export interface DiffData {
+  id: number;
+  type: 'document' | 'category';
+  operation: 'created' | 'updated' | 'deleted';
+  snapshots: {
+    current: {
+      breadcrumbs: any[];
+      data: any;
+    };
+    original: {
+      breadcrumbs: any[];
+      data: any;
+    } | [];
+  };
+  changed_fields: Record<string, DiffFieldInfo>;
+}
+
 // プルリクエスト詳細レスポンスの型定義
 export interface PullRequestDetailResponse {
-  document_versions: any[];
-  category_versions: any[];
-  original_document_versions?: any[];
-  original_category_versions?: any[];
-  diff_data: any[];
+  diff: DiffData[];
   title: string;
   description: string;
   status: 'opened' | 'merged' | 'closed' | 'conflict';
-  author_name: string;
+  author_name: string | null;
   author_email: string;
   reviewers: Reviewer[];
   created_at: string;
+  activity_logs: ActivityLog[];
 }
 
 /**
