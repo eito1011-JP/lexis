@@ -13,9 +13,9 @@ use App\Http\Requests\Api\PullRequest\ClosePullRequestRequest;
 use App\Http\Requests\Api\PullRequest\DetectConflictRequest;
 use App\Http\Requests\Api\PullRequest\FetchActivityLogRequest;
 use App\Http\Requests\Api\PullRequest\MergePullRequestRequest;
+use App\Http\Requests\Api\PullRequest\ShowRequest;
 use App\Http\Requests\Api\PullRequest\UpdatePullRequestTitleRequest;
 use App\Http\Requests\CreatePullRequestRequest;
-use App\Http\Requests\FetchPullRequestDetailRequest;
 use App\Http\Requests\FetchPullRequestsRequest;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\PullRequest;
@@ -28,6 +28,8 @@ use App\Services\PullRequestConflictService;
 use App\UseCases\PullRequest\CreatePullRequestUseCase;
 use App\UseCases\PullRequest\IsConflictResolvedUseCase;
 use App\UseCases\PullRequest\MergePullRequestUseCase;
+use App\UseCases\PullRequest\ShowPullRequestUseCase;
+use App\Dto\UseCase\PullRequest\ShowDto;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -53,6 +55,8 @@ class PullRequestController extends ApiBaseController
 
     protected CreatePullRequestUseCase $createPullRequestUseCase;
 
+    protected ShowPullRequestUseCase $showPullRequestUseCase;
+
     public function __construct(
         DocumentDiffService $documentDiffService,
         GitService $gitService,
@@ -60,7 +64,8 @@ class PullRequestController extends ApiBaseController
         CategoryFolderService $categoryFolderService,
         PullRequestConflictService $pullRequestConflictService,
         IsConflictResolvedUseCase $isConflictResolvedUseCase,
-        CreatePullRequestUseCase $createPullRequestUseCase
+        CreatePullRequestUseCase $createPullRequestUseCase,
+        ShowPullRequestUseCase $showPullRequestUseCase
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->gitService = $gitService;
@@ -69,6 +74,7 @@ class PullRequestController extends ApiBaseController
         $this->pullRequestConflictService = $pullRequestConflictService;
         $this->isConflictResolvedUseCase = $isConflictResolvedUseCase;
         $this->createPullRequestUseCase = $createPullRequestUseCase;
+        $this->showPullRequestUseCase = $showPullRequestUseCase;
     }
 
     /**
@@ -197,70 +203,33 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエスト詳細を取得
      */
-    public function show(FetchPullRequestDetailRequest $request): JsonResponse
+    public function show(ShowRequest $request): JsonResponse
     {
         try {
             // 1. 認証ユーザーか確認
             $user = $this->user();
 
             if (! $user) {
-                return response()->json([
-                    'error' => '認証されていません',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
-            // 2. プルリクエストを取得（status = opened or conflict）
-            $pullRequest = PullRequest::with([
-                'userBranch.user',
-                'userBranch.editStartVersions',
-                'userBranch.editStartVersions.originalDocumentVersion',
-                'userBranch.editStartVersions.currentDocumentVersion',
-                'userBranch.editStartVersions.originalDocumentVersion.category',
-                'userBranch.editStartVersions.currentDocumentVersion.category',
-                'userBranch.editStartVersions.originalCategory',
-                'userBranch.editStartVersions.currentCategory',
-                'reviewers.user',
-            ])
-                ->where('id', $request->validated('id'))
-                ->firstOrFail();
+            // 2. UseCaseを実行してプルリクエスト詳細を取得
+            $dto = new ShowDto($request->validated('pull_request_id'));
+            $result = $this->showPullRequestUseCase->execute($dto, $user);
 
-            // 3. 差分データを生成
-            $diffResult = $this->documentDiffService->generateDiffData($pullRequest->userBranch->editStartVersions);
+            return response()->json($result);
 
-            // 4. レビュアー情報を取得
-            $reviewers = $pullRequest->reviewers->map(function ($reviewer) {
-                return [
-                    'user_id' => $reviewer->user->id,
-                    'email' => $reviewer->user->email,
-                    'action_status' => $reviewer->action_status,
-                ];
-            })->toArray();
-
-            // 5. プルリクエスト作成者の名前とメールアドレスを取得
-            $authorName = $pullRequest->userBranch->user->name ?? null;
-            $authorEmail = $pullRequest->userBranch->user->email ?? null;
-
-            return response()->json([
-                ...$diffResult,
-                'title' => $pullRequest->title,
-                'description' => $pullRequest->description,
-                'status' => $pullRequest->status,
-                'author_name' => $authorName,
-                'author_email' => $authorEmail,
-                'reviewers' => $reviewers,
-                'created_at' => $pullRequest->created_at,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('プルリクエスト詳細取得エラー: '.$e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString(),
-                'pull_request_id' => $request->validated('id'),
-            ]);
-
-            return response()->json([
-                'error' => 'プルリクエスト詳細の取得に失敗しました',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 
