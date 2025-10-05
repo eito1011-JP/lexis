@@ -26,6 +26,7 @@ import type {
 import { TABS } from '@/types/diff';
 import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
+import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 // プラスアイコンコンポーネント
 const PlusIcon = ({ className }: { className?: string }) => (
@@ -712,8 +713,14 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                               key={category.id}
                               className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                             >
+                              {/* パンクズリスト追加 */}
+                              {diffItem.snapshots?.current?.breadcrumbs && (
+                                <div className="mb-4">
+                                  <Breadcrumb breadcrumbs={diffItem.snapshots.current.breadcrumbs} />
+                                </div>
+                              )}
                               <SmartDiffValue
-                                label="カテゴリ名"
+                                label="タイトル"
                                 fieldInfo={getFieldInfo(
                                   diffInfo,
                                   'title',
@@ -757,6 +764,12 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
                               key={document.id}
                               className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                             >
+                              {/* パンクズリスト追加 */}
+                              {diffItem.snapshots?.current?.breadcrumbs && (
+                                <div className="mb-4">
+                                  <Breadcrumb breadcrumbs={diffItem.snapshots.current.breadcrumbs} />
+                                </div>
+                              )}
                               <SmartDiffValue
                                 label="Slug"
                                 fieldInfo={getFieldInfo(
