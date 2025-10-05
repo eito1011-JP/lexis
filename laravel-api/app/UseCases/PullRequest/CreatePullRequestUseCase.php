@@ -59,7 +59,7 @@ class CreatePullRequestUseCase
             $pullRequest = $this->createPullRequest($dto, $userBranch);
 
             // 6. user_branchを非アクティブにする
-            $userBranch->update(['is_active' => Flag::FALSE]);
+            $userBranch->deactivate();
             $userBranch->save();
 
             // 7. レビュアーのuser_idを取得してpull_request_reviewersテーブルに一括insert
