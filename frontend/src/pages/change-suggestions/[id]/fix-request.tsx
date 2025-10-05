@@ -35,11 +35,11 @@ type DiffItem = {
 // ステータスバナーコンポーネント
 const StatusBanner: React.FC<{
   status: string;
-  authorEmail: string;
+  authorNickname: string;
   createdAt: string;
   conflict: boolean;
   title: string;
-}> = ({ status, authorEmail, createdAt, conflict, title }) => {
+}> = ({ status, authorNickname, createdAt, conflict, title }) => {
   let button;
   switch (true) {
     case conflict:
@@ -100,7 +100,7 @@ const StatusBanner: React.FC<{
       <div className="flex items-center justify-start">
         {button}
         <span className="font-medium text-[#B1B1B1] ml-4">
-          {authorEmail}さんが{' '}
+          {authorNickname}さんが{' '}
           {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: ja })}{' '}
           に変更を提出しました
         </span>
@@ -259,7 +259,7 @@ export default function FixRequestPage(): JSX.Element {
         {pullRequestData && (
           <StatusBanner
             status={pullRequestData.status}
-            authorEmail={pullRequestData.author_email}
+            authorNickname={pullRequestData.author_nickname || ''}
             createdAt={pullRequestData.created_at}
             conflict={false}
             title={pullRequestData.title}

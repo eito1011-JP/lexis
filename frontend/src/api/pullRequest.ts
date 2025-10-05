@@ -106,8 +106,7 @@ export interface PullRequestDetailResponse {
   title: string;
   description: string;
   status: 'opened' | 'merged' | 'closed' | 'conflict';
-  author_name: string | null;
-  author_email: string;
+  author_nickname: string | null;
   reviewers: Reviewer[];
   created_at: string;
   activity_logs: ActivityLog[];

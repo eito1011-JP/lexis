@@ -234,12 +234,12 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
 // ステータスバナーコンポーネント
 const StatusBanner: React.FC<{
   status: string;
-  authorEmail: string;
+  authorNickname: string;
   createdAt: string;
   conflict: boolean;
   title: string;
   onEditTitle: () => void;
-}> = ({ status, authorEmail, createdAt, conflict, title, onEditTitle }) => {
+}> = ({ status, authorNickname, createdAt, conflict, title, onEditTitle }) => {
   let button;
   switch (true) {
     case conflict:
@@ -308,7 +308,7 @@ const StatusBanner: React.FC<{
       <div className="flex items-center justify-start">
         {button}
         <span className="font-medium text-[#B1B1B1] ml-4">
-          {authorEmail}さんが{' '}
+          {authorNickname}さんが{' '}
           {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: ja })}{' '}
           に変更を提出しました
         </span>
@@ -854,7 +854,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
           conflictStatus.mergeable === false) && (
           <StatusBanner
             status={pullRequestData.status}
-            authorEmail={pullRequestData.author_email}
+            authorNickname={pullRequestData.author_nickname || ''}
             createdAt={pullRequestData.created_at}
             conflict={conflictStatus.mergeable === false}
             title={pullRequestData.title}
@@ -911,7 +911,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                     <div className="flex items-center justify-between mb-2 ml-[-1rem]">
                       <div className="flex items-center gap-3">
                         <span className="text-white font-semibold text-lg">
-                          {pullRequestData?.author_email}
+                          {pullRequestData?.author_nickname}
                         </span>
                       </div>
                     </div>
