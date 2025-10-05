@@ -10,17 +10,17 @@ export const API_CONFIG = {
     PRE_USERS_IDENTIFY: '/api/auth/pre-users',
     ORGANIZATIONS_CREATE: '/api/organizations',
     DOCUMENTS: {
-      CREATE: '/api/document_entities',
-      UPDATE: '/api/document_entities',
-      DELETE: '/api/document_entities',
-      GET: '/api/document_entities',
-      GET_DOCUMENT_DETAIL: '/api/document_entities',
-      GET_DOCUMENT_CATEGORY_CONTENTS: '/api/document_entities/category-contents',
+      CREATE: '/api/document-entities',
+      UPDATE: '/api/document-entities',
+      DELETE: '/api/document-entities',
+      GET: '/api/document-entities',
+      GET_DOCUMENT_DETAIL: '/api/document-entities',
+      GET_DOCUMENT_CATEGORY_CONTENTS: '/api/document-entities/category-contents',
     },
     DOCUMENT_VERSIONS: {
-      CREATE: '/api/document_entities',
-      GET_DETAIL: (id: number) => `/api/document_entities/${id}`,
-      DELETE: '/api/document_entities',
+      CREATE: '/api/document-entities',
+      GET_DETAIL: (id: number) => `/api/document-entities/${id}`,
+      DELETE: '/api/document-entities',
     },
     CATEGORIES: {
       GET: '/api/category-entities/',
@@ -44,7 +44,7 @@ export const API_CONFIG = {
     PULL_REQUESTS: {
       GET: '/api/pull-requests',
       GET_DETAIL: '/api/pull-requests',
-      CREATE: '/api/pull-requests/create',
+      CREATE: '/api/pull-requests',
       FIX_REQUEST: '/api/pull-requests',
       MERGE: '/api/pull-requests',
       CONFLICT: '/api/pull-requests',
@@ -53,8 +53,8 @@ export const API_CONFIG = {
       UPDATE_TITLE: '/api/pull-requests',
     },
     GIT: {
-      CHECK_DIFF: '/api/document_entities/git/check-diff',
-      GET_DIFF: '/api/document_entities/git/diff',
+      CHECK_DIFF: '/api/document-entities/git/check-diff',
+      GET_DIFF: '/api/document-entities/git/diff',
     },
     FIX_REQUESTS: {
       GET_DIFF: '/api/fix-requests/:token',

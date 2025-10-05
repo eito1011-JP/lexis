@@ -70,20 +70,17 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // プルリクエスト関連
+    Route::resource('pull-requests', PullRequestController::class, ['only' => ['index', 'show', 'store', 'update']]);
     Route::prefix('pull-requests')->group(function () {
-        Route::get('/', [PullRequestController::class, 'fetchPullRequests']);
-        Route::get('/{id}', [PullRequestController::class, 'fetchPullRequestDetail']);
         Route::get('/{id}/conflict', [PullRequestController::class, 'detectConflict']);
         Route::get('/{id}/conflict/diff', [PullRequestController::class, 'fetchConflictDiff']);
         Route::post('/{id}/conflict/temporary', [PullRequestController::class, 'isConflictResolved']);
         Route::get('/{id}/comments', [CommentController::class, 'index']);
         Route::get('/{id}/activity-log-on-pull-request', [PullRequestController::class, 'fetchActivityLog']);
-        Route::post('/create', [PullRequestController::class, 'createPullRequest']);
         Route::post('/{id}/fix-request', [FixRequestController::class, 'sendFixRequest']);
         Route::put('/{id}', [PullRequestController::class, 'merge']);
         Route::patch('/{id}/close', [PullRequestController::class, 'close']);
         Route::patch('/{id}/approve', [PullRequestController::class, 'approve']);
-        Route::patch('/{id}/title', [PullRequestController::class, 'updateTitle']);
     });
 
     // プルリクエスト編集セッション関連
@@ -104,7 +101,7 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // ドキュメント関連
-    Route::resource('document_entities', DocumentEntityController::class);
+    Route::resource('document-entities', DocumentEntityController::class);
 
     // カテゴリ関連
     Route::resource('category-entities', CategoryEntityController::class);
