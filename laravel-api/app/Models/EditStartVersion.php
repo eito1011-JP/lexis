@@ -80,7 +80,7 @@ class EditStartVersion extends Model
      */
     public function getOriginalObject()
     {
-        if ($this->original_version_id === null) {
+        if ($this->original_version_id === $this->current_version_id) {
             return null;
         }
         

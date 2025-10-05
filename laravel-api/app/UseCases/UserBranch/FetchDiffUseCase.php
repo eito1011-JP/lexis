@@ -21,7 +21,10 @@ class FetchDiffUseCase
     public function execute(User $user, int $userBranchId): array
     {
         try {
-            $userBranch = $user->userBranches()->active()->where('id', $userBranchId)->first();
+            $userBranch = $user->userBranches()
+                ->active()
+                ->where('id', $userBranchId)
+                ->first();
 
             if (! $userBranch) {
                 throw new NotFoundException();
