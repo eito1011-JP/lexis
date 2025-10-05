@@ -78,9 +78,9 @@ export interface ActivityLog {
 // プルリクエスト詳細レスポンスの型定義
 export interface PullRequestDetailResponse {
   document_versions: any[];
-  document_categories: any[];
+  category_versions: any[];
   original_document_versions?: any[];
-  original_document_categories?: any[];
+  original_category_versions?: any[];
   diff_data: any[];
   title: string;
   description: string;

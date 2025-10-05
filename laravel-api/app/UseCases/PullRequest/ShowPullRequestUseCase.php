@@ -39,8 +39,6 @@ class ShowPullRequestUseCase
             'userBranch.editStartVersions.currentDocumentVersion',
             'userBranch.editStartVersions.originalDocumentVersion.category',
             'userBranch.editStartVersions.currentDocumentVersion.category',
-            'userBranch.editStartVersions.originalCategory',
-            'userBranch.editStartVersions.currentCategory',
             'reviewers.user',
         ])
             ->where('id', $dto->pullRequestId)

@@ -510,17 +510,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     return diffInfo.changed_fields[fieldName];
   };
 
-  // データをslugでマップ化する関数
-  const mapBySlug = (items: DiffItem[]) => {
-    return items.reduce(
-      (acc, item) => {
-        acc[item.slug] = item;
-        return acc;
-      },
-      {} as Record<string, DiffItem>
-    );
-  };
-
   // コメント取得API呼び出し関数
   const fetchComments = useCallback(async () => {
     if (!id) return;
@@ -550,7 +539,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     try {
       const logs = await fetchActivityLog(id);
       setActivityLogs(logs);
-      console.log('logs', logs);
     } catch (error) {
       console.error('アクティビティログ取得エラー:', error);
       setToast({
@@ -651,10 +639,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   // アクティビティタブの時にコメントとActivityLogを取得
   useEffect(() => {
     if (activeTab === 'activity' && id) {
-      fetchComments();
+      // fetchComments();
       fetchActivityLogs();
     }
-  }, [activeTab, id, fetchComments, fetchActivityLogs]);
+  }, [activeTab, id, fetchActivityLogs]);
 
   useEffect(() => {
     if (!showReviewerModal) return;
@@ -740,7 +728,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         })
         .filter(Boolean);
 
-      console.log('selectedEmails', selectedEmails);
       const endpoint = API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
       await apiClient.post(endpoint, {
         pull_request_id: parseInt(id),
@@ -772,7 +759,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       setToast({ message: 'コメントを投稿しました', type: 'success' });
       setComment('');
       // コメント投稿後にコメントリストを再取得
-      fetchComments();
+      // fetchComments();
     } catch (error) {
       console.error('コメント投稿エラー:', error);
       setToast({
@@ -879,7 +866,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     if (!id) return;
 
     try {
-      console.log('reviewerUserId', reviewerUserId);
       await apiClient.patch(
         `${API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.SEND_REVIEW_REQUEST_AGAIN(reviewerUserId)}`,
         {
@@ -1268,14 +1254,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 <div className="text-white text-sm mb-4">
                   {pullRequestData && (
                     <>
-                      {pullRequestData.document_versions.length > 0 && (
+                      {pullRequestData.document_versions?.length > 0 && (
                         <div className="mb-2">
                           📝 ドキュメント: {pullRequestData.document_versions.length}件の変更
                         </div>
                       )}
-                      {pullRequestData.document_categories.length > 0 && (
+                      {pullRequestData.category_versions?.length > 0 && (
                         <div className="mb-2">
-                          📁 カテゴリ: {pullRequestData.document_categories.length}件の変更
+                          📁 カテゴリ: {pullRequestData.category_versions.length}件の変更
                         </div>
                       )}
                     </>
