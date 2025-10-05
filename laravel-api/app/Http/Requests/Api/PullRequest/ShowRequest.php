@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests;
+namespace App\Http\Requests\Api\PullRequest;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class FetchPullRequestDetailRequest extends FormRequest
+class ShowRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,7 +22,7 @@ class FetchPullRequestDetailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => 'required|integer|exists:pull_requests,id',
+            'pull_request_id' => 'required|integer|exists:pull_requests,id',
         ];
     }
 
@@ -33,19 +33,7 @@ class FetchPullRequestDetailRequest extends FormRequest
     {
         // URLパラメータのidをマージ
         $this->merge([
-            'id' => $this->route('id'),
+            'pull_request_id' => $this->route('pull_request'),
         ]);
-    }
-
-    /**
-     * Get custom attribute names for validator errors.
-     *
-     * @return array<string, string>
-     */
-    public function attributes(): array
-    {
-        return [
-            'id' => __('validation.attributes.id'),
-        ];
     }
 }
