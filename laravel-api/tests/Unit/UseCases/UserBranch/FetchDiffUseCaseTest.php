@@ -676,8 +676,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
+                        'current' => $currentDocument,
+                        'original' => $originalDocument,
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $currentDocument->title, 'original' => $originalDocument->title],
@@ -745,8 +745,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
+                        'current' => $currentDocument,
+                        'original' => $originalDocument,
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $currentDocument->title, 'original' => $originalDocument->title],
@@ -797,7 +797,7 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$currentDocument],
+                        'current' => $currentDocument,
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -1030,8 +1030,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
+                        'current' => $currentDocument,
+                        'original' => $originalDocument,
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->title],
@@ -1101,8 +1101,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
+                        'current' => $currentDocument,
+                        'original' => $originalDocument,
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->title],
@@ -2009,8 +2009,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
+                        'current' => $currentDocument,
+                        'original' => $originalDocument,
                     ],
                 ],
             ],
@@ -2077,8 +2077,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$currentDocument],
-                        'original' => [$originalDocument],
+                        'current' => $currentDocument,
+                        'original' => $originalDocument,
                     ],
                 ],
             ],
@@ -2180,7 +2180,7 @@ class FetchDiffUseCaseTest extends TestCase
                     'operation' => 'deleted',
                     'snapshots' => [
                         'current' => [$deletedDocument],
-                        'original' => [$originalDocument],
+                        'original' => $originalDocument,
                     ],
                 ],
             ],

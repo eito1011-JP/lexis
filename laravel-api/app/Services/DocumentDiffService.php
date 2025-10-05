@@ -77,6 +77,10 @@ class DocumentDiffService
             'id' => $currentObject->id,
             'type' => $isDocument ? 'document' : 'category',
             'operation' => $this->determineOperation($currentObject, $originalObject, $isNewCreation),
+            'snapshots' => [
+                'current' => $currentObject,
+                'original' => $originalObject ? $originalObject : null,
+            ],
             'changed_fields' => [],
         ];
 
