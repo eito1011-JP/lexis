@@ -15,7 +15,6 @@ class UserBranch extends Model
     protected $fillable = [
         'user_id',
         'branch_name',
-        'snapshot_commit',
         'is_active',
         'organization_id',
         'created_at',

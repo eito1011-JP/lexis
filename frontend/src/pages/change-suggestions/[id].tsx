@@ -4,7 +4,6 @@ import type { JSX } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   fetchPullRequestDetail,
-  fetchActivityLog,
   type PullRequestDetailResponse,
   type ActivityLog,
 } from '@/api/pullRequest';
@@ -139,23 +138,6 @@ const SmartDiffValue: React.FC<{
           {renderContent(renderValue(fieldInfo.current || fieldInfo.original), isMarkdown)}
         </div>
       )}
-    </div>
-  );
-};
-
-// SlugBreadcrumbコンポーネント
-const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
-  const parts = slug.split('/').filter(Boolean);
-
-  return (
-    <div className="mb-4 text-sm text-gray-400">
-      <span>/</span>
-      {parts.map((part, index) => (
-        <span key={index}>
-          <span className="text-gray-300">{part}</span>
-          {index < parts.length - 1 && <span>/</span>}
-        </span>
-      ))}
     </div>
   );
 };
@@ -467,16 +449,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [editingTitle, setEditingTitle] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
 
-  // 差分データをIDでマップ化する関数
-  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
-    if (!pullRequestData?.diff_data) return null;
-    return (
-      pullRequestData.diff_data.find(
-        (diff: DiffDataInfo) => diff.id === id && diff.type === type
-      ) || null
-    );
-  };
-
   // フィールド情報を取得する関数
   const getFieldInfo = (
     diffInfo: DiffDataInfo | null,
@@ -510,17 +482,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     return diffInfo.changed_fields[fieldName];
   };
 
-  // データをslugでマップ化する関数
-  const mapBySlug = (items: DiffItem[]) => {
-    return items.reduce(
-      (acc, item) => {
-        acc[item.slug] = item;
-        return acc;
-      },
-      {} as Record<string, DiffItem>
-    );
-  };
-
   // コメント取得API呼び出し関数
   const fetchComments = useCallback(async () => {
     if (!id) return;
@@ -539,26 +500,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       });
     } finally {
       setLoadingComments(false);
-    }
-  }, [id]);
-
-  // ActivityLog取得API呼び出し関数
-  const fetchActivityLogs = useCallback(async () => {
-    if (!id) return;
-
-    setLoadingActivityLogs(true);
-    try {
-      const logs = await fetchActivityLog(id);
-      setActivityLogs(logs);
-      console.log('logs', logs);
-    } catch (error) {
-      console.error('アクティビティログ取得エラー:', error);
-      setToast({
-        message: 'アクティビティログの取得に失敗しました',
-        type: 'error',
-      });
-    } finally {
-      setLoadingActivityLogs(false);
     }
   }, [id]);
 
@@ -648,13 +589,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     fetchData();
   }, [id]);
 
-  // アクティビティタブの時にコメントとActivityLogを取得
-  useEffect(() => {
-    if (activeTab === 'activity' && id) {
-      fetchComments();
-      fetchActivityLogs();
-    }
-  }, [activeTab, id, fetchComments, fetchActivityLogs]);
 
   useEffect(() => {
     if (!showReviewerModal) return;
@@ -740,7 +674,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         })
         .filter(Boolean);
 
-      console.log('selectedEmails', selectedEmails);
       const endpoint = API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
       await apiClient.post(endpoint, {
         pull_request_id: parseInt(id),
@@ -772,7 +705,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       setToast({ message: 'コメントを投稿しました', type: 'success' });
       setComment('');
       // コメント投稿後にコメントリストを再取得
-      fetchComments();
+      // fetchComments();
     } catch (error) {
       console.error('コメント投稿エラー:', error);
       setToast({
@@ -834,9 +767,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
       setToast({ message: 'タイトルを更新しました', type: 'success' });
       setShowTitleEditModal(false);
-
-      // アクティビティログを再取得
-      fetchActivityLogs();
     } catch (error) {
       console.error('タイトル更新エラー:', error);
       setToast({
@@ -879,7 +809,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     if (!id) return;
 
     try {
-      console.log('reviewerUserId', reviewerUserId);
       await apiClient.patch(
         `${API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.SEND_REVIEW_REQUEST_AGAIN(reviewerUserId)}`,
         {
@@ -890,9 +819,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       );
 
       setToast({ message: 'レビュー依頼を送信しました', type: 'success' });
-
-      // アクティビティログを再取得
-      fetchActivityLogs();
     } catch (error) {
       console.error('レビュー依頼送信エラー:', error);
       setToast({
@@ -1268,14 +1194,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 <div className="text-white text-sm mb-4">
                   {pullRequestData && (
                     <>
-                      {pullRequestData.document_versions.length > 0 && (
+                      {pullRequestData.diff.filter(item => item.type === 'document').length > 0 && (
                         <div className="mb-2">
-                          📝 ドキュメント: {pullRequestData.document_versions.length}件の変更
+                          📝 ドキュメント: {pullRequestData.diff.filter(item => item.type === 'document').length}件の変更
                         </div>
                       )}
-                      {pullRequestData.document_categories.length > 0 && (
+                      {pullRequestData.diff.filter(item => item.type === 'category').length > 0 && (
                         <div className="mb-2">
-                          📁 カテゴリ: {pullRequestData.document_categories.length}件の変更
+                          📁 カテゴリ: {pullRequestData.diff.filter(item => item.type === 'category').length}件の変更
                         </div>
                       )}
                     </>
