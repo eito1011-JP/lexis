@@ -89,4 +89,14 @@ class UserBranch extends Model
     {
         return $this->hasMany(PullRequest::class);
     }
+
+    /**
+     * ユーザーブランチを非アクティブにする
+     *
+     * @param  UserBranch  $this  アクティブなユーザーブランチ
+     */
+    public function deactivate()
+    {
+        $this->is_active = Flag::FALSE;
+    }
 }

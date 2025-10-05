@@ -74,7 +74,7 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエスト作成
      */
-    public function createPullRequest(CreatePullRequestRequest $request): JsonResponse
+    public function store(CreatePullRequestRequest $request): JsonResponse
     {
         try {
             // 1. 認証ユーザーか確認
@@ -121,7 +121,7 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエスト一覧を取得
      */
-    public function fetchPullRequests(FetchPullRequestsRequest $request): JsonResponse
+    public function index(FetchPullRequestsRequest $request): JsonResponse
     {
         try {
             $user = $this->user();
@@ -197,7 +197,7 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエスト詳細を取得
      */
-    public function fetchPullRequestDetail(FetchPullRequestDetailRequest $request): JsonResponse
+    public function show(FetchPullRequestDetailRequest $request): JsonResponse
     {
         try {
             // 1. 認証ユーザーか確認
@@ -556,7 +556,7 @@ class PullRequestController extends ApiBaseController
     /**
      * プルリクエストのタイトルを更新する
      */
-    public function updateTitle(UpdatePullRequestTitleRequest $request, int $id): JsonResponse
+    public function update(UpdatePullRequestTitleRequest $request, int $id): JsonResponse
     {
         DB::beginTransaction();
 
