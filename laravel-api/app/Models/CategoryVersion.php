@@ -35,44 +35,7 @@ class CategoryVersion extends Model
         'is_deleted' => 'boolean',
     ];
 
-    /**
-     * サブカテゴリを取得（ブランチ別）
-     */
-    public static function getSubCategories(int $parentId, ?int $userBranchId = null, ?int $editPullRequestId = null): \Illuminate\Database\Eloquent\Collection
-    {
-        $query = self::select('title', 'position')
-            ->where('parent_entity_id', $parentId)
-            ->where(function ($q) use ($userBranchId) {
-                $q->where('status', 'merged')
-                    ->orWhere(function ($subQ) use ($userBranchId) {
-                        $subQ->where('user_branch_id', $userBranchId)
-                            ->where('status', DocumentCategoryStatus::DRAFT->value);
-                    });
-            })
-            ->when($editPullRequestId, function ($query, $editPullRequestId) {
-                return $query->orWhere(function ($subQ) use ($editPullRequestId) {
-                    $subQ->whereHas('userBranch.pullRequests', function ($prQ) use ($editPullRequestId) {
-                        $prQ->where('id', $editPullRequestId);
-                    })
-                        ->where('status', DocumentCategoryStatus::PUSHED->value);
-                });
-            })
-            ->when($userBranchId, function ($query, $userBranchId) {
-                $appliedFixRequestCategoryIds = FixRequest::where('status', FixRequestStatus::APPLIED->value)
-                    ->whereNotNull('document_category_id')
-                    ->whereHas('categoryVersion', function ($q) use ($userBranchId) {
-                        $q->where('user_branch_id', $userBranchId);
-                    })
-                    ->pluck('document_category_id')
-                    ->toArray();
 
-                if (! empty($appliedFixRequestCategoryIds)) {
-                    $query->orWhereIn('id', $appliedFixRequestCategoryIds);
-                }
-            });
-
-        return $query->orderBy('position', 'asc')->get();
-    }
 
     /**
      * ドキュメントバージョンとのリレーション

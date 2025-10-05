@@ -2,13 +2,12 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import DocumentsPage from './pages/documents';
 import OrganizationRegisterPage from './pages/organization/register';
 import OrganizationJoinPage from './pages/organization/join.tsx';
-import DocumentBySlugPage from './pages/documents/slug';
 import LoginPage from './pages/login';
 import SignupPage from './pages/signup';
 import CreateDocumentPage from './pages/documents/create';
 import CreateRootCategoryPage from './pages/categories/create';
 import EditCategoryPage from './pages/categories/[id]/edit';
-import EditDocumentPage from './pages/documents/[slug]/edit';
+import UserBranchDiffPage from './pages/documents/diff';
 import EditDocumentInCategoryPage from './pages/categories/[id]/documents/edit';
 import ChangeSuggestionsPage from './pages/change-suggestions';
 import ChangeSuggestionDetailPage from './pages/change-suggestions/[id]';
@@ -18,7 +17,7 @@ import FixRequestDetailPageWithToken from './pages/change-suggestions/[id]/fix-r
 import PullRequestEditSessionDetailPage from './pages/change-suggestions/[id]/pull_request_edit_sessions/[token]';
 import ConflictResolutionPage from './pages/change-suggestions/[id]/conflicts';
 import VerifyEmailPage from './pages/verify-email';
-import { ROUTE_PATHS } from './routes';
+import { ROUTE_PATHS, ROUTES } from './routes';
 import { ToastProvider } from './contexts/ToastContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -105,6 +104,7 @@ function App() {
         <Route path={ROUTE_PATHS['create-root-category']} element={<ProtectedRoute><CreateRootCategoryPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['edit-category']} element={<ProtectedRoute><EditCategoryPage /></ProtectedRoute>} />
         <Route path={ROUTE_PATHS['edit-document-in-category']} element={<ProtectedRoute><EditDocumentInCategoryPage /></ProtectedRoute>} />
+        <Route path={ROUTE_PATHS[ROUTES.USER_BRANCHES_DIFF]} element={<ProtectedRoute><UserBranchDiffPage /></ProtectedRoute>} />
         </Routes>
       </ToastProvider>
     </AuthProvider>

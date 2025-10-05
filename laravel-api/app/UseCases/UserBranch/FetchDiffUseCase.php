@@ -2,9 +2,9 @@
 
 namespace App\UseCases\UserBranch;
 
-use App\Exceptions\TargetDocumentNotFoundException;
 use App\Models\User;
 use App\Services\DocumentDiffService;
+use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\Log;
 
 class FetchDiffUseCase
@@ -16,45 +16,38 @@ class FetchDiffUseCase
     /**
      * ユーザーブランチの差分データを取得
      *
-     * @throws TargetDocumentNotFoundException
+     * @throws NotFoundException
      */
-    public function execute(User $user): array
+    public function execute(User $user, int $userBranchId): array
     {
         try {
-            // ユーザーブランチと関連データを一括取得
-            $userBranch = $user->userBranches()->active()
-                ->with([
-                    'editStartVersions',
-                    'editStartVersions.originalDocumentVersion',
-                    'editStartVersions.currentDocumentVersion',
-                    'editStartVersions.originalCategory',
-                    'editStartVersions.currentCategory',
-                ])
+            $userBranch = $user->userBranches()
+                ->active()
+                ->where('id', $userBranchId)
                 ->first();
 
             if (! $userBranch) {
-                throw new TargetDocumentNotFoundException(
-                    'アクティブなユーザーブランチが見つかりません',
-                    'MSG_USER_BRANCH_NOT_FOUND',
-                    404
-                );
+                throw new NotFoundException();
             }
+
+            // ユーザーブランチと関連データを一括取得
+            $userBranch->with([
+                'editStartVersions',
+                'editStartVersions.originalDocumentVersion',
+                'editStartVersions.currentDocumentVersion',
+                'editStartVersions.originalCategory',
+                'editStartVersions.currentCategory',
+            ]);
 
             // 差分データを生成
             $diffResult = $this->documentDiffService->generateDiffData($userBranch->editStartVersions);
 
             $diffResult['user_branch_id'] = $userBranch->id;
             $diffResult['organization_id'] = $userBranch->organization->id;
-
+            
             return $diffResult;
-
-        } catch (TargetDocumentNotFoundException $e) {
-            Log::error('ユーザーブランチが見つかりません: '.$e->getMessage());
-
-            throw $e;
         } catch (\Exception $e) {
-            Log::error('Git差分の取得に失敗しました: '.$e->getMessage());
-
+            Log::error($e);
             throw $e;
         }
     }

@@ -146,4 +146,27 @@ class DocumentVersion extends Model
                     });
             });
     }
+
+    /**
+     * パンクズリストを生成（カテゴリ階層を含む）
+     *
+     * @return array ドキュメントの階層配列（ルートカテゴリから現在のドキュメントまで）
+     */
+    public function getBreadcrumbs(): array
+    {
+        $breadcrumbs = [];
+        
+        // カテゴリが存在する場合、カテゴリのパンクズリストを取得
+        if ($this->category) {
+            $breadcrumbs = $this->category->getBreadcrumbs();
+        }
+        
+        // ドキュメント自身を追加
+        $breadcrumbs[] = [
+            'id' => $this->id,
+            'title' => $this->title,
+        ];
+        
+        return $breadcrumbs;
+    }
 }

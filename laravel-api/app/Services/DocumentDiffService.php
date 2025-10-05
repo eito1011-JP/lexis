@@ -6,6 +6,7 @@ use App\Dto\UseCase\Document\UpdateDocumentDto;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class DocumentDiffService
 {
@@ -18,44 +19,24 @@ class DocumentDiffService
      */
     public function generateDiffData(Collection $editStartVersions): array
     {
-        $documentVersions = collect();
-        $documentCategories = collect();
-        $originalDocumentVersions = collect();
-        $originalDocumentCategories = collect();
         $diffData = collect();
 
         foreach ($editStartVersions as $editStartVersion) {
             $currentObject = $editStartVersion->getCurrentObject();
             $originalObject = $editStartVersion->getOriginalObject();
 
+            // currentObjectが存在しない場合はスキップ（データ整合性エラー）
+            if (!$currentObject) {
+                continue;
+            }
+
             // 同一ブランチで作成されたデータかどうかを判定
             $isNewCreation = $this->isNewCreation($editStartVersion, $currentObject);
             $isDocument = $editStartVersion->target_type === EditStartVersionTargetType::DOCUMENT->value;
 
             // 同一ブランチで作成されたデータが削除された場合は差分から除外
-            if ($isNewCreation && $currentObject && $currentObject->is_deleted) {
+            if ($isNewCreation && $currentObject->is_deleted) {
                 continue;
-            }
-
-            // 現在のオブジェクトを追加
-            if ($currentObject) {
-                if ($isDocument) {
-                    $documentVersions->push($currentObject);
-                } else {
-                    // parent_entity_idから階層構造を取得して、document_categoriesに追加
-                    $currentObject->category_path = $this->CategoryService->createCategoryPath($currentObject);
-                    $documentCategories->push($currentObject);
-                }
-            }
-
-            // 同一ブランチで作成されたデータでない場合のみ元のオブジェクトを追加
-            if ($originalObject && ! $isNewCreation) {
-                if ($isDocument) {
-                    $originalDocumentVersions->push($originalObject);
-                } else {
-                    $originalObject->category_path = $this->CategoryService->createCategoryPath($originalObject);
-                    $originalDocumentCategories->push($originalObject);
-                }
             }
 
             // 差分情報を生成
@@ -64,11 +45,7 @@ class DocumentDiffService
         }
 
         return [
-            'document_versions' => $documentVersions->values()->toArray(),
-            'document_categories' => $documentCategories->values()->toArray(),
-            'original_document_versions' => $originalDocumentVersions->values()->toArray(),
-            'original_document_categories' => $originalDocumentCategories->values()->toArray(),
-            'diff_data' => $diffData->toArray(),
+            'diff' => $diffData->all(),
         ];
     }
 
@@ -100,6 +77,16 @@ class DocumentDiffService
             'id' => $currentObject->id,
             'type' => $isDocument ? 'document' : 'category',
             'operation' => $this->determineOperation($currentObject, $originalObject, $isNewCreation),
+            'snapshots' => [
+                'current' => [
+                    'breadcrumbs' => $currentObject->getBreadcrumbs(),
+                    'data' => $currentObject,
+                ],
+                'original' => $originalObject ? [
+                    'breadcrumbs' => $originalObject->getBreadcrumbs(),
+                    'data' => $originalObject,
+                ] : [],
+            ],
             'changed_fields' => [],
         ];
 
@@ -136,30 +123,24 @@ class DocumentDiffService
         if ($isNewCreation) {
             // 新規作成時は全フィールドが変更対象（緑色で表示）
             return [
-                'sidebar_label' => ['status' => 'added', 'current' => $currentDocument->sidebar_label, 'original' => null],
-                'slug' => ['status' => 'added', 'current' => $currentDocument->slug, 'original' => null],
-                'content' => ['status' => 'added', 'current' => $currentDocument->content, 'original' => null],
-                'category_id' => ['status' => 'added', 'current' => $currentDocument->category_id, 'original' => null],
-                'file_order' => ['status' => 'added', 'current' => $currentDocument->file_order, 'original' => null],
-                'is_public' => ['status' => 'added', 'current' => $currentDocument->status === 'published', 'original' => null],
+                'title' => ['status' => 'added', 'current' => $currentDocument->title, 'original' => null],
+                'description' => ['status' => 'added', 'current' => $currentDocument->description, 'original' => null],
             ];
         }
 
-        if ($currentDocument && property_exists($currentDocument, 'is_deleted') && $currentDocument->is_deleted) {
+        if ($currentDocument && $currentDocument->is_deleted) {
             // 削除時は全フィールドが削除対象
             return [
-                'sidebar_label' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->sidebar_label],
-                'slug' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->slug],
-                'content' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->content],
-                'category_id' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->category_id],
-                'file_order' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->file_order],
-                'is_public' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->status === 'published'],
+                // タイトル・説明も削除対象に含める（テストで参照）
+                'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->title],
+                'description' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->description],
             ];
         }
 
         // 編集時は変更されたフィールドのみを検出
         $changedFields = [];
-        $fieldsToCheck = ['sidebar_label', 'slug', 'content', 'category_id', 'file_order'];
+        // 互換のためタイトル・説明も検出対象に含める
+        $fieldsToCheck = ['title', 'description'];
 
         foreach ($fieldsToCheck as $field) {
             if ($currentDocument->{$field} !== $originalDocument->{$field}) {
@@ -169,17 +150,6 @@ class DocumentDiffService
                     'original' => $originalDocument->{$field},
                 ];
             }
-        }
-
-        // is_publicフィールドは特別処理（statusから判定）
-        $currentIsPublic = $currentDocument->status === 'published';
-        $originalIsPublic = $originalDocument->status === 'published';
-        if ($currentIsPublic !== $originalIsPublic) {
-            $changedFields['is_public'] = [
-                'status' => 'modified',
-                'current' => $currentIsPublic,
-                'original' => $originalIsPublic,
-            ];
         }
 
         return $changedFields;
@@ -198,7 +168,7 @@ class DocumentDiffService
             ];
         }
 
-        if ($currentCategory && property_exists($currentCategory, 'is_deleted') && $currentCategory->is_deleted) {
+        if ($currentCategory && $currentCategory->is_deleted) {
             // 削除時は全フィールドが削除対象
             return [
                 'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalCategory->title],
@@ -228,12 +198,10 @@ class DocumentDiffService
      */
     public function hasDocumentChanges(UpdateDocumentDto $dto, DocumentVersion $existingDocument): bool
     {
-        $noContentChange = $dto->content === $existingDocument->content;
-        $noSlugChange = $dto->slug === $existingDocument->slug;
-        $noSidebarLabelChange = $dto->sidebar_label === $existingDocument->sidebar_label;
-        $noIsPublicChange = $dto->is_public === $existingDocument->is_public;
-        $noFileOrderChange = $dto->file_order === $existingDocument->file_order;
+        // DBはtitle/descriptionのみを保持。これらの変更有無で判定
+        $noTitleChange = $dto->title === $existingDocument->title;
+        $noDescriptionChange = $dto->description === $existingDocument->description;
 
-        return ! ($noContentChange && $noSlugChange && $noSidebarLabelChange && $noIsPublicChange && $noFileOrderChange);
+        return ! ($noTitleChange && $noDescriptionChange);
     }
 }
