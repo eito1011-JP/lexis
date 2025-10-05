@@ -12,41 +12,57 @@ import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequest';
 import { markdownStyles } from '@/styles/markdownContent';
 import { useToast } from '@/contexts/ToastContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 // 差分データの型定義
-type DiffItem = {
+type CategoryVersion = {
   id: number;
-  title?: string;
+  entity_id: number;
+  parent_entity_id?: number;
+  organization_id: number;
+  title: string;
   description?: string;
-  file_order?: number;
-  category_id?: number;
-  category_path?: string; // カテゴリ階層パス
   status: string;
-  user_branch_id: number;
+  user_branch_id?: number;
+  pull_request_edit_session_id?: number;
+  is_deleted: number;
+  deleted_at?: string;
   created_at: string;
   updated_at: string;
 };
 
-type DiffFieldInfo = {
+type DocumentVersion = {
+  id: number;
+  entity_id: number;
+  organization_id: number;
+  user_id?: number;
+  user_branch_id?: number;
+  pull_request_edit_session_id?: number;
+  status: string;
+  description: string;
+  title: string;
+  category_entity_id?: number;
+  is_deleted: number;
+  deleted_at?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type FieldChangeInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
   current: any;
   original: any;
 };
 
-type DiffDataInfo = {
+type DiffInfo = {
   id: number;
-  type: 'document' | 'category';
+  type: 'category' | 'document';
   operation: 'created' | 'updated' | 'deleted';
-  changed_fields: Record<string, DiffFieldInfo>;
+  changed_fields: Record<string, FieldChangeInfo>;
 };
 
 type DiffResponse = {
-  document_versions: DiffItem[];
-  document_categories: DiffItem[];
-  original_document_versions?: DiffItem[];
-  original_document_categories?: DiffItem[];
-  diff_data: DiffDataInfo[];
+  diff: DiffInfo[];
   user_branch_id: number;
   organization_id: number;
 };
@@ -319,7 +335,7 @@ const SmartDiffValue = ({
   isMarkdown = false,
 }: {
   label: string;
-  fieldInfo: DiffFieldInfo;
+  fieldInfo: FieldChangeInfo;
   isMarkdown?: boolean;
 }) => {
   const renderValue = (value: any) => {
@@ -424,6 +440,8 @@ const SmartDiffValue = ({
 export default function DiffPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const userBranchId = searchParams.get('user_branch_id');
   const [diffData, setDiffData] = useState<DiffResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -475,13 +493,20 @@ export default function DiffPage(): JSX.Element {
 
   useEffect(() => {
     const fetchDiff = async () => {
+      if (!userBranchId) {
+        setError('ユーザーブランチIDが指定されていません');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await apiClient.get(
-          `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}`
+          `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}?user_branch_id=${userBranchId}`
         );
 
+        console.log('差分データ:', response);
         // 差分データが存在しない、または変更がない場合はドキュメント一覧にリダイレクト
-        if (!response || (response.document_categories.length === 0 && response.document_versions.length === 0)) {
+        if (!response || !response.diff || response.diff.length === 0) {
           navigate('/documents');
           return;
         }
@@ -496,7 +521,7 @@ export default function DiffPage(): JSX.Element {
     };
 
     fetchDiff();
-  }, [navigate]);
+  }, [navigate, userBranchId]);
 
   useEffect(() => {
     if (!showReviewerModal) return;
@@ -517,27 +542,10 @@ export default function DiffPage(): JSX.Element {
     setValidationErrors({});
 
     try {
-      // diffアイテムを構築
-      const diffItems: ApiDiffItem[] = [];
-
-      // ドキュメントバージョンを追加
-      if (diffData?.document_versions) {
-        diffData.document_versions.forEach(doc => {
-          diffItems.push({
-            id: doc.id,
-            type: 'document',
-          });
-        });
-      }
-
-      // カテゴリを追加
-      if (diffData?.document_categories) {
-        diffData.document_categories.forEach(cat => {
-          diffItems.push({
-            id: cat.id,
-            type: 'category',
-          });
-        });
+      if (!diffData) {
+        show({ message: '差分データが見つかりません', type: 'error' });
+        navigate('/documents');
+        return;
       }
 
       // レビュアーのメールアドレスを取得
@@ -545,12 +553,6 @@ export default function DiffPage(): JSX.Element {
         selectedReviewers.length > 0
           ? users.filter(user => selectedReviewers.includes(user.id)).map(user => user.email)
           : undefined;
-
-      if (!diffData) {
-        show({ message: '差分データが見つかりません', type: 'error' });
-        navigate('/documents');
-        return;
-      }
 
       // デバッグログ
       console.log('送信データ:', {
@@ -592,46 +594,6 @@ export default function DiffPage(): JSX.Element {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // 差分データをIDでマップ化
-  const getDiffInfoById = (id: number, type: 'document' | 'category'): DiffDataInfo | null => {
-    if (!diffData?.diff_data) return null;
-    return diffData.diff_data.find(diff => diff.id === id && diff.type === type) || null;
-  };
-
-  // フィールド情報を取得（差分データがない場合は未変更として扱う）
-  const getFieldInfo = (
-    diffInfo: DiffDataInfo | null,
-    fieldName: string,
-    currentValue: any,
-    originalValue?: any
-  ): DiffFieldInfo => {
-    if (!diffInfo) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-
-    // 削除されたアイテムの場合、すべてのフィールドを削除済みとして扱う
-    if (diffInfo.operation === 'deleted') {
-      return {
-        status: 'deleted',
-        current: null,
-        original: originalValue,
-      };
-    }
-
-    if (!diffInfo.changed_fields[fieldName]) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-    return diffInfo.changed_fields[fieldName];
   };
 
   // セッション確認中はローディング表示
@@ -680,10 +642,7 @@ export default function DiffPage(): JSX.Element {
   }
 
   // データが空の場合
-  if (
-    !diffData ||
-    (diffData.document_categories.length === 0 && diffData.document_versions.length === 0)
-  ) {
+  if (!diffData || !diffData.diff || diffData.diff.length === 0) {
     return (
       <AdminLayout title="差分確認">
         <div className="flex flex-col items-center justify-center h-full">
@@ -699,11 +658,9 @@ export default function DiffPage(): JSX.Element {
     );
   }
 
-  // original/currentをidでマッピング
-  const mapBySlug = (arr: DiffItem[]) => Object.fromEntries(arr.map(item => [item.id, item]));
-
-  const originalDocs = mapBySlug(diffData.original_document_versions || []);
-  const originalCats = mapBySlug(diffData.original_document_categories || []);
+  // カテゴリと ドキュメントの差分を分離
+  const categoryDiffs = diffData.diff.filter(d => d.type === 'category');
+  const documentDiffs = diffData.diff.filter(d => d.type === 'document');
 
   return (
     <AdminLayout title="差分確認">
@@ -876,46 +833,39 @@ export default function DiffPage(): JSX.Element {
         </div>
 
         {/* 変更されたカテゴリの詳細 */}
-        {diffData.document_categories.length > 0 && (
+        {categoryDiffs.length > 0 && (
           <div className="mb-10">
             <h2 className="text-xl font-bold mb-6 flex items-center border-b border-gray-700 pb-3">
               <Folder className="w-5 h-5 mr-2" />
-              カテゴリの変更 × {diffData.document_categories.length}
+              カテゴリの変更 × {categoryDiffs.length}
             </h2>
             <div className="space-y-6 mr-20">
-              {diffData.document_categories.map(category => {
-                const diffInfo = getDiffInfoById(category.id, 'category');
-                const originalCategory = originalCats[category.id];
+              {categoryDiffs.map((diff, index) => {
+                // changed_fieldsから各フィールドの情報を取得
+                const titleFieldInfo: FieldChangeInfo = diff.changed_fields?.title || {
+                  status: 'unchanged',
+                  current: null,
+                  original: null,
+                };
+
+                const descriptionFieldInfo: FieldChangeInfo = diff.changed_fields?.description || {
+                  status: 'unchanged',
+                  current: null,
+                  original: null,
+                };
 
                 return (
                   <div
-                    key={category.id}
+                    key={`category-${diff.id || index}`}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
-                    <div className="mb-6">
-                      <Breadcrumb 
-                        categoryPath={category.category_path} 
-                        className="flex items-center text-sm text-gray-400 mb-3"
-                      />
-                      <div className="border-b border-gray-700/50"></div>
-                    </div>
                     <SmartDiffValue
                       label="タイトル"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'title',
-                        category.title,
-                        originalCategory?.title
-                      )}
+                      fieldInfo={titleFieldInfo}
                     />
                     <SmartDiffValue
                       label="説明"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'description',
-                        category.description,
-                        originalCategory?.description
-                      )}
+                      fieldInfo={descriptionFieldInfo}
                       isMarkdown={true}
                     />
                   </div>
@@ -928,50 +878,39 @@ export default function DiffPage(): JSX.Element {
         {/* ドキュメントの変更数表示 */}
         <h2 className="text-xl font-bold mb-6 flex items-center">
           <DocumentDetailed className="w-6 h-6 mr-2" />
-          ドキュメントの変更 × {diffData.document_versions.length}
+          ドキュメントの変更 × {documentDiffs.length}
         </h2>
 
         {/* 変更されたドキュメントの詳細 */}
-        {diffData.document_versions.length > 0 && (
+        {documentDiffs.length > 0 && (
           <div className="mb-8 mr-20">
             <div className="space-y-6">
-              {diffData.document_versions.map(document => {
-                const diffInfo = getDiffInfoById(document.id, 'document');
-                const originalDocument = originalDocs[document.id];
-                
-                // ドキュメントのカテゴリのcategory_pathを取得
-                const documentCategory = diffData.document_categories.find(cat => cat.id === document.category_id);
-                const documentCategoryPath = documentCategory?.category_path;
+              {documentDiffs.map((diff, index) => {
+                // changed_fieldsから各フィールドの情報を取得
+                const titleFieldInfo: FieldChangeInfo = diff.changed_fields?.title || {
+                  status: 'unchanged',
+                  current: null,
+                  original: null,
+                };
+
+                const descriptionFieldInfo: FieldChangeInfo = diff.changed_fields?.description || {
+                  status: 'unchanged',
+                  current: null,
+                  original: null,
+                };
 
                 return (
                   <div
-                    key={document.id}
+                    key={`document-${diff.id || index}`}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
-                    <div className="mb-6">
-                      <Breadcrumb 
-                        categoryPath={documentCategoryPath} 
-                        className="flex items-center text-sm text-gray-400 mb-3"
-                      />
-                      <div className="border-b border-gray-700/50"></div>
-                    </div>
                     <SmartDiffValue
                       label="タイトル"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'title',
-                        document.title,
-                        originalDocument?.title
-                      )}
+                      fieldInfo={titleFieldInfo}
                     />
                     <SmartDiffValue
                       label="説明"
-                      fieldInfo={getFieldInfo(
-                        diffInfo,
-                        'description',
-                        document.description,
-                        originalDocument?.description
-                      )}
+                      fieldInfo={descriptionFieldInfo}
                       isMarkdown={true}
                     />
                   </div>
