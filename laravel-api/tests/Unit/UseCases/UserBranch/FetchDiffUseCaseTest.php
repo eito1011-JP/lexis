@@ -132,7 +132,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'operation' => 'created',
                     'snapshots' => [
                         'current' => [
-                            $category,
+                            'breadcrumbs' => $category->breadcrumbs,
+                            'data' => $category,
                         ],
                         'original' => [],
                     ],
@@ -208,7 +209,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'operation' => 'created',
                     'snapshots' => [
                         'current' => [
-                            $parentCategory,
+                            'breadcrumbs' => $parentCategory->breadcrumbs,
+                            'data' => $parentCategory,
                         ],
                         'original' => [],
                     ],
@@ -222,7 +224,8 @@ class FetchDiffUseCaseTest extends TestCase
                     'operation' => 'created',
                     'snapshots' => [
                         'current' => [
-                            $document,
+                            'breadcrumbs' => $document->breadcrumbs,
+                            'data' => $document,
                         ],
                         'original' => [],
                     ],
@@ -278,7 +281,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$document],
+                        'current' => [
+                            'breadcrumbs' => $document->breadcrumbs,
+                            'data' => $document,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -382,7 +388,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$category1],
+                        'current' => [
+                            'breadcrumbs' => $category1->breadcrumbs,
+                            'data' => $category1,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -394,7 +403,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$category2],
+                        'current' => [
+                            'breadcrumbs' => $category2->breadcrumbs,
+                            'data' => $category2,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -406,7 +418,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$document1],
+                        'current' => [
+                            'breadcrumbs' => $document1->breadcrumbs,
+                            'data' => $document1,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -418,7 +433,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$document2],
+                        'current' => [
+                            'breadcrumbs' => $document2->breadcrumbs,
+                            'data' => $document2,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -493,8 +511,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
+                        'current' => [
+                            'breadcrumbs' => $currentCategory->breadcrumbs,
+                            'data' => $currentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalCategory->breadcrumbs,
+                            'data' => $originalCategory,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $currentCategory->title, 'original' => $originalCategory->title],
@@ -562,8 +586,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
+                        'current' => [
+                            'breadcrumbs' => $currentCategory->breadcrumbs,
+                            'data' => $currentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalCategory->breadcrumbs,
+                            'data' => $originalCategory,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $currentCategory->title, 'original' => $originalCategory->title],
@@ -614,7 +644,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$currentCategory],
+                        'current' => [
+                            'breadcrumbs' => $currentCategory->breadcrumbs,
+                            'data' => $currentCategory,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -676,8 +709,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => $currentDocument,
-                        'original' => $originalDocument,
+                        'current' => [
+                            'breadcrumbs' => $currentDocument->breadcrumbs,
+                            'data' => $currentDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDocument->breadcrumbs,
+                            'data' => $originalDocument,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $currentDocument->title, 'original' => $originalDocument->title],
@@ -745,8 +784,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => $currentDocument,
-                        'original' => $originalDocument,
+                        'current' => [
+                            'breadcrumbs' => $currentDocument->breadcrumbs,
+                            'data' => $currentDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDocument->breadcrumbs,
+                            'data' => $originalDocument,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $currentDocument->title, 'original' => $originalDocument->title],
@@ -797,7 +842,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => $currentDocument,
+                        'current' => [
+                            'breadcrumbs' => $currentDocument->breadcrumbs,
+                            'data' => $currentDocument,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -864,8 +912,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
+                        'current' => [
+                            'breadcrumbs' => $currentCategory->breadcrumbs,
+                            'data' => $currentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalCategory->breadcrumbs,
+                            'data' => $originalCategory,
+                        ],
                     ],
                 ],
             ],
@@ -927,8 +981,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
+                        'current' => [
+                            'breadcrumbs' => $currentCategory->breadcrumbs,
+                            'data' => $currentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalCategory->breadcrumbs,
+                            'data' => $originalCategory,
+                        ],
                     ],
                 ],
             ],
@@ -1030,8 +1090,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => $currentDocument,
-                        'original' => $originalDocument,
+                        'current' => [
+                            'breadcrumbs' => $currentDocument->breadcrumbs,
+                            'data' => $currentDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDocument->breadcrumbs,
+                            'data' => $originalDocument,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->title],
@@ -1101,8 +1167,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => $currentDocument,
-                        'original' => $originalDocument,
+                        'current' => [
+                            'breadcrumbs' => $currentDocument->breadcrumbs,
+                            'data' => $currentDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDocument->breadcrumbs,
+                            'data' => $originalDocument,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'deleted', 'current' => null, 'original' => $originalDocument->title],
@@ -1234,7 +1306,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$draftCategory],
+                        'current' => [
+                            'breadcrumbs' => $draftCategory->breadcrumbs,
+                            'data' => $draftCategory,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -1246,8 +1321,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$updatedCategory],
-                        'original' => [$originalMergedCategory],
+                        'current' => [
+                            'breadcrumbs' => $updatedCategory->breadcrumbs,
+                            'data' => $updatedCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalMergedCategory->breadcrumbs,
+                            'data' => $originalMergedCategory,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $updatedCategory->title, 'original' => $originalMergedCategory->title],
@@ -1335,8 +1416,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$updatedCategory],
-                        'original' => [$originalUpdateCategory],
+                        'current' => [
+                            'breadcrumbs' => $updatedCategory->breadcrumbs,
+                            'data' => $updatedCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalUpdateCategory->breadcrumbs,
+                            'data' => $originalUpdateCategory,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $updatedCategory->title, 'original' => $originalUpdateCategory->title],
@@ -1347,8 +1434,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedCategory],
-                        'original' => [$originalDeleteCategory],
+                        'current' => [
+                            'breadcrumbs' => $deletedCategory->breadcrumbs,
+                            'data' => $deletedCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDeleteCategory->breadcrumbs,
+                            'data' => $originalDeleteCategory,
+                        ],
                     ],
                 ],
             ],
@@ -1447,7 +1540,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$draftCategory],
+                        'current' => [
+                            'breadcrumbs' => $draftCategory->breadcrumbs,
+                            'data' => $draftCategory,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -1459,8 +1555,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$updatedCategory],
-                        'original' => [$originalUpdateCategory],
+                        'current' => [
+                            'breadcrumbs' => $updatedCategory->breadcrumbs,
+                            'data' => $updatedCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalUpdateCategory->breadcrumbs,
+                            'data' => $originalUpdateCategory,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $updatedCategory->title, 'original' => $originalUpdateCategory->title],
@@ -1471,8 +1573,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedCategory],
-                        'original' => [$originalDeleteCategory],
+                        'current' => [
+                            'breadcrumbs' => $deletedCategory->breadcrumbs,
+                            'data' => $deletedCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDeleteCategory->breadcrumbs,
+                            'data' => $originalDeleteCategory,
+                        ],
                     ],
                 ],
             ],
@@ -1553,7 +1661,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$draftDocument],
+                        'current' => [
+                            'breadcrumbs' => $draftDocument->breadcrumbs,
+                            'data' => $draftDocument,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -1565,8 +1676,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$updatedDocument],
-                        'original' => [$originalMergedDocument],
+                        'current' => [
+                            'breadcrumbs' => $updatedDocument->breadcrumbs,
+                            'data' => $updatedDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalMergedDocument->breadcrumbs,
+                            'data' => $originalMergedDocument,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $updatedDocument->title, 'original' => $originalMergedDocument->title],
@@ -1666,8 +1783,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$updatedDocument],
-                        'original' => [$originalUpdateDocument],
+                        'current' => [
+                            'breadcrumbs' => $updatedDocument->breadcrumbs,
+                            'data' => $updatedDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalUpdateDocument->breadcrumbs,
+                            'data' => $originalUpdateDocument,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $updatedDocument->title, 'original' => $originalUpdateDocument->title],
@@ -1678,8 +1801,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedDocument],
-                        'original' => [$originalDeleteDocument],
+                        'current' => [
+                            'breadcrumbs' => $deletedDocument->breadcrumbs,
+                            'data' => $deletedDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDeleteDocument->breadcrumbs,
+                            'data' => $originalDeleteDocument,
+                        ],
                     ],
                 ],
             ],
@@ -1793,7 +1922,10 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'created',
                     'snapshots' => [
-                        'current' => [$draftDocument],
+                        'current' => [
+                            'breadcrumbs' => $draftDocument->breadcrumbs,
+                            'data' => $draftDocument,
+                        ],
                         'original' => [],
                     ],
                     'changed_fields' => [
@@ -1805,8 +1937,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$updatedDocument],
-                        'original' => [$originalUpdateDocument],
+                        'current' => [
+                            'breadcrumbs' => $updatedDocument->breadcrumbs,
+                            'data' => $updatedDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalUpdateDocument->breadcrumbs,
+                            'data' => $originalUpdateDocument,
+                        ],
                     ],
                     'changed_fields' => [
                         'title' => ['status' => 'modified', 'current' => $updatedDocument->title, 'original' => $originalUpdateDocument->title],
@@ -1817,8 +1955,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedDocument],
-                        'original' => [$originalDeleteDocument],
+                        'current' => [
+                            'breadcrumbs' => $deletedDocument->breadcrumbs,
+                            'data' => $deletedDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDeleteDocument->breadcrumbs,
+                            'data' => $originalDeleteDocument,
+                        ],
                     ],
                 ],
             ],
@@ -1882,8 +2026,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
+                        'current' => [
+                            'breadcrumbs' => $currentCategory->breadcrumbs,
+                            'data' => $currentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalCategory->breadcrumbs,
+                            'data' => $originalCategory,
+                        ],
                     ],
                 ],
             ],
@@ -1899,7 +2049,7 @@ class FetchDiffUseCaseTest extends TestCase
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
-        $this->assertEquals('2回目の編集', $result['diff'][0]['snapshots']['current'][0]->title);
+        $this->assertEquals('2回目の編集', $result['diff'][0]['snapshots']['current']['data']->title);
     }
 
     #[Test]
@@ -1944,8 +2094,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$currentCategory],
-                        'original' => [$originalCategory],
+                        'current' => [
+                            'breadcrumbs' => $currentCategory->breadcrumbs,
+                            'data' => $currentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalCategory->breadcrumbs,
+                            'data' => $originalCategory,
+                        ],
                     ],
                 ],
             ],
@@ -2009,8 +2165,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'updated',
                     'snapshots' => [
-                        'current' => $currentDocument,
-                        'original' => $originalDocument,
+                        'current' => [
+                            'breadcrumbs' => $currentDocument->breadcrumbs,
+                            'data' => $currentDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDocument->breadcrumbs,
+                            'data' => $originalDocument,
+                        ],
                     ],
                 ],
             ],
@@ -2026,7 +2188,7 @@ class FetchDiffUseCaseTest extends TestCase
 
         // Assert
         $this->assertEquals('updated', $result['diff'][0]['operation']);
-        $this->assertEquals('2回目の編集', $result['diff'][0]['snapshots']['current'][0]->title);
+        $this->assertEquals('2回目の編集', $result['diff'][0]['snapshots']['current']['data']->title);
     }
 
     #[Test]
@@ -2077,8 +2239,14 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => $currentDocument,
-                        'original' => $originalDocument,
+                        'current' => [
+                            'breadcrumbs' => $currentDocument->breadcrumbs,
+                            'data' => $currentDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDocument->breadcrumbs,
+                            'data' => $originalDocument,
+                        ],
                     ],
                 ],
             ],
@@ -2171,16 +2339,28 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedParentCategory],
-                        'original' => [$originalParentCategory],
+                        'current' => [
+                            'breadcrumbs' => $deletedParentCategory->breadcrumbs,
+                            'data' => $deletedParentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalParentCategory->breadcrumbs,
+                            'data' => $originalParentCategory,
+                        ],
                     ],
                 ],
                 [
                     'type' => 'document',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedDocument],
-                        'original' => $originalDocument,
+                        'current' => [
+                            'breadcrumbs' => $deletedDocument->breadcrumbs,
+                            'data' => $deletedDocument,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalDocument->breadcrumbs,
+                            'data' => $originalDocument,
+                        ],
                     ],
                 ],
             ],
@@ -2297,24 +2477,42 @@ class FetchDiffUseCaseTest extends TestCase
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedParentCategory],
-                        'original' => [$originalParentCategory],
+                        'current' => [
+                            'breadcrumbs' => $deletedParentCategory->breadcrumbs,
+                            'data' => $deletedParentCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalParentCategory->breadcrumbs,
+                            'data' => $originalParentCategory,
+                        ],
                     ],
                 ],
                 [
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedChildCategory],
-                        'original' => [$originalChildCategory],
+                        'current' => [
+                            'breadcrumbs' => $deletedChildCategory->breadcrumbs,
+                            'data' => $deletedChildCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalChildCategory->breadcrumbs,
+                            'data' => $originalChildCategory,
+                        ],
                     ],
                 ],
                 [
                     'type' => 'category',
                     'operation' => 'deleted',
                     'snapshots' => [
-                        'current' => [$deletedGrandchildCategory],
-                        'original' => [$originalGrandchildCategory],
+                        'current' => [
+                            'breadcrumbs' => $deletedGrandchildCategory->breadcrumbs,
+                            'data' => $deletedGrandchildCategory,
+                        ],
+                        'original' => [
+                            'breadcrumbs' => $originalGrandchildCategory->breadcrumbs,
+                            'data' => $originalGrandchildCategory,
+                        ],
                     ],
                 ],
             ],

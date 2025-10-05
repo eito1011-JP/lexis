@@ -13,6 +13,7 @@ import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullReque
 import { markdownStyles } from '@/styles/markdownContent';
 import { useToast } from '@/contexts/ToastContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { type BreadcrumbItem } from '@/api/category';
 
 // 差分データの型定義
 type CategoryVersion = {
@@ -59,6 +60,16 @@ type DiffInfo = {
   type: 'category' | 'document';
   operation: 'created' | 'updated' | 'deleted';
   changed_fields: Record<string, FieldChangeInfo>;
+  snapshots?: {
+    current?: {
+      breadcrumbs?: BreadcrumbItem[];
+      data?: any;
+    };
+    original?: {
+      breadcrumbs?: BreadcrumbItem[];
+      data?: any;
+    };
+  };
 };
 
 type DiffResponse = {
@@ -859,6 +870,12 @@ export default function DiffPage(): JSX.Element {
                     key={`category-${diff.id || index}`}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
+                    {/* パンクズリスト追加 */}
+                    {diff.snapshots?.current?.breadcrumbs && (
+                      <div className="mb-4">
+                        <Breadcrumb breadcrumbs={diff.snapshots.current.breadcrumbs} />
+                      </div>
+                    )}
                     <SmartDiffValue
                       label="タイトル"
                       fieldInfo={titleFieldInfo}
@@ -904,6 +921,12 @@ export default function DiffPage(): JSX.Element {
                     key={`document-${diff.id || index}`}
                     className="bg-gray-900/70 rounded-lg border border-gray-800 p-6 shadow-lg"
                   >
+                    {/* パンクズリスト追加 */}
+                    {diff.snapshots?.current?.breadcrumbs && (
+                      <div className="mb-4">
+                        <Breadcrumb breadcrumbs={diff.snapshots.current.breadcrumbs} />
+                      </div>
+                    )}
                     <SmartDiffValue
                       label="タイトル"
                       fieldInfo={titleFieldInfo}

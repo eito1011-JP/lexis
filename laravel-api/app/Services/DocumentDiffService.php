@@ -78,8 +78,14 @@ class DocumentDiffService
             'type' => $isDocument ? 'document' : 'category',
             'operation' => $this->determineOperation($currentObject, $originalObject, $isNewCreation),
             'snapshots' => [
-                'current' => $currentObject,
-                'original' => $originalObject ? $originalObject : null,
+                'current' => [
+                    'breadcrumbs' => $currentObject->getBreadcrumbs(),
+                    'data' => $currentObject,
+                ],
+                'original' => $originalObject ? [
+                    'breadcrumbs' => $originalObject->getBreadcrumbs(),
+                    'data' => $originalObject,
+                ] : [],
             ],
             'changed_fields' => [],
         ];
