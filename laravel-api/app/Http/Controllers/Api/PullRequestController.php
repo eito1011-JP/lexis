@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Consts\ErrorType;
 use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
 use App\Dto\UseCase\PullRequest\MergePullRequestDto;
-use App\Dto\UseCase\PullRequest\UpdatePullRequestTitleDto;
+use App\Dto\UseCase\PullRequest\UpdatePullRequestDto;
 use App\Enums\PullRequestActivityAction;
 use App\Enums\PullRequestReviewerActionStatus;
 use App\Enums\PullRequestStatus;
@@ -29,8 +29,8 @@ use App\UseCases\PullRequest\CreatePullRequestUseCase;
 use App\UseCases\PullRequest\IsConflictResolvedUseCase;
 use App\UseCases\PullRequest\MergePullRequestUseCase;
 use App\UseCases\PullRequest\ShowPullRequestUseCase;
-use App\UseCases\PullRequest\UpdatePullRequestTitleUseCase;
 use App\Dto\UseCase\PullRequest\ShowDto;
+use App\UseCases\PullRequest\UpdatePullRequestUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -58,7 +58,7 @@ class PullRequestController extends ApiBaseController
 
     protected ShowPullRequestUseCase $showPullRequestUseCase;
 
-    protected UpdatePullRequestTitleUseCase $updatePullRequestTitleUseCase;
+    protected UpdatePullRequestUseCase $updatePullRequestUseCase;
 
     public function __construct(
         DocumentDiffService $documentDiffService,
@@ -69,7 +69,7 @@ class PullRequestController extends ApiBaseController
         IsConflictResolvedUseCase $isConflictResolvedUseCase,
         CreatePullRequestUseCase $createPullRequestUseCase,
         ShowPullRequestUseCase $showPullRequestUseCase,
-        UpdatePullRequestTitleUseCase $updatePullRequestTitleUseCase
+        UpdatePullRequestUseCase $updatePullRequestUseCase
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->gitService = $gitService;
@@ -79,7 +79,7 @@ class PullRequestController extends ApiBaseController
         $this->isConflictResolvedUseCase = $isConflictResolvedUseCase;
         $this->createPullRequestUseCase = $createPullRequestUseCase;
         $this->showPullRequestUseCase = $showPullRequestUseCase;
-        $this->updatePullRequestTitleUseCase = $updatePullRequestTitleUseCase;
+        $this->updatePullRequestUseCase = $updatePullRequestUseCase;
     }
 
     /**
@@ -466,14 +466,14 @@ class PullRequestController extends ApiBaseController
             }
 
             // 2. DTOを作成
-            $dto = new UpdatePullRequestTitleDto(
+            $dto = new UpdatePullRequestDto(
                 pullRequestId: $request->validated('pull_request_id'),
                 title: $request->validated('title'),
                 description: $request->validated('description'),
             );
 
             // 3. UseCaseを実行
-            $this->updatePullRequestTitleUseCase->execute($dto, $user);
+            $this->updatePullRequestUseCase->execute($dto, $user);
 
             return response()->json();
 

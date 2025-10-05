@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\UseCases\PullRequest;
 
 use App\Dto\UseCase\PullRequest\UpdatePullRequestDto;
+use Http\Discovery\Exception\NotFoundException;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Services\PullRequestActivityLogService;
@@ -33,11 +34,22 @@ class UpdatePullRequestUseCase
         DB::beginTransaction();
 
         try {
+            // 0. ユーザーの組織メンバーシップを確認
+            $organizationMember = $user->organizationMember;
+
+            if (! $organizationMember || ! $organizationMember->organization_id) {
+                throw new NotFoundException;
+            }
+
+            $organizationId = $organizationMember->organization_id;
+
             // 1. プルリクエストを取得
-            $pullRequest = PullRequest::findOrFail($dto->pullRequestId);
+            $pullRequest = PullRequest::where('id', $dto->pullRequestId)
+                ->where('organization_id', $organizationId)
+                ->firstOrFail();
 
             // 2. アクティビティログを作成
-            if ($dto->title) {
+            if ($dto->title !== null) {
                 $this->activityLogService->createTitleEditLog($user, $pullRequest, $dto->title);
             }
 

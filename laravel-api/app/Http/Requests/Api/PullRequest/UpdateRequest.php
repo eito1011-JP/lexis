@@ -21,7 +21,7 @@ class UpdateRequest extends FormRequest
     {
         return [
             'pull_request_id' => 'required|integer|exists:pull_requests,id',
-            'title' => 'nullable|string|max:255',
+            'title' => 'nullable|filled|string|max:255',
             'description' => 'nullable|string',
         ];
     }
