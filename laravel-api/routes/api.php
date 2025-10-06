@@ -60,6 +60,7 @@ Route::middleware('auth:api')->group(function () {
     // ユーザー関連
     Route::prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index']);
+        Route::get('/me', [UserController::class, 'me']);
     });
 
     // プルリクエストレビュアー関連
