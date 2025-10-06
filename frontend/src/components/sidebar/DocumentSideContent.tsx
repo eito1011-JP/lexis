@@ -511,8 +511,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
       {/* サイドコンテンツヘッダー */}
       <div className="px-4 py-1 group">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white">
-            {organization?.name || '読み込み中...'} ({activeUserBranch ? `${user?.nickname}のversion` : 'main'})
+          <h3 className="text-sm font-semibold">
+            <span className="text-[#B1B1B1]">{organization?.name || '読み込み中...'}</span> 
+            <span className="text-[#FF9900]"> ({activeUserBranch ? `${user?.nickname}のversion` : 'main'})</span>
           </h3>
           {/* 会社名横のプラスボタン */}
           <button
