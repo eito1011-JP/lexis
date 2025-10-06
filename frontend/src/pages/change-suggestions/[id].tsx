@@ -29,6 +29,9 @@ import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
 import { markdownStyles } from '@/styles/markdownContent';
 import { CheckMark } from '@/components/icon/common/CheckMark';
 import SendReview from '@/components/icon/common/SendReview';
+import { ThreeDots } from '@/components/icon/common/ThreeDots';
+import { DescriptionEdit } from '@/components/diff/DescriptionEdit';
+import { DescriptionDisplay } from '@/components/diff/DescriptionDisplay';
 
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -347,6 +350,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [showTitleEditModal, setShowTitleEditModal] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editingDescription, setEditingDescription] = useState('');
+  const [isUpdatingDescription, setIsUpdatingDescription] = useState(false);
+  const [showDescriptionMenu, setShowDescriptionMenu] = useState(false);
+  const descriptionMenuRef = useRef<HTMLDivElement | null>(null);
 
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
@@ -452,6 +460,20 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showReviewerModal]);
+
+  // Description メニューの外部クリックで閉じる
+  useEffect(() => {
+    if (!showDescriptionMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (descriptionMenuRef.current && !descriptionMenuRef.current.contains(event.target as Node)) {
+        setShowDescriptionMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDescriptionMenu]);
 
   // レビュアーモーダルが閉じられた時のAPI実行
   useEffect(() => {
@@ -635,6 +657,51 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       });
     } finally {
       setIsUpdatingTitle(false);
+    }
+  };
+
+  // Description編集を開始するハンドラー
+  const handleStartEditDescription = () => {
+    setEditingDescription(pullRequestData?.description || '');
+    setIsEditingDescription(true);
+    setShowDescriptionMenu(false);
+  };
+
+  // Description編集をキャンセルするハンドラー
+  const handleCancelEditDescription = () => {
+    setIsEditingDescription(false);
+    setEditingDescription('');
+  };
+
+  // Description更新のハンドラー
+  const handleUpdateDescription = async () => {
+    if (!id || isUpdatingDescription) return;
+
+    setIsUpdatingDescription(true);
+    try {
+      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE}/${id}/`, {
+        description: editingDescription.trim(),
+      });
+
+      setToast({ message: '説明を更新しました', type: 'success' });
+      setIsEditingDescription(false);
+
+      // Description更新後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
+    } catch (error) {
+      console.error('説明更新エラー:', error);
+      setToast({
+        message:
+          '説明更新に失敗しました: ' +
+          (error instanceof Error ? error.message : '不明なエラー'),
+        type: 'error',
+      });
+    } finally {
+      setIsUpdatingDescription(false);
     }
   };
 
@@ -846,6 +913,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         </div>
       )}
 
+
       <div className="mb-20 w-full rounded-lg relative">
         {/* ステータスバナー */}
         {(pullRequestData.status === PULL_REQUEST_STATUS.MERGED ||
@@ -914,11 +982,41 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                           {pullRequestData?.author_nickname}
                         </span>
                       </div>
+                      {!isEditingDescription && (
+                        <div className="relative" ref={descriptionMenuRef}>
+                          <button
+                            onClick={() => setShowDescriptionMenu(!showDescriptionMenu)}
+                            className="p-2 hover:bg-gray-700 rounded-md transition-colors"
+                            title="メニューを開く"
+                          >
+                            <ThreeDots className="w-4 h-4" />
+                          </button>
+                          {showDescriptionMenu && (
+                            <div className="absolute right-0 top-full mt-1 bg-[#181A1B] border border-gray-600 rounded-lg shadow-lg overflow-hidden min-w-[120px] z-10">
+                              <button
+                                onClick={handleStartEditDescription}
+                                className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+                              >
+                                編集
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="text-white text-base leading-relaxed ml-[-1rem]">
-                      {pullRequestData?.description || 'この変更提案には説明がありません。'}
-                    </div>
+                    {/* Description表示または編集 */}
+                    {isEditingDescription ? (
+                      <DescriptionEdit
+                        value={editingDescription}
+                        onChange={setEditingDescription}
+                        onCancel={handleCancelEditDescription}
+                        onSave={handleUpdateDescription}
+                        isUpdating={isUpdatingDescription}
+                      />
+                    ) : (
+                      <DescriptionDisplay description={pullRequestData?.description} />
+                    )}
                   </div>
                 </div>
               </div>
