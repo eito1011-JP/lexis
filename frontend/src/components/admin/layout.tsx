@@ -28,6 +28,7 @@ interface AdminLayoutProps {
   selectedCategoryEntityId?: number;
   selectedDocumentEntityId?: number;
   onNavigationRequest?: (path: string) => void;
+  refreshTrigger?: number;
 }
 
 export default function AdminLayout({
@@ -40,6 +41,7 @@ export default function AdminLayout({
   selectedCategoryEntityId,
   selectedDocumentEntityId,
   onNavigationRequest,
+  refreshTrigger,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -187,6 +189,7 @@ export default function AdminLayout({
                     onDocumentSelect={onDocumentSelect}
                     selectedCategoryEntityId={selectedCategoryEntityId}
                     selectedDocumentEntityId={selectedDocumentEntityId}
+                    refreshTrigger={refreshTrigger}
                   />
               )}
             </div>

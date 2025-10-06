@@ -8,12 +8,15 @@ import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { MarkdownRenderer } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
+import { ROUTE_PATHS, ROUTES } from '@/routes';
+import { useNavigate } from 'react-router-dom';
 
 
 /**
  * 管理画面のドキュメント一覧ページコンポーネント
  */
 export default function DocumentsPage(): JSX.Element {
+  const navigate = useNavigate();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
@@ -25,6 +28,8 @@ export default function DocumentsPage(): JSX.Element {
   const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
   const [userBranchId, setUserBranchId] = useState<string | null>(null);
   const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
+  const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // マークダウンスタイルを一度だけ適用
   useEffect(() => {
@@ -158,6 +163,7 @@ export default function DocumentsPage(): JSX.Element {
       onDocumentSelect={handleDocumentSelect}
       selectedCategoryEntityId={selectedSideContentCategory ? selectedSideContentCategory : undefined}
       selectedDocumentEntityId={selectedDocumentEntityId || undefined}
+      refreshTrigger={refreshTrigger}
     >
          <div className="mb-6 align-left">
            {/* パンくずリストと差分提出ボタン */}
@@ -170,6 +176,29 @@ export default function DocumentsPage(): JSX.Element {
             />
 
             <div className="flex items-center gap-4 mr-9">
+              <button
+                className="flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  setShowDiscardConfirmModal(true);
+                }}
+                disabled={!showPrSubmitButton}
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+                <span>差分破棄</span>
+              </button>
               <button
                 className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => {
@@ -272,6 +301,92 @@ export default function DocumentsPage(): JSX.Element {
                 }}
               >
                 差分確認画面へ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 差分破棄確認モーダル */}
+      {showDiscardConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">差分を破棄</h2>
+
+            <p className="mb-4 text-gray-300">
+              差分を下書きとして保存しますか？
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={() => setShowDiscardConfirmModal(false)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none"
+                onClick={() => {
+                  // TODO: 下書きとして保存する処理を実装
+                  setToastMessage('下書き保存機能は未実装です');
+                  setToastType('error');
+                  setShowToast(true);
+                  setShowDiscardConfirmModal(false);
+                }}
+              >
+                はい
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 rounded-md hover:bg-red-700 focus:outline-none"
+                onClick={async () => {
+                  if (!userBranchId) {
+                    setToastMessage(
+                      '差分データの取得に失敗しました。ページを再読み込みしてください。'
+                    );
+                    setToastType('error');
+                    setShowToast(true);
+                    setShowDiscardConfirmModal(false);
+                    return;
+                  }
+
+                  try {
+                    await apiClient.delete(`/api/user-branches/${userBranchId}`);
+                    setToastMessage('差分を破棄しました');
+                    setToastType('success');
+                    setShowToast(true);
+                    setShowDiscardConfirmModal(false);
+                    setShowPrSubmitButton(false);
+                    setUserBranchId(null);
+                    
+                    // サイドバーのカテゴリを最新情報に更新
+                    setRefreshTrigger(prev => prev + 1);
+                    
+                    // ドキュメント詳細とカテゴリ詳細をクリア（古い情報を表示しないように）
+                    setSelectedDocumentEntityId(null);
+                    setDocumentDetail(null);
+                    setSelectedSideContentCategory(null);
+                    setCategoryDetail(null);
+                    
+                    // 最新のカテゴリ情報を再取得
+                    const categories = await fetchCategories(null);
+                    if (categories.length > 0) {
+                      const minIdCategory = categories.reduce((min, current) => 
+                        current.entity_id < min.entity_id ? current : min
+                      );
+                      setSelectedSideContentCategory(minIdCategory.entity_id);
+                      await loadCategoryDetail(minIdCategory.entity_id);
+                    }
+                    
+                  } catch (error) {
+                    console.error('差分破棄エラー:', error);
+                    setToastMessage('差分の破棄に失敗しました');
+                    setToastType('error');
+                    setShowToast(true);
+                    setShowDiscardConfirmModal(false);
+                  }
+                }}
+              >
+                いいえ
               </button>
             </div>
           </div>
