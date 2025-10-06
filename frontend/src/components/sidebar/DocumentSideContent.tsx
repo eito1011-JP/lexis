@@ -45,6 +45,7 @@ interface DocumentSideContentProps {
   onDocumentSelect?: (documentId: number) => void;
   selectedCategoryEntityId?: number;
   selectedDocumentEntityId?: number;
+  refreshTrigger?: number;
 }
 
 // カテゴリデータを取得するサービス関数（無制限表示）
@@ -70,7 +71,7 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
  * ドキュメント用サイドコンテンツコンポーネント
  * 株式会社Nexis配下の階層構造を無制限表示
  */
-export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentEntityId }: DocumentSideContentProps) {
+export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentEntityId, refreshTrigger }: DocumentSideContentProps) {
   const navigate = useNavigate();
   const { user, organization, activeUserBranch } = useUserMe();
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
@@ -204,6 +205,13 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   useEffect(() => {
     loadCategories();
   }, []);
+
+  // refreshTriggerが変更された時にカテゴリを再読み込み
+  useEffect(() => {
+    if (refreshTrigger !== undefined) {
+      loadCategories();
+    }
+  }, [refreshTrigger]);
 
   // カテゴリの展開/折りたたみを切り替え
   const toggleExpanded = (categoryEntityId: number) => {

@@ -107,6 +107,7 @@ Route::middleware('auth:api')->group(function () {
     Route::resource('category-entities', CategoryEntityController::class);
 
     // ユーザーブランチ関連
+    Route::resource('user-branches', UserBranchController::class, ['only' => [  'destroy']]);
     Route::prefix('user-branches')->group(function () {
         Route::get('/has-changes', [UserBranchController::class, 'hasUserChanges']);
         Route::get('/diff', [UserBranchController::class, 'fetchDiff']);
