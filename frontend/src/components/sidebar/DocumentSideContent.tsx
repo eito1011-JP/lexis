@@ -10,6 +10,7 @@ import CreateActionModal from '@/components/sidebar/CreateActionModal';
 import DocumentDeleteModal from '@/components/sidebar/DocumentDeleteModal';
 import { useNavigate } from 'react-router-dom';
 import { API_CONFIG } from '../admin/api/config';
+import { useUserMe } from '@/hooks/useUserMe';
 
 // APIから取得するカテゴリデータの型定義
 interface ApiCategoryData {
@@ -71,6 +72,7 @@ const fetchCategories = async (parentEntityId: number | null = null): Promise<Ap
  */
 export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentEntityId }: DocumentSideContentProps) {
   const navigate = useNavigate();
+  const { user, organization, activeUserBranch } = useUserMe();
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
@@ -501,7 +503,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
       {/* サイドコンテンツヘッダー */}
       <div className="px-4 py-1 group">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-white">株式会社Nexis (main)</h3>
+          <h3 className="text-sm font-semibold text-white">
+            {organization?.name || '読み込み中...'} ({activeUserBranch ? `${user?.nickname}のversion` : 'main'})
+          </h3>
           {/* 会社名横のプラスボタン */}
           <button
             className="p-1 hover:bg-gray-700 rounded transition-colors opacity-0 group-hover:opacity-100"

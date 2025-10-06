@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { API_CONFIG } from '../api/config';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserMe } from '@/hooks/useUserMe';
 
 const PATHS = {
   ADMIN_LOGIN: '/login',
@@ -16,27 +17,43 @@ const STYLES = {
     'font-bold text-center border border-[#DEDEDE] bg-transparent text-white py-2 rounded text-sm transition-colors w-32',
 } as const;
 
-const UserInfo: React.FC<{ email: string }> = ({ email }) => <span>{email}でログイン中</span>;
+/**
+ * ユーザー情報表示コンポーネント
+ * useUserMeフックを使用して、ユーザー、組織、アクティブブランチ情報を表示
+ */
+const UserInfo: React.FC = () => {
+  const { user, isLoading } = useUserMe();
+
+  if (isLoading) {
+    return <span className="text-gray-400">読み込み中...</span>;
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex flex-col items-end text-sm">
+        <span className="font-medium">{user.email}でログイン中</span>
+      </div>
+    </div>
+  );
+};
 
 
 /**
  * 管理画面用のヘッダーコンポーネント
  */
 function Header(): React.ReactElement {
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <header className={STYLES.header}>
       <div className={STYLES.container}>
         <div className={STYLES.logo}>Lexis</div>
         <div className={STYLES.navContainer}>
-          {isAuthenticated && user ? (
-            <>
-              <UserInfo email={user.email} />
-            </>
-          ) : (
-            <></>
-          )}
+          {isAuthenticated && <UserInfo />}
         </div>
       </div>
     </header>
