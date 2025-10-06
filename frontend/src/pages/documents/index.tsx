@@ -8,8 +8,8 @@ import { apiClient } from '@/components/admin/api/client';
 import { API_CONFIG } from '@/components/admin/api/config';
 import { MarkdownRenderer } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
-import { ROUTE_PATHS, ROUTES } from '@/routes';
 import { useNavigate } from 'react-router-dom';
+import { useUserMe } from '@/hooks/useUserMe';
 
 
 /**
@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
  */
 export default function DocumentsPage(): JSX.Element {
   const navigate = useNavigate();
+  const { user, organization, activeUserBranch, mutate: mutateUserMe } = useUserMe();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
@@ -369,6 +370,10 @@ export default function DocumentsPage(): JSX.Element {
                     
                     // 最新のカテゴリ情報を再取得
                     const categories = await fetchCategories(null);
+                    
+                    // ユーザー情報とカテゴリ情報を最新にリロード
+                    await mutateUserMe();
+                    
                     if (categories.length > 0) {
                       const minIdCategory = categories.reduce((min, current) => 
                         current.entity_id < min.entity_id ? current : min
