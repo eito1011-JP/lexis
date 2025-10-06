@@ -26,46 +26,12 @@ import { Closed } from '@/components/icon/common/Closed';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
 import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
-import { MarkdownRenderer } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { CheckMark } from '@/components/icon/common/CheckMark';
 import SendReview from '@/components/icon/common/SendReview';
-
-// 差分データの型定義
-type DiffItem = {
-  id: number;
-  slug: string;
-  sidebar_label: string;
-  description?: string;
-  title?: string;
-  content?: string;
-  position?: number;
-  file_order?: number;
-  parent_entity_id?: number;
-  category_id?: number;
-  status: string;
-  user_branch_id: number;
-  created_at: string;
-  updated_at: string;
-};
-
-// ユーザーオブジェクトの型定義
-type User = {
-  id: number;
-  email: string;
-  role?: string;
-  created_at?: string;
-};
-
-// コメントの型定義
-type Comment = {
-  id: number;
-  author: string | null;
-  content: string;
-  is_resolved: boolean;
-  created_at: string;
-  updated_at: string;
-};
+import { ThreeDots } from '@/components/icon/common/ThreeDots';
+import { DescriptionEdit } from '@/components/diff/DescriptionEdit';
+import { DescriptionDisplay } from '@/components/diff/DescriptionDisplay';
 
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -78,68 +44,6 @@ type DiffDataInfo = {
   type: 'document' | 'category';
   operation: 'created' | 'updated' | 'deleted';
   changed_fields: Record<string, DiffFieldInfo>;
-};
-
-// SmartDiffValueコンポーネント
-const SmartDiffValue: React.FC<{
-  label: string;
-  fieldInfo: DiffFieldInfo;
-  isMarkdown?: boolean;
-}> = ({ label, fieldInfo, isMarkdown = false }) => {
-  const renderValue = (value: any) => {
-    if (value === null || value === undefined) return '';
-    if (typeof value === 'boolean') return value ? 'はい' : 'いいえ';
-    return String(value);
-  };
-
-  const renderContent = (content: string, isMarkdown: boolean) => {
-    if (!isMarkdown || !content) return content;
-
-    try {
-      return (
-        <div className="markdown-content prose prose-invert max-w-none">
-          <MarkdownRenderer>{content}</MarkdownRenderer>
-        </div>
-      );
-    } catch (error) {
-      return content;
-    }
-  };
-
-  return (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-300 mb-2">{label}</label>
-
-      {fieldInfo.status === 'added' && (
-        <div className="bg-green-900/30 border rounded-md p-3 text-sm text-green-200">
-          {renderContent(renderValue(fieldInfo.current), isMarkdown)}
-        </div>
-      )}
-
-      {fieldInfo.status === 'deleted' && (
-        <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
-          {renderContent(renderValue(fieldInfo.original), isMarkdown)}
-        </div>
-      )}
-
-      {fieldInfo.status === 'modified' && (
-        <div className="space-y-1">
-          <div className="bg-red-900/30 border border-red-700 rounded-md p-3 text-sm text-red-200">
-            {renderContent(renderValue(fieldInfo.original), isMarkdown)}
-          </div>
-          <div className="bg-green-900/30 border rounded-md p-3 text-sm text-green-200">
-            {renderContent(renderValue(fieldInfo.current), isMarkdown)}
-          </div>
-        </div>
-      )}
-
-      {fieldInfo.status === 'unchanged' && (
-        <div className="bg-gray-800 border border-gray-600 rounded-md p-3 text-sm text-gray-300">
-          {renderContent(renderValue(fieldInfo.current || fieldInfo.original), isMarkdown)}
-        </div>
-      )}
-    </div>
-  );
 };
 
 // タブ定義
@@ -333,12 +237,12 @@ const ActivityLogItem: React.FC<{ log: ActivityLog; pullRequestId: string }> = (
 // ステータスバナーコンポーネント
 const StatusBanner: React.FC<{
   status: string;
-  authorEmail: string;
+  authorNickname: string;
   createdAt: string;
   conflict: boolean;
   title: string;
   onEditTitle: () => void;
-}> = ({ status, authorEmail, createdAt, conflict, title, onEditTitle }) => {
+}> = ({ status, authorNickname, createdAt, conflict, title, onEditTitle }) => {
   let button;
   switch (true) {
     case conflict:
@@ -407,7 +311,7 @@ const StatusBanner: React.FC<{
       <div className="flex items-center justify-start">
         {button}
         <span className="font-medium text-[#B1B1B1] ml-4">
-          {authorEmail}さんが{' '}
+          {authorNickname}さんが{' '}
           {formatDistanceToNow(new Date(createdAt), { addSuffix: true, locale: ja })}{' '}
           に変更を提出しました
         </span>
@@ -441,67 +345,16 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
   const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('activity');
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loadingActivityLogs, setLoadingActivityLogs] = useState(false);
   const [showTitleEditModal, setShowTitleEditModal] = useState(false);
   const [editingTitle, setEditingTitle] = useState('');
   const [isUpdatingTitle, setIsUpdatingTitle] = useState(false);
-
-  // フィールド情報を取得する関数
-  const getFieldInfo = (
-    diffInfo: DiffDataInfo | null,
-    fieldName: string,
-    currentValue: any,
-    originalValue?: any
-  ): DiffFieldInfo => {
-    if (!diffInfo) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-
-    if (diffInfo.operation === 'deleted') {
-      return {
-        status: 'deleted',
-        current: null,
-        original: originalValue,
-      };
-    }
-
-    if (!diffInfo.changed_fields[fieldName]) {
-      return {
-        status: 'unchanged',
-        current: currentValue,
-        original: originalValue,
-      };
-    }
-    return diffInfo.changed_fields[fieldName];
-  };
-
-  // コメント取得API呼び出し関数
-  const fetchComments = useCallback(async () => {
-    if (!id) return;
-
-    setLoadingComments(true);
-    try {
-      const response = await apiClient.get(
-        `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET_DETAIL}/${id}/comments`
-      );
-      setComments(response || []);
-    } catch (error) {
-      console.error('コメント取得エラー:', error);
-      setToast({
-        message: 'コメントの取得に失敗しました',
-        type: 'error',
-      });
-    } finally {
-      setLoadingComments(false);
-    }
-  }, [id]);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editingDescription, setEditingDescription] = useState('');
+  const [isUpdatingDescription, setIsUpdatingDescription] = useState(false);
+  const [showDescriptionMenu, setShowDescriptionMenu] = useState(false);
+  const descriptionMenuRef = useRef<HTMLDivElement | null>(null);
 
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
@@ -564,6 +417,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         const data = await fetchPullRequestDetail(id);
         setPullRequestData(data);
 
+        // アクティビティログをstateにセット
+        if (data.activity_logs) {
+          setActivityLogs(data.activity_logs);
+        }
+
         // プルリクエストデータが取得できた場合、レビュアー設定のためにユーザー一覧を取得
         if (data.reviewers && data.reviewers.length > 0) {
           try {
@@ -603,6 +461,20 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     };
   }, [showReviewerModal]);
 
+  // Description メニューの外部クリックで閉じる
+  useEffect(() => {
+    if (!showDescriptionMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (descriptionMenuRef.current && !descriptionMenuRef.current.contains(event.target as Node)) {
+        setShowDescriptionMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDescriptionMenu]);
+
   // レビュアーモーダルが閉じられた時のAPI実行
   useEffect(() => {
     if (showReviewerModal === false && reviewersInitialized) {
@@ -622,6 +494,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         fetchPullRequestDetail(id)
           .then(data => {
             setPullRequestData(data);
+            // アクティビティログも更新
+            if (data.activity_logs) {
+              setActivityLogs(data.activity_logs);
+            }
           })
           .catch(error => {
             console.error('プルリクエスト詳細再取得エラー:', error);
@@ -704,8 +580,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
       setToast({ message: 'コメントを投稿しました', type: 'success' });
       setComment('');
-      // コメント投稿後にコメントリストを再取得
-      // fetchComments();
+      
+      // コメント投稿後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
     } catch (error) {
       console.error('コメント投稿エラー:', error);
       setToast({
@@ -753,20 +634,19 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
     setIsUpdatingTitle(true);
     try {
-      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE_TITLE}/${id}/title`, {
+      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE}/${id}/`, {
         title: editingTitle.trim(),
       });
 
-      // プルリクエストデータを更新
-      if (pullRequestData) {
-        setPullRequestData({
-          ...pullRequestData,
-          title: editingTitle.trim(),
-        });
-      }
-
       setToast({ message: 'タイトルを更新しました', type: 'success' });
       setShowTitleEditModal(false);
+
+      // タイトル更新後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
     } catch (error) {
       console.error('タイトル更新エラー:', error);
       setToast({
@@ -777,6 +657,51 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       });
     } finally {
       setIsUpdatingTitle(false);
+    }
+  };
+
+  // Description編集を開始するハンドラー
+  const handleStartEditDescription = () => {
+    setEditingDescription(pullRequestData?.description || '');
+    setIsEditingDescription(true);
+    setShowDescriptionMenu(false);
+  };
+
+  // Description編集をキャンセルするハンドラー
+  const handleCancelEditDescription = () => {
+    setIsEditingDescription(false);
+    setEditingDescription('');
+  };
+
+  // Description更新のハンドラー
+  const handleUpdateDescription = async () => {
+    if (!id || isUpdatingDescription) return;
+
+    setIsUpdatingDescription(true);
+    try {
+      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE}/${id}/`, {
+        description: editingDescription.trim(),
+      });
+
+      setToast({ message: '説明を更新しました', type: 'success' });
+      setIsEditingDescription(false);
+
+      // Description更新後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
+    } catch (error) {
+      console.error('説明更新エラー:', error);
+      setToast({
+        message:
+          '説明更新に失敗しました: ' +
+          (error instanceof Error ? error.message : '不明なエラー'),
+        type: 'error',
+      });
+    } finally {
+      setIsUpdatingDescription(false);
     }
   };
 
@@ -819,6 +744,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       );
 
       setToast({ message: 'レビュー依頼を送信しました', type: 'success' });
+
+      // レビュー依頼再送後にプルリクエストデータを再取得してactivity logsを更新
+      const updatedData = await fetchPullRequestDetail(id);
+      setPullRequestData(updatedData);
+      if (updatedData.activity_logs) {
+        setActivityLogs(updatedData.activity_logs);
+      }
     } catch (error) {
       console.error('レビュー依頼送信エラー:', error);
       setToast({
@@ -981,6 +913,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         </div>
       )}
 
+
       <div className="mb-20 w-full rounded-lg relative">
         {/* ステータスバナー */}
         {(pullRequestData.status === PULL_REQUEST_STATUS.MERGED ||
@@ -989,7 +922,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
           conflictStatus.mergeable === false) && (
           <StatusBanner
             status={pullRequestData.status}
-            authorEmail={pullRequestData.author_email}
+            authorNickname={pullRequestData.author_nickname || ''}
             createdAt={pullRequestData.created_at}
             conflict={conflictStatus.mergeable === false}
             title={pullRequestData.title}
@@ -1046,19 +979,49 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                     <div className="flex items-center justify-between mb-2 ml-[-1rem]">
                       <div className="flex items-center gap-3">
                         <span className="text-white font-semibold text-lg">
-                          {pullRequestData?.author_email}
+                          {pullRequestData?.author_nickname}
                         </span>
                       </div>
+                      {!isEditingDescription && (
+                        <div className="relative" ref={descriptionMenuRef}>
+                          <button
+                            onClick={() => setShowDescriptionMenu(!showDescriptionMenu)}
+                            className="p-2 hover:bg-gray-700 rounded-md transition-colors"
+                            title="メニューを開く"
+                          >
+                            <ThreeDots className="w-4 h-4" />
+                          </button>
+                          {showDescriptionMenu && (
+                            <div className="absolute right-0 top-full mt-1 bg-[#181A1B] border border-gray-600 rounded-lg shadow-lg overflow-hidden min-w-[120px] z-10">
+                              <button
+                                onClick={handleStartEditDescription}
+                                className="w-full px-4 py-2 text-left text-white hover:bg-gray-700 transition-colors flex items-center gap-2 text-sm"
+                              >
+                                編集
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="text-white text-base leading-relaxed ml-[-1rem]">
-                      {pullRequestData?.description || 'この変更提案には説明がありません。'}
-                    </div>
+                    {/* Description表示または編集 */}
+                    {isEditingDescription ? (
+                      <DescriptionEdit
+                        value={editingDescription}
+                        onChange={setEditingDescription}
+                        onCancel={handleCancelEditDescription}
+                        onSave={handleUpdateDescription}
+                        isUpdating={isUpdatingDescription}
+                      />
+                    ) : (
+                      <DescriptionDisplay description={pullRequestData?.description} />
+                    )}
                   </div>
                 </div>
               </div>
               {/* アクティビティログリスト（コメント以外） */}
-              {loadingActivityLogs ? (
+              {loading || loadingActivityLogs ? (
                 <div className="timeline-item">
                   <div className="timeline-avatar">
                     <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
@@ -1070,68 +1033,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                   </div>
                 </div>
               ) : (
-                activityLogs
-                  .filter(log => log.action !== 'commented') // コメント以外のActivityLogのみ表示
-                  .map((log, index) => (
-                    <ActivityLogItem key={log.id} log={log} pullRequestId={id || ''} />
-                  ))
-              )}
-
-              {/* コメントリスト */}
-              {loadingComments ? (
-                <div className="timeline-item">
-                  <div className="timeline-avatar">
-                    <div className="w-5 h-5 animate-spin rounded-full border-t-2 border-b-2 border-white"></div>
-                  </div>
-                  <div className="timeline-content timeline-content-with-line">
-                    <div className="border border-gray-600 rounded-lg p-6 flex-1">
-                      <p className="text-gray-400">コメントを読み込み中...</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                comments.map((commentItem, index) => (
-                  <div key={commentItem.id} className="timeline-item">
-                    <div className="timeline-avatar">
-                      <span className="text-white text-sm">👤</span>
-                    </div>
-                    <div
-                      className={`timeline-content ${index < comments.length - 1 ? 'timeline-content-with-line' : ''}`}
-                    >
-                      <div className="relative border border-gray-600 rounded-lg p-6 w-full max-w-none pt-1">
-                        {/* 吹き出しの三角形 */}
-                        <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-800 border-b-[8px] border-b-transparent transform -translate-x-3"></div>
-                        <div className="absolute left-0 top-4 w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-gray-600 border-b-[8px] border-b-transparent transform -translate-x-[13px]"></div>
-
-                        {/* コメントヘッダー */}
-                        <div className="flex items-center justify-between mb-2 ml-[-0.7rem]">
-                          <div className="flex items-center gap-3">
-                            <span className="text-white font-semibold">
-                              {commentItem.author || '不明なユーザー'}
-                            </span>
-                            <span className="text-gray-400 text-sm">
-                              {formatDistanceToNow(new Date(commentItem.created_at), {
-                                addSuffix: true,
-                                locale: ja,
-                              })}
-                            </span>
-                          </div>
-                          {commentItem.is_resolved && (
-                            <span className="text-green-400 text-sm px-2 py-1 bg-green-900/30 border rounded">
-                              解決済み
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 白い区切り線 */}
-                        <div className="w-full h-px bg-white mb-3 mx-[-24px]"></div>
-                        {/* コメント内容 */}
-                        <div className="text-white text-base leading-relaxed whitespace-pre-wrap ml-[-0.7rem]">
-                          {commentItem.content}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                activityLogs.map((log, index) => (
+                  <ActivityLogItem key={log.id} log={log} pullRequestId={id || ''} />
                 ))
               )}
             </div>
@@ -1370,6 +1273,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);
                                         setPullRequestData(updatedData);
+                                        // アクティビティログも更新
+                                        if (updatedData.activity_logs) {
+                                          setActivityLogs(updatedData.activity_logs);
+                                        }
                                       } catch (error) {
                                         console.error('レビュアー設定エラー:', error);
                                       }
@@ -1397,6 +1304,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);
                                         setPullRequestData(updatedData);
+                                        // アクティビティログも更新
+                                        if (updatedData.activity_logs) {
+                                          setActivityLogs(updatedData.activity_logs);
+                                        }
                                       } catch (error) {
                                         console.error('レビュアー設定エラー:', error);
                                       }
