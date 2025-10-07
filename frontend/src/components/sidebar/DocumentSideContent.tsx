@@ -513,7 +513,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">
             <span className="text-[#B1B1B1]">{organization?.name || '読み込み中...'}</span> 
-            <span className="text-[#FF9900]"> ({activeUserBranch ? `${user?.nickname}のversion` : 'main'})</span>
+            <span className="text-[#FF9900]">（{activeUserBranch ? `${user?.nickname}のversion` : '最新版'}）</span>
           </h3>
           {/* 会社名横のプラスボタン */}
           <button

@@ -263,7 +263,6 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-gray-400">カテゴリまたはドキュメントを選択してください</p>
             </div>
           )}
         </div>
