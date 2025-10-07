@@ -64,7 +64,7 @@ class FetchNodesUseCaseTest extends TestCase
     }
 
     /**
-     * マージ済みカテゴリとドキュメントを取得する（pullRequestEditSessionTokenなし）
+     * マージ済みカテゴリとドキュメントを取得する
      */
     #[\PHPUnit\Framework\Attributes\Test]
     public function execute_should_return_merged_and_draft_nodes_when_has_active_user_branch(): void
@@ -90,7 +90,6 @@ class FetchNodesUseCaseTest extends TestCase
 
         $dto = new FetchNodesDto(
             categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
         );
 
         $mergedCategoryEntity = CategoryEntity::factory()->create([
@@ -199,7 +198,7 @@ class FetchNodesUseCaseTest extends TestCase
     }
 
     /**
-     * ドラフト状態のカテゴリとドキュメントを取得する（pullRequestEditSessionTokenあり、編集セッション存在）
+     * ドラフト状態のカテゴリとドキュメントを取得する
      */
     #[\PHPUnit\Framework\Attributes\Test]
     public function execute_should_return_draft_nodes_when_edit_merged_nodes(): void
@@ -226,7 +225,6 @@ class FetchNodesUseCaseTest extends TestCase
 
         $dto = new FetchNodesDto(
             categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
         );
 
         // ドラフト状態のカテゴリとドキュメントを作成
@@ -355,8 +353,7 @@ class FetchNodesUseCaseTest extends TestCase
         $this->userBranch->update(['is_active' => false]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
+            categoryEntityId: $parentCategoryEntity->id
         );
 
         // マージ済みカテゴリとドキュメントを作成
@@ -491,8 +488,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: 'some-token'
+            categoryEntityId: $parentCategoryEntity->id
         );
 
         // マージ済みカテゴリとドキュメントを作成
@@ -597,8 +593,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
+            categoryEntityId: $parentCategoryEntity->id
         );
 
         // Act
@@ -637,8 +632,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
+            categoryEntityId: $parentCategoryEntity->id
         );
 
         // IDが大きい順に作成して、結果では小さい順になることを確認
@@ -763,8 +757,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
+            categoryEntityId: $parentCategoryEntity->id
         );
 
         // 正しいユーザーとブランチのドラフトデータ（取得される）
@@ -905,8 +898,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
+            categoryEntityId: $parentCategoryEntity->id
         );
 
         // 現在のユーザーブランチで作成されたマージ済みドキュメント
@@ -1052,8 +1044,7 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
 
         $dto = new FetchNodesDto(
-            categoryEntityId: $parentCategoryEntity->id,
-            pullRequestEditSessionToken: null
+            categoryEntityId: $parentCategoryEntity->id
         );
 
         // Act & Assert

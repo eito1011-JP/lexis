@@ -10,6 +10,5 @@ final class GetDocumentsDto extends UseCaseDto
 {
     public function __construct(
         public readonly ?string $category_path = null,
-        public readonly ?int $edit_pull_request_id = null,
     ) {}
 }

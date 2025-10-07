@@ -25,8 +25,6 @@ class CreateDocumentRequest extends FormRequest
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'category_entity_id' => 'required|integer|exists:category_entities,id',
-            'edit_pull_request_id' => 'nullable|integer',
-            'pull_request_edit_token' => 'nullable|string',
         ];
     }
 
@@ -39,8 +37,6 @@ class CreateDocumentRequest extends FormRequest
             'title' => __('validation.attributes.title'),
             'description' => __('validation.attributes.description'),
             'category_entity_id' => __('validation.attributes.category_entity_id'),
-            'edit_pull_request_id' => __('validation.attributes.edit_pull_request_id'),
-            'pull_request_edit_token' => __('validation.attributes.pull_request_edit_token'),
         ];
     }
 }

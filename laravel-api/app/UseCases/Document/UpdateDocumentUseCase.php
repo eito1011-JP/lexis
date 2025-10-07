@@ -59,21 +59,12 @@ class UpdateDocumentUseCase
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
                 $organizationId,
-                $dto->edit_pull_request_id
-            );
-
-            // 4. PullRequestEditSession::findEditSessionId
-            $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId(
-                $dto->edit_pull_request_id,
-                $dto->pull_request_edit_token,
-                $user->id
             );
 
             // 5. 編集対象のexistingDocumentを取得
             $existingDocument = $this->documentService->getDocumentByWorkContext(
                 $dto->document_entity_id,
                 $user,
-                $dto->pull_request_edit_token
             );
 
             // 7. DocumentVersionを作成
@@ -82,7 +73,6 @@ class UpdateDocumentUseCase
                 'organization_id' => $organizationId,
                 'user_id' => $user->id,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'status' => DocumentStatus::DRAFT->value,
                 'description' => $dto->description,
                 'category_entity_id' => $existingDocument->category_entity_id,
@@ -100,21 +90,6 @@ class UpdateDocumentUseCase
 
             if ($existingDocument->status === DocumentStatus::DRAFT->value) {
                 $existingDocument->delete();
-            }
-
-            // 9. プルリクエストを編集している処理を考慮
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                        'original_version_id' => $existingDocument->id,
-                    ],
-                    [
-                        'current_version_id' => $newDocumentVersion->id,
-                        'diff_type' => 'updated',
-                    ]
-                );
             }
 
             DB::commit();

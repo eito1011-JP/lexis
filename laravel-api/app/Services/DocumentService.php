@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Constants\DocumentCategoryConstants;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Models\DocumentVersion;
@@ -10,7 +9,6 @@ use App\Models\EditStartVersion;
 use App\Models\User;
 use App\Models\UserBranch;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Facades\DB;
 
 class DocumentService
 {
@@ -19,30 +17,15 @@ class DocumentService
     ) {}
 
     /**
-     * ドキュメントファイルパスを生成
-     *
-     * @param  string  $categoryPath  カテゴリパス
-     * @param  string  $slug  スラッグ
-     */
-    public function generateDocumentFilePath(string $categoryPath, string $slug): string
-    {
-        $categoryPath = $categoryPath ? trim($categoryPath, '/') : '';
-
-        return $categoryPath ? "{$categoryPath}/{$slug}.md" : "{$slug}.md";
-    }
-
-    /**
      * 作業コンテキストに応じて配下の全ドキュメントを再帰的に取得
      *
      * @param  int  $categoryEntityId  対象カテゴリのエンティティID
      * @param  User  $user  認証済みユーザー
-     * @param  ?string  $pullRequestEditSessionToken  プルリクエスト編集トークン
      * @return Collection ドキュメントバージョンのコレクション
      */
     public function getDescendantDocumentsByWorkContext(
         int $categoryEntityId,
         User $user,
-        ?string $pullRequestEditSessionToken = null
     ): Collection {
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
         $organizationId = $user->organizationMember->organization_id;
@@ -53,7 +36,6 @@ class DocumentService
             $categoryEntityId,
             $organizationId,
             $activeUserBranch,
-            $pullRequestEditSessionToken
         );
 
         $documents = $documents->merge($directDocuments);
@@ -63,14 +45,12 @@ class DocumentService
             $categoryEntityId,
             $organizationId,
             $activeUserBranch,
-            $pullRequestEditSessionToken
         );
 
         foreach ($childCategories as $childCategory) {
             $childDocuments = $this->getDescendantDocumentsByWorkContext(
                 $childCategory->entity_id,
                 $user,
-                $pullRequestEditSessionToken
             );
 
             $documents = $documents->merge($childDocuments);
@@ -85,7 +65,6 @@ class DocumentService
     public function getDocumentByWorkContext(
         int $documentEntityId,
         User $user,
-        ?string $pullRequestEditSessionToken = null
     ): ?DocumentVersion {
         // ユーザーのアクティブブランチを取得
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
@@ -124,18 +103,6 @@ class DocumentService
             }
         }
 
-        if ($pullRequestEditSessionToken) {
-            // 再編集している場合：PUSHEDとDRAFTとMERGEDステータスを取得（最新のものを優先）
-            return $baseQuery->where(function ($query) use ($activeUserBranch) {
-                $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->whereIn('status', [
-                        DocumentStatus::PUSHED->value,
-                        DocumentStatus::DRAFT->value,
-                    ])
-                        ->where('user_branch_id', $activeUserBranch->id);
-                })->orWhere('status', DocumentStatus::MERGED->value);
-            })->orderBy('created_at', 'desc')->first();
-        } else {
             // 初回編集の場合：DRAFTとMERGEDステータスを取得（最新のものを優先）
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
@@ -143,7 +110,6 @@ class DocumentService
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentStatus::MERGED->value);
             })->orderBy('created_at', 'desc')->first();
-        }
     }
 
     /**
@@ -153,7 +119,6 @@ class DocumentService
         int $categoryEntityId,
         int $organizationId,
         ?UserBranch $activeUserBranch,
-        ?string $pullRequestEditSessionToken
     ): Collection {
         $baseQuery = DocumentVersion::where('category_entity_id', $categoryEntityId)
             ->where('organization_id', $organizationId);
@@ -162,23 +127,11 @@ class DocumentService
             return $baseQuery->where('status', DocumentStatus::MERGED->value)->get();
         }
 
-        if ($pullRequestEditSessionToken) {
-            return $baseQuery->where(function ($query) use ($activeUserBranch) {
-                $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->whereIn('status', [
-                        DocumentStatus::PUSHED->value,
-                        DocumentStatus::DRAFT->value,
-                    ])
-                        ->where('user_branch_id', $activeUserBranch->id);
-                })->orWhere('status', DocumentStatus::MERGED->value);
-            })->get();
-        } else {
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
                     $q1->where('status', DocumentStatus::DRAFT->value)
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentStatus::MERGED->value);
             })->get();
-        }
     }
 }

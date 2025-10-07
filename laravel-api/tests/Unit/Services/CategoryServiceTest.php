@@ -307,49 +307,6 @@ class CategoryServiceTest extends TestCase
         $this->assertEquals('Current version description', $result->description);
     }
 
-    /**
-     * @test
-     */
-    public function test_get_category_by_work_context_with_pull_request_edit_session_token_returns_pushed_category(): void
-    {
-        // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-            'is_active' => true,
-        ]);
-
-        $pushedCategory = CategoryVersion::factory()->create([
-            'entity_id' => $this->categoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::PUSHED->value,
-            'user_branch_id' => $userBranch->id,
-            'title' => 'Pushed Category',
-            'description' => 'Pushed description',
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $this->mergedCategory->id,
-            'current_version_id' => $pushedCategory->id,
-        ]);
-
-        // Act
-        $result = $this->service->getCategoryByWorkContext(
-            $this->categoryEntity->id,
-            $this->user,
-            'test-token'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        // PUSHEDカテゴリが取得される
-        $this->assertEquals($pushedCategory->id, $result->id);
-        $this->assertEquals('Pushed Category', $result->title);
-        $this->assertEquals('Pushed description', $result->description);
-    }
-
         /**
      * @test
      */

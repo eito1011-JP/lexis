@@ -22,7 +22,6 @@ class CategoryVersion extends Model
         'description',
         'status',
         'user_branch_id',
-        'pull_request_edit_session_id',
         'is_deleted',
         'organization_id',
         'created_at',
@@ -83,14 +82,6 @@ class CategoryVersion extends Model
     public function entity()
     {
         return $this->belongsTo(CategoryEntity::class, 'entity_id');
-    }
-
-    /**
-     * プルリクエスト編集セッションとのリレーション
-     */
-    public function pullRequestEditSession()
-    {
-        return $this->belongsTo(PullRequestEditSession::class, 'pull_request_edit_session_id');
     }
 
     /**

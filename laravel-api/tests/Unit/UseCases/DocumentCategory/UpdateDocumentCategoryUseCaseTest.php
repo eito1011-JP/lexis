@@ -96,20 +96,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($userBranch->id);
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
-            ->with($categoryEntity->id, $this->user, null)
+            ->with($categoryEntity->id, $this->user)
             ->andReturn($existingCategory);
 
         // Act
@@ -123,7 +121,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         $this->assertEquals($userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $result->status);
-        $this->assertNull($result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
         $this->assertDatabaseHas('edit_start_versions', [
@@ -137,154 +134,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
         $this->assertDatabaseHas('category_versions', [
             'id' => $existingCategory->id,
             'deleted_at' => null,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function test_update_category_successfully_with_pull_request_edit_session(): void
-    {
-        // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'finished_at' => null,
-        ]);
-
-        $categoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $existingCategory = CategoryVersion::factory()->create([
-            'entity_id' => $categoryEntity->id,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        $dto = new UpdateDocumentCategoryDto(
-            categoryEntityId: $categoryEntity->id,
-            title: 'Updated Title',
-            description: 'Updated Description',
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: $pullRequestEditSession->token
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($userBranch->id);
-
-        $this->CategoryService
-            ->shouldReceive('getCategoryByWorkContext')
-            ->once()
-            ->with($categoryEntity->id, $this->user, $pullRequestEditSession->token)
-            ->andReturn($existingCategory);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertInstanceOf(CategoryVersion::class, $result);
-        $this->assertEquals('Updated Title', $result->title);
-        $this->assertEquals('Updated Description', $result->description);
-        $this->assertEquals($pullRequestEditSession->id, $result->pull_request_edit_session_id);
-
-        // PullRequestEditSessionDiffが作成または更新されていることを確認
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'current_version_id' => $result->id,
-            'diff_type' => 'updated',
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function test_update_category_with_existing_pull_request_edit_session_diff(): void
-    {
-        // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'finished_at' => null,
-        ]);
-
-        $categoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $existingCategory = CategoryVersion::factory()->create([
-            'entity_id' => $categoryEntity->id,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        // 既存のPullRequestEditSessionDiffを作成
-        $existingDiff = PullRequestEditSessionDiff::factory()->create([
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'current_version_id' => $existingCategory->id,
-            'diff_type' => 'created',
-        ]);
-
-        $dto = new UpdateDocumentCategoryDto(
-            categoryEntityId: $categoryEntity->id,
-            title: 'Updated Title',
-            description: 'Updated Description',
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: $pullRequestEditSession->token
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($userBranch->id);
-
-        $this->CategoryService
-            ->shouldReceive('getCategoryByWorkContext')
-            ->once()
-            ->with($categoryEntity->id, $this->user, $pullRequestEditSession->token)
-            ->andReturn($existingCategory);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        // 既存のDiffレコードが更新されていることを確認
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'id' => $existingDiff->id,
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'current_version_id' => $result->id, // 新しいカテゴリIDに更新される
-            'diff_type' => 'updated',
         ]);
     }
 
@@ -307,8 +156,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         // Act & Assert
@@ -328,8 +175,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $nonExistentCategoryEntityId,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         // DocumentCategoryEntity::find()で見つからない場合、fetchOrCreateActiveBranchは呼び出されない
@@ -353,8 +198,6 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         $this->userBranchService
@@ -382,74 +225,19 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         // UserBranchServiceがExceptionを投げるようにモック
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andThrow(new \Exception('Database error'));
 
         // Act & Assert
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Database error');
         $this->useCase->execute($dto, $this->user);
-    }
-
-    /**
-     * @test
-     */
-    public function test_update_category_without_pull_request_edit_session_when_edit_pull_request_id_is_null(): void
-    {
-        // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $categoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $existingCategory = CategoryVersion::factory()->create([
-            'entity_id' => $categoryEntity->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $dto = new UpdateDocumentCategoryDto(
-            categoryEntityId: $categoryEntity->id,
-            title: 'Updated Title',
-            description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, null)
-            ->andReturn($userBranch->id);
-
-        $this->CategoryService
-            ->shouldReceive('getCategoryByWorkContext')
-            ->once()
-            ->with($categoryEntity->id, $this->user, null)
-            ->andReturn($existingCategory);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertNull($result->pull_request_edit_session_id);
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'current_version_id' => $result->id,
-        ]);
     }
 
     /**
@@ -486,20 +274,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($userBranch->id);
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
-            ->with($categoryEntity->id, $this->user, null)
+            ->with($categoryEntity->id, $this->user)
             ->andReturn($existingCategory);
 
         // Act
@@ -534,20 +320,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($userBranch->id);
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
-            ->with($categoryEntity->id, $this->user, null)
+            ->with($categoryEntity->id, $this->user)
             ->andReturn($existingCategory);
 
         // Act
@@ -599,20 +383,18 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
             categoryEntityId: $categoryEntity->id,
             title: 'Updated Title',
             description: 'Updated Description',
-            editPullRequestId: null,
-            pullRequestEditToken: null,
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($userBranch->id);
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
-            ->with($categoryEntity->id, $this->user, null)
+            ->with($categoryEntity->id, $this->user)
             ->andReturn($existingCategory);
 
         // Act

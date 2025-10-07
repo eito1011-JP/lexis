@@ -19,7 +19,6 @@ class DocumentVersion extends Model
     protected $fillable = [
         'user_id',
         'user_branch_id',
-        'pull_request_edit_session_id',
         'organization_id',
         'entity_id',
         'category_entity_id',
@@ -89,14 +88,6 @@ class DocumentVersion extends Model
     public function currentEditStartVersions()
     {
         return $this->hasMany(EditStartVersion::class, 'current_version_id');
-    }
-
-    /**
-     * プルリクエスト編集セッションとのリレーション
-     */
-    public function pullRequestEditSession()
-    {
-        return $this->belongsTo(PullRequestEditSession::class, 'pull_request_edit_session_id');
     }
 
     /**

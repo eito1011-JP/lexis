@@ -145,20 +145,18 @@ class DestroyDocumentUseCaseTest extends TestCase
         // Arrange
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->documentService
             ->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->existingDocument);
 
         // Act
@@ -176,7 +174,6 @@ class DestroyDocumentUseCaseTest extends TestCase
         $this->assertEquals($this->existingDocument->title, $result->title);
         $this->assertEquals(Flag::TRUE, $result->is_deleted);
         $this->assertNotNull($result->deleted_at);
-        $this->assertNull($result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
         $this->assertDatabaseHas('edit_start_versions', [
@@ -184,83 +181,6 @@ class DestroyDocumentUseCaseTest extends TestCase
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $this->existingDocument->id,
             'current_version_id' => $result->id,
-        ]);
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_successfully_destroys_document_with_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'token' => $pullRequestEditToken,
-            'started_at' => now(),
-            'finished_at' => null,
-        ]);
-
-        $dto = new DestroyDocumentDto(
-            document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: $pullRequest->id,
-            pull_request_edit_token: $pullRequestEditToken
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        $this->documentService
-            ->shouldReceive('getDocumentByWorkContext')
-            ->once()
-            ->with($this->documentEntity->id, $this->user, $pullRequestEditToken)
-            ->andReturn($this->existingDocument);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertEquals($this->documentEntity->id, $result->entity_id);
-        $this->assertEquals($this->organization->id, $result->organization_id);
-        $this->assertEquals($this->user->id, $result->user_id);
-        $this->assertEquals($this->userBranch->id, $result->user_branch_id);
-        $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertEquals($this->existingDocument->description, $result->description);
-        $this->assertEquals($this->existingDocument->category_entity_id, $result->category_entity_id);
-        $this->assertEquals($this->existingDocument->title, $result->title);
-        $this->assertEquals(Flag::TRUE, $result->is_deleted);
-        $this->assertNotNull($result->deleted_at);
-        $this->assertEquals($pullRequestEditSession->id, $result->pull_request_edit_session_id);
-
-        // EditStartVersionが作成されていることを確認
-        $this->assertDatabaseHas('edit_start_versions', [
-            'user_branch_id' => $this->userBranch->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $this->existingDocument->id,
-            'current_version_id' => $result->id,
-        ]);
-
-        // PullRequestEditSessionDiffが作成されていることを確認
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $this->existingDocument->id,
-            'current_version_id' => $result->id,
-            'diff_type' => 'deleted',
         ]);
     }
 
@@ -289,20 +209,18 @@ class DestroyDocumentUseCaseTest extends TestCase
 
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->documentService
             ->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($draftDocument);
 
         // Act
@@ -326,20 +244,18 @@ class DestroyDocumentUseCaseTest extends TestCase
         // MERGEDステータスの既存ドキュメント（デフォルトセットアップで作成済み）
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->documentService
             ->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->existingDocument);
 
         // Act
@@ -368,8 +284,6 @@ class DestroyDocumentUseCaseTest extends TestCase
 
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         // Act & Assert
@@ -384,8 +298,6 @@ class DestroyDocumentUseCaseTest extends TestCase
         $nonExistentEntityId = 999999;
         $dto = new DestroyDocumentDto(
             document_entity_id: $nonExistentEntityId,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         // Act & Assert
@@ -399,20 +311,18 @@ class DestroyDocumentUseCaseTest extends TestCase
         // Arrange
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->documentService
             ->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn(null); // ドキュメントが見つからない
 
         // Act & Assert
@@ -421,157 +331,11 @@ class DestroyDocumentUseCaseTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_with_invalid_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        // 無効なトークンで実行
-        $dto = new DestroyDocumentDto(
-            document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: $pullRequest->id,
-            pull_request_edit_token: 'invalid-token'
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        $this->documentService
-            ->shouldReceive('getDocumentByWorkContext')
-            ->once()
-            ->with($this->documentEntity->id, $this->user, 'invalid-token')
-            ->andReturn($this->existingDocument);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertNull($result->pull_request_edit_session_id); // 無効なセッションIDは設定されない
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_with_finished_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'token' => $pullRequestEditToken,
-            'finished_at' => now(), // 終了済みのセッション
-        ]);
-
-        $dto = new DestroyDocumentDto(
-            document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: $pullRequest->id,
-            pull_request_edit_token: $pullRequestEditToken
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        $this->documentService
-            ->shouldReceive('getDocumentByWorkContext')
-            ->once()
-            ->with($this->documentEntity->id, $this->user, $pullRequestEditToken)
-            ->andReturn($this->existingDocument);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertNull($result->pull_request_edit_session_id); // 終了済みセッションは無視される
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_with_different_user_pull_request_edit_session(): void
-    {
-        // Arrange
-        $anotherUser = User::factory()->create();
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $anotherUser->id, // 別のユーザー
-            'token' => $pullRequestEditToken,
-            'started_at' => now(),
-            'finished_at' => null,
-        ]);
-
-        $dto = new DestroyDocumentDto(
-            document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: $pullRequest->id,
-            pull_request_edit_token: $pullRequestEditToken
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        $this->documentService
-            ->shouldReceive('getDocumentByWorkContext')
-            ->once()
-            ->with($this->documentEntity->id, $this->user, $pullRequestEditToken)
-            ->andReturn($this->existingDocument);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertNull($result->pull_request_edit_session_id); // 別ユーザーのセッションは無視される
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
     public function test_execute_rollback_on_exception_from_user_branch_service(): void
     {
         // Arrange
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
@@ -608,14 +372,12 @@ class DestroyDocumentUseCaseTest extends TestCase
         // Arrange
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->documentService
@@ -652,20 +414,18 @@ class DestroyDocumentUseCaseTest extends TestCase
         // Arrange
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->documentService
             ->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->existingDocument);
 
         // Logのモック
@@ -699,14 +459,12 @@ class DestroyDocumentUseCaseTest extends TestCase
         // Arrange
         $dto = new DestroyDocumentDto(
             document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: null,
-            pull_request_edit_token: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->documentService
@@ -733,75 +491,6 @@ class DestroyDocumentUseCaseTest extends TestCase
             'category_entity_id' => $this->existingDocument->category_entity_id,
             'title' => $this->existingDocument->title,
             'is_deleted' => Flag::TRUE,
-            'pull_request_edit_session_id' => null,
         ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_updates_or_creates_pull_request_edit_session_diff(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'token' => $pullRequestEditToken,
-            'started_at' => now(),
-            'finished_at' => null,
-        ]);
-
-        // 既存のPullRequestEditSessionDiffを作成
-        $existingDiff = PullRequestEditSessionDiff::create([
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $this->existingDocument->id,
-            'current_version_id' => $this->existingDocument->id,
-            'diff_type' => 'updated',
-        ]);
-
-        $dto = new DestroyDocumentDto(
-            document_entity_id: $this->documentEntity->id,
-            edit_pull_request_id: $pullRequest->id,
-            pull_request_edit_token: $pullRequestEditToken
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        $this->documentService
-            ->shouldReceive('getDocumentByWorkContext')
-            ->once()
-            ->with($this->documentEntity->id, $this->user, $pullRequestEditToken)
-            ->andReturn($this->existingDocument);
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-
-        // 既存のDiffが更新されていることを確認
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'id' => $existingDiff->id,
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $this->existingDocument->id,
-            'current_version_id' => $result->id,
-            'diff_type' => 'deleted',
-        ]);
-
-        // 古いDiffレコードが削除されていないことを確認（updateOrCreateなので）
-        $this->assertEquals(1, PullRequestEditSessionDiff::where('pull_request_edit_session_id', $pullRequestEditSession->id)
-            ->where('target_type', EditStartVersionTargetType::DOCUMENT->value)
-            ->where('original_version_id', $this->existingDocument->id)
-            ->count());
     }
 }

@@ -21,7 +21,6 @@ class FetchNodesRequest extends FormRequest
     {
         return [
             'category_entity_id' => 'required|integer|exists:category_versions,entity_id',
-            'pull_request_edit_session_token' => 'nullable|string',
         ];
     }
 }

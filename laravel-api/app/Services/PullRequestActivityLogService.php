@@ -170,29 +170,4 @@ class PullRequestActivityLogService extends BaseService
             'comment_id' => $commentId,
         ]);
     }
-
-    /**
-     * プルリクエスト編集のアクティビティログを作成
-     *
-     * @param  User  $user  ユーザー
-     * @param  PullRequest  $pullRequest  プルリクエスト
-     * @param  string|null  $editSessionToken  編集セッショントークン
-     * @return void
-     */
-    public function createEditedLog(User $user, PullRequest $pullRequest, ?string $editSessionToken = null): void
-    {
-        $data = [
-            'user_id' => $user->id,
-            'pull_request_id' => $pullRequest->id,
-            'action' => PullRequestActivityAction::PULL_REQUEST_EDITED->value,
-        ];
-
-        if ($editSessionToken) {
-            $data['pull_request_edit_session_id'] = $editSessionToken;
-        }
-
-        ActivityLogOnPullRequest::create($data);
-    }
-
-
 }

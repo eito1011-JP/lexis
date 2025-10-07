@@ -57,7 +57,6 @@ class VersionEditPermissionService
         return [
             'can_edit' => true,
             'has_re_edit_session' => $hasReEditSession,
-            'pull_request_edit_session_id' => $pullRequestEditSessionId,
         ];
     }
 

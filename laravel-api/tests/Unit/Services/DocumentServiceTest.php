@@ -168,8 +168,6 @@ class DocumentServiceTest extends TestCase
     public function 再編集の場合は_pushe_dと_draf_tと_merge_dステータスのドキュメントを取得する(): void
     {
         // Arrange
-        $pullRequestEditSessionToken = 'test-token';
-
         $mergedDocument = DocumentVersion::factory()->create([
             'entity_id' => $this->documentEntity->id,
             'organization_id' => $this->organization->id,
@@ -218,7 +216,6 @@ class DocumentServiceTest extends TestCase
         $result = $this->service->getDocumentByWorkContext(
             $this->documentEntity->id,
             $this->user,
-            $pullRequestEditSessionToken
         );
 
         // Assert
@@ -446,7 +443,6 @@ class DocumentServiceTest extends TestCase
         $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
-        $pullRequestEditSessionToken = 'test-token';
 
         $mergedDocument = DocumentVersion::factory()->create([
             'category_entity_id' => $categoryEntity->id,
@@ -487,7 +483,6 @@ class DocumentServiceTest extends TestCase
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
             $this->user,
-            $pullRequestEditSessionToken
         );
 
         // Assert: PR編集時はPUSHED/DRAFT/MERGEDが取得される

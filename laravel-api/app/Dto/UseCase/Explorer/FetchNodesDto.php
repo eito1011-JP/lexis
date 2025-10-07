@@ -8,7 +8,6 @@ class FetchNodesDto extends UseCaseDto
 {
     public function __construct(
         public readonly int $categoryEntityId,
-        public readonly ?string $pullRequestEditSessionToken = null,
     ) {}
 
     /**
@@ -18,7 +17,6 @@ class FetchNodesDto extends UseCaseDto
     {
         return new self(
             categoryEntityId: $requestData['category_entity_id'],
-            pullRequestEditSessionToken: $requestData['pull_request_edit_session_token'] ?? null,
         );
     }
 }

@@ -5,12 +5,9 @@ namespace App\UseCases\Document;
 use App\Dto\UseCase\Document\CreateDocumentUseCaseDto;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
-use App\Enums\PullRequestEditSessionDiffType;
 use App\Models\DocumentVersion;
 use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
-use App\Models\PullRequestEditSession;
-use App\Models\PullRequestEditSessionDiff;
 use App\Services\CategoryService;
 use App\Services\DocumentService;
 use App\Services\UserBranchService;
@@ -49,18 +46,8 @@ class CreateDocumentUseCase
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $dto->user,
                 $organizationId,
-                $dto->editPullRequestId
             );
 
-            // プルリクエスト編集セッションIDを取得
-            $pullRequestEditSessionId = null;
-            if (! empty($dto->editPullRequestId) && ! empty($dto->pullRequestEditToken)) {
-                $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId(
-                    $dto->editPullRequestId,
-                    $dto->pullRequestEditToken,
-                    $dto->user->id
-                );
-            }
 
             // ドキュメントエンティティを作成
             $documentEntity = DocumentEntity::create([
@@ -72,7 +59,6 @@ class CreateDocumentUseCase
                 'entity_id' => $documentEntity->id,
                 'user_id' => $dto->user->id,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'organization_id' => $organizationId,
                 'category_entity_id' => $dto->categoryEntityId,
                 'title' => $dto->title,
@@ -88,21 +74,6 @@ class CreateDocumentUseCase
                 'original_version_id' => $document->id,
                 'current_version_id' => $document->id,
             ]);
-
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                        'current_version_id' => $document->id,
-                    ],
-                    [
-                        'current_version_id' => $document->id,
-                        'diff_type' => PullRequestEditSessionDiffType::CREATED->value,
-                    ]
-                );
-            }
 
             DB::commit();
 

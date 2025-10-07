@@ -44,11 +44,7 @@ class CreateDocumentCategoryUseCase
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
                 $organizationId,
-                $dto->editPullRequestId
             );
-
-            // プルリクエスト編集セッションIDを取得
-            $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId($dto->editPullRequestId, $dto->pullRequestEditToken, $user->id);
 
             // カテゴリエンティティを作成
             $categoryEntity = CategoryEntity::create([
@@ -61,7 +57,6 @@ class CreateDocumentCategoryUseCase
                 'title' => $dto->title,
                 'description' => $dto->description,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'parent_entity_id' => $dto->parentEntityId,
                 'organization_id' => $organizationId,
             ]);
@@ -73,21 +68,6 @@ class CreateDocumentCategoryUseCase
                 'original_version_id' => $category->id,
                 'current_version_id' => $category->id,
             ]);
-
-            // プルリクエスト編集セッション差分の処理
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                        'current_version_id' => $category->id,
-                    ],
-                    [
-                        'current_version_id' => $category->id,
-                        'diff_type' => 'created',
-                    ]
-                );
-            }
 
             DB::commit();
 

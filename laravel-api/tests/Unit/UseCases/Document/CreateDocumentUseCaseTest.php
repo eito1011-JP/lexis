@@ -101,15 +101,13 @@ class CreateDocumentUseCaseTest extends TestCase
             title: 'Test Document',
             description: 'Test description',
             categoryEntityId: $this->category->entity_id,
-            editPullRequestId: null,
-            pullRequestEditToken: null,
             user: $this->user
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         // Act
@@ -124,7 +122,6 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertEquals($this->userBranch->id, $result->user_branch_id);
         $this->assertEquals($this->organization->id, $result->organization_id);
         $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertNull($result->pull_request_edit_session_id);
 
         // EditStartVersionが作成されていることを確認
         $this->assertDatabaseHas('edit_start_versions', [
@@ -132,75 +129,6 @@ class CreateDocumentUseCaseTest extends TestCase
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $result->id,
             'current_version_id' => $result->id,
-        ]);
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_successfully_creates_document_with_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'token' => $pullRequestEditToken,
-            'finished_at' => null,
-        ]);
-
-        $dto = new CreateDocumentUseCaseDto(
-            title: 'Test Document',
-            description: 'Test description',
-            categoryEntityId: $this->category->entity_id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: $pullRequestEditToken,
-            user: $this->user
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        // Act
-        $result = $this->useCase->execute($dto);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertEquals('Test Document', $result->title);
-        $this->assertEquals('Test description', $result->description);
-        $this->assertEquals($this->category->entity_id, $result->category_entity_id);
-        $this->assertEquals($this->user->id, $result->user_id);
-        $this->assertEquals($this->userBranch->id, $result->user_branch_id);
-        $this->assertEquals($this->organization->id, $result->organization_id);
-        $this->assertEquals(DocumentStatus::DRAFT->value, $result->status);
-        $this->assertEquals($pullRequestEditSession->id, $result->pull_request_edit_session_id);
-
-        // EditStartVersionが作成されていることを確認
-        $this->assertDatabaseHas('edit_start_versions', [
-            'user_branch_id' => $this->userBranch->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $result->id,
-            'current_version_id' => $result->id,
-        ]);
-
-        // PullRequestEditSessionDiffが作成されていることを確認
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-            'diff_type' => PullRequestEditSessionDiffType::CREATED->value,
         ]);
     }
 
@@ -217,8 +145,6 @@ class CreateDocumentUseCaseTest extends TestCase
             title: 'Test Document',
             description: 'Test description',
             categoryEntityId: $this->category->entity_id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: null,
             user: $this->user
         );
 
@@ -236,13 +162,6 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertEquals('Test Document', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($this->category->entity_id, $result->category_entity_id);
-        $this->assertNull($result->pull_request_edit_session_id);
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -253,15 +172,13 @@ class CreateDocumentUseCaseTest extends TestCase
             title: 'Test Document',
             description: 'Test description',
             categoryEntityId: $this->category->entity_id,
-            editPullRequestId: null,
-            pullRequestEditToken: 'test-token',
             user: $this->user
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         // Act
@@ -272,54 +189,6 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->assertEquals('Test Document', $result->title);
         $this->assertEquals('Test description', $result->description);
         $this->assertEquals($this->category->entity_id, $result->category_entity_id);
-        $this->assertNull($result->pull_request_edit_session_id);
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_with_invalid_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $dto = new CreateDocumentUseCaseDto(
-            title: 'Test Document',
-            description: 'Test description',
-            categoryEntityId: $this->category->entity_id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: 'invalid-token',
-            user: $this->user
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        // Act
-        $result = $this->useCase->execute($dto);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertEquals('Test Document', $result->title);
-        $this->assertEquals('Test description', $result->description);
-        $this->assertEquals($this->category->entity_id, $result->category_entity_id);
-        $this->assertNull($result->pull_request_edit_session_id);
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
@@ -335,8 +204,6 @@ class CreateDocumentUseCaseTest extends TestCase
             title: 'Test Document',
             description: 'Test description',
             categoryEntityId: $this->category->entity_id,
-            editPullRequestId: null,
-            pullRequestEditToken: null,
             user: $this->user
         );
 
@@ -353,8 +220,6 @@ class CreateDocumentUseCaseTest extends TestCase
             title: 'Test Document',
             description: 'Test description',
             categoryEntityId: $this->category->entity_id,
-            editPullRequestId: null,
-            pullRequestEditToken: null,
             user: $this->user
         );
 
@@ -395,15 +260,13 @@ class CreateDocumentUseCaseTest extends TestCase
             title: 'Test Document',
             description: 'Test description',
             categoryEntityId: 999999, // 存在しないカテゴリID
-            editPullRequestId: null,
-            pullRequestEditToken: null,
             user: $this->user
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         // Logのモック
@@ -429,100 +292,6 @@ class CreateDocumentUseCaseTest extends TestCase
         }
     }
 
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_with_finished_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'token' => $pullRequestEditToken,
-            'finished_at' => now(), // 終了済みのセッション
-        ]);
-
-        $dto = new CreateDocumentUseCaseDto(
-            title: 'Test Document',
-            description: 'Test description',
-            categoryEntityId: $this->category->entity_id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: $pullRequestEditToken,
-            user: $this->user
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        // Act
-        $result = $this->useCase->execute($dto);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertNull($result->pull_request_edit_session_id); // 終了済みセッションは無視される
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
-
-    #[\PHPUnit\Framework\Attributes\Test]
-    public function test_execute_with_different_user_pull_request_edit_session(): void
-    {
-        // Arrange
-        $anotherUser = User::factory()->create();
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $anotherUser->id, // 別のユーザー
-            'token' => $pullRequestEditToken,
-            'finished_at' => null,
-        ]);
-
-        $dto = new CreateDocumentUseCaseDto(
-            title: 'Test Document',
-            description: 'Test description',
-            categoryEntityId: $this->category->entity_id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: $pullRequestEditToken,
-            user: $this->user
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        // Act
-        $result = $this->useCase->execute($dto);
-
-        // Assert
-        $this->assertInstanceOf(DocumentVersion::class, $result);
-        $this->assertNull($result->pull_request_edit_session_id); // 別ユーザーのセッションは無視される
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'current_version_id' => $result->id,
-        ]);
-    }
 
     #[\PHPUnit\Framework\Attributes\Test]
     public function test_execute_verifies_correct_data_is_passed_to_services(): void
@@ -532,15 +301,13 @@ class CreateDocumentUseCaseTest extends TestCase
             title: 'Test Document',
             description: 'Test description',
             categoryEntityId: $this->category->entity_id,
-            editPullRequestId: null,
-            pullRequestEditToken: null,
             user: $this->user
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         // Act
@@ -559,7 +326,6 @@ class CreateDocumentUseCaseTest extends TestCase
             'title' => 'Test Document',
             'description' => 'Test description',
             'status' => DocumentStatus::DRAFT->value,
-            'pull_request_edit_session_id' => null,
         ]);
     }
 }

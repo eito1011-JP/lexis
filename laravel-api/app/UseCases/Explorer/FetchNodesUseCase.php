@@ -44,7 +44,6 @@ class FetchNodesUseCase
                 $categories->push($this->CategoryService->getCategoryByWorkContext(
                     $entityId,
                     $user,
-                    $dto->pullRequestEditSessionToken
                 ));
             }
 
@@ -59,7 +58,6 @@ class FetchNodesUseCase
                 $documents->push($this->documentService->getDocumentByWorkContext(
                     $entityId,
                     $user,
-                    $dto->pullRequestEditSessionToken
                 ));
             }
 

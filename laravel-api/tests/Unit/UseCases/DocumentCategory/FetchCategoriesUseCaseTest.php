@@ -127,7 +127,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
+        $dto = new FetchCategoriesDto(parentEntityId: null);
 
         // 編集対象になっていないマージ済みカテゴリ（表示される）
         $unEditedMergedCategoryEntity = CategoryEntity::factory()->create([
@@ -219,7 +219,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
+        $dto = new FetchCategoriesDto(parentEntityId: null);
 
         // 他のユーザーが作成したドラフトカテゴリ用のエンティティ（表示されない）
         $draftCategoryEntityByOtherUser = CategoryEntity::factory()->create([
@@ -342,7 +342,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
+        $dto = new FetchCategoriesDto(parentEntityId: null);
 
         // 同じエンティティに関連するカテゴリ（表示される）
         $category1Entity = CategoryEntity::factory()->create([
@@ -405,7 +405,6 @@ class FetchCategoriesUseCaseTest extends TestCase
         $result = $this->useCase->execute($dto, $this->user);
 
         // Assert
-        // pullRequestEditSessionTokenがある場合、PUSHED、DRAFT、MERGEDステータスのカテゴリが返される
         $this->assertCount(3, $result);
         $resultTitles = $result->pluck('title')->toArray();
         $this->assertContains('カテゴリ1', $resultTitles);
@@ -425,7 +424,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: 'some-token');
+        $dto = new FetchCategoriesDto(parentEntityId: null);
 
         $category3Entity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
@@ -505,7 +504,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $dto = new FetchCategoriesDto(parentEntityId: null, pullRequestEditSessionToken: null);
+        $dto = new FetchCategoriesDto(parentEntityId: null);
 
         // ケース1: ドラフトカテゴリ（表示されない）
         $originalDraftCategoryEntity = CategoryEntity::factory()->create([

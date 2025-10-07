@@ -8,8 +8,6 @@ use App\Enums\EditStartVersionTargetType;
 use App\Models\CategoryVersion;
 use App\Models\CategoryEntity;
 use App\Models\EditStartVersion;
-use App\Models\PullRequestEditSession;
-use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Services\CategoryService;
 use App\Services\UserBranchService;
@@ -59,21 +57,12 @@ class UpdateDocumentCategoryUseCase
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
                 $organizationId,
-                $dto->editPullRequestId
-            );
-
-            // 4. PullRequestEditSession::findEditSessionId
-            $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId(
-                $dto->editPullRequestId,
-                $dto->pullRequestEditToken,
-                $user->id
             );
 
             // 5. 編集対象のexistingCategoryを取得
             $existingCategory = $this->CategoryService->getCategoryByWorkContext(
                 $dto->categoryEntityId,
                 $user,
-                $dto->pullRequestEditToken
             );
 
             // 6. if existingCategoryがない場合 throw new NotFoundException;
@@ -88,7 +77,6 @@ class UpdateDocumentCategoryUseCase
                 'parent_entity_id' => $existingCategory->parent_entity_id,
                 'description' => $dto->description,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'organization_id' => $organizationId,
                 'status' => DocumentCategoryStatus::DRAFT->value,
             ]);
@@ -103,21 +91,6 @@ class UpdateDocumentCategoryUseCase
 
             if ($existingCategory->status === DocumentCategoryStatus::DRAFT->value) {
                 $existingCategory->delete();
-            }
-
-            // 9. プルリクエストを編集している処理を考慮
-            if ($pullRequestEditSessionId) {
-                PullRequestEditSessionDiff::updateOrCreate(
-                    [
-                        'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                        'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                        'current_version_id' => $existingCategory->id,
-                    ],
-                    [
-                        'current_version_id' => $newCategory->id,
-                        'diff_type' => 'updated',
-                    ]
-                );
             }
 
             DB::commit();

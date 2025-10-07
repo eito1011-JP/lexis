@@ -69,21 +69,12 @@ class DestroyDocumentCategoryUseCase
             $userBranchId = $this->userBranchService->fetchOrCreateActiveBranch(
                 $user,
                 $organizationId,
-                $dto->editPullRequestId
-            );
-
-            // 5. PullRequestEditSession::findEditSessionId
-            $pullRequestEditSessionId = PullRequestEditSession::findEditSessionId(
-                $dto->editPullRequestId,
-                $dto->pullRequestEditToken,
-                $user->id
             );
 
             // 6. 削除対象のカテゴリ自体を取得
             $existingCategory = $this->CategoryService->getCategoryByWorkContext(
                 $dto->categoryEntityId,
                 $user,
-                $dto->pullRequestEditToken
             );
 
             if (! $existingCategory) {
@@ -94,14 +85,12 @@ class DestroyDocumentCategoryUseCase
             $documents = $this->DocumentService->getDescendantDocumentsByWorkContext(
                 $dto->categoryEntityId,
                 $user,
-                $dto->pullRequestEditToken
             );
 
             // 8. category_entity_idで作業コンテキストに応じて、配下のcategory_versionsを再帰的に全て取得
             $categories = $this->CategoryService->getDescendantCategoriesByWorkContext(
                 $dto->categoryEntityId,
                 $user,
-                $dto->pullRequestEditToken
             );
 
             // 9. 既存のEditStartVersionを取得（original_version_idを取得するため）
@@ -116,7 +105,6 @@ class DestroyDocumentCategoryUseCase
             $documentVersionsData = [];
             $categoryVersionsData = [];
             $editStartVersionsData = [];
-            $pullRequestEditSessionDiffsData = [];
             $draftDocumentIds = [];
             $draftCategoryIds = [];
 
@@ -127,7 +115,6 @@ class DestroyDocumentCategoryUseCase
                     'organization_id' => $organizationId,
                     'user_id' => $user->id,
                     'user_branch_id' => $userBranchId,
-                    'pull_request_edit_session_id' => $pullRequestEditSessionId,
                     'status' => DocumentStatus::DRAFT->value,
                     'description' => $document->description,
                     'category_entity_id' => $document->category_entity_id,
@@ -153,7 +140,6 @@ class DestroyDocumentCategoryUseCase
                     'description' => $category->description,
                     'status' => DocumentCategoryStatus::DRAFT->value,
                     'user_branch_id' => $userBranchId,
-                    'pull_request_edit_session_id' => $pullRequestEditSessionId,
                     'organization_id' => $organizationId,
                     'deleted_at' => $now,
                     'is_deleted' => Flag::TRUE,
@@ -175,7 +161,6 @@ class DestroyDocumentCategoryUseCase
                 'description' => $existingCategory->description,
                 'status' => DocumentCategoryStatus::DRAFT->value,
                 'user_branch_id' => $userBranchId,
-                'pull_request_edit_session_id' => $pullRequestEditSessionId,
                 'organization_id' => $organizationId,
                 'deleted_at' => $now,
                 'is_deleted' => Flag::TRUE,
@@ -227,19 +212,6 @@ class DestroyDocumentCategoryUseCase
                             'created_at' => $now,
                             'updated_at' => $now,
                         ];
-
-                        // PullRequestEditSessionDiffのデータ準備
-                        if ($pullRequestEditSessionId) {
-                            $pullRequestEditSessionDiffsData[] = [
-                                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                                'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-                                'original_version_id' => $document->id,
-                                'current_version_id' => $newVersion->id,
-                                'diff_type' => 'deleted',
-                                'created_at' => $now,
-                                'updated_at' => $now,
-                            ];
-                        }
                     }
                 }
             }
@@ -270,19 +242,6 @@ class DestroyDocumentCategoryUseCase
                             'created_at' => $now,
                             'updated_at' => $now,
                         ];
-
-                        // PullRequestEditSessionDiffのデータ準備
-                        if ($pullRequestEditSessionId) {
-                            $pullRequestEditSessionDiffsData[] = [
-                                'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                                'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                                'original_version_id' => $category->id,
-                                'current_version_id' => $newVersion->id,
-                                'diff_type' => 'deleted',
-                                'created_at' => $now,
-                                'updated_at' => $now,
-                            ];
-                        }
                     }
                 }
 
@@ -303,19 +262,6 @@ class DestroyDocumentCategoryUseCase
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];
-
-                    // PullRequestEditSessionDiffのデータ準備
-                    if ($pullRequestEditSessionId) {
-                        $pullRequestEditSessionDiffsData[] = [
-                            'pull_request_edit_session_id' => $pullRequestEditSessionId,
-                            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-                            'original_version_id' => $existingCategory->id,
-                            'current_version_id' => $newCategoryVersion->id,
-                            'diff_type' => 'deleted',
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                        ];
-                    }
                 }
             }
 
@@ -325,15 +271,6 @@ class DestroyDocumentCategoryUseCase
                     $editStartVersionsData,
                     ['user_branch_id', 'target_type', 'original_version_id'],
                     ['current_version_id', 'updated_at']
-                );
-            }
-
-            // 15. PullRequestEditSessionDiffsを一括作成（upsert使用）
-            if (! empty($pullRequestEditSessionDiffsData)) {
-                PullRequestEditSessionDiff::upsert(
-                    $pullRequestEditSessionDiffsData,
-                    ['pull_request_edit_session_id', 'target_type', 'original_version_id'],
-                    ['current_version_id', 'diff_type', 'updated_at']
                 );
             }
 
