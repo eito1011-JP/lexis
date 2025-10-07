@@ -460,6 +460,7 @@ class DestroyUserBranchUseCaseTest extends TestCase
 
         $editStartVersion = EditStartVersion::create([
             'user_branch_id' => $this->activeUserBranch->id,
+            'entity_id' => $documentEntity->id,
             'target_type' => 'document',
             'original_version_id' => $originalVersion->id,
             'current_version_id' => $currentVersion->id,

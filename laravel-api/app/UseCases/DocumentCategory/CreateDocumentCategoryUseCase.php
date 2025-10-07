@@ -65,6 +65,7 @@ class CreateDocumentCategoryUseCase
             EditStartVersion::create([
                 'user_branch_id' => $userBranchId,
                 'target_type' => EditStartVersionTargetType::CATEGORY->value,
+                'entity_id' => $categoryEntity->id,
                 'original_version_id' => $category->id,
                 'current_version_id' => $category->id,
             ]);

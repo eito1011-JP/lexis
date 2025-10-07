@@ -84,6 +84,7 @@ class UpdateDocumentCategoryUseCase
             // 8. EditStartVersionを作成(original_version_id = existingCategory.id, current_version_id = 新規のDocumentCategory.id)
             EditStartVersion::create([
                 'user_branch_id' => $userBranchId,
+                'entity_id' => $categoryEntity->id,
                 'target_type' => EditStartVersionTargetType::CATEGORY->value,
                 'original_version_id' => $existingCategory->id,
                 'current_version_id' => $newCategory->id,

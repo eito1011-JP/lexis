@@ -84,6 +84,7 @@ class UpdateDocumentUseCase
             EditStartVersion::create([
                 'user_branch_id' => $userBranchId,
                 'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+                'entity_id' => $documentEntity->id,
                 'original_version_id' => $existingDocument->id,
                 'current_version_id' => $newDocumentVersion->id,
             ]);

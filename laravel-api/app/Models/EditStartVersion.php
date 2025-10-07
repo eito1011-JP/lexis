@@ -14,6 +14,7 @@ class EditStartVersion extends Model
     protected $fillable = [
         'user_branch_id',
         'target_type',
+        'entity_id',
         'original_version_id',
         'current_version_id',
         'created_at',
@@ -21,6 +22,7 @@ class EditStartVersion extends Model
     ];
 
     protected $casts = [
+        'entity_id' => 'integer',
         'original_version_id' => 'integer',
         'current_version_id' => 'integer',
     ];
