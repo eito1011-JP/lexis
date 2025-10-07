@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\UserBranch\DestroyUserBranchDto;
+use App\Dto\UseCase\UserBranch\UpdateUserBranchDto;
 use App\Http\Requests\Api\UserBranch\DestroyUserBranchRequest;
 use App\Http\Requests\Api\UserBranch\FetchDiffRequest;
+use App\Http\Requests\Api\UserBranch\UpdateUserBranchRequest;
 use App\Services\DocumentDiffService;
 use App\UseCases\UserBranch\DestroyUserBranchUseCase;
 use App\UseCases\UserBranch\FetchDiffUseCase;
+use App\UseCases\UserBranch\UpdateUserBranchUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -25,14 +28,18 @@ class UserBranchController extends ApiBaseController
 
     protected DestroyUserBranchUseCase $destroyUserBranchUseCase;
 
+    protected UpdateUserBranchUseCase $updateUserBranchUseCase;
+
     public function __construct(
         DocumentDiffService $documentDiffService,
         FetchDiffUseCase $fetchDiffUseCase,
-        DestroyUserBranchUseCase $destroyUserBranchUseCase
+        DestroyUserBranchUseCase $destroyUserBranchUseCase,
+        UpdateUserBranchUseCase $updateUserBranchUseCase
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->fetchDiffUseCase = $fetchDiffUseCase;
         $this->destroyUserBranchUseCase = $destroyUserBranchUseCase;
+        $this->updateUserBranchUseCase = $updateUserBranchUseCase;
     }
 
     /**
@@ -100,6 +107,48 @@ class UserBranchController extends ApiBaseController
         }
     }
 
+    /**
+     * ユーザーブランチを更新
+     */
+    public function update(UpdateUserBranchRequest $request): JsonResponse
+    {
+        try {
+            $user = $this->user();
+
+            if (! $user) {
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
+            }
+
+            // UseCaseを実行
+            $dto = new UpdateUserBranchDto(
+                $request->validated()['user_branch_id'],
+                $request->validated()['is_active'],
+                $user
+            );
+            $this->updateUserBranchUseCase->execute($dto);
+
+            return response()->json();
+
+        } catch (NotFoundException) {
+            return $this->sendError(
+                ErrorType::CODE_NOT_FOUND,
+                __('errors.MSG_NOT_FOUND'),
+                ErrorType::STATUS_NOT_FOUND,
+            );
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
+        }
+    }
+    
     /**
      * ユーザーブランチを削除
      */
