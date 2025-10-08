@@ -13,8 +13,6 @@ class CreateDocumentUseCaseDto extends UseCaseDto
         public readonly string $title,
         public readonly string $description,
         public readonly int $categoryEntityId,
-        public readonly ?int $editPullRequestId,
-        public readonly ?string $pullRequestEditToken,
         public readonly object $user
     ) {}
 
@@ -27,8 +25,6 @@ class CreateDocumentUseCaseDto extends UseCaseDto
             title: $requestData['title'],
             description: $requestData['description'],
             categoryEntityId: $requestData['category_entity_id'],
-            editPullRequestId: $requestData['edit_pull_request_id'] ?? null,
-            pullRequestEditToken: $requestData['pull_request_edit_token'] ?? null,
             user: $user
         );
     }

@@ -20,18 +20,12 @@ class GetCategoryDto extends UseCaseDto
     public readonly object $user;
 
     /**
-     * プルリクエスト編集セッショントークン
-     */
-    public readonly ?string $pullRequestEditSessionToken;
-
-    /**
      * コンストラクタ
      */
     public function __construct(array $data)
     {
         $this->categoryEntityId = $data['category_entity_id'];
         $this->user = $data['user'];
-        $this->pullRequestEditSessionToken = $data['pull_request_edit_session_token'] ?? null;
     }
 
     /**

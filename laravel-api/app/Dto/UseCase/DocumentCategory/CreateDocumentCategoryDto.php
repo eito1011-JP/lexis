@@ -10,8 +10,6 @@ class CreateDocumentCategoryDto extends UseCaseDto
         public readonly string $title,
         public readonly string $description,
         public readonly ?int $parentEntityId,
-        public readonly ?int $editPullRequestId,
-        public readonly ?string $pullRequestEditToken
     ) {}
 
     /**
@@ -23,8 +21,6 @@ class CreateDocumentCategoryDto extends UseCaseDto
             title: $requestData['title'],
             description: $requestData['description'],
             parentEntityId: $requestData['parent_entity_id'] ?? null,
-            editPullRequestId: $requestData['edit_pull_request_id'],
-            pullRequestEditToken: $requestData['pull_request_edit_token'] ?? null
         );
     }
 }

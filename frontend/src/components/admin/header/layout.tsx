@@ -1,6 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { API_CONFIG } from '../api/config';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserMe } from '@/hooks/useUserMe';
 

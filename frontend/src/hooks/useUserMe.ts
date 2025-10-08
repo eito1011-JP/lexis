@@ -1,55 +1,5 @@
-import useSWR from 'swr';
-import { apiClient } from '@/components/admin/api/client';
-
-/**
- * ユーザー情報の型定義
- */
-export interface User {
-  id: number;
-  email: string;
-  nickname: string;
-  organization_id: number;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * 組織情報の型定義
- */
-export interface Organization {
-  id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * アクティブなユーザーブランチの型定義
- */
-export interface ActiveUserBranch {
-  id: number;
-  user_id: number;
-  branch_name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * /api/users/meのレスポンス型定義
- */
-export interface UserMeResponse {
-  user: User;
-  organization: Organization;
-  activeUserBranch: ActiveUserBranch | null;
-}
-
-/**
- * APIフェッチャー関数
- */
-const fetcher = async (url: string): Promise<UserMeResponse> => {
-  const response = await apiClient.get(url);
-  return response as UserMeResponse;
-};
+import useAspidaSWR from '@aspida/swr';
+import { client } from '@/api/client';
 
 /**
  * どの画面からでも/api/users/meを呼び出してユーザー情報を取得できるカスタムフック
@@ -68,9 +18,8 @@ const fetcher = async (url: string): Promise<UserMeResponse> => {
  * ```
  */
 export const useUserMe = () => {
-  const { data, error, isLoading, mutate } = useSWR<UserMeResponse>(
-    '/api/users/me',
-    fetcher,
+  const { data, error, isLoading, mutate } = useAspidaSWR(
+    client.users.me,
     {
       // キャッシュ設定
       revalidateOnFocus: false, // フォーカス時の再検証を無効化

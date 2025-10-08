@@ -168,8 +168,6 @@ class DocumentServiceTest extends TestCase
     public function 再編集の場合は_pushe_dと_draf_tと_merge_dステータスのドキュメントを取得する(): void
     {
         // Arrange
-        $pullRequestEditSessionToken = 'test-token';
-
         $mergedDocument = DocumentVersion::factory()->create([
             'entity_id' => $this->documentEntity->id,
             'organization_id' => $this->organization->id,
@@ -218,7 +216,6 @@ class DocumentServiceTest extends TestCase
         $result = $this->service->getDocumentByWorkContext(
             $this->documentEntity->id,
             $this->user,
-            $pullRequestEditSessionToken
         );
 
         // Assert
@@ -373,8 +370,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert
@@ -430,69 +426,12 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert: 初回編集時はMERGEDとDRAFTの両方が取得される
         $this->assertGreaterThanOrEqual(1, $result->count());
         $this->assertTrue($result->contains(fn($doc) => $doc->status === DocumentStatus::DRAFT->value));
-    }
-
-    #[Test]
-    public function get_descendant_documents_by_work_context_with_pr_edit_session(): void
-    {
-        // Arrange
-        $categoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-        $pullRequestEditSessionToken = 'test-token';
-
-        $mergedDocument = DocumentVersion::factory()->create([
-            'category_entity_id' => $categoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'user_branch_id' => null,
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->activeUserBranch->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $mergedDocument->id,
-            'current_version_id' => $mergedDocument->id,
-        ]);
-
-        $pushedDocument = DocumentVersion::factory()->create([
-            'category_entity_id' => $categoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::PUSHED->value,
-            'user_branch_id' => $this->activeUserBranch->id,
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->activeUserBranch->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $mergedDocument->id,
-            'current_version_id' => $pushedDocument->id,
-        ]);
-
-        // CategoryServiceのモックを設定
-        $categoryServiceMock = $this->createMock(CategoryService::class);
-        $categoryServiceMock->method('getChildCategoriesByWorkContext')
-            ->willReturn(new \Illuminate\Database\Eloquent\Collection());
-
-        $service = new DocumentService($categoryServiceMock);
-
-        // Act
-        $result = $service->getDescendantDocumentsByWorkContext(
-            $categoryEntity->id,
-            $this->user,
-            $pullRequestEditSessionToken
-        );
-
-        // Assert: PR編集時はPUSHED/DRAFT/MERGEDが取得される
-        $this->assertGreaterThanOrEqual(1, $result->count());
-        $this->assertTrue($result->contains(fn($doc) => $doc->status === DocumentStatus::PUSHED->value));
     }
 
     #[Test]
@@ -563,8 +502,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $parentCategoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert
@@ -597,8 +535,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert
@@ -677,8 +614,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $grandparentCategory->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert
@@ -746,8 +682,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $parentCategory->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert: MERGED と DRAFT の両方が取得される（フィルタリングは getDocumentsByWorkContext で行われる）
@@ -807,8 +742,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            'test-token'
+            $this->user
         );
 
         // Assert: PR再編集時は PUSHED, DRAFT, MERGED すべてが取得対象
@@ -870,8 +804,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert: 他ユーザーのDRAFTは含まれない
@@ -897,8 +830,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert
@@ -949,8 +881,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert: ソフトデリートされたドキュメントは含まれない
@@ -1003,8 +934,7 @@ class DocumentServiceTest extends TestCase
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
             $categoryEntity->id,
-            $this->user,
-            null
+            $this->user
         );
 
         // Assert: 異なる組織のドキュメントは含まれない

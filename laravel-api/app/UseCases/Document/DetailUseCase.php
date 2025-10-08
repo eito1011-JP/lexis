@@ -30,7 +30,6 @@ class DetailUseCase
             $document = $this->documentService->getDocumentByWorkContext(
                 $dto->entityId,
                 $user,
-                $dto->pullRequestEditSessionToken ?? null
             );
 
             if (! $document) {

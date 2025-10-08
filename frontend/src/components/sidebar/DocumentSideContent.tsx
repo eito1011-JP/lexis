@@ -4,20 +4,13 @@ import { Folder } from '@/components/icon/common/Folder';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Plus } from '@/components/icon/common/Plus';
 import { Edit } from '@/components/icon/common/Edit';
-import { apiClient } from '@/components/admin/api/client';
+import { client } from '@/api/client';
 import CategoryActionModal from '@/components/admin/CategoryActionModal';
 import CreateActionModal from '@/components/sidebar/CreateActionModal';
 import DocumentDeleteModal from '@/components/sidebar/DocumentDeleteModal';
 import { useNavigate } from 'react-router-dom';
-import { API_CONFIG } from '../admin/api/config';
 import { useUserMe } from '@/hooks/useUserMe';
-
-// APIから取得するカテゴリデータの型定義
-interface ApiCategoryData {
-  id: number;
-  entity_id: number;
-  title: string;
-}
+import { useCategories } from '@/hooks/useCategories';
 
 // 共通のアイテム型定義
 interface BaseItem {
@@ -45,44 +38,24 @@ interface DocumentSideContentProps {
   onDocumentSelect?: (documentId: number) => void;
   selectedCategoryEntityId?: number;
   selectedDocumentEntityId?: number;
-  refreshTrigger?: number;
+  onRefreshRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
-// カテゴリデータを取得するサービス関数（無制限表示）
-const fetchCategories = async (parentEntityId: number | null = null): Promise<ApiCategoryData[]> => {
-  try {
-    const params = new URLSearchParams();
-    if (parentEntityId !== null) {
-      params.append('parent_entity_id', parentEntityId.toString());
-    }
-    
-    const endpoint = `/api/category-entities/${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await apiClient.get(endpoint);
-    
-    // すべてのカテゴリを返す（制限なし）
-    return response.categories || [];
-  } catch (error) {
-    console.error('カテゴリの取得に失敗しました:', error);
-    throw error;
-  }
-};
 
 /**
  * ドキュメント用サイドコンテンツコンポーネント
  * 株式会社Nexis配下の階層構造を無制限表示
  */
-export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentEntityId, refreshTrigger }: DocumentSideContentProps) {
+export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentEntityId, onRefreshRef }: DocumentSideContentProps) {
   const navigate = useNavigate();
   const { user, organization, activeUserBranch } = useUserMe();
+  // useCategories フックでルートカテゴリを取得
+  const { categories: rootCategories, isLoading: isLoadingCategories, isError, mutate: mutateCategories } = useCategories(null);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
   // ホバー状態を管理
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
-  // カテゴリデータの状態管理
+  // カテゴリデータの状態管理（階層構造を持つ形式に変換したもの）
   const [categories, setCategories] = useState<CategoryItem[]>([]);
-  // ローディング状態
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  // エラー状態
-  const [error, setError] = useState<string | null>(null);
   // モーダル状態
   const [showActionModal, setShowActionModal] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<CategoryItem | null>(null);
@@ -100,7 +73,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   // APIデータをCategoryItem形式に変換する関数
-  const transformApiDataToCategories = (apiData: ApiCategoryData[]): CategoryItem[] => {
+  const transformApiDataToCategories = (apiData: any[]): CategoryItem[] => {
     return apiData.map(item => ({
       id: item.id,
       entityId: item.entity_id,
@@ -140,7 +113,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // 従属するカテゴリとドキュメントを取得する関数（無制限表示・深い階層対応）
   const handleFetchBelogingItems = async (categoryEntityId: number) => {
     try {
-      const response = await apiClient.get(`/api/nodes?category_entity_id=${categoryEntityId}`);
+      const response = await client.nodes.$get({ 
+        query: { category_entity_id: categoryEntityId }
+      });
       
       // 既存のカテゴリデータを更新（深い階層まで対応）
       setCategories(prevCategories => {
@@ -182,36 +157,102 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     }
   };
 
-  // カテゴリデータを取得する関数
-  const loadCategories = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // parent_entity_id=nullですべてのルートカテゴリを取得（制限なし）
-      const apiCategories = await fetchCategories(null);
-      const transformedCategories = transformApiDataToCategories(apiCategories);
-      
+  // rootCategoriesが変更されたときにcategoriesを更新
+  useEffect(() => {
+    if (rootCategories && rootCategories.length > 0) {
+      const transformedCategories = transformApiDataToCategories(rootCategories);
       setCategories(transformedCategories);
-    } catch (err) {
-      console.error('カテゴリの取得に失敗しました:', err);
-      setError('カテゴリの取得に失敗しました');
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [rootCategories]);
 
-  // カテゴリデータを取得するuseEffect（無制限表示）
+  // 親コンポーネントから呼び出せるrefresh関数を設定
   useEffect(() => {
-    loadCategories();
-  }, []);
-
-  // refreshTriggerが変更された時にカテゴリを再読み込み
-  useEffect(() => {
-    if (refreshTrigger !== undefined) {
-      loadCategories();
+    if (onRefreshRef) {
+      onRefreshRef.current = async () => {
+        // 展開されているカテゴリのリストを保存
+        const expandedList = Array.from(expandedItems);
+        
+        // カテゴリ一覧を再取得（mutateは新しいデータを返す）
+        const newData = await mutateCategories();
+        
+        // 新しいデータが取得できた場合、categoriesを更新
+        if (newData && newData.categories) {
+          const newTransformedCategories = newData.categories.map((item: any) => ({
+            id: item.id,
+            entityId: item.entity_id,
+            label: item.title,
+            icon: Folder,
+            type: 'category' as const,
+            children: []
+          }));
+          setCategories(newTransformedCategories);
+          
+          // 展開されているカテゴリの子要素を順次再読み込み
+          for (const entityId of expandedList) {
+            try {
+              const response = await client.nodes.$get({ 
+                query: { category_entity_id: entityId }
+              });
+              
+              // 取得したデータでカテゴリツリーを更新
+              setCategories(prevCategories => {
+                const categoryChildren = (response.categories || [])
+                  .filter((cat: any) => cat && cat.id && cat.entity_id && cat.title)
+                  .map((cat: any) => ({
+                    id: cat.id,
+                    entityId: cat.entity_id,
+                    label: cat.title,
+                    icon: Folder,
+                    type: 'category' as const,
+                    children: []
+                  }));
+                
+                const documentChildren = (response.documents || [])
+                  .filter((doc: any) => doc && doc.id && doc.entity_id && (doc.title || doc.sidebar_label))
+                  .map((doc: any) => ({
+                    id: doc.id,
+                    entityId: doc.entity_id,
+                    label: doc.sidebar_label || doc.title,
+                    type: 'document' as const,
+                  }));
+                
+                const children = [...categoryChildren, ...documentChildren];
+                
+                // 深い階層まで再帰的に検索して更新
+                const updateTree = (categories: CategoryItem[]): CategoryItem[] => {
+                  return categories.map(category => {
+                    if (category.entityId === entityId) {
+                      return {
+                        ...category,
+                        children: children
+                      };
+                    }
+                    
+                    if (category.children && category.children.length > 0) {
+                      const childCategories = category.children.filter(child => child.type === 'category') as CategoryItem[];
+                      const updatedChildCategories = updateTree(childCategories);
+                      const childDocuments = category.children.filter(child => child.type === 'document');
+                      
+                      return {
+                        ...category,
+                        children: [...updatedChildCategories, ...childDocuments]
+                      };
+                    }
+                    
+                    return category;
+                  });
+                };
+                
+                return updateTree(prevCategories);
+              });
+            } catch (error) {
+              console.error('従属アイテムの取得に失敗しました:', error);
+            }
+          }
+        }
+      };
     }
-  }, [refreshTrigger]);
+  }, [mutateCategories, expandedItems, onRefreshRef]);
 
   // カテゴリの展開/折りたたみを切り替え
   const toggleExpanded = (categoryEntityId: number) => {
@@ -299,9 +340,10 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   const handleDelete = async () => {
     if (selectedCategory) {
         try {
-        await apiClient.delete(API_CONFIG.ENDPOINTS.CATEGORIES.DELETE + selectedCategory.entityId);
+        await client.category_entities._entityId(selectedCategory.entityId).$delete();
 
-        loadCategories();
+        // カテゴリ一覧を再取得
+        mutateCategories();
 
       } catch (error) {
         console.error('カテゴリの削除に失敗しました:', error);
@@ -309,7 +351,6 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
         setToastType('error');
         setShowToast(true);
       }
-        // TODO: 削除APIの実装
     }
     handleCloseModal();
   };
@@ -346,13 +387,10 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     if (!selectedDocument) return;
 
     try {
-      await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE + selectedDocument.entityId);
+      await client.document_entities._entityId(selectedDocument.entityId).$delete();
       
-      // 削除後にUIを更新 - 削除されたドキュメントを含むカテゴリを再読み込み
-      // ここでは簡易的に全体を再読み込みする
-      const apiCategories = await fetchCategories(null);
-      const transformedCategories = transformApiDataToCategories(apiCategories);
-      setCategories(transformedCategories);
+      // 削除後にUIを更新
+      mutateCategories();
       
       // 展開されているカテゴリの子要素も再読み込み
       for (const entityId of expandedItems) {
@@ -528,13 +566,13 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
 
       {/* カテゴリリスト */}
       <div className="">
-        {isLoading ? (
+        {isLoadingCategories ? (
           <div className="px-4 py-2 text-gray-400 text-sm">
             カテゴリを読み込み中...
           </div>
-        ) : error ? (
+        ) : isError ? (
           <div className="px-4 py-2 text-red-400 text-sm">
-            {error}
+            カテゴリの取得に失敗しました
           </div>
         ) : (
           categories.map((category) => renderCategoryItem(category))

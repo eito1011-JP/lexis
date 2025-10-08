@@ -8,7 +8,6 @@ class FetchCategoriesDto extends UseCaseDto
 {
     public function __construct(
         public readonly ?int $parentEntityId = null,
-        public readonly ?string $pullRequestEditSessionToken = null,
     ) {}
 
     /**
@@ -18,7 +17,6 @@ class FetchCategoriesDto extends UseCaseDto
     {
         return new self(
             parentEntityId: $requestData['parent_entity_id'] ?? null,
-            pullRequestEditSessionToken: $requestData['pull_request_edit_session_token'] ?? null,
         );
     }
 }

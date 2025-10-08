@@ -1,6 +1,6 @@
 import React from 'react';
 import { Home } from '@/components/icon/common/Home';
-import { type BreadcrumbItem } from '@/api/category';
+import { type BreadcrumbItem } from '@/api/categoryHelpers';
 
 interface BreadcrumbProps {
   breadcrumbs?: BreadcrumbItem[];

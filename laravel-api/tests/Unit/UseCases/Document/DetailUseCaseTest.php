@@ -143,7 +143,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->document);
 
         // Act
@@ -190,7 +190,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($documentWithSimpleCategory->entity_id, $this->user, null)
+            ->with($documentWithSimpleCategory->entity_id, $this->user)
             ->andReturn($documentWithSimpleCategory);
 
         // Act
@@ -299,7 +299,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($documentWithHierarchyEntity->id, $this->user, null)
+            ->with($documentWithHierarchyEntity->id, $this->user)
             ->andReturn($documentWithHierarchy);
 
         // Act
@@ -334,7 +334,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($nonExistentId, $this->user, null)
+            ->with($nonExistentId, $this->user)
             ->andReturn(null);
 
         // Act & Assert
@@ -383,7 +383,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定（異なる組織なのでnullを返す）
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($documentFromAnotherOrgEntity->id, $this->user, null)
+            ->with($documentFromAnotherOrgEntity->id, $this->user)
             ->andReturn(null);
 
         // Act & Assert
@@ -415,7 +415,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->document);
 
         // Act
@@ -449,7 +449,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->document);
 
         // Act
@@ -538,7 +538,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($documentEntity->id, $this->user, null)
+            ->with($documentEntity->id, $this->user)
             ->andReturn($deepDocument);
 
         // Act
@@ -622,7 +622,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($specialCharDocumentEntity->id, $this->user, null)
+            ->with($specialCharDocumentEntity->id, $this->user)
             ->andReturn($specialCharDocument);
 
         // Act
@@ -666,7 +666,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($documentWithEmptyDescriptionEntity->id, $this->user, null)
+            ->with($documentWithEmptyDescriptionEntity->id, $this->user)
             ->andReturn($documentWithEmptyDescription);
 
         // Act
@@ -699,7 +699,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定（異なる組織なのでnullを返す）
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $anotherUser, null)
+            ->with($this->documentEntity->id, $anotherUser)
             ->andReturn(null);
 
         // Act & Assert
@@ -719,7 +719,7 @@ class DetailUseCaseTest extends TestCase
         // documentServiceのモック設定
         $this->documentService->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->document);
 
         // Act

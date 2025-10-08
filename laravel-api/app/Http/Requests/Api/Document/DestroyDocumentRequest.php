@@ -24,8 +24,6 @@ class DestroyDocumentRequest extends FormRequest
     {
         return [
             'document_entity_id' => 'required|integer|exists:document_entities,id',
-            'edit_pull_request_id' => 'nullable|integer',
-            'pull_request_edit_token' => 'nullable|string',
         ];
     }
 
@@ -36,8 +34,6 @@ class DestroyDocumentRequest extends FormRequest
     {
         return [
             'document_entity_id' => __('attributes.document.documentEntityId'),
-            'edit_pull_request_id' => __('attributes.document.editPullRequestId'),
-            'pull_request_edit_token' => __('attributes.document.pullRequestEditToken'),
         ];
     }
 

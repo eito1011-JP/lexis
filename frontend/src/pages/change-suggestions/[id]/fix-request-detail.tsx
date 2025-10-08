@@ -6,8 +6,7 @@ import { Toast } from '@/components/admin/Toast';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { diffStyles } from '@/styles/diffStyles';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { makeDiff, cleanupSemantic } from '@sanity/diff-match-patch';
 
 // 差分データの型定義
@@ -32,7 +31,6 @@ type DiffItem = {
 
 // API レスポンスの型定義
 type FixRequestDiffResponse = {
-  status: string;
   current_pr: {
     documents: DiffItem[];
     categories: DiffItem[];
@@ -41,6 +39,7 @@ type FixRequestDiffResponse = {
     documents: DiffItem[];
     categories: DiffItem[];
   };
+  status?: string;
 };
 
 // SmartDiffValueコンポーネント
@@ -285,14 +284,16 @@ export default function FixRequestDetailPage(): JSX.Element {
     try {
       setLoading(true);
       // apiClientのgetを利用し、tokenをクエリパラメータとして渡す
-      const response = await apiClient.get(
-        `${API_CONFIG.ENDPOINTS.FIX_REQUESTS.GET_DIFF.replace(':token', token)}`,
-        {
-          params: { pull_request_id: id },
-        }
-      );
+      const response = await client.fix_requests._token(token).$get({
+        query: { pull_request_id: id }
+      });
       console.log('response', response);
-      setDiffData(response);
+      const fixRequestData: FixRequestDiffResponse = {
+        current_pr: response.current_pr,
+        fix_request: response.fix_request,
+        status: response.status || 'pending'
+      };
+      setDiffData(fixRequestData);
     } catch (err) {
       console.error('修正リクエスト差分取得エラー:', err);
       setError('修正リクエスト差分の取得に失敗しました');
@@ -314,8 +315,10 @@ export default function FixRequestDetailPage(): JSX.Element {
 
     try {
       setApplying(true);
-      await apiClient.post(`/api/fix-requests/apply`, {
-        token: token,
+      await client.fix_requests.apply.$post({
+        body: {
+          token: token,
+        }
       });
       setToast({ message: '修正リクエストが正常に適用されました', type: 'success' });
 

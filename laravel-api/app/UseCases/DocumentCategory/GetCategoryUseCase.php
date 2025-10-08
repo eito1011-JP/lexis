@@ -33,7 +33,6 @@ class GetCategoryUseCase
         $category = $this->CategoryService->getCategoryByWorkContext(
             $dto->categoryEntityId,
             $dto->user,
-            $dto->pullRequestEditSessionToken
         );
 
         if (! $category) {

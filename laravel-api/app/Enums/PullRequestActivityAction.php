@@ -12,7 +12,6 @@ enum PullRequestActivityAction: string
     case PULL_REQUEST_MERGED = 'pull_request_merged';
     case PULL_REQUEST_CLOSED = 'pull_request_closed';
     case PULL_REQUEST_REOPENED = 'pull_request_reopened';
-    case PULL_REQUEST_EDITED = 'pull_request_edited';
     case PULL_REQUEST_TITLE_EDITED = 'pull_request_title_edited';
 
     /**
@@ -29,7 +28,6 @@ enum PullRequestActivityAction: string
             self::PULL_REQUEST_MERGED => 'プルリクエストがマージされました',
             self::PULL_REQUEST_CLOSED => 'プルリクエストがクローズされました',
             self::PULL_REQUEST_REOPENED => 'プルリクエストが再オープンされました',
-            self::PULL_REQUEST_EDITED => 'プルリクエストが編集されました',
             self::PULL_REQUEST_TITLE_EDITED => 'タイトルが編集されました',
         };
     }

@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 
 interface User {
   id: number;
@@ -44,7 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setIsLoading(true);
       // cookieが自動で送信されるため、認証が必要なエンドポイントを呼び出して確認
-      const response = await apiClient.get('/api/auth/me');
+      const response = await client.auth.me.$get();
       setUser(response.user);
     } catch (error: any) {
       console.log('認証チェック失敗:', error);
@@ -63,9 +62,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.SIGNIN_WITH_EMAIL, {
-        email,
-        password,
+      await client.auth.signin_with_email.$post({
+        body: {
+          email,
+          password,
+        },
       });
       
       // ログイン成功後に認証状態を再チェック
@@ -81,7 +82,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
    */
   const logout = async (): Promise<void> => {
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.LOGOUT, {});
+      await client.auth.logout.$post({ body: {} });
     } catch (error) {
       console.error('ログアウトエラー:', error);
       // ログアウトAPIが失敗してもフロントエンド側の状態はクリア

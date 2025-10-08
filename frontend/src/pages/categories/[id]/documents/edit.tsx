@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/layout';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
@@ -55,11 +54,11 @@ export default function EditDocumentPage(): JSX.Element {
       const documentEntityId = parseInt(documentEntityIdParam);
 
       try {
-        const documentResponse = await apiClient.get(API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentEntityId));
+        const documentResponse = await client.document_entities._entityId(documentEntityId).$get();
 
-        setTitle(documentResponse.title || '');
-        setDescription(documentResponse.description || '');
-        setDocumentBreadcrumbs(documentResponse.breadcrumbs || []);
+        setTitle(documentResponse.document.title || '');
+        setDescription(documentResponse.document.description || '');
+        setDocumentBreadcrumbs(documentResponse.document.breadcrumbs || []);
       } catch (error) {
         console.error('データ取得エラー:', error);
       } finally {
@@ -103,14 +102,13 @@ export default function EditDocumentPage(): JSX.Element {
         document_entity_id: documentEntityIdParam,
       };
 
-      // プルリクエスト編集関連の処理（必要に応じて）
-      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
-      if (pullRequestEditToken) {
-        payload.pull_request_edit_token = pullRequestEditToken;
-      }
-
       // RESTfulなドキュメント更新APIを呼び出す
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentEntityIdParam}`, payload);
+      await client.document_entities._entityId(parseInt(documentEntityIdParam)).$put({
+        body: {
+          title: payload.title,
+          body: payload.description,
+        }
+      });
 
       alert('ドキュメントが更新されました');
       

@@ -19,7 +19,6 @@ class CategoryService
     public function getCategoryByWorkContext(
         int $categoryEntityId,
         User $user,
-        ?string $pullRequestEditSessionToken = null
     ): ?CategoryVersion {
         // ユーザーのアクティブブランチを取得
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
@@ -54,18 +53,7 @@ class CategoryService
             }
         }
 
-        if ($pullRequestEditSessionToken) {
-            // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
-            return $baseQuery->where(function ($query) use ($activeUserBranch) {
-                $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->whereIn('status', [
-                        DocumentCategoryStatus::PUSHED->value,
-                        DocumentCategoryStatus::DRAFT->value,
-                    ])
-                        ->where('user_branch_id', $activeUserBranch->id);
-                })->orWhere('status', DocumentCategoryStatus::MERGED->value);
-            })->orderBy('created_at', 'desc')->first();
-        } else {
+        
             // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
@@ -73,7 +61,6 @@ class CategoryService
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentCategoryStatus::MERGED->value);
             })->orderBy('created_at', 'desc')->first();
-        }
     }
 
     /**
@@ -81,13 +68,11 @@ class CategoryService
      *
      * @param  int  $categoryEntityId  対象カテゴリのエンティティID
      * @param  User  $user  認証済みユーザー
-     * @param  ?string  $pullRequestEditSessionToken  プルリクエスト編集トークン
      * @return Collection カテゴリバージョンのコレクション
      */
     public function getDescendantCategoriesByWorkContext(
         int $categoryEntityId,
         User $user,
-        ?string $pullRequestEditSessionToken = null
     ): Collection {
         $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
         $organizationId = $user->organizationMember->organization_id;
@@ -98,7 +83,6 @@ class CategoryService
             $categoryEntityId,
             $organizationId,
             $activeUserBranch,
-            $pullRequestEditSessionToken
         );
 
         foreach ($childCategories as $childCategory) {
@@ -108,7 +92,6 @@ class CategoryService
             $grandChildren = $this->getDescendantCategoriesByWorkContext(
                 $childCategory->entity_id,
                 $user,
-                $pullRequestEditSessionToken
             );
 
             $descendants = $descendants->merge($grandChildren);
@@ -124,7 +107,6 @@ class CategoryService
         int $parentEntityId,
         int $organizationId,
         ?UserBranch $activeUserBranch,
-        ?string $pullRequestEditSessionToken
     ): Collection {
         $baseQuery = CategoryVersion::where('parent_entity_id', $parentEntityId)
             ->where('organization_id', $organizationId);
@@ -133,23 +115,11 @@ class CategoryService
             return $baseQuery->where('status', DocumentCategoryStatus::MERGED->value)->get();
         }
 
-        if ($pullRequestEditSessionToken) {
-            return $baseQuery->where(function ($query) use ($activeUserBranch) {
-                $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->whereIn('status', [
-                        DocumentCategoryStatus::PUSHED->value,
-                        DocumentCategoryStatus::DRAFT->value,
-                    ])
-                        ->where('user_branch_id', $activeUserBranch->id);
-                })->orWhere('status', DocumentCategoryStatus::MERGED->value);
-            })->get();
-        } else {
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
                     $q1->where('status', DocumentCategoryStatus::DRAFT->value)
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentCategoryStatus::MERGED->value);
             })->get();
-        }
     }
 }

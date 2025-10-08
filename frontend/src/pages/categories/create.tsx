@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
+import CategoryForm, { useUnsavedChangesHandler } from '@/components/admin/CategoryForm';
+import { CreateCategoryFormData } from '@/schemas';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 
 /**
  * カテゴリ新規作成ページ
@@ -27,23 +27,21 @@ export default function CreateRootCategoryPage(): JSX.Element {
     handleCancel: handleModalCancel
   } = useUnsavedChangesHandler(hasUnsavedChanges);
 
-  const handleSubmit = async (formData: CategoryFormData) => {
+  const handleSubmit = async (formData: CreateCategoryFormData) => {
     setIsSubmitting(true);
     setError(null);
 
     try {
       // URLパラメータに基づいてparent_entity_idを設定
-      const parentEntityId = categoryEntityId ? categoryEntityId : null;
+      const parentEntityId = categoryEntityId ? Number(categoryEntityId) : null;
 
-      const payload = {
-        title: formData.title,
-        description: formData.description,
-        parent_entity_id: parentEntityId, // URLにidがある場合はサブカテゴリ、ない場合はルートカテゴリ
-        edit_pull_request_id: null,
-        pull_request_edit_token: null,
-      };
-
-      await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
+      await client.category_entities.$post({
+        body: {
+          title: formData.title,
+          description: formData.description,
+          parent_entity_id: parentEntityId
+        } as any
+      });
       
       // カテゴリ作成成功時はドキュメント一覧ページに遷移
       navigate('/documents', { 

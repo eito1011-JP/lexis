@@ -144,8 +144,6 @@ class DocumentEntityController extends ApiBaseController
                 document_entity_id: $validatedRequest['document_entity_id'],
                 title: $validatedRequest['title'],
                 description: $validatedRequest['description'],
-                edit_pull_request_id: $validatedRequest['edit_pull_request_id'] ?? null,
-                pull_request_edit_token: $validatedRequest['pull_request_edit_token'] ?? null,
             );
             $this->updateDocumentUseCase->execute($updateDocumentDto, $user);
 
@@ -179,8 +177,6 @@ class DocumentEntityController extends ApiBaseController
         $validatedData = $request->validated();
         $dto = new DestroyDocumentDto(
             document_entity_id: $validatedData['document_entity_id'],
-            edit_pull_request_id: $validatedData['edit_pull_request_id'] ?? null,
-            pull_request_edit_token: $validatedData['pull_request_edit_token'] ?? null,
         );
         $useCase->execute($dto, $user);
 

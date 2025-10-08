@@ -89,11 +89,6 @@ class ShowPullRequestUseCase
                     'token' => $log->fixRequest->token,
                     'created_at' => $log->fixRequest->created_at->toISOString(),
                 ] : null,
-                'pull_request_edit_session' => $log->pullRequestEditSession ? [
-                    'id' => $log->pullRequestEditSession->id,
-                    'token' => $log->pullRequestEditSession->token,
-                    'created_at' => $log->pullRequestEditSession->created_at->toISOString(),
-                ] : null,
                 'old_pull_request_title' => $log->old_pull_request_title,
                 'new_pull_request_title' => $log->new_pull_request_title,
                 'fix_request_token' => $log->fix_request_token,

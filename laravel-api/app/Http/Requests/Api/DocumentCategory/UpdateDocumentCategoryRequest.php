@@ -24,16 +24,14 @@ class UpdateDocumentCategoryRequest extends FormRequest
         return [
             'category_entity_id' => 'required|integer|exists:category_entities,id',
             'title' => 'required|string',
-            'description' => 'nullable|string',
-            'edit_pull_request_id' => 'nullable|integer',
-            'pull_request_edit_token' => 'nullable|string',
+            'description' => 'required|string',
         ];
     }
 
     public function prepareForValidation(): void
     {
         $this->merge([
-            'category_entity_id' => $this->route('id'),
+            'category_entity_id' => $this->route('category_entity'),
         ]);
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Consts\Flag;
-use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use Http\Discovery\Exception\NotFoundException;
@@ -14,18 +13,11 @@ class UserBranchService extends BaseService
      * ユーザーのアクティブなブランチを取得または作成する
      *
      * @param  User  $user  ユーザー
-     * @param  int|null  $editPullRequestId  編集対象のプルリクエストID
+     * @param  int|null  $organizationId  組織ID
      * @return int ユーザーブランチID
      */
-    public function fetchOrCreateActiveBranch(User $user, int $organizationId, ?int $editPullRequestId = null): int
+    public function fetchOrCreateActiveBranch(User $user, int $organizationId): int
     {
-        // プルリクエストが指定されている場合は、そのプルリクエストのブランチを使用
-        if ($editPullRequestId) {
-            $pullRequest = PullRequest::organization($organizationId)->findOrFail($editPullRequestId);
-
-            return $pullRequest->user_branch_id;
-        }
-
         // アクティブなユーザーブランチを確認（リレーション経由）
         $activeBranch = $user->userBranches()
             ->where('organization_id', $organizationId)

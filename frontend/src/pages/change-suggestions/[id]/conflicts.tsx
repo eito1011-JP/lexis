@@ -7,7 +7,7 @@ import {
   type ConflictFileDiff,
   type FixConflictTemporaryRequestItem,
   type FixConflictTemporaryResponse,
-} from '@/api/pullRequest';
+} from '@/api/pullRequestHelpers';
 import MarkdownEditor from '@/components/admin/editor/SlateEditor';
 import { Toast } from '@/components/admin/Toast';
 

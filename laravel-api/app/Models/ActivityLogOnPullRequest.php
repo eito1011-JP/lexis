@@ -14,7 +14,6 @@ class ActivityLogOnPullRequest extends Model
         'pull_request_id',
         'comment_id',
         'reviewer_id',
-        'pull_request_edit_session_id',
         'action',
         'old_pull_request_title',
         'new_pull_request_title',
@@ -72,13 +71,5 @@ class ActivityLogOnPullRequest extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewer_id');
-    }
-
-    /**
-     * プルリクエスト編集セッションとのリレーション
-     */
-    public function pullRequestEditSession()
-    {
-        return $this->belongsTo(PullRequestEditSession::class, 'pull_request_edit_session_id');
     }
 }

@@ -39,24 +39,6 @@ class FetchCategoriesUseCase
             ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
             ->pluck('current_version_id');
 
-        if ($dto->pullRequestEditSessionToken) {
-            // 再編集している場合：PUSHEDとDRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
-            return CategoryVersion::select('id', 'entity_id', 'title')
-                ->where('parent_entity_id', $dto->parentEntityId)
-                ->where('organization_id', $user->organizationMember->organization_id)
-                ->whereIn('id', $currentVersionIds)
-                ->where(function ($query) use ($activeUserBranch) {
-                    $query->where(function ($q1) use ($activeUserBranch) {
-                        $q1->whereIn('status', [
-                            DocumentCategoryStatus::PUSHED->value,
-                            DocumentCategoryStatus::DRAFT->value,
-                        ])
-                            ->where('user_branch_id', $activeUserBranch->id);
-                    })->orWhere('status', DocumentCategoryStatus::MERGED->value);
-                })
-                ->orderBy('created_at', 'asc')
-                ->get();
-        } else {
             // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
             // ただし、編集対象となったカテゴリは除外する
             $editedCategoryIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
@@ -77,6 +59,5 @@ class FetchCategoriesUseCase
                 })
                 ->orderBy('created_at', 'asc')
                 ->get();
-        }
     }
 }

@@ -13,8 +13,6 @@ final class DestroyCategoryEntityDto extends UseCaseDto
 {
     public function __construct(
         public readonly int $categoryEntityId,
-        public readonly ?int $editPullRequestId = null,
-        public readonly ?string $pullRequestEditToken = null,
     ) {}
 
     /**
@@ -24,8 +22,6 @@ final class DestroyCategoryEntityDto extends UseCaseDto
     {
         return new self(
             categoryEntityId: $requestData['category_entity_id'],
-            editPullRequestId: $requestData['edit_pull_request_id'] ?? null,
-            pullRequestEditToken: $requestData['pull_request_edit_token'] ?? null,
         );
     }
 }

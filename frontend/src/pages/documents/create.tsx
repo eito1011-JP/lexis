@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/layout';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createDocumentSchema, CreateDocumentFormData } from '@/schemas';
 
 // エラー型の定義
 interface ApiError {
@@ -25,12 +27,27 @@ export default function CreateDocumentPage(): JSX.Element {
   const { categoryEntityId: categoryEntityIdParam } = useParams<{ categoryEntityId: string }>();
   const [isLoading, setIsLoading] = useState(true);
 
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
   const [categoryEntityId, setCategoryEntityId] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<CreateDocumentFormData>({
+    resolver: zodResolver(createDocumentSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      title: '',
+      description: '',
+    },
+  });
+
+  const title = watch('title');
+  const description = watch('description');
 
   // URLパスからcategoryIdを取得し、そのカテゴリ情報を取得
   useEffect(() => {
@@ -44,7 +61,8 @@ export default function CreateDocumentPage(): JSX.Element {
       try {
         const id = parseInt(categoryEntityIdParam);
         setCategoryEntityId(id);
-        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
+        setValue('category_entity_id', id);
+        const response = await client.category_entities._entityId(id).$get();
         setSelectedCategory(response.category);
       } catch (error) {
         console.error('カテゴリ詳細取得エラー:', error);
@@ -54,50 +72,22 @@ export default function CreateDocumentPage(): JSX.Element {
     };
 
     fetchCategoryDetail();
-  }, [categoryEntityIdParam]);
+  }, [categoryEntityIdParam, setValue]);
 
-  const handleSave = async () => {
+  const onSubmit = async (data: CreateDocumentFormData) => {
     if (isSubmitting) return;
-
-
-    // バリデーション
-    const errors: {[key: string]: string} = {};
-    if (!title.trim()) {
-      errors.title = 'タイトルを入力してください';
-    }
-    if (!description.trim()) {
-      errors.description = '本文を入力してください';
-    }
-    if (!categoryEntityId) {
-      alert('カテゴリが選択されていません。');
-      return;
-    }
-
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-
-    setValidationErrors({});
 
     try {
       setIsSubmitting(true);
 
-      // APIリクエストのペイロードを構築
-      const payload: any = {
-        title: title.trim(),
-        description: description.trim(),
-        category_entity_id: categoryEntityId,
-      };
-
-      // プルリクエスト編集関連の処理（必要に応じて）
-      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
-      if (pullRequestEditToken) {
-        payload.pull_request_edit_token = pullRequestEditToken;
-      }
-
       // RESTfulなドキュメント作成APIを呼び出す
-      await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE, payload);
+      await client.document_entities.$post({
+        body: {
+          title: data.title.trim(),
+          description: data.description.trim(),
+          category_entity_id: data.category_entity_id,
+        } as any
+      });
 
       alert('ドキュメントが作成されました');
       
@@ -139,14 +129,13 @@ export default function CreateDocumentPage(): JSX.Element {
             <label className="block text-sm font-medium mb-2">タイトル</label>
             <input
               type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              {...register('title')}
               placeholder="ドキュメントのタイトルを入力してください"
               className="w-full px-3 py-2 bg-transparent border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
               disabled={isSubmitting}
             />
-            {validationErrors.title && (
-              <p className="text-red-500 text-sm mt-1">{validationErrors.title}</p>
+            {errors.title && (
+              <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
             )}
           </div>
 
@@ -156,18 +145,19 @@ export default function CreateDocumentPage(): JSX.Element {
               <SlateEditor
                 initialContent={description}
                 onChange={() => {}}
-                onMarkdownChange={(markdown: string) => setDescription(markdown)}
+                onMarkdownChange={(markdown: string) => setValue('description', markdown)}
                 placeholder="ここにドキュメントの内容を入力してください"
               />
             </div>
-            {validationErrors.description && (
-              <p className="text-red-500 text-sm mt-1">{validationErrors.description}</p>
+            {errors.description && (
+              <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
             )}
           </div>
 
           {/* ボタン */}
           <div className="flex gap-4">
             <button
+              type="button"
               onClick={() => console.log('プレビュー機能は未実装です')}
               className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
               disabled={isSubmitting}
@@ -175,13 +165,15 @@ export default function CreateDocumentPage(): JSX.Element {
               プレビュー
             </button>
             <button
-              onClick={handleSave}
-              disabled={isSubmitting || !title.trim()}
+              type="button"
+              onClick={handleSubmit(onSubmit)}
+              disabled={isSubmitting || !title?.trim()}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-md text-white transition-colors"
             >
               {isSubmitting ? '保存中...' : '保存'}
             </button>
             <button
+              type="button"
               onClick={() => navigate('/documents')}
               disabled={isSubmitting}
               className="px-6 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-md text-white transition-colors"

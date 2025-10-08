@@ -1,20 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/layout';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { axios } from '@/api/client';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
-import { AUTHENTICATION_FAILED, DUPLICATE_ORGANIZATION, ERROR, INVALID_AUTHENTICATION_TOKEN } from '@/const/ErrorMessage';
+import { AUTHENTICATION_FAILED, DUPLICATE_ORGANIZATION, ERROR, INVALID_AUTHENTICATION_TOKEN, VALIDATION_ERROR } from '@/const/ErrorMessage';
+import { organizationSchema, OrganizationFormData } from '@/schemas';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 export default function OrganizationRegisterPage(): React.ReactElement {
   const location = useLocation();
   const navigate = useNavigate();
-  const [organizationId, setOrganizationId] = useState('');
-  const [organizationName, setOrganizationName] = useState('');
   const [loading, setLoading] = useState(false);
   const token = useMemo(() => new URLSearchParams(location.search).get('token') ?? '', [location.search]);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const { show } = useToast();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<OrganizationFormData>({
+    resolver: zodResolver(organizationSchema),
+    mode: 'onBlur',
+  });
 
   useEffect(() => {
     async function handleIdentifyToken() {
@@ -25,7 +33,8 @@ export default function OrganizationRegisterPage(): React.ReactElement {
       }
   
       try {
-        await apiClient.get(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, { params: { token } });
+        // TODO: トークン検証用のaspidaエンドポイントを追加する必要があります
+        await axios.get('/auth/pre-users', { params: { token } });
         // トークンが有効な場合、何もしない（フォームを表示する）
       } catch (error: any) {
         if (error.response?.status === 401) {
@@ -38,18 +47,17 @@ export default function OrganizationRegisterPage(): React.ReactElement {
     }
     
     handleIdentifyToken();
-  }, [token, navigate]);
+  }, [token, navigate, show]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: OrganizationFormData) => {
     if (!token) return;
     setLoading(true);
-    setValidationErrors({}); // バリデーションエラーをクリア
     
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.ORGANIZATIONS_CREATE, {
-        organization_uuid: organizationId,
-        organization_name: organizationName,
+      // organization_uuidとtokenを含むリクエストをaxiosで送信
+      await axios.post('/organizations', {
+        organization_uuid: data.organization_uuid,
+        organization_name: data.organization_name,
         token,
       });
 
@@ -60,7 +68,7 @@ export default function OrganizationRegisterPage(): React.ReactElement {
       }, 1000);
     } catch (error: any) {
       if (error.response?.status === 422 && error.response?.data?.errors) {
-        setValidationErrors(error.response.data.errors);
+        show({ message: VALIDATION_ERROR, type: 'error' });
       } else if (error.response?.status === 401) {
         show({ message: AUTHENTICATION_FAILED, type: 'error' });
         navigate('/signup');
@@ -80,23 +88,19 @@ export default function OrganizationRegisterPage(): React.ReactElement {
       <div className="bg-black min-h-screen flex items-center justify-center">
         <div className="w-full max-w-[500px] bg-[#0A0A0A] border-[1px] border-[#B1B1B1] rounded-xl p-12">
           <h2 className="text-white text-2xl font-bold text-center mb-10">組織名を入力してください</h2>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-6">
               <label className="block text-white mb-2 font-bold">組織ID</label>
               <input
                 className={`w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none ${
-                  validationErrors.organization_uuid ? 'border-2 border-red-500' : ''
+                  errors.organization_uuid ? 'border-2 border-red-500' : ''
                 }`}
                 placeholder="nexis-inc"
-                value={organizationId}
-                onChange={(e) => setOrganizationId(e.target.value)}
-                required
+                {...register('organization_uuid')}
               />
-              {validationErrors.organization_uuid && (
+              {errors.organization_uuid && (
                 <div className="mt-2">
-                  {validationErrors.organization_uuid.map((error, index) => (
-                    <p key={index} className="text-red-500 text-sm">{error}</p>
-                  ))}
+                  <p className="text-red-500 text-sm">{errors.organization_uuid.message}</p>
                 </div>
               )}
             </div>
@@ -104,18 +108,14 @@ export default function OrganizationRegisterPage(): React.ReactElement {
               <label className="block text-white mb-2 font-bold">組織名</label>
               <input
                 className={`w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none ${
-                  validationErrors.organization_name ? 'border-2 border-red-500' : ''
+                  errors.organization_name ? 'border-2 border-red-500' : ''
                 }`}
                 placeholder="株式会社Nexis"
-                value={organizationName}
-                onChange={(e) => setOrganizationName(e.target.value)}
-                required
+                {...register('organization_name')}
               />
-              {validationErrors.organization_name && (
+              {errors.organization_name && (
                 <div className="mt-2">
-                  {validationErrors.organization_name.map((error, index) => (
-                    <p key={index} className="text-red-500 text-sm">{error}</p>
-                  ))}
+                  <p className="text-red-500 text-sm">{errors.organization_name.message}</p>
                 </div>
               )}
             </div>

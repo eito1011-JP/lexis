@@ -6,7 +6,8 @@ import {
   fetchPullRequestDetail,
   type PullRequestDetailResponse,
   type ActivityLog,
-} from '@/api/pullRequest';
+} from '@/api/pullRequestHelpers';
+import { client, axios } from '@/api/client';
 import { Settings } from '@/components/icon/common/Settings';
 import { TitleEditedLog } from '@/components/icon/common/TitleEditedLog';
 import { MergedLog } from '@/components/icon/common/MergedLog';
@@ -16,9 +17,6 @@ import { PullRequestClosedLog } from '@/components/icon/common/PullRequestClosed
 import { PullRequestReopenedLog } from '@/components/icon/common/PullRequestReopenedLog';
 import { PullRequestEditedLog } from '@/components/icon/common/PullRequestEditedLog';
 import React from 'react';
-
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
 import { Toast } from '@/components/admin/Toast';
 import { Merge } from '@/components/icon/common/Merge';
 import { Merged } from '@/components/icon/common/Merged';
@@ -32,6 +30,9 @@ import SendReview from '@/components/icon/common/SendReview';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { DescriptionEdit } from '@/components/diff/DescriptionEdit';
 import { DescriptionDisplay } from '@/components/diff/DescriptionDisplay';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { postCommentSchema, PostCommentFormData } from '@/schemas';
 
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -343,7 +344,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [prefetchingConflict, setPrefetchingConflict] = useState(false);
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('activity');
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loadingActivityLogs, setLoadingActivityLogs] = useState(false);
@@ -356,6 +356,31 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [showDescriptionMenu, setShowDescriptionMenu] = useState(false);
   const descriptionMenuRef = useRef<HTMLDivElement | null>(null);
 
+  const {
+    register: registerComment,
+    handleSubmit: handleSubmitComment,
+    formState: { errors: commentErrors },
+    setValue: setCommentValue,
+    watch: watchComment,
+    reset: resetComment,
+  } = useForm<PostCommentFormData>({
+    resolver: zodResolver(postCommentSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      content: '',
+      pull_request_id: id ? parseInt(id) : 0,
+    },
+  });
+
+  const comment = watchComment('content');
+
+  // idが変わったらpull_request_idを更新
+  useEffect(() => {
+    if (id) {
+      setCommentValue('pull_request_id', parseInt(id));
+    }
+  }, [id, setCommentValue]);
+
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
   }, [id, isCheckingConflict, conflictStatus.mergeable]);
@@ -364,11 +389,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const handleFetchUser = async (searchEmail?: string) => {
     setLoadingUsers(true);
     try {
-      const endpoint = searchEmail
-        ? `${API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET}?email=${encodeURIComponent(searchEmail)}`
-        : API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
-
-      const response = await apiClient.get(endpoint);
+      const query = searchEmail ? { email: searchEmail } : undefined;
+      const response = await client.pull_request_reviewers.$get({ query });
       setUsers(response.users || []);
     } catch (error) {
       console.error('ユーザー取得エラー:', error);
@@ -425,8 +447,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         // プルリクエストデータが取得できた場合、レビュアー設定のためにユーザー一覧を取得
         if (data.reviewers && data.reviewers.length > 0) {
           try {
-            const endpoint = API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
-            const response = await apiClient.get(endpoint);
+            const response = await client.pull_request_reviewers.$get();
             const allUsers = response.users || [];
             setUsers(allUsers);
 
@@ -550,10 +571,11 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         })
         .filter(Boolean);
 
-      const endpoint = API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
-      await apiClient.post(endpoint, {
-        pull_request_id: parseInt(id),
-        emails: selectedEmails,
+      await client.pull_request_reviewers.$post({
+        body: {
+          pull_request_id: parseInt(id),
+          reviewer_ids: selectedReviewers,
+        }
       });
 
       // 成功時はToast表示などの処理を追加可能
@@ -569,17 +591,17 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   };
 
   // コメント投稿のハンドラー
-  const handleComment = async () => {
-    if (!comment.trim() || !id) return;
+  const onSubmitComment = async (data: PostCommentFormData) => {
+    if (!id) return;
 
     try {
-      await apiClient.post('/api/comments', {
+      await axios.post('/comments', {
         pull_request_id: parseInt(id),
-        content: comment.trim(),
+        content: data.content.trim(),
       });
 
       setToast({ message: 'コメントを投稿しました', type: 'success' });
-      setComment('');
+      resetComment();
       
       // コメント投稿後にプルリクエストデータを再取得してactivity logsを更新
       const updatedData = await fetchPullRequestDetail(id);
@@ -602,8 +624,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
     setIsMerging(true);
     try {
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.MERGE}/${id}`, {
-        pull_request_id: id,
+      await client.pull_requests._id(parseInt(id)).merge.$put({
+        body: {
+          pull_request_id: id,
+        }
       });
 
       setToast({ message: 'プルリクエストをマージしました', type: 'success' });
@@ -634,8 +658,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
     setIsUpdatingTitle(true);
     try {
-      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE}/${id}/`, {
-        title: editingTitle.trim(),
+      await client.pull_requests._id(parseInt(id)).update.$patch({
+        body: {
+          title: editingTitle.trim(),
+        }
       });
 
       setToast({ message: 'タイトルを更新しました', type: 'success' });
@@ -679,8 +705,10 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
     setIsUpdatingDescription(true);
     try {
-      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.UPDATE}/${id}/`, {
-        description: editingDescription.trim(),
+      await client.pull_requests._id(parseInt(id)).update.$patch({
+        body: {
+          description: editingDescription.trim(),
+        }
       });
 
       setToast({ message: '説明を更新しました', type: 'success' });
@@ -711,7 +739,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
     setIsMerging(true);
     try {
-      await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CLOSE}/${id}/close`);
+      await client.pull_requests._id(parseInt(id)).close.$patch();
 
       setToast({ message: 'プルリクエストを取り下げました', type: 'success' });
       setTimeout(() => {
@@ -734,14 +762,13 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     if (!id) return;
 
     try {
-      await apiClient.patch(
-        `${API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.SEND_REVIEW_REQUEST_AGAIN(reviewerUserId)}`,
-        {
+      await client.pull_request_reviewers._userId(reviewerUserId).resend.$patch({
+        body: {
           action: 'pending',
           pull_request_id: parseInt(id),
           user_id: reviewerUserId,
         }
-      );
+      });
 
       setToast({ message: 'レビュー依頼を送信しました', type: 'success' });
 
@@ -1050,12 +1077,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 </div>
 
                 <textarea
+                  {...registerComment('content')}
                   className="w-full border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 resize-none"
                   rows={4}
                   placeholder="コメントを追加してください..."
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
                 />
+                {commentErrors.content && (
+                  <p className="text-red-500 text-sm mt-1">{commentErrors.content.message}</p>
+                )}
 
                 <div className="flex justify-end gap-4 mt-4">
                   <button
@@ -1066,8 +1095,9 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                     提案を取り下げる
                   </button>
                   <button
-                    onClick={handleComment}
-                    disabled={!comment.trim()}
+                    type="button"
+                    onClick={handleSubmitComment(onSubmitComment)}
+                    disabled={!comment?.trim()}
                     className="px-6 py-2 bg-[#1B6E2A] hover:bg-gray-700 text-white rounded-md transition-colors"
                   >
                     コメントする
@@ -1262,13 +1292,12 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
                                     if (id) {
                                       try {
-                                        await apiClient.post(
-                                          API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET,
-                                          {
+                                        await client.pull_request_reviewers.$post({
+                                          body: {
                                             pull_request_id: parseInt(id),
                                             emails: currentReviewerEmails,
                                           }
-                                        );
+                                        });
 
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);
@@ -1293,13 +1322,12 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
 
                                     if (id) {
                                       try {
-                                        await apiClient.post(
-                                          API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET,
-                                          {
+                                        await client.pull_request_reviewers.$post({
+                                          body: {
                                             pull_request_id: parseInt(id),
                                             emails: newReviewerEmails,
                                           }
-                                        );
+                                        });
 
                                         // API実行後に最新のプルリクエストデータを再取得
                                         const updatedData = await fetchPullRequestDetail(id);

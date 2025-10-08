@@ -9,7 +9,7 @@ import {
   type PullRequestDetailResponse,
   type DiffData,
   type DiffFieldInfo,
-} from '@/api/pullRequest';
+} from '@/api/pullRequestHelpers';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Folder } from '@/components/icon/common/Folder';
 import { markdownStyles } from '@/styles/markdownContent';
@@ -590,7 +590,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
 
           // 変更提案の再編集画面に遷移
           navigate(
-            `/documents?edit_pull_request_id=${id}&pull_request_edit_token=${sessionResponse.token}`
+            `/documents`
           );
         } catch (error) {
           console.error('編集セッション開始エラー:', error);
@@ -630,7 +630,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
           conflictStatus.mergeable === false) && (
           <StatusBanner
             status={pullRequestData.status}
-            authorEmail={pullRequestData.author_email}
+            authorEmail={pullRequestData.author_nickname || ''}
             createdAt={pullRequestData.created_at}
             conflict={conflictStatus.mergeable === false}
             title={pullRequestData.title}

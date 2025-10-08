@@ -123,32 +123,30 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         // Arrange
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
-            ->with($this->parentCategoryEntity->id, $this->user, null)
+            ->with($this->parentCategoryEntity->id, $this->user)
             ->andReturn($this->existingParentCategory);
 
         $this->DocumentService
             ->shouldReceive('getDescendantDocumentsByWorkContext')
             ->once()
-            ->with($this->parentCategoryEntity->id, $this->user, null)
+            ->with($this->parentCategoryEntity->id, $this->user)
             ->andReturn(new Collection());
 
         $this->CategoryService
             ->shouldReceive('getDescendantCategoriesByWorkContext')
             ->once()
-            ->with($this->parentCategoryEntity->id, $this->user, null)
+                ->with($this->parentCategoryEntity->id, $this->user)
             ->andReturn(new Collection());
 
         // Act
@@ -180,76 +178,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
             'original_version_id' => $this->existingParentCategory->id,
             'current_version_id' => $deletedCategory->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function test_execute_successfully_destroys_category_with_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'token' => $pullRequestEditToken,
-            'started_at' => now(),
-            'finished_at' => null,
-        ]);
-
-        $dto = new DestroyCategoryEntityDto(
-            categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: $pullRequestEditToken
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
-            ->andReturn($this->userBranch->id);
-
-        $this->CategoryService
-            ->shouldReceive('getCategoryByWorkContext')
-            ->once()
-            ->with($this->parentCategoryEntity->id, $this->user, $pullRequestEditToken)
-            ->andReturn($this->existingParentCategory);
-
-        $this->DocumentService
-            ->shouldReceive('getDescendantDocumentsByWorkContext')
-            ->once()
-            ->with($this->parentCategoryEntity->id, $this->user, $pullRequestEditToken)
-            ->andReturn(new Collection());
-
-        $this->CategoryService
-            ->shouldReceive('getDescendantCategoriesByWorkContext')
-            ->once()
-            ->with($this->parentCategoryEntity->id, $this->user, $pullRequestEditToken)
-            ->andReturn(new Collection());
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $this->assertIsArray($result);
-        $this->assertCount(1, $result['category_versions']);
-
-        $deletedCategory = $result['category_versions'][0];
-        $this->assertEquals($pullRequestEditSession->id, $deletedCategory->pull_request_edit_session_id);
-
-        // PullRequestEditSessionDiffが作成されていることを確認
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $this->existingParentCategory->id,
-            'current_version_id' => $deletedCategory->id,
-            'diff_type' => 'deleted',
         ]);
     }
 
@@ -299,8 +227,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
@@ -392,8 +318,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
@@ -463,8 +387,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
@@ -543,8 +465,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
@@ -614,8 +534,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         // Act & Assert
@@ -652,20 +570,18 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $anotherCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, null)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
             ->once()
-            ->with($anotherCategoryEntity->id, $this->user, null)
+            ->with($anotherCategoryEntity->id, $this->user)
             ->andReturn(null); // 別組織のカテゴリなのでnull
 
         // Act & Assert
@@ -682,8 +598,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         $nonExistentEntityId = 999999;
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $nonExistentEntityId,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         // Act & Assert
@@ -699,8 +613,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         // Arrange
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
@@ -721,64 +633,11 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function test_execute_with_invalid_pull_request_edit_session(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $dto = new DestroyCategoryEntityDto(
-            categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: 'invalid-token'
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->andReturn($this->userBranch->id);
-
-        $this->CategoryService
-            ->shouldReceive('getCategoryByWorkContext')
-            ->once()
-            ->andReturn($this->existingParentCategory);
-
-        $this->DocumentService
-            ->shouldReceive('getDescendantDocumentsByWorkContext')
-            ->once()
-            ->andReturn(new Collection());
-
-        $this->CategoryService
-            ->shouldReceive('getDescendantCategoriesByWorkContext')
-            ->once()
-            ->andReturn(new Collection());
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        $deletedCategory = $result['category_versions'][0];
-        $this->assertNull($deletedCategory->pull_request_edit_session_id); // 無効なトークンなのでnull
-
-        // PullRequestEditSessionDiffが作成されていないことを確認
-        $this->assertDatabaseMissing('pull_request_edit_session_diffs', [
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'current_version_id' => $deletedCategory->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
     public function test_execute_handles_exception_and_roll_back_transaction(): void
     {
         // Arrange
         $dto = new DestroyCategoryEntityDto(
             categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: null,
-            pullRequestEditToken: null
         );
 
         $this->userBranchService
@@ -804,109 +663,6 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
 
             throw $e;
         }
-    }
-
-    /**
-     * @test
-     */
-    public function test_execute_creates_pull_request_edit_session_diff_for_all_items(): void
-    {
-        // Arrange
-        $pullRequest = PullRequest::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $pullRequestEditToken = 'test-token';
-        $pullRequestEditSession = PullRequestEditSession::factory()->create([
-            'pull_request_id' => $pullRequest->id,
-            'user_id' => $this->user->id,
-            'token' => $pullRequestEditToken,
-            'finished_at' => null,
-        ]);
-
-        // 子カテゴリとドキュメントを作成
-        $childCategoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $childCategory = CategoryVersion::factory()->create([
-            'entity_id' => $childCategoryEntity->id,
-            'parent_entity_id' => $this->parentCategoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::MERGED->value,
-        ]);
-
-        $documentEntity = DocumentEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $document = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'category_entity_id' => $this->parentCategoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-        ]);
-
-        $dto = new DestroyCategoryEntityDto(
-            categoryEntityId: $this->parentCategoryEntity->id,
-            editPullRequestId: $pullRequest->id,
-            pullRequestEditToken: $pullRequestEditToken
-        );
-
-        $this->userBranchService
-            ->shouldReceive('fetchOrCreateActiveBranch')
-            ->once()
-            ->andReturn($this->userBranch->id);
-
-        $this->CategoryService
-            ->shouldReceive('getCategoryByWorkContext')
-            ->once()
-            ->andReturn($this->existingParentCategory);
-
-        $this->DocumentService
-            ->shouldReceive('getDescendantDocumentsByWorkContext')
-            ->once()
-            ->andReturn(new Collection([$document]));
-
-        $this->CategoryService
-            ->shouldReceive('getDescendantCategoriesByWorkContext')
-            ->once()
-            ->andReturn(new Collection([$childCategory]));
-
-        // Act
-        $result = $this->useCase->execute($dto, $this->user);
-
-        // Assert
-        // ドキュメントのPullRequestEditSessionDiffが作成されていることを確認
-        $deletedDocument = $result['document_versions'][0];
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'original_version_id' => $document->id,
-            'current_version_id' => $deletedDocument->id,
-            'diff_type' => 'deleted',
-        ]);
-
-        // 子カテゴリのPullRequestEditSessionDiffが作成されていることを確認
-        $deletedChildCategory = $result['category_versions'][0];
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $childCategory->id,
-            'current_version_id' => $deletedChildCategory->id,
-            'diff_type' => 'deleted',
-        ]);
-
-        // カテゴリ自体のPullRequestEditSessionDiffが作成されていることを確認
-        $deletedCategory = $result['category_versions'][1];
-        $this->assertDatabaseHas('pull_request_edit_session_diffs', [
-            'pull_request_edit_session_id' => $pullRequestEditSession->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'original_version_id' => $this->existingParentCategory->id,
-            'current_version_id' => $deletedCategory->id,
-            'diff_type' => 'deleted',
-        ]);
     }
 }
 

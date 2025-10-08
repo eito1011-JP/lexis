@@ -69,7 +69,7 @@ class GetCategoryUseCaseTest extends TestCase
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
-            ->with($this->categoryEntity->id, $this->user, null)
+            ->with($this->categoryEntity->id, $this->user)
             ->andReturn($mockCategory);
 
         $dto = new GetCategoryDto([
@@ -115,7 +115,7 @@ class GetCategoryUseCaseTest extends TestCase
         // Arrange
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
-            ->with($this->categoryEntity->id, $this->user, null)
+            ->with($this->categoryEntity->id, $this->user)
             ->andReturn(null);
 
         $dto = new GetCategoryDto([
@@ -126,41 +126,5 @@ class GetCategoryUseCaseTest extends TestCase
         // Act & Assert
         $this->expectException(NotFoundException::class);
         $this->useCase->execute($dto);
-    }
-
-    /**
-     * @test
-     */
-    public function test_get_category_with_pull_request_edit_session_token(): void
-    {
-        // Arrange
-        $mockCategory = Mockery::mock(CategoryVersion::class);
-        $mockCategory->shouldReceive('getAttribute')->with('id')->andReturn(2);
-        $mockCategory->shouldReceive('getAttribute')->with('entity_id')->andReturn($this->categoryEntity->id);
-        $mockCategory->shouldReceive('getAttribute')->with('title')->andReturn('Pushed Category');
-        $mockCategory->shouldReceive('getAttribute')->with('description')->andReturn('Pushed description');
-        $mockCategory->shouldReceive('getBreadcrumbs')->andReturn(['Pushed Category']);
-
-        $this->CategoryService
-            ->shouldReceive('getCategoryByWorkContext')
-            ->with($this->categoryEntity->id, $this->user, 'test-token')
-            ->andReturn($mockCategory);
-
-        $dto = new GetCategoryDto([
-            'category_entity_id' => $this->categoryEntity->id,
-            'user' => $this->user,
-            'pull_request_edit_session_token' => 'test-token',
-        ]);
-
-        // Act
-        $result = $this->useCase->execute($dto);
-
-        // Assert
-        $this->assertIsArray($result);
-        $this->assertEquals(2, $result['id']);
-        $this->assertEquals($this->categoryEntity->id, $result['entity_id']);
-        $this->assertEquals('Pushed Category', $result['title']);
-        $this->assertEquals('Pushed description', $result['description']);
-        $this->assertEquals(['Pushed Category'], $result['breadcrumbs']);
     }
 }
