@@ -69,7 +69,7 @@ class GetCategoryUseCaseTest extends TestCase
 
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
-            ->with($this->categoryEntity->id, $this->user, null)
+            ->with($this->categoryEntity->id, $this->user)
             ->andReturn($mockCategory);
 
         $dto = new GetCategoryDto([
@@ -115,7 +115,7 @@ class GetCategoryUseCaseTest extends TestCase
         // Arrange
         $this->CategoryService
             ->shouldReceive('getCategoryByWorkContext')
-            ->with($this->categoryEntity->id, $this->user, null)
+            ->with($this->categoryEntity->id, $this->user)
             ->andReturn(null);
 
         $dto = new GetCategoryDto([
