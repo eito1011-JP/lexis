@@ -13,6 +13,9 @@ import { markdownStyles } from '@/styles/markdownContent';
 import { useToast } from '@/contexts/ToastContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type BreadcrumbItem } from '@/api/categoryHelpers';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { createPullRequestSchema, CreatePullRequestFormData } from '@/schemas';
 
 type FieldChangeInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -421,9 +424,6 @@ export default function DiffPage(): JSX.Element {
   const [diffData, setDiffData] = useState<DiffResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<{[key: string]: string[]}>({});
-  const [prTitle, setPrTitle] = useState('');
-  const [prDescription, setPrDescription] = useState('');
   const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
   const [showReviewerModal, setShowReviewerModal] = useState(false);
   const [reviewerSearch, setReviewerSearch] = useState('');
@@ -431,6 +431,25 @@ export default function DiffPage(): JSX.Element {
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const { show } = useToast();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+  } = useForm<CreatePullRequestFormData>({
+    resolver: zodResolver(createPullRequestSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      title: '',
+      description: '',
+      reviewers: [],
+    },
+  });
+
+  const prTitle = watch('title');
+  const prDescription = watch('description');
   // ユーザー一覧を取得する関数
   const handleFetchUser = async (searchEmail?: string) => {
     setLoadingUsers(true);
@@ -491,6 +510,10 @@ export default function DiffPage(): JSX.Element {
           organization_id: response.organization_id || 0
         };
         setDiffData(diffResponse);
+        
+        // フォームにデータを設定
+        setValue('user_branch_id', diffResponse.user_branch_id);
+        setValue('organization_id', diffResponse.organization_id);
       } catch (err) {
         console.error('差分取得エラー:', err);
         setError('差分データの取得に失敗しました');
@@ -516,9 +539,8 @@ export default function DiffPage(): JSX.Element {
   }, [showReviewerModal]);
 
   // PR作成のハンドラー
-  const handleSubmitPR = async () => {
+  const onSubmitPR = async (data: CreatePullRequestFormData) => {
     setIsSubmitting(true);
-    setValidationErrors({});
 
     try {
       if (!diffData) {
@@ -537,8 +559,8 @@ export default function DiffPage(): JSX.Element {
       console.log('送信データ:', {
         organization_id: diffData.organization_id,
         user_branch_id: diffData.user_branch_id,
-        title: prTitle,
-        description: prDescription || 'このPRはハンドブックの更新を含みます。',
+        title: data.title,
+        description: data.description || 'このPRはハンドブックの更新を含みます。',
         reviewers: reviewerEmails,
         selectedReviewers,
         users: users.map(u => ({ id: u.id, email: u.email })),
@@ -548,8 +570,8 @@ export default function DiffPage(): JSX.Element {
       await createPullRequest({
         organization_id: diffData.organization_id,
         user_branch_id: diffData.user_branch_id,
-        title: prTitle,
-        description: prDescription || 'このPRはハンドブックの更新を含みます。',
+        title: data.title,
+        description: data.description || 'このPRはハンドブックの更新を含みます。',
         reviewers: reviewerEmails,
       });
 
@@ -564,8 +586,6 @@ export default function DiffPage(): JSX.Element {
       
       // バリデーションエラーの場合
       if (err.response && err.response.status === 422) {
-        const errors = err.response.data.errors || {};
-        setValidationErrors(errors);
         show({ message: '入力内容に不備があります。各項目を確認してください。', type: 'error' });
       } else {
         show({ message: '差分の提出中にエラーが発生しました', type: 'error' });
@@ -654,34 +674,14 @@ export default function DiffPage(): JSX.Element {
               <label className="block text-white text-base font-medium mb-3">タイトル</label>
               <input
                 type="text"
-                className={`w-full px-4 py-3 pr-40 rounded-lg border ${validationErrors.title ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
+                {...register('title')}
+                className={`w-full px-4 py-3 pr-40 rounded-lg border ${errors.title ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
                 placeholder=""
-                value={prTitle}
-                onChange={e => setPrTitle(e.target.value)}
                 disabled={isSubmitting}
               />
               {/* タイトルのバリデーションエラー */}
-              {validationErrors.title && validationErrors.title.length > 0 && (
-                <div className="mt-2 text-red-400 text-sm">
-                  {validationErrors.title.map((error, index) => (
-                    <div key={index} className="flex items-center">
-                      <svg
-                        className="w-4 h-4 mr-1 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span>{error}</span>
-                    </div>
-                  ))}
-                </div>
+              {errors.title && (
+                <div className="mt-2 text-red-400 text-sm">{errors.title.message}</div>
               )}
             </div>
 
@@ -775,11 +775,10 @@ export default function DiffPage(): JSX.Element {
                   本文
                 </label>
                 <textarea
+                  {...register('description')}
                   className="w-full px-4 py-3 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
                   placeholder=""
                   rows={5}
-                  value={prDescription}
-                  onChange={e => setPrDescription(e.target.value)}
                   disabled={isSubmitting}
                 />
               </div>
@@ -794,8 +793,9 @@ export default function DiffPage(): JSX.Element {
                 戻る
               </button>
               <button
+                type="button"
                 className="px-6 py-2.5 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none flex items-center text-white font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleSubmitPR}
+                onClick={handleSubmit(onSubmitPR)}
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (

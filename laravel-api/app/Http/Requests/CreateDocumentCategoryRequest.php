@@ -23,7 +23,7 @@ class CreateDocumentCategoryRequest extends FormRequest
     {
         return [
             'title' => 'required|string',
-            'description' => 'nullable|string',
+            'description' => 'required|string',
             'parent_entity_id' => 'nullable|integer',
         ];
     }

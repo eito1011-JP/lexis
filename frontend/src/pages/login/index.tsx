@@ -1,31 +1,37 @@
 import AdminLayout from '@/components/admin/layout';
-import { useState, FormEvent, ReactElement } from 'react';
+import { useState, ReactElement } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { VALIDATION_ERROR, WRONG_EMAIL_OR_PASSWORD, NO_ACCOUNT, ERROR, TOO_MANY_REQUESTS } from '@/const/ErrorMessage';
+import { loginSchema, LoginFormData } from '@/schemas';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 export default function LoginPage(): ReactElement {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
   const { show } = useToast();
   const { login } = useAuth();
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    mode: 'onBlur',
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
-    setValidationErrors({});
 
     try {
-      await login(email, password);
+      await login(data.email, data.password);
 
       show({ message: 'ログインに成功しました', type: 'success' });
-      // フォームをリセット
-      setEmail('');
-      setPassword('');
+      reset();
 
       // 認証状態が更新されるのを待ってからリダイレクト
       setTimeout(() => {
@@ -34,7 +40,6 @@ export default function LoginPage(): ReactElement {
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 422) {
-        setValidationErrors(error.response?.data?.errors ?? {});
         show({ message: VALIDATION_ERROR, type: 'error' });
       } else if (status === 401) {
         show({ message: WRONG_EMAIL_OR_PASSWORD, type: 'error' });
@@ -72,7 +77,7 @@ export default function LoginPage(): ReactElement {
             <h2 className="text-white text-2xl">ログイン</h2>
           </div>
 
-          <form className="mb-[1rem]" onSubmit={handleSubmit}>
+          <form className="mb-[1rem]" onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-2">
               <label htmlFor="email" className="block text-white mb-1 font-bold">
                 メールアドレス
@@ -81,13 +86,13 @@ export default function LoginPage(): ReactElement {
                 type="email"
                 id="email"
                 placeholder="mail@example.com"
-                className="w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
+                className={`w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none ${
+                  errors.email ? 'border-2 border-red-500' : ''
+                }`}
+                {...register('email')}
               />
-              {validationErrors.email && (
-                <p className="text-red-400 text-sm mt-1">{validationErrors.email[0]}</p>
+              {errors.email && (
+                <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
               )}
             </div>
 
@@ -99,13 +104,13 @@ export default function LoginPage(): ReactElement {
                 type="password"
                 id="password"
                 placeholder="パスワードを入力"
-                className="w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
+                className={`w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none ${
+                  errors.password ? 'border-2 border-red-500' : ''
+                }`}
+                {...register('password')}
               />
-              {validationErrors.password && (
-                <p className="text-red-400 text-sm mt-1">{validationErrors.password[0]}</p>
+              {errors.password && (
+                <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
               )}
             </div>
             <button

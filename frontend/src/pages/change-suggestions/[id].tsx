@@ -30,6 +30,9 @@ import SendReview from '@/components/icon/common/SendReview';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { DescriptionEdit } from '@/components/diff/DescriptionEdit';
 import { DescriptionDisplay } from '@/components/diff/DescriptionDisplay';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { postCommentSchema, PostCommentFormData } from '@/schemas';
 
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -341,7 +344,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [prefetchingConflict, setPrefetchingConflict] = useState(false);
   const [isCheckingConflict, setIsCheckingConflict] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [comment, setComment] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('activity');
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [loadingActivityLogs, setLoadingActivityLogs] = useState(false);
@@ -353,6 +355,31 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [isUpdatingDescription, setIsUpdatingDescription] = useState(false);
   const [showDescriptionMenu, setShowDescriptionMenu] = useState(false);
   const descriptionMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const {
+    register: registerComment,
+    handleSubmit: handleSubmitComment,
+    formState: { errors: commentErrors },
+    setValue: setCommentValue,
+    watch: watchComment,
+    reset: resetComment,
+  } = useForm<PostCommentFormData>({
+    resolver: zodResolver(postCommentSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      content: '',
+      pull_request_id: id ? parseInt(id) : 0,
+    },
+  });
+
+  const comment = watchComment('content');
+
+  // idが変わったらpull_request_idを更新
+  useEffect(() => {
+    if (id) {
+      setCommentValue('pull_request_id', parseInt(id));
+    }
+  }, [id, setCommentValue]);
 
   // コンフリクト検知API呼び出し関数
   const checkConflictStatus = useCallback(async () => {
@@ -564,17 +591,17 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   };
 
   // コメント投稿のハンドラー
-  const handleComment = async () => {
-    if (!comment.trim() || !id) return;
+  const onSubmitComment = async (data: PostCommentFormData) => {
+    if (!id) return;
 
     try {
       await axios.post('/comments', {
         pull_request_id: parseInt(id),
-        content: comment.trim(),
+        content: data.content.trim(),
       });
 
       setToast({ message: 'コメントを投稿しました', type: 'success' });
-      setComment('');
+      resetComment();
       
       // コメント投稿後にプルリクエストデータを再取得してactivity logsを更新
       const updatedData = await fetchPullRequestDetail(id);
@@ -1050,12 +1077,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                 </div>
 
                 <textarea
+                  {...registerComment('content')}
                   className="w-full border border-gray-600 rounded-md p-3 text-white placeholder-gray-400 resize-none"
                   rows={4}
                   placeholder="コメントを追加してください..."
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
                 />
+                {commentErrors.content && (
+                  <p className="text-red-500 text-sm mt-1">{commentErrors.content.message}</p>
+                )}
 
                 <div className="flex justify-end gap-4 mt-4">
                   <button
@@ -1066,8 +1095,9 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
                     提案を取り下げる
                   </button>
                   <button
-                    onClick={handleComment}
-                    disabled={!comment.trim()}
+                    type="button"
+                    onClick={handleSubmitComment(onSubmitComment)}
+                    disabled={!comment?.trim()}
                     className="px-6 py-2 bg-[#1B6E2A] hover:bg-gray-700 text-white rounded-md transition-colors"
                   >
                     コメントする

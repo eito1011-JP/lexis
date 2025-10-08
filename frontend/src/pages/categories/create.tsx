@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
+import CategoryForm, { useUnsavedChangesHandler } from '@/components/admin/CategoryForm';
+import { CreateCategoryFormData } from '@/schemas';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
 import { client } from '@/api/client';
@@ -26,7 +27,7 @@ export default function CreateRootCategoryPage(): JSX.Element {
     handleCancel: handleModalCancel
   } = useUnsavedChangesHandler(hasUnsavedChanges);
 
-  const handleSubmit = async (formData: CategoryFormData) => {
+  const handleSubmit = async (formData: CreateCategoryFormData) => {
     setIsSubmitting(true);
     setError(null);
 
@@ -39,7 +40,7 @@ export default function CreateRootCategoryPage(): JSX.Element {
           title: formData.title,
           description: formData.description,
           parent_entity_id: parentEntityId
-        }
+        } as any
       });
       
       // カテゴリ作成成功時はドキュメント一覧ページに遷移

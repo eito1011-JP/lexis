@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
+import { createCategorySchema, CreateCategoryFormData } from '@/schemas';
+import { useToast } from '@/contexts/ToastContext';
+import { VALIDATION_ERROR } from '@/const/ErrorMessage';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
-export interface CategoryFormData {
-  title: string;
-  description: string;
-}
+// zodスキーマから型をエクスポート
+export type { CreateCategoryFormData };
 
 interface CategoryFormProps {
-  initialData?: CategoryFormData;
-  onSubmit: (data: CategoryFormData) => Promise<void>;
+  initialData?: Partial<CreateCategoryFormData>;
+  onSubmit: (data: CreateCategoryFormData) => Promise<void>;
   onCancel?: () => void;
   onUnsavedChangesChange?: (hasUnsavedChanges: boolean) => void;
   isSubmitting?: boolean;
@@ -29,27 +32,35 @@ export default function CategoryForm({
   submitButtonText = '保存',
   submittingText = '保存中...'
 }: CategoryFormProps) {
-  const [title, setTitle] = useState(initialData.title);
-  const [description, setDescription] = useState(initialData.description);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const { show } = useToast();
 
-  // initialData が変更されたときに state を更新（空でない場合のみ）
-  useEffect(() => {
-    // 空でないデータが来た場合のみ更新
-    if (initialData.title !== '' || initialData.description !== '') {
-      setTitle(initialData.title);
-      setDescription(initialData.description);
-    }
-  }, [initialData]);
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isDirty },
+    watch,
+  } = useForm<CreateCategoryFormData>({
+    resolver: zodResolver(createCategorySchema),
+    mode: 'onBlur',
+    defaultValues: {
+      title: initialData.title || '',
+      description: initialData.description || '',
+    },
+  });
+
+  // フォームの値を監視
+  const title = watch('title');
+  const description = watch('description');
 
   // 未保存の変更を追跡
   useEffect(() => {
-    const hasChanges = title !== initialData.title || description !== initialData.description;
-    setHasUnsavedChanges(hasChanges);
+    setHasUnsavedChanges(isDirty);
     if (onUnsavedChangesChange) {
-      onUnsavedChangesChange(hasChanges);
+      onUnsavedChangesChange(isDirty);
     }
-  }, [title, description, onUnsavedChangesChange, initialData]);
+  }, [isDirty, onUnsavedChangesChange]);
 
   // ブラウザタブ/ウィンドウを閉じる際の保護
   useEffect(() => {
@@ -64,22 +75,13 @@ export default function CategoryForm({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  const handleEditorChange = (markdown: string) => {
-    setDescription(markdown);
-  };
-
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
-    
-    if (!title.trim()) {
-      return;
-    }
-
+  const onSubmitForm = async (data: CreateCategoryFormData) => {
     try {
-      await onSubmit({ title, description });
+      await onSubmit(data);
     } catch (error) {
       // エラーハンドリングは親コンポーネントに委譲
       console.error('フォーム送信エラー:', error);
+      show({ message: VALIDATION_ERROR, type: 'error' });
     }
   };
 
@@ -93,56 +95,79 @@ export default function CategoryForm({
     <div className="text-white min-h-full">
       {/* ヘッダー部分 */}
       <div className="border-b border-gray-700 p-6">
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">タイトル</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="これは新しいカテゴリです"
-            className="w-full px-3 py-2 bg-transparent border border-gray-600 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">説明</label>
-          <div className="w-full p-2.5 border border-gray-700 rounded bg-black text-white min-h-72">
-            <SlateEditor
-              initialContent={initialData.description}
-              onChange={() => {}}
-              onMarkdownChange={handleEditorChange}
-              placeholder="ここにカテゴリの説明を入力してください"
-            />
-          </div>
-        </div>
-
-        {/* ボタン */}
-        <div className="flex gap-4">
-          <button
-            onClick={handlePreview}
-            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
-            disabled={isSubmitting}
-          >
-            プレビュー
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !title.trim()}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-md text-white transition-colors"
-          >
-            {isSubmitting ? submittingText : submitButtonText}
-          </button>
-          {onCancel && (
-            <button
-              onClick={onCancel}
+        <form onSubmit={handleSubmit(onSubmitForm)}>
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">タイトル</label>
+            <input
+              type="text"
+              placeholder="これは新しいカテゴリです"
+              className={`w-full px-3 py-2 bg-transparent border rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 ${
+                errors.title ? 'border-red-500' : 'border-gray-600'
+              }`}
               disabled={isSubmitting}
-              className="px-6 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-md text-white transition-colors"
+              {...register('title')}
+            />
+            {errors.title && (
+              <div className="mt-2">
+                <p className="text-red-400 text-sm">{errors.title.message}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium mb-2">説明</label>
+            <Controller
+              name="description"
+              control={control}
+              render={({ field }) => (
+                <div className={`w-full p-2.5 border rounded bg-black text-white min-h-72 ${
+                  errors.description ? 'border-red-500' : 'border-gray-700'
+                }`}>
+                  <SlateEditor
+                    initialContent={initialData.description || ''}
+                    onChange={() => {}}
+                    onMarkdownChange={(markdown) => field.onChange(markdown)}
+                    placeholder="ここにカテゴリの説明を入力してください"
+                  />
+                </div>
+              )}
+            />
+            {errors.description && (
+              <div className="mt-2">
+                <p className="text-red-400 text-sm">{errors.description.message}</p>
+              </div>
+            )}
+          </div>
+
+          {/* ボタン */}
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={handlePreview}
+              className="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white transition-colors"
+              disabled={isSubmitting}
             >
-              キャンセル
+              プレビュー
             </button>
-          )}
-        </div>
+            <button
+              type="submit"
+              disabled={isSubmitting || !title || !description}
+              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed rounded-md text-white transition-colors"
+            >
+              {isSubmitting ? submittingText : submitButtonText}
+            </button>
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed rounded-md text-white transition-colors"
+              >
+                キャンセル
+              </button>
+            )}
+          </div>
+        </form>
       </div>
     </div>
   );

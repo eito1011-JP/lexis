@@ -4,9 +4,13 @@ import type { BreadcrumbItem } from '@/api/categoryHelpers';
  * ドキュメント詳細のレスポンス型
  */
 export interface DocumentDetailResponse {
-  entityId: number;
+  id: number;
   title: string;
   description?: string;
+  category?: {
+    id: number;
+    title: string;
+  } | null;
   breadcrumbs?: BreadcrumbItem[];
 }
 
@@ -17,9 +21,7 @@ export interface DocumentDetailResponse {
  */
 export type Methods = {
   get: {
-    resBody: {
-      document: DocumentDetailResponse;
-    };
+    resBody: DocumentDetailResponse;
   };
   put: {
     reqBody: {

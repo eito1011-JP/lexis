@@ -1,40 +1,41 @@
-import  { useState, FormEvent, ReactElement } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, ReactElement } from 'react';
 import { client } from '@/api/client';
 import AdminLayout from '@/components/admin/layout';
 import { useToast } from '@/contexts/ToastContext';
 import FormError from '@/components/FormError';
-import { DUPLICATE_EXECUTION, ERROR } from '@/const/ErrorMessage';
+import { DUPLICATE_EXECUTION, ERROR, VALIDATION_ERROR } from '@/const/ErrorMessage';
+import { signupSchema, SignupFormData } from '@/schemas';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 export default function AdminPage(): ReactElement {
-  const location = useLocation();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
   const { show } = useToast();
 
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    mode: 'onBlur',
+  });
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
+  const onSubmit = async (data: SignupFormData) => {
     setLoading(true);
-    setValidationErrors({}); // エラーをクリア
 
     try {
       await client.auth.pre_users.$post({
         body: {
           token: '', // TODO: 実際のトークンを取得
-          password,
-          nickname: email, // TODO: nicknameフィールドの適切な値を設定
+          password: data.password,
+          nickname: data.email, // TODO: nicknameフィールドの適切な値を設定
         }
       });
 
       show({ message: '入力されたメールアドレスにメールを送信しました', type: 'success' });
-
-      // フォームをリセット
-      setEmail('');
-      setPassword('');
+      reset();
 
       // 状態の更新を待ってからリダイレクト
       setTimeout(() => {
@@ -42,13 +43,12 @@ export default function AdminPage(): ReactElement {
       }, 1000);
     } catch (error: any) {
       if (error.response?.status === 422 && error.response?.data?.errors) {
-        // バリデーションエラーを設定
-        setValidationErrors(error.response.data.errors);
+        show({ message: VALIDATION_ERROR, type: 'error' });
       } else if (error.response?.status === 409) {
         show({ message: DUPLICATE_EXECUTION, type: 'error' });
       } else {
         show({ message: ERROR, type: 'error' });
-      };
+      }
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export default function AdminPage(): ReactElement {
             <h2 className="text-white text-2xl">新規登録</h2>
           </div>
 
-          <form className="mb-[1rem]" onSubmit={handleSubmit}>
+          <form className="mb-[1rem]" onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-2">
               <label htmlFor="email" className="block text-white mb-1 font-bold">
                 メールアドレス
@@ -72,16 +72,14 @@ export default function AdminPage(): ReactElement {
                 type="email"
                 id="email"
                 placeholder="mail@example.com"
-                className="w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
+                className={`w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none ${
+                  errors.email ? 'border-2 border-red-500' : ''
+                }`}
+                {...register('email')}
               />
-              {validationErrors.email && (
+              {errors.email && (
                 <FormError className="mt-2">
-                  {validationErrors.email.map((error, index) => (
-                    <div key={index}>{error}</div>
-                  ))}
+                  {errors.email.message}
                 </FormError>
               )}
             </div>
@@ -94,17 +92,14 @@ export default function AdminPage(): ReactElement {
                 type="password"
                 id="password"
                 placeholder="パスワードを入力"
-                className="w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                minLength={8}
+                className={`w-full px-4 py-4 rounded-lg bg-white text-black placeholder-[#737373] focus:outline-none ${
+                  errors.password ? 'border-2 border-red-500' : ''
+                }`}
+                {...register('password')}
               />
-              {validationErrors.password && (
+              {errors.password && (
                 <FormError className="mt-2">
-                  {validationErrors.password.map((error, index) => (
-                    <div key={index}>{error}</div>
-                  ))}
+                  {errors.password.message}
                 </FormError>
               )}
             </div>

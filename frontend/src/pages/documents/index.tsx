@@ -40,10 +40,10 @@ export default function DocumentsPage(): JSX.Element {
   
   // ドキュメント詳細をローカルstateに変換（パンくずリスト用）
   const documentDetail: DocumentDetail | null = docDetail ? ({
-    entityId: docDetail.document.entityId,
-    title: docDetail.document.title,
-    description: docDetail.document.description ?? '',
-    breadcrumbs: docDetail.document.breadcrumbs
+    entityId: docDetail.id,
+    title: docDetail.title,
+    description: docDetail.description ?? '',
+    breadcrumbs: docDetail.breadcrumbs
   } as DocumentDetail) : null;
 
   // マークダウンスタイルを一度だけ適用

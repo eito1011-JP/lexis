@@ -24,7 +24,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
         return [
             'category_entity_id' => 'required|integer|exists:category_entities,id',
             'title' => 'required|string',
-            'description' => 'nullable|string',
+            'description' => 'required|string',
         ];
     }
 
