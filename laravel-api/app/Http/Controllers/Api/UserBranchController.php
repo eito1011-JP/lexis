@@ -124,9 +124,10 @@ class UserBranchController extends ApiBaseController
             }
 
             // UseCaseを実行
+            $validatedData = $request->validated();
             $dto = new UpdateUserBranchDto(
-                $request->validated()['user_branch_id'],
-                $request->validated()['is_active'],
+                $validatedData['user_branch_id'],
+                $validatedData['is_active'],
                 $user
             );
             $this->updateUserBranchUseCase->execute($dto);

@@ -35,6 +35,7 @@ export const API_CONFIG = {
     USER_BRANCHES: {
       HAS_USER_CHANGES: '/api/user-branches/has-changes',
       GET_DIFF: '/api/user-branches/diff',
+      UPDATE: (userBranchId: number) => `/api/user-branches/${userBranchId}`,
     },
     PULL_REQUEST_REVIEWERS: {
       GET: '/api/pull-request-reviewers',
