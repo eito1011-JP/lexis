@@ -77,12 +77,4 @@ class PullRequest extends Model
     {
         return $this->hasMany(FixRequest::class);
     }
-
-    /**
-     * プルリクエスト編集セッションとのリレーション
-     */
-    public function pullRequestEditSessions()
-    {
-        return $this->hasMany(PullRequestEditSession::class);
-    }
 }

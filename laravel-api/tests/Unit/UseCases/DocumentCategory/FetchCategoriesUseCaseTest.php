@@ -5,11 +5,13 @@ namespace Tests\Unit\UseCases\DocumentCategory;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
+use App\Enums\PullRequestStatus;
 use App\Models\CategoryEntity;
 use App\Models\CategoryVersion;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
+use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
@@ -398,5 +400,150 @@ class FetchCategoriesUseCaseTest extends TestCase
 
         // 表示されないもの
         $this->assertNotContains('元のドラフトカテゴリ', $resultTitles);
+    }
+
+        /**
+     * @test
+     */
+    public function test_returns_pushed_category_after_activate_user_branch(): void
+    {
+        // Arrange
+        $previousUserBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => false,
+            'organization_id' => $this->organization->id,
+        ]);
+        $userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pullRequest = PullRequest::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+            'status' => PullRequestStatus::OPENED->value,
+        ]);
+
+        $dto = new FetchCategoriesDto(parentEntityId: null);
+
+        // ケース1: PR作成前に提出したカテゴリ(表示される)
+        $firstCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $firstCategory = CategoryVersion::factory()->create([
+            'title' => 'PR作成前に提出したカテゴリ',
+            'parent_entity_id' => null,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+            'entity_id' => $firstCategoryEntity->id,
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // PR作成前のEditStartVersion（original_version_id ≠ current_version_id）
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $firstCategory->id,
+            'current_version_id' => $firstCategory->id,
+        ]);
+
+        // ケース2: mergedカテゴリ(表示される)
+        $secondCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $secondCategory = CategoryVersion::factory()->create([
+            'title' => 'mergedカテゴリ',
+            'parent_entity_id' => null,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'entity_id' => $secondCategoryEntity->id,
+            'user_branch_id' => $previousUserBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $previousUserBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $secondCategory->id,
+            'current_version_id' => $secondCategory->id,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        $this->assertCount(2, $result);
+        $resultTitles = $result->pluck('title')->toArray();
+
+        // 表示されるもの
+        $this->assertContains('PR作成前に提出したカテゴリ', $resultTitles);
+        $this->assertContains('mergedカテゴリ', $resultTitles);
+    }
+
+    /**
+     * @test
+     */
+    public function test_returns_draft_and_pushed_category_after_activate_user_branch(): void
+    {
+        // Arrange
+        $userBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pullRequest = PullRequest::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+            'status' => PullRequestStatus::OPENED->value,
+        ]);
+
+        $dto = new FetchCategoriesDto(parentEntityId: null);
+
+        // ケース1: PR作成前に提出したカテゴリ(表示されない)
+        $firstCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $firstCategory = CategoryVersion::factory()->create([
+            'title' => 'PR作成前に提出したカテゴリ',
+            'parent_entity_id' => null,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+            'entity_id' => $firstCategoryEntity->id,
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        // PR作成前のEditStartVersion（original_version_id ≠ current_version_id）
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $firstCategory->id,
+            'current_version_id' => $firstCategory->id,
+        ]);
+
+        // ケース2: 再編集で作成したカテゴリ(表示される)
+        $secondCategory = CategoryVersion::factory()->create([
+            'title' => '再編集で作成したカテゴリ',
+            'parent_entity_id' => null,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'entity_id' => $firstCategoryEntity->id,
+            'user_branch_id' => $userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $firstCategory->id,
+            'current_version_id' => $secondCategory->id,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        $this->assertCount(1, $result);
+        $resultTitles = $result->pluck('title')->toArray();
+
+        // 表示されるもの
+        $this->assertContains('再編集で作成したカテゴリ', $resultTitles);
     }
 }

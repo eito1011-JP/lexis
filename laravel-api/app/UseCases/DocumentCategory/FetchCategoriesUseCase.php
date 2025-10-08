@@ -39,25 +39,34 @@ class FetchCategoriesUseCase
             ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
             ->pluck('current_version_id');
 
-            // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
-            // ただし、編集対象となったカテゴリは除外する
-            $editedCategoryIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
-                ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
-                ->whereColumn('original_version_id', '!=', 'current_version_id')
-                ->pluck('original_version_id');
+        // 編集対象となったカテゴリのoriginal_version_idを取得（original_version_idとcurrent_version_idが異なるもの）
+        // これらは表示から除外する
+        $editedOriginalVersionIds = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
+            ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
+            ->whereColumn('original_version_id', '!=', 'current_version_id')
+            ->pluck('original_version_id');
 
-            return CategoryVersion::select('id', 'entity_id', 'title')
-                ->where('parent_entity_id', $dto->parentEntityId)
-                ->where('organization_id', $user->organizationMember->organization_id)
-                ->whereIn('id', $currentVersionIds)
-                ->whereNotIn('id', $editedCategoryIds) // 編集対象となった元のカテゴリを除外
-                ->where(function ($query) use ($activeUserBranch) {
-                    $query->where(function ($q1) use ($activeUserBranch) {
-                        $q1->where('status', DocumentCategoryStatus::DRAFT->value)
-                            ->where('user_branch_id', $activeUserBranch->id);
-                    })->orWhere('status', DocumentCategoryStatus::MERGED->value);
-                })
-                ->orderBy('created_at', 'asc')
-                ->get();
+        return CategoryVersion::select('id', 'entity_id', 'title')
+            ->where('parent_entity_id', $dto->parentEntityId)
+            ->where('organization_id', $user->organizationMember->organization_id)
+            ->where(function ($query) use ($activeUserBranch, $currentVersionIds, $editedOriginalVersionIds) {
+                $query->where(function ($q1) use ($activeUserBranch, $currentVersionIds, $editedOriginalVersionIds) {
+                    // DRAFTまたはPUSHEDステータスで自分のuser_branchに紐づくもの（EditStartVersionのcurrent_version_id）
+                    // ただし、編集されたoriginal_version_idは除外
+                    $q1->whereIn('status', [
+                        DocumentCategoryStatus::DRAFT->value,
+                        DocumentCategoryStatus::PUSHED->value,
+                    ])
+                        ->where('user_branch_id', $activeUserBranch->id)
+                        ->whereIn('id', $currentVersionIds)
+                        ->whereNotIn('id', $editedOriginalVersionIds);
+                })->orWhere(function ($q2) use ($editedOriginalVersionIds) {
+                    // MERGEDステータスで、編集対象になっていないもの
+                    $q2->where('status', DocumentCategoryStatus::MERGED->value)
+                        ->whereNotIn('id', $editedOriginalVersionIds);
+                });
+            })
+            ->orderBy('created_at', 'asc')
+            ->get();
     }
 }
