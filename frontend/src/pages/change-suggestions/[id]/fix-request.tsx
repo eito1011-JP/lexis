@@ -11,7 +11,7 @@ import { PULL_REQUEST_STATUS } from '@/constants/pullRequestStatus';
 import { Merge } from '@/components/icon/common/Merge';
 import { Merged } from '@/components/icon/common/Merged';
 import { Closed } from '@/components/icon/common/Closed';
-import { Toast } from '@/components/admin/Toast';
+import { useToast } from '@/contexts/ToastContext';
 
 // 差分データの型定義
 type DiffItem = {
@@ -111,12 +111,12 @@ const StatusBanner: React.FC<{
 export default function FixRequestPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const { id } = useParams<{ id: string }>();
+  const toast = useToast();
 
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // フォームデータの状態
   const [title, setTitle] = useState('');
@@ -182,7 +182,7 @@ export default function FixRequestPage(): JSX.Element {
       });
 
       // 成功時にトースト通知を表示
-      setToast({ message: '修正リクエストを送信しました', type: 'success' });
+      toast.show({ message: '修正リクエストを送信しました', type: 'success' });
 
       // 少し待ってからアクティビティページに遷移
       setTimeout(() => {
@@ -249,9 +249,6 @@ export default function FixRequestPage(): JSX.Element {
 
   return (
     <AdminLayout title="修正リクエスト作成">
-      {/* トースト通知 */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="max-w-6xl mx-auto p-6">
         {/* ステータスバナー */}
         {pullRequestData && (

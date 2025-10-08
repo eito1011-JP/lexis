@@ -9,7 +9,7 @@ import {
   type FixConflictTemporaryResponse,
 } from '@/api/pullRequestHelpers';
 import MarkdownEditor from '@/components/admin/editor/SlateEditor';
-import { Toast } from '@/components/admin/Toast';
+import { useToast } from '@/contexts/ToastContext';
 
 // front-matterを除去して本文のみを取得する関数
 const extractBodyContent = (content: string | null): string => {
@@ -571,6 +571,7 @@ const buildConflictMarkedContent = (baseBody: string, headBody: string) => {
 const ConflictResolutionPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
   const [isLoading, setIsLoading] = useState(true);
 
   const [loading, setLoading] = useState(true);
@@ -591,7 +592,6 @@ const ConflictResolutionPage: React.FC = () => {
 
   const [checking, setChecking] = useState(false);
   const [checkedFiles, setCheckedFiles] = useState<Record<string, boolean>>({});
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -1064,18 +1064,18 @@ const ConflictResolutionPage: React.FC = () => {
 
                         // コンフリクトが発生した場合、トーストエラー通知を表示
                         if (res.is_conflict) {
-                          setToast({
-                            message: '競合している部分があります。修正してください。',
-                            type: 'error',
+                          toast.show({ 
+                            message: '競合している部分があります。修正してください。', 
+                            type: 'error' 
                           });
                         } else {
-                          setToast({ message: '保存が完了しました。', type: 'success' });
+                          toast.show({ message: '保存が完了しました。', type: 'success' });
                         }
                       } catch (e: any) {
                         const apiErr: any = e;
                         const errorMessage = apiErr?.error || 'コンフリクトを修正してください';
                         setError(errorMessage);
-                        setToast({ message: errorMessage, type: 'error' });
+                        toast.show({ message: errorMessage, type: 'error' });
                       } finally {
                         setChecking(false);
                       }
@@ -1089,9 +1089,6 @@ const ConflictResolutionPage: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Toast通知 */}
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </AdminLayout>
   );
 };

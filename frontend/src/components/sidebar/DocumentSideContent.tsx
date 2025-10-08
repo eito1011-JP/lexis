@@ -11,6 +11,7 @@ import DocumentDeleteModal from '@/components/sidebar/DocumentDeleteModal';
 import { useNavigate } from 'react-router-dom';
 import { useUserMe } from '@/hooks/useUserMe';
 import { useCategories } from '@/hooks/useCategories';
+import { useToast } from '@/contexts/ToastContext';
 
 // 共通のアイテム型定義
 interface BaseItem {
@@ -49,6 +50,7 @@ interface DocumentSideContentProps {
 export default function DocumentSideContent({ onCategorySelect, onDocumentSelect, selectedCategoryEntityId, selectedDocumentEntityId, onRefreshRef }: DocumentSideContentProps) {
   const navigate = useNavigate();
   const { user, organization, activeUserBranch } = useUserMe();
+  const toast = useToast();
   // useCategories フックでルートカテゴリを取得
   const { categories: rootCategories, isLoading: isLoadingCategories, isError, mutate: mutateCategories } = useCategories(null);
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([4]));
@@ -67,11 +69,8 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // ドキュメント削除モーダル状態
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentItem | null>(null);
-  // トースト状態
-  const [showToast, setShowToast] = useState<boolean>(false);
-  const [toastMessage, setToastMessage] = useState<string>('');
-  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
+  console.log('categories', categories);
   // APIデータをCategoryItem形式に変換する関数
   const transformApiDataToCategories = (apiData: any[]): CategoryItem[] => {
     return apiData.map(item => ({
@@ -339,17 +338,29 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // 削除のハンドラ
   const handleDelete = async () => {
     if (selectedCategory) {
-        try {
+      try {
         await client.category_entities._entityId(selectedCategory.entityId).$delete();
 
-        // カテゴリ一覧を再取得
-        mutateCategories();
+        toast.show({
+          message: 'カテゴリが削除されました',
+          type: 'success'
+        });
+
+        // カテゴリ一覧を再取得し、結果を待つ
+        const newData = await mutateCategories();
+        
+        // 新しいデータが取得できた場合、categoriesを即座に更新
+        if (newData && newData.categories) {
+          const newTransformedCategories = transformApiDataToCategories(newData.categories);
+          setCategories(newTransformedCategories);
+        }
 
       } catch (error) {
         console.error('カテゴリの削除に失敗しました:', error);
-        setToastMessage('カテゴリの削除に失敗しました');
-        setToastType('error');
-        setShowToast(true);
+        toast.show({
+          message: 'カテゴリの削除に失敗しました',
+          type: 'error'
+        });
       }
     }
     handleCloseModal();

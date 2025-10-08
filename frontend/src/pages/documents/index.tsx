@@ -2,7 +2,6 @@ import AdminLayout, { type DocumentDetail } from '@/components/admin/layout';
 import { useState, useEffect, useRef } from 'react';
 import type { JSX } from 'react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
-import { Toast } from '@/components/admin/Toast';
 import { MarkdownRenderer } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +11,7 @@ import { useCategoryDetail } from '@/hooks/useCategoryDetail';
 import { useDocumentDetail } from '@/hooks/useDocumentDetail';
 import { useUserBranchChanges } from '@/hooks/useUserBranchChanges';
 import { client } from '@/api/client';
+import { useToast } from '@/contexts/ToastContext';
 
 
 /**
@@ -20,9 +20,7 @@ import { client } from '@/api/client';
 export default function DocumentsPage(): JSX.Element {
   const navigate = useNavigate();
   const { mutate: mutateUserMe } = useUserMe();
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const toast = useToast();
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number | null>(null);
   const [selectedDocumentEntityId, setSelectedDocumentEntityId] = useState<number | null>(null);
   const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
@@ -75,23 +73,19 @@ export default function DocumentsPage(): JSX.Element {
   // 下書き保存のハンドラー
   const handleDraftSave = async () => {
     if (!userBranchId) {
-      setToastMessage('ユーザーブランチIDが取得できません');
-      setToastType('error');
-      setShowToast(true);
+      toast.show({ message: 'ユーザーブランチIDが取得できません', type: 'error' });
       return;
     }
 
     try {
-      await client.user_branches._userBranchId(parseInt(userBranchId)).$put({
+      await client.user_branches._userBranchId(userBranchId).$put({
         body: {
           is_active: false,
           user_branch_id: userBranchId
         }
       });
 
-      setToastMessage('下書きを保存しました');
-      setToastType('success');
-      setShowToast(true);
+      toast.show({ message: '下書きを保存しました', type: 'success' });
       
       // ユーザー情報を再取得
       // activeUserBranchが変更されるため、これにより全てのキャッシュキーが変更され
@@ -107,9 +101,7 @@ export default function DocumentsPage(): JSX.Element {
       setShowDiscardConfirmModal(false);
     } catch (error) {
       console.error('下書き保存エラー:', error);
-      setToastMessage('下書きの保存に失敗しました');
-      setToastType('error');
-      setShowToast(true);
+      toast.show({ message: '下書きの保存に失敗しました', type: 'error' });
     }
   };
 
@@ -288,11 +280,10 @@ export default function DocumentsPage(): JSX.Element {
                     window.location.href = `/documents/diff?user_branch_id=${userBranchId}`;
                   } else {
                     // user_branch_idが取得できない場合はエラーメッセージを表示
-                    setToastMessage(
-                      '差分データの取得に失敗しました。ページを再読み込みしてください。'
-                    );
-                    setToastType('error');
-                    setShowToast(true);
+                    toast.show({ 
+                      message: '差分データの取得に失敗しました。ページを再読み込みしてください。', 
+                      type: 'error' 
+                    });
                     setShowDiffConfirmModal(false);
                   }
                 }}
@@ -302,11 +293,6 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           </div>
         </div>
-      )}
-
-      {/* トーストメッセージ */}
-      {showToast && (
-        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
 
     </AdminLayout>

@@ -17,7 +17,6 @@ import { PullRequestClosedLog } from '@/components/icon/common/PullRequestClosed
 import { PullRequestReopenedLog } from '@/components/icon/common/PullRequestReopenedLog';
 import { PullRequestEditedLog } from '@/components/icon/common/PullRequestEditedLog';
 import React from 'react';
-import { Toast } from '@/components/admin/Toast';
 import { Merge } from '@/components/icon/common/Merge';
 import { Merged } from '@/components/icon/common/Merged';
 import { Closed } from '@/components/icon/common/Closed';
@@ -33,6 +32,7 @@ import { DescriptionDisplay } from '@/components/diff/DescriptionDisplay';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { postCommentSchema, PostCommentFormData } from '@/schemas';
+import { useToast } from '@/contexts/ToastContext';
 
 type DiffFieldInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -323,6 +323,7 @@ const StatusBanner: React.FC<{
 
 export default function ChangeSuggestionDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
+  const toast = useToast();
 
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -336,7 +337,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
   const [reviewersInitialized, setReviewersInitialized] = useState(false);
   const [initialReviewers, setInitialReviewers] = useState<number[]>([]);
   const [isMerging, setIsMerging] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [conflictStatus, setConflictStatus] = useState<{
     mergeable: boolean | null;
     mergeable_state: string | null;
@@ -600,7 +600,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         content: data.content.trim(),
       });
 
-      setToast({ message: 'コメントを投稿しました', type: 'success' });
+      toast.show({ message: 'コメントを投稿しました', type: 'success' });
       resetComment();
       
       // コメント投稿後にプルリクエストデータを再取得してactivity logsを更新
@@ -611,10 +611,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       }
     } catch (error) {
       console.error('コメント投稿エラー:', error);
-      setToast({
-        message: 'コメント投稿に失敗しました',
-        type: 'error',
-      });
+      toast.show({ message: 'コメント投稿に失敗しました', type: 'error' });
     }
   };
 
@@ -630,15 +627,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         }
       });
 
-      setToast({ message: 'プルリクエストをマージしました', type: 'success' });
+      toast.show({ message: 'プルリクエストをマージしました', type: 'success' });
       setTimeout(() => {
         window.location.href = '/change-suggestions';
       }, 1500);
     } catch (error) {
       console.error('マージエラー:', error);
-      setToast({
-        message:
-          'マージに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
+      toast.show({
+        message: 'マージに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
         type: 'error',
       });
     } finally {
@@ -664,7 +660,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         }
       });
 
-      setToast({ message: 'タイトルを更新しました', type: 'success' });
+      toast.show({ message: 'タイトルを更新しました', type: 'success' });
       setShowTitleEditModal(false);
 
       // タイトル更新後にプルリクエストデータを再取得してactivity logsを更新
@@ -675,10 +671,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       }
     } catch (error) {
       console.error('タイトル更新エラー:', error);
-      setToast({
-        message:
-          'タイトル更新に失敗しました: ' +
-          (error instanceof Error ? error.message : '不明なエラー'),
+      toast.show({
+        message: 'タイトル更新に失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
         type: 'error',
       });
     } finally {
@@ -711,7 +705,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         }
       });
 
-      setToast({ message: '説明を更新しました', type: 'success' });
+      toast.show({ message: '説明を更新しました', type: 'success' });
       setIsEditingDescription(false);
 
       // Description更新後にプルリクエストデータを再取得してactivity logsを更新
@@ -722,10 +716,8 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       }
     } catch (error) {
       console.error('説明更新エラー:', error);
-      setToast({
-        message:
-          '説明更新に失敗しました: ' +
-          (error instanceof Error ? error.message : '不明なエラー'),
+      toast.show({
+        message: '説明更新に失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
         type: 'error',
       });
     } finally {
@@ -741,15 +733,14 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
     try {
       await client.pull_requests._id(parseInt(id)).close.$patch();
 
-      setToast({ message: 'プルリクエストを取り下げました', type: 'success' });
+      toast.show({ message: 'プルリクエストを取り下げました', type: 'success' });
       setTimeout(() => {
         window.location.href = '/change-suggestions';
       }, 1500);
     } catch (error) {
       console.error('クローズエラー:', error);
-      setToast({
-        message:
-          '取り下げに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
+      toast.show({
+        message: '取り下げに失敗しました: ' + (error instanceof Error ? error.message : '不明なエラー'),
         type: 'error',
       });
     } finally {
@@ -770,7 +761,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
         }
       });
 
-      setToast({ message: 'レビュー依頼を送信しました', type: 'success' });
+      toast.show({ message: 'レビュー依頼を送信しました', type: 'success' });
 
       // レビュー依頼再送後にプルリクエストデータを再取得してactivity logsを更新
       const updatedData = await fetchPullRequestDetail(id);
@@ -780,10 +771,7 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
       }
     } catch (error) {
       console.error('レビュー依頼送信エラー:', error);
-      setToast({
-        message: 'レビュー依頼の送信に失敗しました',
-        type: 'error',
-      });
+      toast.show({ message: 'レビュー依頼の送信に失敗しました', type: 'error' });
     }
   };
 
@@ -895,7 +883,6 @@ export default function ChangeSuggestionDetailPage(): JSX.Element {
           z-index: 1;
         }
       `}</style>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* タイトル編集モーダル */}
       {showTitleEditModal && (
