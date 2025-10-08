@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\UseCases\DocumentCategory;
 
+use App\Consts\Flag;
 use App\Dto\UseCase\DocumentCategory\FetchCategoriesDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\EditStartVersionTargetType;
@@ -482,7 +483,7 @@ class FetchCategoriesUseCaseTest extends TestCase
     /**
      * @test
      */
-    public function test_returns_draft_and_pushed_category_after_activate_user_branch(): void
+    public function test_returns_draft_category_after_activate_user_branch(): void
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
@@ -510,6 +511,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'entity_id' => $firstCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
+            'is_deleted' => Flag::TRUE,
         ]);
 
         // PR作成前のEditStartVersion（original_version_id ≠ current_version_id）
@@ -528,6 +530,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'entity_id' => $firstCategoryEntity->id,
             'user_branch_id' => $userBranch->id,
             'organization_id' => $this->organization->id,
+            'is_deleted' => Flag::FALSE,
         ]);
         EditStartVersion::factory()->create([
             'user_branch_id' => $userBranch->id,
