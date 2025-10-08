@@ -14,9 +14,6 @@ use App\Models\DocumentEntity;
 use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
-use App\Models\PullRequest;
-use App\Models\PullRequestEditSession;
-use App\Models\PullRequestEditSessionDiff;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\DocumentService;
@@ -470,7 +467,7 @@ class DestroyDocumentUseCaseTest extends TestCase
         $this->documentService
             ->shouldReceive('getDocumentByWorkContext')
             ->once()
-            ->with($this->documentEntity->id, $this->user, null)
+            ->with($this->documentEntity->id, $this->user)
             ->andReturn($this->existingDocument);
 
         // Act
