@@ -1,5 +1,4 @@
-import { apiClient } from '../components/admin/api/client';
-import { API_CONFIG } from '../components/admin/api/config';
+import { client } from './client';
 
 // 差分アイテムの型定義
 export interface DiffItem {
@@ -119,7 +118,7 @@ export const createPullRequest = async (
   request: CreatePullRequestRequest
 ): Promise<CreatePullRequestResponse> => {
   try {
-    const response = await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUESTS.CREATE, request);
+    const response = await client.pull_requests.$post({ body: request });
     return response;
   } catch (error: any) {
     console.error('プルリクエスト作成エラー:', error);
@@ -134,7 +133,7 @@ export const fetchPullRequestDetail = async (
   id: string | number
 ): Promise<PullRequestDetailResponse> => {
   try {
-    const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET_DETAIL}/${id}`);
+    const response = await client.pull_requests._id(Number(id)).$get();
     return response;
   } catch (error: any) {
     console.error('プルリクエスト詳細取得エラー:', error);
@@ -149,7 +148,7 @@ export const approvePullRequest = async (
   id: string | number
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    await apiClient.patch(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.APPROVE}/${id}/approve`);
+    await client.pull_requests._id(Number(id)).approve.$patch();
     return { success: true };
   } catch (error: any) {
     console.error('プルリクエスト承認エラー:', error);
@@ -174,9 +173,7 @@ export const approvePullRequest = async (
  */
 export const fetchActivityLog = async (pullRequestId: string): Promise<ActivityLog[]> => {
   try {
-    const response = await apiClient.get(
-      `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET_DETAIL}/${pullRequestId}/activity-log-on-pull-request`
-    );
+    const response = await client.pull_requests._id(Number(pullRequestId)).activity_log_on_pull_request.$get();
     return response || [];
   } catch (error: any) {
     console.error('アクティビティログ取得エラー:', error);
@@ -189,9 +186,11 @@ export const fetchActivityLog = async (pullRequestId: string): Promise<ActivityL
  */
 export const createActivityLogOnPullRequest = async (pullRequestId: string): Promise<void> => {
   try {
-    await apiClient.post(`${API_CONFIG.ENDPOINTS.ACTIVITY_LOGS.CREATE}`, {
-      pull_request_id: pullRequestId,
-      action: 'pull_request_edited',
+    await client.activity_logs.$post({
+      body: {
+        pull_request_id: pullRequestId,
+        action: 'pull_request_edited',
+      },
     });
   } catch (error: any) {
     console.error('編集終了記録エラー:', error);
@@ -212,8 +211,10 @@ export const startPullRequestEditSession = async (
   pullRequestId: string | number
 ): Promise<StartEditSessionResponse> => {
   try {
-    const response = await apiClient.post(API_CONFIG.ENDPOINTS.PULL_REQUEST_EDIT_SESSIONS.START, {
-      pull_request_id: pullRequestId,
+    const response = await client.pull_request_edit_sessions.$post({
+      body: {
+        pull_request_id: pullRequestId,
+      },
     });
     return response;
   } catch (error: any) {
@@ -230,9 +231,11 @@ export const finishPullRequestEditSession = async (
   pullRequestId: string | number
 ): Promise<void> => {
   try {
-    await apiClient.patch(API_CONFIG.ENDPOINTS.PULL_REQUEST_EDIT_SESSIONS.FINISH, {
-      token: token,
-      pull_request_id: pullRequestId,
+    await client.pull_request_edit_sessions.$patch({
+      body: {
+        token: token,
+        pull_request_id: pullRequestId,
+      },
     });
   } catch (error: any) {
     console.error('プルリクエスト編集セッション終了エラー:', error);
@@ -269,9 +272,7 @@ export const fetchConflictDiffs = async (
   pullRequestId: string | number
 ): Promise<ConflictDiffResponse> => {
   try {
-    const response = await apiClient.get(
-      `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${pullRequestId}/conflict/diff`
-    );
+    const response = await client.pull_requests._id(Number(pullRequestId)).conflict.diff.$get();
     return response as ConflictDiffResponse;
   } catch (error: any) {
     console.error('コンフリクト差分取得エラー:', error);
@@ -287,10 +288,9 @@ export const handleFixConflictTemporary = async (
   item: FixConflictTemporaryRequestItem
 ): Promise<FixConflictTemporaryResponse> => {
   try {
-    const response = await apiClient.post(
-      `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.CONFLICT}/${pullRequestId}/conflict/temporary`,
-      { file: item }
-    );
+    const response = await client.pull_requests._id(Number(pullRequestId)).conflict.temporary.$post({
+      body: { file: item },
+    });
 
     return response as FixConflictTemporaryResponse;
   } catch (error: any) {

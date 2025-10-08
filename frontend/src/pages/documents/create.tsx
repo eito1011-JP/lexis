@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminLayout from '@/components/admin/layout';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { useNavigate, useParams } from 'react-router-dom';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
@@ -44,7 +43,7 @@ export default function CreateDocumentPage(): JSX.Element {
       try {
         const id = parseInt(categoryEntityIdParam);
         setCategoryEntityId(id);
-        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${id}`);
+        const response = await client.category_entities._entityId(id).$get();
         setSelectedCategory(response.category);
       } catch (error) {
         console.error('カテゴリ詳細取得エラー:', error);
@@ -83,15 +82,14 @@ export default function CreateDocumentPage(): JSX.Element {
     try {
       setIsSubmitting(true);
 
-      // APIリクエストのペイロードを構築
-      const payload: any = {
-        title: title.trim(),
-        description: description.trim(),
-        category_entity_id: categoryEntityId,
-      };
-
       // RESTfulなドキュメント作成APIを呼び出す
-      await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE, payload);
+      await client.document_entities.$post({
+        body: {
+          title: title.trim(),
+          body: description.trim(),
+          category_entity_id: categoryEntityId,
+        }
+      });
 
       alert('ドキュメントが作成されました');
       

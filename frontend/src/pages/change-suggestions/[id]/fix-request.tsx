@@ -2,9 +2,8 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchPullRequestDetail, type PullRequestDetailResponse } from '@/api/pullRequest';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { fetchPullRequestDetail, type PullRequestDetailResponse } from '@/api/pullRequestHelpers';
+import { client } from '@/api/client';
 import SlateEditor from '@/components/admin/editor/SlateEditor';
 import { formatDistanceToNow } from 'date-fns';
 import ja from 'date-fns/locale/ja';
@@ -143,8 +142,6 @@ export default function FixRequestPage(): JSX.Element {
         // フォームに既存のデータをセット
         setTitle(data.title || '');
         setDescription(data.description || '');
-        setDocumentVersions(data.document_versions || []);
-        setDocumentCategories(data.document_categories || []);
       } catch (err) {
         console.error('プルリクエスト詳細取得エラー:', err);
         setError('プルリクエスト詳細の取得に失敗しました');
@@ -176,11 +173,12 @@ export default function FixRequestPage(): JSX.Element {
 
     setIsSubmitting(true);
     try {
-      await apiClient.post(`${API_CONFIG.ENDPOINTS.PULL_REQUESTS.FIX_REQUEST}/${id}/fix-request`, {
-        title,
-        description,
-        document_versions: documentVersions,
-        document_categories: documentCategories,
+      await client.pull_requests._id(parseInt(id)).fix_request.$post({
+        body: {
+          title,
+          description,
+          document_versions: documentVersions,
+        }
       });
 
       // 成功時にトースト通知を表示

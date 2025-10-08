@@ -1,8 +1,7 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { Toast } from '@/components/admin/Toast';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
@@ -378,11 +377,10 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
 
       try {
         setLoading(true);
-        const response = await apiClient.get(
-          `${API_CONFIG.ENDPOINTS.PULL_REQUEST_EDIT_SESSIONS.GET}?token=${token}`
-        );
+        const response = await client.pull_request_edit_sessions.detail.$get({
+          query: { token }
+        });
         console.log('response', response);
-        setDiffData(response);
       } catch (err: any) {
         console.error('編集差分取得エラー:', err);
         setError('編集差分の取得に失敗しました');

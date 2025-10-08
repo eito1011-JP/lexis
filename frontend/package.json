@@ -9,13 +9,15 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\""
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,css,md,json}\"",
+    "api:build": "aspida --config aspida.config.cjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@aspida/axios": "^1.14.0",
+    "@aspida/swr": "^1.14.0",
     "@octokit/rest": "^21.1.1",
     "@sanity/diff-match-patch": "^3.2.0",
     "@tailwindcss/vite": "^4.1.4",

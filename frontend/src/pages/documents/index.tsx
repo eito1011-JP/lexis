@@ -3,13 +3,15 @@ import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Toast } from '@/components/admin/Toast';
-import { fetchCategoryDetail, type ApiCategoryDetailResponse, type BreadcrumbItem } from '@/api/category';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
 import { MarkdownRenderer } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { useNavigate } from 'react-router-dom';
 import { useUserMe } from '@/hooks/useUserMe';
+import { useCategories } from '@/hooks/useCategories';
+import { useCategoryDetail } from '@/hooks/useCategoryDetail';
+import { useDocumentDetail } from '@/hooks/useDocumentDetail';
+import { useUserBranchChanges } from '@/hooks/useUserBranchChanges';
+import { client } from '@/api/client';
 
 
 /**
@@ -17,58 +19,32 @@ import { useUserMe } from '@/hooks/useUserMe';
  */
 export default function DocumentsPage(): JSX.Element {
   const navigate = useNavigate();
-  const { user, organization, activeUserBranch, mutate: mutateUserMe } = useUserMe();
+  const { mutate: mutateUserMe } = useUserMe();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number | null>(null);
-  const [categoryDetail, setCategoryDetail] = useState<ApiCategoryDetailResponse | null>(null);
   const [selectedDocumentEntityId, setSelectedDocumentEntityId] = useState<number | null>(null);
-  const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [showPrSubmitButton, setShowPrSubmitButton] = useState(false);
-  const [userBranchId, setUserBranchId] = useState<string | null>(null);
   const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
+  const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // 下書き保存のハンドラー
-  const handleDraftSave = async () => {
-    if (!userBranchId) {
-      setToastMessage('ユーザーブランチIDが取得できません');
-      setToastType('error');
-      setShowToast(true);
-      return;
-    }
+  // カスタムフックの使用
+  const { categories, isLoading: categoriesLoading } = useCategories(null);
+  const { categoryDetail, isLoading: categoryLoading } = useCategoryDetail(selectedSideContentCategory);
+  const { documentDetail: docDetail, isLoading: documentLoading } = useDocumentDetail(selectedDocumentEntityId);
+  const { hasUserChanges, userBranchId, mutate: mutateUserBranchChanges } = useUserBranchChanges();
 
-    try {
-      setLoading(true);
-      const endpoint = API_CONFIG.ENDPOINTS.USER_BRANCHES.UPDATE(parseInt(userBranchId));
-      
-      await apiClient.patch(endpoint, {
-        is_active: false,
-        user_branch_id: userBranchId
-      });
-
-      setToastMessage('下書きを保存しました');
-      setToastType('success');
-      setShowToast(true);
-      
-      // ボタンの状態を更新
-      setShowPrSubmitButton(false);
-      setUserBranchId(null);
-      
-      // ユーザー情報を再取得
-      await mutateUserMe();
-      
-    } catch (error) {
-      console.error('下書き保存エラー:', error);
-      setToastMessage('下書きの保存に失敗しました');
-      setToastType('error');
-      setShowToast(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // ローディング状態の統合
+  const loading = categoriesLoading || categoryLoading || documentLoading;
+  
+  // ドキュメント詳細をローカルstateに変換（パンくずリスト用）
+  const documentDetail: DocumentDetail | null = docDetail ? ({
+    entityId: docDetail.document.entityId,
+    title: docDetail.document.title,
+    description: docDetail.document.description ?? '',
+    breadcrumbs: docDetail.document.breadcrumbs
+  } as DocumentDetail) : null;
 
   // マークダウンスタイルを一度だけ適用
   useEffect(() => {
@@ -81,117 +57,63 @@ export default function DocumentsPage(): JSX.Element {
     }
   }, []);
 
-  // カテゴリリストを取得する関数
-  const fetchCategories = async (parentId: number | null = null): Promise<any[]> => {
-    try {
-      const params = new URLSearchParams();
-      if (parentId !== null) {
-        params.append('parent_entity_id', parentId.toString());
-      }
-      
-      const endpoint = `/api/category-entities/${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await apiClient.get(endpoint);
-      
-      return response.categories || [];
-    } catch (error) {
-      console.error('カテゴリの取得に失敗しました:', error);
-      throw error;
-    }
-  };
-
-  // カテゴリ詳細を取得する関数
-  const loadCategoryDetail = async (categoryEntityId: number) => {
-    try {
-      setLoading(true);
-      const detail = await fetchCategoryDetail(categoryEntityId);
-      setCategoryDetail(detail);
-    } catch (error) {
-      console.error('カテゴリ詳細の取得に失敗しました:', error);
-      setToastMessage('カテゴリ詳細の取得に失敗しました');
-      setToastType('error');
-      setShowToast(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // サイドコンテンツのカテゴリ選択ハンドラ
   const handleSideContentCategorySelect = (categoryEntityId: number) => {
     setSelectedSideContentCategory(categoryEntityId);
     setSelectedDocumentEntityId(null);
-    setDocumentDetail(null);
     console.log('Selected side content category:', categoryEntityId);
-    loadCategoryDetail(categoryEntityId);
   };
 
   // ドキュメント選択ハンドラ
-  const handleDocumentSelect = async (documentEntityId: number) => {
-    try {
-      setLoading(true);
-      const endpoint = API_CONFIG.ENDPOINTS.DOCUMENT_VERSIONS.GET_DETAIL(documentEntityId);
-      
-      const response = await apiClient.get(endpoint);
-      
-      // レスポンスからドキュメント詳細とパンクズリストを取得
-      const documentDetail: DocumentDetail = {
-        entityId: response.entityId,
-        title: response.title,
-        description: response.description,
-        breadcrumbs: response.breadcrumbs
-      };
+  const handleDocumentSelect = (documentEntityId: number) => {
+    setSelectedDocumentEntityId(documentEntityId);
+    setSelectedSideContentCategory(null);
+  };
 
-      setSelectedDocumentEntityId(documentDetail.entityId);
-      setDocumentDetail(documentDetail);
-      setSelectedSideContentCategory(null);
-      setCategoryDetail(null);
-      
-    } catch (error) {
-      console.error('ドキュメント取得エラー:', error);
-      setToastMessage('ドキュメント詳細の取得に失敗しました');
+  // 下書き保存のハンドラー
+  const handleDraftSave = async () => {
+    if (!userBranchId) {
+      setToastMessage('ユーザーブランチIDが取得できません');
       setToastType('error');
       setShowToast(true);
-    } finally {
-      setLoading(false);
+      return;
+    }
+
+    try {
+      await client.user_branches._userBranchId(parseInt(userBranchId)).$put({
+        body: {
+          is_active: false,
+          user_branch_id: userBranchId
+        }
+      });
+
+      setToastMessage('下書きを保存しました');
+      setToastType('success');
+      setShowToast(true);
+      
+      // ユーザー情報を再取得
+      await mutateUserMe();
+      await mutateUserBranchChanges();
+      
+      setShowDiscardConfirmModal(false);
+    } catch (error) {
+      console.error('下書き保存エラー:', error);
+      setToastMessage('下書きの保存に失敗しました');
+      setToastType('error');
+      setShowToast(true);
     }
   };
 
-  // 初期表示時に最小IDのカテゴリを自動選択とユーザー変更チェック
+  // 初期表示時に最小IDのカテゴリを自動選択
   useEffect(() => {
-    const loadInitialCategory = async () => {
-      try {
-        if (!selectedSideContentCategory) {
-          // カテゴリリストを取得
-          const categories = await fetchCategories(null);
-          if (categories.length > 0) {
-            // entity_IDが最も小さいカテゴリを選択
-            const minIdCategory = categories.reduce((min, current) => 
-              current.entity_id < min.entity_id ? current : min
-            );
-            setSelectedSideContentCategory(minIdCategory.entity_id);
-            await loadCategoryDetail(minIdCategory.entity_id);
-          }
-        } else {
-          await loadCategoryDetail(selectedSideContentCategory);
-        }
-
-        // ユーザー変更があるかチェック
-        const hasUserChanges = await apiClient.get(
-          API_CONFIG.ENDPOINTS.USER_BRANCHES.HAS_USER_CHANGES
-        );
-        if (hasUserChanges && hasUserChanges.has_user_changes) {
-          setShowPrSubmitButton(true);
-          setUserBranchId(hasUserChanges.user_branch_id);
-        }
-      } catch (error) {
-        console.error('初期カテゴリの読み込みに失敗しました:', error);
-        setToastMessage('初期カテゴリの読み込みに失敗しました');
-        setToastType('error');
-        setShowToast(true);
-      }
-    };
-
-    loadInitialCategory();
-  }, []);
+    if (!selectedSideContentCategory && categories.length > 0) {
+      // entity_IDが最も小さいカテゴリを選択
+      const minIdCategory = categories.reduce((min, current) => 
+        current.entity_id < min.entity_id ? current : min
+      );
+      setSelectedSideContentCategory(minIdCategory.entity_id);
+    }
+  }, [categories, selectedSideContentCategory]);
 
   return (
     <AdminLayout 
@@ -217,8 +139,10 @@ export default function DocumentsPage(): JSX.Element {
             <div className="flex items-center gap-4 mr-9">
               <button
                 className="flex items-center px-3 py-2 bg-[#B1B1B1] hover:bg-[#B1B1B1] text-white rounded-md focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleDraftSave}
-                disabled={!showPrSubmitButton}
+                onClick={() => {
+                  setShowDiscardConfirmModal(true);
+                }}
+                disabled={!hasUserChanges}
               >
                 <svg
                   className="w-5 h-5 mr-2"
@@ -241,7 +165,7 @@ export default function DocumentsPage(): JSX.Element {
                 onClick={() => {
                   setShowDiffConfirmModal(true);
                 }}
-                disabled={!showPrSubmitButton}
+                disabled={!hasUserChanges}
               >
                 <svg
                   className="w-5 h-5 mr-2"
@@ -302,6 +226,34 @@ export default function DocumentsPage(): JSX.Element {
             </div>
           )}
         </div>
+
+      {/* 下書き保存確認モーダル */}
+      {showDiscardConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">下書き保存</h2>
+
+            <p className="mb-4 text-gray-300">
+              現在の変更内容を下書きとして保存します。よろしいですか？
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
+                onClick={() => setShowDiscardConfirmModal(false)}
+              >
+                キャンセル
+              </button>
+              <button
+                className="px-4 py-2 bg-[#B1B1B1] rounded-md hover:bg-[#8A8A8A] focus:outline-none flex items-center"
+                onClick={handleDraftSave}
+              >
+                下書き保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 差分提出確認モーダル */}
       {showDiffConfirmModal && (

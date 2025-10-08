@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '@/components/admin/layout';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client, axios } from '@/api/client';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useToast } from '@/contexts/ToastContext';
 import { AUTHENTICATION_FAILED, DUPLICATE_ORGANIZATION, ERROR, INVALID_AUTHENTICATION_TOKEN } from '@/const/ErrorMessage';
@@ -25,7 +24,8 @@ export default function OrganizationRegisterPage(): React.ReactElement {
       }
   
       try {
-        await apiClient.get(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, { params: { token } });
+        // TODO: トークン検証用のaspidaエンドポイントを追加する必要があります
+        await axios.get('/auth/pre-users', { params: { token } });
         // トークンが有効な場合、何もしない（フォームを表示する）
       } catch (error: any) {
         if (error.response?.status === 401) {
@@ -47,7 +47,16 @@ export default function OrganizationRegisterPage(): React.ReactElement {
     setValidationErrors({}); // バリデーションエラーをクリア
     
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.ORGANIZATIONS_CREATE, {
+      await client.organizations.$post({
+        body: {
+          name: organizationName,
+          // organization_uuid: organizationId, // 必要に応じて追加
+          // token, // 必要に応じて追加
+        }
+      });
+      // TODO: organization_uuidとtokenを含むリクエストに対応する型定義の更新が必要です
+      // 一時的にaxiosを使用
+      await axios.post('/organizations', {
         organization_uuid: organizationId,
         organization_name: organizationName,
         token,

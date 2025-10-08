@@ -1,19 +1,18 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect, useRef } from 'react';
 import type { JSX } from 'react';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { Folder } from '@/components/icon/common/Folder';
 import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Settings } from '@/components/icon/common/Settings';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
-import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequest';
+import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequestHelpers';
 import { markdownStyles } from '@/styles/markdownContent';
 import { useToast } from '@/contexts/ToastContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { type BreadcrumbItem } from '@/api/category';
+import { type BreadcrumbItem } from '@/api/categoryHelpers';
 
 type FieldChangeInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -436,11 +435,8 @@ export default function DiffPage(): JSX.Element {
   const handleFetchUser = async (searchEmail?: string) => {
     setLoadingUsers(true);
     try {
-      const endpoint = searchEmail
-        ? `${API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET}?email=${encodeURIComponent(searchEmail)}`
-        : API_CONFIG.ENDPOINTS.PULL_REQUEST_REVIEWERS.GET;
-
-      const response = await apiClient.get(endpoint);
+      const query = searchEmail ? { email: searchEmail } : undefined;
+      const response = await client.pull_request_reviewers.$get({ query });
       setUsers(response.users || []);
     } catch (error) {
       console.error('ユーザー取得エラー:', error);
@@ -477,18 +473,24 @@ export default function DiffPage(): JSX.Element {
       }
 
       try {
-        const response = await apiClient.get(
-          `${API_CONFIG.ENDPOINTS.USER_BRANCHES.GET_DIFF}?user_branch_id=${userBranchId}`
-        );
+        const response = await client.user_branches.diff.$get({
+          query: { user_branch_id: Number(userBranchId) }
+        });
 
         console.log('差分データ:', response);
         // 差分データが存在しない、または変更がない場合はドキュメント一覧にリダイレクト
-        if (!response || !response.diff || response.diff.length === 0) {
+        if (!response.diff || response.diff.length === 0) {
           navigate('/documents');
           return;
         }
 
-        setDiffData(response);
+        // DiffResponseの型に合わせてデータをセット
+        const diffResponse: DiffResponse = {
+          diff: response.diff,
+          user_branch_id: response.user_branch_id || Number(userBranchId),
+          organization_id: response.organization_id || 0
+        };
+        setDiffData(diffResponse);
       } catch (err) {
         console.error('差分取得エラー:', err);
         setError('差分データの取得に失敗しました');

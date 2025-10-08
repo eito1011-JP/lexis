@@ -1,8 +1,7 @@
 import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Toast } from '@/components/admin/Toast';
 import { formatDateTime } from '@/utils/date';
@@ -94,11 +93,9 @@ export default function ChangeSuggestionsPage(): JSX.Element {
       try {
         setChangeProposalsLoading(true);
 
-        const params: Record<string, string> = isCompletedView ? { status: 'merged,closed' } : {};
-        const queryString = new URLSearchParams(params).toString();
-        const apiUrl = `${API_CONFIG.ENDPOINTS.PULL_REQUESTS.GET}${queryString ? '?' + queryString : ''}`;
+        const query = isCompletedView ? { status: 'merged,closed' } : undefined;
 
-        const response = await apiClient.get(apiUrl);
+        const response = await client.pull_requests.$get({ query });
 
         if (!response?.pull_requests) {
           console.error('API response does not contain pull_requests:', response);
@@ -133,9 +130,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
 
     try {
       // RESTfulなドキュメント削除APIを呼び出す
-      await apiClient.delete(
-        `${API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE}/${documentToDelete.id}`
-      );
+      await client.document_entities._entityId(documentToDelete.id).$delete();
 
       // 即座にページをリロード
       window.location.reload();
@@ -299,12 +294,12 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   };
 
   return (
-    <AdminLayout 
+      <AdminLayout 
       title={isCompletedView ? '変更提案 - 完了済み' : '変更提案'}
       sidebar={true}
       showDocumentSideContent={false}
       onCategorySelect={setSelectedCategoryId}
-      selectedCategoryId={selectedCategoryId}
+      selectedCategoryEntityId={selectedCategoryId}
     >
       <div className="flex flex-col h-full">
         {/* ヘッダー部分 */}

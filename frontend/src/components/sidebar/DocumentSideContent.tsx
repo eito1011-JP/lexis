@@ -4,12 +4,11 @@ import { Folder } from '@/components/icon/common/Folder';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
 import { Plus } from '@/components/icon/common/Plus';
 import { Edit } from '@/components/icon/common/Edit';
-import { apiClient } from '@/components/admin/api/client';
+import { client } from '@/api/client';
 import CategoryActionModal from '@/components/admin/CategoryActionModal';
 import CreateActionModal from '@/components/sidebar/CreateActionModal';
 import DocumentDeleteModal from '@/components/sidebar/DocumentDeleteModal';
 import { useNavigate } from 'react-router-dom';
-import { API_CONFIG } from '../admin/api/config';
 import { useUserMe } from '@/hooks/useUserMe';
 
 // APIから取得するカテゴリデータの型定義
@@ -51,13 +50,8 @@ interface DocumentSideContentProps {
 // カテゴリデータを取得するサービス関数（無制限表示）
 const fetchCategories = async (parentEntityId: number | null = null): Promise<ApiCategoryData[]> => {
   try {
-    const params = new URLSearchParams();
-    if (parentEntityId !== null) {
-      params.append('parent_entity_id', parentEntityId.toString());
-    }
-    
-    const endpoint = `/api/category-entities/${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await apiClient.get(endpoint);
+    const query = parentEntityId !== null ? { parent_entity_id: parentEntityId } : undefined;
+    const response = await client.category_entities.$get({ query });
     
     // すべてのカテゴリを返す（制限なし）
     return response.categories || [];
@@ -140,7 +134,9 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   // 従属するカテゴリとドキュメントを取得する関数（無制限表示・深い階層対応）
   const handleFetchBelogingItems = async (categoryEntityId: number) => {
     try {
-      const response = await apiClient.get(`/api/nodes?category_entity_id=${categoryEntityId}`);
+      const response = await client.nodes.$get({ 
+        query: { category_entity_id: categoryEntityId }
+      });
       
       // 既存のカテゴリデータを更新（深い階層まで対応）
       setCategories(prevCategories => {
@@ -299,7 +295,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
   const handleDelete = async () => {
     if (selectedCategory) {
         try {
-        await apiClient.delete(API_CONFIG.ENDPOINTS.CATEGORIES.DELETE + selectedCategory.entityId);
+        await client.category_entities._entityId(selectedCategory.entityId).$delete();
 
         loadCategories();
 
@@ -346,7 +342,7 @@ export default function DocumentSideContent({ onCategorySelect, onDocumentSelect
     if (!selectedDocument) return;
 
     try {
-      await apiClient.delete(API_CONFIG.ENDPOINTS.DOCUMENTS.DELETE + selectedDocument.entityId);
+      await client.document_entities._entityId(selectedDocument.entityId).$delete();
       
       // 削除後にUIを更新 - 削除されたドキュメントを含むカテゴリを再読み込み
       // ここでは簡易的に全体を再読み込みする

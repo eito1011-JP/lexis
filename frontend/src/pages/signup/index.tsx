@@ -1,7 +1,6 @@
 import  { useState, FormEvent, ReactElement } from 'react';
 import { useLocation } from 'react-router-dom';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import AdminLayout from '@/components/admin/layout';
 import { useToast } from '@/contexts/ToastContext';
 import FormError from '@/components/FormError';
@@ -23,9 +22,12 @@ export default function AdminPage(): ReactElement {
     setValidationErrors({}); // エラーをクリア
 
     try {
-      await apiClient.post(API_CONFIG.ENDPOINTS.PRE_USERS_IDENTIFY, {
-        email,
-        password,
+      await client.auth.pre_users.$post({
+        body: {
+          token: '', // TODO: 実際のトークンを取得
+          password,
+          nickname: email, // TODO: nicknameフィールドの適切な値を設定
+        }
       });
 
       show({ message: '入力されたメールアドレスにメールを送信しました', type: 'success' });

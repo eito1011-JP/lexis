@@ -3,8 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 
 /**
  * カテゴリ新規作成ページ
@@ -33,15 +32,15 @@ export default function CreateRootCategoryPage(): JSX.Element {
 
     try {
       // URLパラメータに基づいてparent_entity_idを設定
-      const parentEntityId = categoryEntityId ? categoryEntityId : null;
+      const parentEntityId = categoryEntityId ? Number(categoryEntityId) : null;
 
-      const payload = {
-        title: formData.title,
-        description: formData.description,
-        parent_entity_id: parentEntityId
-      };
-
-      await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);
+      await client.category_entities.$post({
+        body: {
+          title: formData.title,
+          description: formData.description,
+          parent_entity_id: parentEntityId
+        }
+      });
       
       // カテゴリ作成成功時はドキュメント一覧ページに遷移
       navigate('/documents', { 

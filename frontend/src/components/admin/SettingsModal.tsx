@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { apiClient } from './api/client';
+import { client } from '@/api/client';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps): 
   const handleLogOut = async (): Promise<void> => {
     try {
       setIsLoggingOut(true);
-      await apiClient.post('/api/auth/logout', {});
+      await client.auth.logout.$post({ body: {} });
       
       // ログアウト成功後、ログインページにリダイレクト
       window.location.href = '/login';

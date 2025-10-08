@@ -3,8 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import CategoryForm, { useUnsavedChangesHandler, CategoryFormData } from '@/components/admin/CategoryForm';
 import AdminLayout from '@/components/admin/layout';
 import UnsavedChangesModal from '@/components/admin/UnsavedChangesModal';
-import { apiClient } from '@/components/admin/api/client';
-import { API_CONFIG } from '@/components/admin/api/config';
+import { client } from '@/api/client';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 
 /**
@@ -37,7 +36,7 @@ export default function EditCategoryPage(): JSX.Element {
       
       try {
         setIsLoading(true);
-        const response = await apiClient.get(API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL(parseInt(categoryEntityId)));
+        const response = await client.category_entities._entityId(parseInt(categoryEntityId)).$get();
         setCategory(response.category);
         setCategoryBreadcrumbs(response.category.breadcrumbs || []);
       } catch (err) {
@@ -58,9 +57,11 @@ export default function EditCategoryPage(): JSX.Element {
     setError(null);
 
     try {
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}${categoryEntityId}`, {
-        title: formData.title,
-        description: formData.description,
+      await client.category_entities._entityId(parseInt(categoryEntityId)).$put({
+        body: {
+          title: formData.title,
+          description: formData.description,
+        }
       });
       
       // カテゴリ編集成功時はドキュメント一覧ページに遷移
