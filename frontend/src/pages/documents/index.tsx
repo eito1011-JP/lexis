@@ -1,5 +1,5 @@
 import AdminLayout, { type DocumentDetail } from '@/components/admin/layout';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { JSX } from 'react';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
 import { Toast } from '@/components/admin/Toast';
@@ -27,12 +27,14 @@ export default function DocumentsPage(): JSX.Element {
   const [selectedDocumentEntityId, setSelectedDocumentEntityId] = useState<number | null>(null);
   const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
   const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  // DocumentSideContentのrefresh関数用のref
+  const documentSideContentRefreshRef = useRef<(() => Promise<void>) | null>(null);
 
   // カスタムフックの使用
-  const { categories, isLoading: categoriesLoading } = useCategories(null);
-  const { categoryDetail, isLoading: categoryLoading } = useCategoryDetail(selectedSideContentCategory);
-  const { documentDetail: docDetail, isLoading: documentLoading } = useDocumentDetail(selectedDocumentEntityId);
+  const { categories, isLoading: categoriesLoading, mutate: mutateCategories } = useCategories(null);
+  const { categoryDetail, isLoading: categoryLoading, mutate: mutateCategoryDetail } = useCategoryDetail(selectedSideContentCategory);
+  const { documentDetail: docDetail, isLoading: documentLoading, mutate: mutateDocumentDetail } = useDocumentDetail(selectedDocumentEntityId);
   const { hasUserChanges, userBranchId, mutate: mutateUserBranchChanges } = useUserBranchChanges();
 
   // ローディング状態の統合
@@ -92,8 +94,15 @@ export default function DocumentsPage(): JSX.Element {
       setShowToast(true);
       
       // ユーザー情報を再取得
+      // activeUserBranchが変更されるため、これにより全てのキャッシュキーが変更され
+      // カテゴリ、ドキュメントの詳細が自動的に新しいデータで再取得される
       await mutateUserMe();
       await mutateUserBranchChanges();
+      
+      // サイドバーのDocumentSideContentを更新
+      if (documentSideContentRefreshRef.current) {
+        await documentSideContentRefreshRef.current();
+      }
       
       setShowDiscardConfirmModal(false);
     } catch (error) {
@@ -124,7 +133,7 @@ export default function DocumentsPage(): JSX.Element {
       onDocumentSelect={handleDocumentSelect}
       selectedCategoryEntityId={selectedSideContentCategory ? selectedSideContentCategory : undefined}
       selectedDocumentEntityId={selectedDocumentEntityId || undefined}
-      refreshTrigger={refreshTrigger}
+      onDocumentSideContentRefreshRef={documentSideContentRefreshRef}
     >
          <div className="mb-6 align-left">
            {/* パンくずリストと差分提出ボタン */}

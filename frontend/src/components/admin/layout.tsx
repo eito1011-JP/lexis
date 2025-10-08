@@ -28,7 +28,7 @@ interface AdminLayoutProps {
   selectedCategoryEntityId?: number;
   selectedDocumentEntityId?: number;
   onNavigationRequest?: (path: string) => void;
-  refreshTrigger?: number;
+  onDocumentSideContentRefreshRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
 export default function AdminLayout({
@@ -41,7 +41,7 @@ export default function AdminLayout({
   selectedCategoryEntityId,
   selectedDocumentEntityId,
   onNavigationRequest,
-  refreshTrigger,
+  onDocumentSideContentRefreshRef,
 }: AdminLayoutProps): React.ReactElement {
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -189,7 +189,7 @@ export default function AdminLayout({
                     onDocumentSelect={onDocumentSelect}
                     selectedCategoryEntityId={selectedCategoryEntityId}
                     selectedDocumentEntityId={selectedDocumentEntityId}
-                    refreshTrigger={refreshTrigger}
+                    onRefreshRef={onDocumentSideContentRefreshRef}
                   />
               )}
             </div>
