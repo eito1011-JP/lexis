@@ -360,7 +360,153 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
         ]);
     }
 
+        /**
+     * @test
+     */
+    public function test_execute_deletes_pushed_status_category(): void
+    {
+        // Arrange
+        $pushedCategory = CategoryVersion::factory()->create([
+            'entity_id' => $this->parentCategoryEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+        ]);
+
+        $pushedCategoryEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->existingParentCategory->id,
+            'current_version_id' => $pushedCategory->id,
+        ]);
+
+        $dto = new DestroyCategoryEntityDto(
+            categoryEntityId: $this->parentCategoryEntity->id,
+        );
+
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->andReturn($this->userBranch->id);
+
+        $this->CategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->andReturn($pushedCategory);
+
+        $this->DocumentService
+            ->shouldReceive('getDescendantDocumentsByWorkContext')
+            ->once()
+            ->andReturn(new Collection());
+
+        $this->CategoryService
+            ->shouldReceive('getDescendantCategoriesByWorkContext')
+            ->once()
+            ->andReturn(new Collection());
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        // 新しい削除バージョンが作成されていることを確認
+        $this->assertCount(1, $result['category_versions']);
+        
+        $deletedCategory = $result['category_versions'][0];
+        $this->assertEquals($this->parentCategoryEntity->id, $deletedCategory->entity_id);
+        $this->assertEquals(Flag::TRUE, $deletedCategory->is_deleted);
+        $this->assertNotNull($deletedCategory->deleted_at);
+        
+        // EditStartVersionが作成されていることを確認
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $this->existingParentCategory->id,
+            'current_version_id' => $deletedCategory->id,
+        ]);
+    }
+
     /**
+     * @test
+     */
+    public function test_execute_deletes_pushed_status_document(): void
+    {
+        // Arrange
+        $documentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pushedDocument = DocumentVersion::factory()->create([
+            'entity_id' => $documentEntity->id,
+            'category_entity_id' => $this->parentCategoryEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::PUSHED->value,
+        ]);
+
+        $pushedDocumentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedDocument->id,
+            'current_version_id' => $pushedDocument->id,
+        ]);
+
+        $dto = new DestroyCategoryEntityDto(
+            categoryEntityId: $this->parentCategoryEntity->id,
+        );
+
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->andReturn($this->userBranch->id);
+
+        $this->CategoryService
+            ->shouldReceive('getCategoryByWorkContext')
+            ->once()
+            ->andReturn($this->existingParentCategory);
+
+        $this->DocumentService
+            ->shouldReceive('getDescendantDocumentsByWorkContext')
+            ->once()
+            ->andReturn(new Collection([$pushedDocument]));
+
+        $this->CategoryService
+            ->shouldReceive('getDescendantCategoriesByWorkContext')
+            ->once()
+            ->andReturn(new Collection());
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        // DRAFTカテゴリが削除されていることを確認
+        $this->assertCount(1, $result['category_versions']);
+        $deletedCategory = $result['category_versions'][0];
+        $this->assertEquals($this->parentCategoryEntity->id, $deletedCategory->entity_id);
+        $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $deletedCategory->status);
+        $this->assertEquals(Flag::TRUE, $deletedCategory->is_deleted);
+        $this->assertNotNull($deletedCategory->deleted_at);
+
+        // 新規作成されたDRAFTドキュメントが削除されていることを確認
+        $this->assertCount(1, $result['document_versions']);
+        $deletedDocument = $result['document_versions'][0];
+        $this->assertEquals($documentEntity->id, $deletedDocument->entity_id);
+        $this->assertEquals(DocumentStatus::DRAFT->value, $deletedDocument->status);
+        $this->assertEquals(Flag::TRUE, $deletedDocument->is_deleted);
+        $this->assertNotNull($deletedDocument->deleted_at);
+        
+        // EditStartVersionが作成されていることを確認
+        $this->assertDatabaseHas('edit_start_versions', [
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedDocument->id,
+            'current_version_id' => $deletedDocument->id,
+        ]);
+
+        // 既存のpushedドキュメントが論理削除されていることを確認
+        $this->assertSoftDeleted('document_versions', [
+            'id' => $pushedDocument->id,
+        ]);
+    }
+
+        /**
      * @test
      */
     public function test_execute_deletes_draft_status_document(): void
@@ -435,6 +581,11 @@ class DestroyDocumentCategoryUseCaseTest extends TestCase
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'original_version_id' => $draftDocument->id,
             'current_version_id' => $deletedDocument->id,
+        ]);
+
+        // 既存のdraftドキュメントが論理削除されていることを確認
+        $this->assertSoftDeleted('document_versions', [
+            'id' => $draftDocument->id,
         ]);
     }
 
