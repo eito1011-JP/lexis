@@ -90,12 +90,6 @@ export default function CreateDocumentPage(): JSX.Element {
         category_entity_id: categoryEntityId,
       };
 
-      // プルリクエスト編集関連の処理（必要に応じて）
-      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
-      if (pullRequestEditToken) {
-        payload.pull_request_edit_token = pullRequestEditToken;
-      }
-
       // RESTfulなドキュメント作成APIを呼び出す
       await apiClient.post(API_CONFIG.ENDPOINTS.DOCUMENTS.CREATE, payload);
 

@@ -38,9 +38,7 @@ export default function CreateRootCategoryPage(): JSX.Element {
       const payload = {
         title: formData.title,
         description: formData.description,
-        parent_entity_id: parentEntityId, // URLにidがある場合はサブカテゴリ、ない場合はルートカテゴリ
-        edit_pull_request_id: null,
-        pull_request_edit_token: null,
+        parent_entity_id: parentEntityId
       };
 
       await apiClient.post(API_CONFIG.ENDPOINTS.CATEGORIES.CREATE, payload);

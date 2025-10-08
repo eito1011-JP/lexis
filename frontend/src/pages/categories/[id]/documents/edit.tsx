@@ -103,12 +103,6 @@ export default function EditDocumentPage(): JSX.Element {
         document_entity_id: documentEntityIdParam,
       };
 
-      // プルリクエスト編集関連の処理（必要に応じて）
-      const pullRequestEditToken = localStorage.getItem('pullRequestEditToken');
-      if (pullRequestEditToken) {
-        payload.pull_request_edit_token = pullRequestEditToken;
-      }
-
       // RESTfulなドキュメント更新APIを呼び出す
       await apiClient.put(`${API_CONFIG.ENDPOINTS.DOCUMENTS.UPDATE}/${documentEntityIdParam}`, payload);
 

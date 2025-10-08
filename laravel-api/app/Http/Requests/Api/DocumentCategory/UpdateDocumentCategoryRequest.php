@@ -31,7 +31,7 @@ class UpdateDocumentCategoryRequest extends FormRequest
     public function prepareForValidation(): void
     {
         $this->merge([
-            'category_entity_id' => $this->route('id'),
+            'category_entity_id' => $this->route('category_entity'),
         ]);
     }
 }

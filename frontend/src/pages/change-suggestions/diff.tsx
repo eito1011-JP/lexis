@@ -590,7 +590,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
 
           // 変更提案の再編集画面に遷移
           navigate(
-            `/documents?edit_pull_request_id=${id}&pull_request_edit_token=${sessionResponse.token}`
+            `/documents`
           );
         } catch (error) {
           console.error('編集セッション開始エラー:', error);

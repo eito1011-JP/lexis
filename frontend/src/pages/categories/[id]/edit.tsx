@@ -37,7 +37,7 @@ export default function EditCategoryPage(): JSX.Element {
       
       try {
         setIsLoading(true);
-        const response = await apiClient.get(`${API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL}/${categoryEntityId}`);
+        const response = await apiClient.get(API_CONFIG.ENDPOINTS.CATEGORIES.GET_DETAIL(parseInt(categoryEntityId)));
         setCategory(response.category);
         setCategoryBreadcrumbs(response.category.breadcrumbs || []);
       } catch (err) {
@@ -58,7 +58,7 @@ export default function EditCategoryPage(): JSX.Element {
     setError(null);
 
     try {
-      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}/${categoryEntityId}`, {
+      await apiClient.put(`${API_CONFIG.ENDPOINTS.CATEGORIES.UPDATE}${categoryEntityId}`, {
         title: formData.title,
         description: formData.description,
       });
