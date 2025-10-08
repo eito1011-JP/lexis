@@ -6,6 +6,7 @@ use App\Dto\UseCase\Explorer\FetchNodesDto;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\DocumentStatus;
 use App\Enums\DocumentCategoryStatus;
+use App\Enums\PullRequestStatus;
 use App\Models\CategoryEntity;
 use App\Models\CategoryVersion;
 use App\Models\DocumentEntity;
@@ -1051,5 +1052,272 @@ class FetchNodesUseCaseTest extends TestCase
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('Database error');
         $useCase->execute($dto, $this->user);
+    }
+
+        /**
+     * @test
+     */
+    public function test_returns_pushed_and_merged_nodes_after_activate_user_branch(): void
+    {
+        // Arrange
+        // 親カテゴリを作成
+        $parentCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $parentCategory = CategoryVersion::factory()->create([
+            'title' => '親カテゴリ',
+            'parent_entity_id' => null,
+            'entity_id' => $parentCategoryEntity->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'organization_id' => $this->organization->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
+        ]);
+
+        $dto = new FetchNodesDto(
+            categoryEntityId: $parentCategoryEntity->id
+        );
+
+        // PR作成前に提出したカテゴリ（取得される）
+        $pushedCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $pushedCategory = CategoryVersion::factory()->create([
+            'title' => 'PR作成前に提出したカテゴリ',
+            'parent_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $pushedCategoryEntity->id,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $pushedCategory->id,
+            'current_version_id' => $pushedCategory->id,
+        ]);
+
+        $pushedDocumentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pushedDocument = DocumentVersion::factory()->create([
+            'title' => 'PR作成前に提出したドキュメント',
+            'category_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $pushedDocumentEntity->id,
+            'status' => DocumentStatus::DRAFT->value,
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedDocument->id,
+            'current_version_id' => $pushedDocument->id,
+        ]);
+
+        // mergedなカテゴリ(取得される)
+        $previousUserBranch = UserBranch::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => false,
+            'organization_id' => $this->organization->id,
+        ]);
+        $mergedCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $mergedCategory = CategoryVersion::factory()->create([
+            'title' => 'mergedなカテゴリ',
+            'parent_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $mergedCategoryEntity->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'user_branch_id' => $previousUserBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $previousUserBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $mergedCategory->id,
+            'current_version_id' => $mergedCategory->id,
+        ]);
+
+        // mergedなドキュメント(取得される)
+        $mergedDocumentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $mergedDocument = DocumentVersion::factory()->create([
+            'title' => 'mergedなドキュメント',
+            'category_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $mergedDocumentEntity->id,
+            'status' => DocumentStatus::MERGED->value,
+            'user_branch_id' => $previousUserBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $previousUserBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $mergedDocument->id,
+            'current_version_id' => $mergedDocument->id,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        $this->assertCount(2, $result['categories']);
+        $this->assertCount(2, $result['documents']);
+
+        // カテゴリの検証
+        $this->assertEquals($pushedCategory->id, $result['categories'][0]['id']);
+        $this->assertEquals('PR作成前に提出したカテゴリ', $result['categories'][0]['title']);
+        $this->assertEquals(DocumentCategoryStatus::PUSHED->value, $result['categories'][0]['status']);
+
+        $this->assertEquals($mergedCategory->id, $result['categories'][1]['id']);
+        $this->assertEquals('mergedなカテゴリ', $result['categories'][1]['title']);
+        $this->assertEquals(DocumentCategoryStatus::MERGED->value, $result['categories'][1]['status']);
+
+        // ドキュメントの検証
+        $this->assertEquals($pushedDocument->id, $result['documents'][0]['id']);
+        $this->assertEquals('PR作成前に提出したドキュメント', $result['documents'][0]['title']);
+        $this->assertEquals(DocumentStatus::DRAFT->value, $result['documents'][0]['status']);
+
+        $this->assertEquals($mergedDocument->id, $result['documents'][1]['id']);
+        $this->assertEquals('mergedなドキュメント', $result['documents'][1]['title']);
+        $this->assertEquals(DocumentStatus::MERGED->value, $result['documents'][1]['status']);
+    }
+
+    /**
+     * @test
+     */
+    public function test_returns_draft_and_pushed_nodes_after_activate_user_branch(): void
+    {
+        // Arrange
+        // 親カテゴリを作成
+        $parentCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $parentCategory = CategoryVersion::factory()->create([
+            'title' => '親カテゴリ',
+            'parent_entity_id' => null,
+            'entity_id' => $parentCategoryEntity->id,
+            'status' => DocumentCategoryStatus::MERGED->value,
+            'organization_id' => $this->organization->id,
+        ]);
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $parentCategory->id,
+            'current_version_id' => $parentCategory->id,
+        ]);
+
+        $dto = new FetchNodesDto(
+            categoryEntityId: $parentCategoryEntity->id
+        );
+
+        // PR作成前に提出したカテゴリ（取得されない）
+        $pushedCategoryEntity = CategoryEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+        $pushedCategory = CategoryVersion::factory()->create([
+            'title' => 'PR作成前に提出したカテゴリ',
+            'parent_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $pushedCategoryEntity->id,
+            'status' => DocumentCategoryStatus::PUSHED->value,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $pushedCategory->id,
+            'current_version_id' => $pushedCategory->id,
+        ]);
+
+        $pushedDocumentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $pushedDocument = DocumentVersion::factory()->create([
+            'title' => 'PR作成前に提出したドキュメント',
+            'category_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $pushedDocumentEntity->id,
+            'status' => DocumentStatus::DRAFT->value,
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedDocument->id,
+            'current_version_id' => $pushedDocument->id,
+        ]);
+
+        // draftなカテゴリ(取得される)
+        $draftCategory = CategoryVersion::factory()->create([
+            'title' => 'draftなカテゴリ',
+            'parent_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $pushedCategoryEntity->id,
+            'status' => DocumentCategoryStatus::DRAFT->value,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'original_version_id' => $pushedCategory->id,
+            'current_version_id' => $draftCategory->id,
+        ]);
+
+        // draftなドキュメント(取得される)
+        $draftDocumentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $draftDocument = DocumentVersion::factory()->create([
+            'title' => 'draftなドキュメント',
+            'category_entity_id' => $parentCategoryEntity->id,
+            'entity_id' => $draftDocumentEntity->id,
+            'status' => DocumentStatus::DRAFT->value,
+            'user_branch_id' => $this->userBranch->id,
+            'organization_id' => $this->organization->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedDocument->id,
+            'current_version_id' => $draftDocument->id,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        $this->assertCount(1, $result['categories']);
+        $this->assertCount(1, $result['documents']);
+
+        // カテゴリの検証
+        $this->assertEquals($draftCategory->id, $result['categories'][0]['id']);
+        $this->assertEquals('draftなカテゴリ', $result['categories'][0]['title']);
+        $this->assertEquals(DocumentCategoryStatus::DRAFT->value, $result['categories'][0]['status']);
+
+        // ドキュメントの検証
+        $this->assertEquals($draftDocument->id, $result['documents'][0]['id']);
+        $this->assertEquals('draftなドキュメント', $result['documents'][0]['title']);
+        $this->assertEquals(DocumentStatus::DRAFT->value, $result['documents'][0]['status']);
+
     }
 }

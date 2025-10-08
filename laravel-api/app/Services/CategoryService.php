@@ -36,11 +36,16 @@ class CategoryService
         // entity_idに基づいて検索し、最新のEditStartVersionレコードを取得
         $editStartVersion = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
             ->where('target_type', EditStartVersionTargetType::CATEGORY->value)
-            ->whereIn('original_version_id', function ($query) use ($categoryEntityId) {
-                $query->select('id')
-                    ->from('category_versions')
-                    ->where('entity_id', $categoryEntityId)
-                    ->where('status', DocumentCategoryStatus::MERGED->value);
+            ->where(function ($query) use ($categoryEntityId) {
+                $query->whereIn('original_version_id', function ($subQuery) use ($categoryEntityId) {
+                    $subQuery->select('id')
+                        ->from('category_versions')
+                        ->where('entity_id', $categoryEntityId);
+                })->orWhereIn('current_version_id', function ($subQuery) use ($categoryEntityId) {
+                    $subQuery->select('id')
+                        ->from('category_versions')
+                        ->where('entity_id', $categoryEntityId);
+                });
             })
             ->orderBy('id', 'desc')
             ->first();
@@ -54,10 +59,10 @@ class CategoryService
         }
 
         
-            // 初回編集の場合：DRAFTステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
+            // 初回編集の場合：DRAFTとPUSHEDステータス（自分のユーザーブランチのもの）とMERGEDステータスを取得
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->where('status', DocumentCategoryStatus::DRAFT->value)
+                    $q1->whereIn('status', [DocumentCategoryStatus::DRAFT->value, DocumentCategoryStatus::PUSHED->value])
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentCategoryStatus::MERGED->value);
             })->orderBy('created_at', 'desc')->first();
@@ -117,7 +122,7 @@ class CategoryService
 
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->where('status', DocumentCategoryStatus::DRAFT->value)
+                    $q1->whereIn('status', [DocumentCategoryStatus::DRAFT->value, DocumentCategoryStatus::PUSHED->value])
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentCategoryStatus::MERGED->value);
             })->get();
