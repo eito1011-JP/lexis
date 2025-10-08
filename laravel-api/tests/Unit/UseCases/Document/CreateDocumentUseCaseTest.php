@@ -151,7 +151,7 @@ class CreateDocumentUseCaseTest extends TestCase
         $this->userBranchService
             ->shouldReceive('fetchOrCreateActiveBranch')
             ->once()
-            ->with($this->user, $this->organization->id, $pullRequest->id)
+            ->with($this->user, $this->organization->id)
             ->andReturn($this->userBranch->id);
 
         // Act
