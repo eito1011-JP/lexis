@@ -3,7 +3,7 @@
  */
 export interface UpdateUserBranchRequest {
   is_active: boolean;
-  user_branch_id: string;
+  user_branch_id: number;
 }
 
 /**

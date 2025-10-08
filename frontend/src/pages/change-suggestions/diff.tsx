@@ -5,11 +5,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   fetchPullRequestDetail,
   approvePullRequest,
-  startPullRequestEditSession,
   type PullRequestDetailResponse,
   type DiffData,
   type DiffFieldInfo,
 } from '@/api/pullRequestHelpers';
+import { client } from '@/api/client';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
 import { Folder } from '@/components/icon/common/Folder';
 import { markdownStyles } from '@/styles/markdownContent';
@@ -467,7 +467,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     mergeable_state: string | null;
   }>({ mergeable: null, mergeable_state: null });
   const [selectedConfirmationAction, setSelectedConfirmationAction] = useState<ConfirmationAction>(
-    'create_correction_request'
+    're_edit_proposal'
   );
 
   // フィールド情報を取得する関数
@@ -576,25 +576,23 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
     if (!id) return;
 
     switch (selectedConfirmationAction) {
-      case 'create_correction_request':
-        // 修正リクエスト作成画面に遷移
-        window.location.href = `/change-suggestions/${id}/fix-request`;
-        break;
       case 're_edit_proposal':
         try {
-          // プルリクエスト編集セッションを開始
-          const sessionResponse = await startPullRequestEditSession(id);
-
-          // セッション情報をローカルストレージに保存
-          localStorage.setItem('pullRequestEditToken', sessionResponse.token);
+          // プルリクエストデータからユーザーブランチIDを取得
+            await client.user_branches._userBranchId(pullRequestData.user_branch_id).$put({
+              body: {
+                is_active: true,
+                user_branch_id: pullRequestData.user_branch_id
+              }
+            });
 
           // 変更提案の再編集画面に遷移
           navigate(
             `/documents`
           );
         } catch (error) {
-          console.error('編集セッション開始エラー:', error);
-          setError('編集セッションの開始に失敗しました');
+          console.error('ユーザーブランチ更新エラー:', error);
+          setError('ユーザーブランチの更新に失敗しました');
         }
         break;
       case 'approve_changes':

@@ -98,6 +98,8 @@ class ShowPullRequestUseCase
 
         return [
             ...$diffResult,
+            'id' => $pullRequest->id,
+            'user_branch_id' => $pullRequest->userBranch->id,
             'title' => $pullRequest->title,
             'description' => $pullRequest->description,
             'status' => $pullRequest->status,

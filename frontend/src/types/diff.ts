@@ -39,15 +39,10 @@ export const TABS = [
 
 // 確認アクションの型定義
 export type ConfirmationAction =
-  | 'create_correction_request'
   | 're_edit_proposal'
   | 'approve_changes';
 
 export const CONFIRMATION_ACTIONS = [
-  {
-    value: 'create_correction_request' as ConfirmationAction,
-    label: '修正リクエストを作成',
-  },
   {
     value: 're_edit_proposal' as ConfirmationAction,
     label: '再編集する',

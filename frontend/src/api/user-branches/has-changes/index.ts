@@ -3,7 +3,7 @@
  */
 export interface HasUserChangesResponse {
   has_user_changes: boolean;
-  user_branch_id?: string;
+  user_branch_id?: number;
 }
 
 /**

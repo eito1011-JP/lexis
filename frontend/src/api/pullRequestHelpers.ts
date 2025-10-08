@@ -102,10 +102,13 @@ export interface DiffData {
 // プルリクエスト詳細レスポンスの型定義
 export interface PullRequestDetailResponse {
   diff: DiffData[];
+  id: number;
+  user_branch_id: number;
   title: string;
   description: string;
   status: 'opened' | 'merged' | 'closed' | 'conflict';
   author_nickname: string | null;
+  author_email: string;
   reviewers: Reviewer[];
   created_at: string;
   activity_logs: ActivityLog[];
@@ -195,31 +198,6 @@ export const createActivityLogOnPullRequest = async (pullRequestId: string): Pro
   } catch (error: any) {
     console.error('編集終了記録エラー:', error);
     throw new Error('編集終了の記録に失敗しました');
-  }
-};
-
-// プルリクエスト編集セッション関連の型定義
-export interface StartEditSessionResponse {
-  token: string;
-  session_id: number;
-}
-
-/**
- * プルリクエスト編集セッションを開始する
- */
-export const startPullRequestEditSession = async (
-  pullRequestId: string | number
-): Promise<StartEditSessionResponse> => {
-  try {
-    const response = await client.pull_request_edit_sessions.$post({
-      body: {
-        pull_request_id: pullRequestId,
-      },
-    });
-    return response;
-  } catch (error: any) {
-    console.error('プルリクエスト編集セッション開始エラー:', error);
-    throw new Error('プルリクエスト編集セッションの開始に失敗しました');
   }
 };
 
