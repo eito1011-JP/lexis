@@ -22,7 +22,7 @@ class FetchCategoriesUseCase
     public function execute(FetchCategoriesDto $dto, User $user, UserBranchService $userBranchService): Collection
     {
         // ユーザーのアクティブブランチを取得
-        $activeUserBranch = $userBranchService->findActiveUserBranch($user->id, $user->organizationMember->organization_id, $user->id);
+        $activeUserBranch = $userBranchService->hasUserActiveBranchSession($user, $user->organizationMember->organization_id);
 
         if (! $activeUserBranch) {
             // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得
