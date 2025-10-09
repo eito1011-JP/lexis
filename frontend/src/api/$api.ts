@@ -411,16 +411,16 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
     },
     user_branches: {
       /**
-       * PUT /api/user-branches/:userBranchId
+       * DELETE /api/user-branches/:userBranchId
        */
       _userBranchId: (val1: number) => {
         const prefix1 = `${PATH24}/${val1}`;
 
         return {
-          put: (option: { body: Methods_vxa6jd['put']['reqBody'], config?: T | undefined }) =>
-            fetch<Methods_vxa6jd['put']['resBody']>(prefix, prefix1, PUT, option).json(),
-          $put: (option: { body: Methods_vxa6jd['put']['reqBody'], config?: T | undefined }) =>
-            fetch<Methods_vxa6jd['put']['resBody']>(prefix, prefix1, PUT, option).json().then(r => r.body),
+          delete: (option?: { config?: T | undefined } | undefined) =>
+            fetch<Methods_vxa6jd['delete']['resBody']>(prefix, prefix1, DELETE, option).json(),
+          $delete: (option?: { config?: T | undefined } | undefined) =>
+            fetch<Methods_vxa6jd['delete']['resBody']>(prefix, prefix1, DELETE, option).json().then(r => r.body),
           $path: () => `${prefix}${prefix1}`,
         };
       },

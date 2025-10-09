@@ -17,12 +17,14 @@ use App\Models\OrganizationMember;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Models\UserBranchSession;
 use App\Services\CategoryService;
 use App\Services\DocumentService;
 use App\UseCases\Explorer\FetchNodesUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
+use App\Services\UserBranchService;
 
 class FetchNodesUseCaseTest extends TestCase
 {
@@ -39,8 +41,9 @@ class FetchNodesUseCaseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $categoryService = new CategoryService();
-        $documentService = new DocumentService($categoryService);
+        $userBranchService = new UserBranchService();
+        $categoryService = new CategoryService($userBranchService);
+        $documentService = new DocumentService($categoryService, $userBranchService);
         $this->useCase = new FetchNodesUseCase(
             $categoryService,
             $documentService
@@ -57,9 +60,8 @@ class FetchNodesUseCaseTest extends TestCase
         ]);
 
         // アクティブなユーザーブランチを作成
-        $this->userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $this->userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
     }
@@ -350,8 +352,8 @@ class FetchNodesUseCaseTest extends TestCase
             'current_version_id' => $parentCategory->id,
         ]);
 
-        // アクティブなユーザーブランチを非アクティブにする
-        $this->userBranch->update(['is_active' => false]);
+        // アクティブなユーザーブランチのセッションを削除（非アクティブにする）
+        UserBranchSession::where('user_branch_id', $this->userBranch->id)->delete();
 
         $dto = new FetchNodesDto(
             categoryEntityId: $parentCategoryEntity->id
@@ -751,9 +753,8 @@ class FetchNodesUseCaseTest extends TestCase
 
         // 別のユーザーとブランチを作成
         $otherUser = User::factory()->create();
-        $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
-            'is_active' => true,
+        $otherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $otherUser->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -875,8 +876,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         // 別のユーザーブランチを作成（非アクティブ）
         $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
-            'is_active' => false,
+            'creator_id' => $otherUser->id,
             'organization_id' => $this->organization->id,
         ]);
         $parentCategoryEntity = CategoryEntity::factory()->create([
@@ -1125,8 +1125,7 @@ class FetchNodesUseCaseTest extends TestCase
 
         // mergedなカテゴリ(取得される)
         $previousUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => false,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
         $mergedCategoryEntity = CategoryEntity::factory()->create([

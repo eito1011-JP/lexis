@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\CategoryService;
 use App\Services\DocumentService;
+use App\Services\UserBranchService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use PHPUnit\Framework\Attributes\Test;
@@ -35,12 +36,14 @@ class DocumentServiceTest extends TestCase
 
     private DocumentEntity $documentEntity;
 
+    private UserBranchService $userBranchService;
+
     protected function setUp(): void
     {
         parent::setUp();
-
-        $CategoryService = $this->createMock(CategoryService::class);
-        $this->service = new DocumentService($CategoryService);
+        $this->userBranchService = new UserBranchService();
+        $CategoryService = new CategoryService($this->userBranchService);
+        $this->service = new DocumentService($CategoryService, $this->userBranchService);
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
@@ -51,10 +54,9 @@ class DocumentServiceTest extends TestCase
             'joined_at' => now(),
         ]);
 
-        $this->activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $this->activeUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $this->documentEntity = DocumentEntity::factory()->create([
@@ -70,9 +72,8 @@ class DocumentServiceTest extends TestCase
         $this->activeUserBranch->delete();
 
         $previousUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
         ]);
 
         // mergedは所得される
@@ -258,10 +259,9 @@ class DocumentServiceTest extends TestCase
     public function 他のユーザーブランチの_draftは取得されない(): void
     {
         // Arrange
-        $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => User::factory()->create()->id,
+        $otherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => User::factory()->create()->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $mergedDocument = DocumentVersion::factory()->create([
@@ -365,7 +365,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new \Illuminate\Database\Eloquent\Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -421,7 +421,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new \Illuminate\Database\Eloquent\Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -497,7 +497,7 @@ class DocumentServiceTest extends TestCase
             return new Collection();
         });
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -530,7 +530,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -609,7 +609,7 @@ class DocumentServiceTest extends TestCase
                 return new Collection();
             });
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -677,7 +677,7 @@ class DocumentServiceTest extends TestCase
                 return new Collection();
             });
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -737,7 +737,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -760,10 +760,9 @@ class DocumentServiceTest extends TestCase
     {
         // Arrange: 他ユーザーブランチの DRAFT/PUSHED が子孫にある
         $otherUser = User::factory()->create();
-        $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
+        $otherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $otherUser->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $categoryEntity = CategoryEntity::factory()->create([
@@ -799,7 +798,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -825,7 +824,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -876,7 +875,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -929,7 +928,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -951,9 +950,8 @@ class DocumentServiceTest extends TestCase
 
         $otherUser = User::factory()->create();
         $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
+            'creator_id' => $otherUser->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
         ]);
         $firstMergedDocument = DocumentVersion::factory()->create([
             'entity_id' => $this->documentEntity->id,
@@ -989,10 +987,9 @@ class DocumentServiceTest extends TestCase
             'current_version_id' => $secondMergedDocument->id,
         ]);
 
-        $activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $activeUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         // ドラフトドキュメントを作成（2つ目のマージ済みドキュメントの編集版）

@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\OrganizationController;
 use App\Http\Controllers\Api\PullRequestController;
 use App\Http\Controllers\Api\PullRequestReviewerController;
 use App\Http\Controllers\Api\UserBranchController;
+use App\Http\Controllers\Api\UserBranchSessionController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -103,8 +104,9 @@ Route::middleware('auth:api')->group(function () {
     Route::resource('category-entities', CategoryEntityController::class);
 
     // ユーザーブランチ関連
-    Route::resource('user-branches', UserBranchController::class, ['only' => ['destroy', 'update']]);
+    Route::resource('user-branches', UserBranchController::class, ['only' => ['destroy']]);
     Route::prefix('user-branches')->group(function () {
+        Route::delete('/{user_branch}/session', [UserBranchSessionController::class, 'destroy']);
         Route::get('/has-changes', [UserBranchController::class, 'hasUserChanges']);
         Route::get('/diff', [UserBranchController::class, 'fetchDiff']);
     });

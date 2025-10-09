@@ -79,7 +79,7 @@ class UpdateDocumentUseCaseTest extends TestCase
 
         // UserBranchの作成
         $this->userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 

@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Collection;
 
 class CategoryService
 {
+    public function __construct(
+        private UserBranchService $userBranchService
+    ) {}
 
     /**
      * 作業コンテキストに応じて適切なカテゴリを取得
@@ -21,7 +24,8 @@ class CategoryService
         User $user,
     ): ?CategoryVersion {
         // ユーザーのアクティブブランチを取得
-        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+        $organizationId = $user->organizationMember->organization_id;
+        $activeUserBranch = $this->userBranchService->hasUserActiveBranchSession($user, $organizationId);
 
         $baseQuery = CategoryVersion::with(['parent.parent.parent.parent.parent.parent.parent']) // 7階層まで親カテゴリを読み込み
             ->where('entity_id', $categoryEntityId)

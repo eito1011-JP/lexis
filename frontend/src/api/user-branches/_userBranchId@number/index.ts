@@ -1,25 +1,14 @@
 /**
- * ユーザーブランチ更新のリクエスト型
+ * ユーザーブランチ削除のレスポンス型
  */
-export interface UpdateUserBranchRequest {
-  is_active: boolean;
-  user_branch_id: number;
-}
+export interface DestroyUserBranchResponse {}
 
 /**
- * ユーザーブランチ更新のレスポンス型
- */
-export interface UpdateUserBranchResponse {
-  message: string;
-}
-
-/**
- * PUT /api/user-branches/:userBranchId
+ * DELETE /api/user-branches/:userBranchId
  */
 export type Methods = {
-  put: {
-    reqBody: UpdateUserBranchRequest;
-    resBody: UpdateUserBranchResponse;
+  delete: {
+    resBody: DestroyUserBranchResponse;
   };
 };
 

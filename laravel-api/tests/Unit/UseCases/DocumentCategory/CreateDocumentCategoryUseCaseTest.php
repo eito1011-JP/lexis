@@ -65,7 +65,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         // Arrange
         // 実際のUserBranchレコードを作成
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -116,7 +116,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         // Arrange
         // 実際のUserBranchレコードを作成
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -214,7 +214,7 @@ class CreateDocumentCategoryUseCaseTest extends TestCase
         // Arrange
         // PullRequestとUserBranchを作成
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 

@@ -130,17 +130,15 @@ class MergePullRequestUseCaseTest extends TestCase
 
         // ユーザーブランチの作成
         $this->userBranch = UserBranch::factory()->create([
-            'user_id' => $this->adminUser->id,
+            'creator_id' => $this->adminUser->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
             'branch_name' => 'test-branch',
         ]);
 
         // プルリクエスト作成者のユーザーブランチ
         $this->authorUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->pullRequestAuthor->id,
+            'creator_id' => $this->pullRequestAuthor->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
             'branch_name' => 'author-test-branch',
         ]);
 

@@ -56,27 +56,27 @@ class User extends Authenticatable
     }
 
     /**
-     * セッションとのリレーション
+     * ユーザーブランチセッションとのリレーション
      */
-    public function sessions()
+    public function userBranchSessions()
     {
-        return $this->hasMany(Session::class);
+        return $this->hasMany(UserBranchSession::class);
     }
 
     /**
-     * ユーザーブランチとのリレーション
+     * ユーザーブランチとのリレーション（作成者として）
+     */
+    public function createdUserBranches()
+    {
+        return $this->hasMany(UserBranch::class, 'creator_id');
+    }
+
+    /**
+     * ユーザーブランチとのリレーション（セッションを通じて）
      */
     public function userBranches()
     {
-        return $this->hasMany(UserBranch::class);
-    }
-
-    /**
-     * ドキュメントバージョンとのリレーション
-     */
-    public function documentVersions()
-    {
-        return $this->hasMany(DocumentVersion::class);
+        return $this->belongsToMany(UserBranch::class, 'user_branch_sessions');
     }
 
     /**

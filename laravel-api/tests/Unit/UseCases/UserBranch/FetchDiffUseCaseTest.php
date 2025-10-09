@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\UseCases\UserBranch;
 
-use App\Consts\Flag;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\DocumentCategoryStatus;
 use App\Models\CategoryEntity;
@@ -14,7 +13,9 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
+use App\Models\UserBranchSession;
 use App\Services\DocumentDiffService;
+use App\Services\UserBranchService;
 use App\UseCases\UserBranch\FetchDiffUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -50,7 +51,8 @@ class FetchDiffUseCaseTest extends TestCase
     {
         parent::setUp();
         $this->documentDiffService = Mockery::mock(DocumentDiffService::class);
-        $this->useCase = new FetchDiffUseCase($this->documentDiffService);
+        $userBranchService = new UserBranchService();
+        $this->useCase = new FetchDiffUseCase($this->documentDiffService, $userBranchService);
 
         // 組織とユーザーを作成
         $this->organization = Organization::factory()->create();
@@ -64,15 +66,13 @@ class FetchDiffUseCaseTest extends TestCase
 
                 // 非アクティブなユーザーブランチを作成
                 $this->inactiveUserBranch = UserBranch::factory()->create([
-                    'user_id' => $this->user->id,
-                    'is_active' => false,
+                    'creator_id' => $this->user->id,
                     'organization_id' => $this->organization->id,
                 ]);
 
         // アクティブなユーザーブランチを作成
-        $this->activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $this->activeUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -2536,8 +2536,8 @@ class FetchDiffUseCaseTest extends TestCase
     #[Test]
     public function execute_throws_not_found_exception_when_active_user_branch_does_not_exist(): void
     {
-        // Arrange - アクティブなブランチを削除
-        $this->activeUserBranch->update(['is_active' => false]);
+        // Arrange - アクティブなブランチのセッションを削除
+        UserBranchSession::where('user_branch_id', $this->activeUserBranch->id)->delete();
 
         // Assert
         $this->expectException(NotFoundException::class);

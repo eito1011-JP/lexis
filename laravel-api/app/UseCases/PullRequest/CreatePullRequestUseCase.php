@@ -33,7 +33,7 @@ class CreatePullRequestUseCase
      *
      * @param  CreatePullRequestDto  $dto  プルリクエスト作成DTO
      * @param  User  $user  認証済みユーザー
-     * @return array プルリクエスト作成結果
+     * @return PullRequest プルリクエスト作成結果
      *
      * @throws \Exception
      */
@@ -46,7 +46,11 @@ class CreatePullRequestUseCase
             $this->organizationService->validateUserBelongsToOrganization($user->id, $dto->organizationId);
 
             // 2. user_branch_idがactiveか確認
-            $userBranch = $this->userBranchService->findActiveUserBranch($dto->userBranchId);
+            $userBranch = $this->userBranchService->findActiveUserBranch($dto->userBranchId, $dto->organizationId, $user->id);
+
+            if (! $userBranch) {
+                throw new NotFoundException;
+            }
 
             // 3. document_versionsをactiveなuser_branch_idで絞り込んでstatus = pushedにupdate
             $this->updateDocumentVersionStatus($dto->userBranchId);
@@ -57,9 +61,8 @@ class CreatePullRequestUseCase
             // 5. pull_requestテーブルにレコードを作成（status = opened）
             $pullRequest = $this->createPullRequest($dto, $userBranch);
 
-            // 6. user_branchを非アクティブにする
-            $userBranch->deactivate();
-            $userBranch->save();
+            // 6. ユーザーブランチセッションを削除
+            $this->userBranchService->deleteUserBranchSessions($userBranch, $user->id);
 
             // 7. レビュアーのuser_idを取得してpull_request_reviewersテーブルに一括insert
             if (! empty($dto->reviewers)) {

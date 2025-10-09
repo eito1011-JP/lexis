@@ -63,15 +63,13 @@ class DocumentDiffServiceTest extends TestCase
 
         // 非アクティブなユーザーブランチを作成
         $this->inactiveUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => false,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
         // アクティブなユーザーブランチを作成
-        $this->activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $this->activeUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 

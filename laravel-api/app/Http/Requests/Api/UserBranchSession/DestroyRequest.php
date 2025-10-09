@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Api\UserBranch;
+namespace App\Http\Requests\Api\UserBranchSession;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateUserBranchRequest extends FormRequest
+class DestroyRequest extends FormRequest
 {
     /**
      * リクエストが承認されるかを判定する
@@ -21,7 +21,6 @@ class UpdateUserBranchRequest extends FormRequest
     {
         return [
             'user_branch_id' => 'required|integer|exists:user_branches,id',
-            'is_active' => 'required|boolean',
         ];
     }
 

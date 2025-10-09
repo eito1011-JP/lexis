@@ -71,19 +71,9 @@ export default function DocumentsPage(): JSX.Element {
   };
 
   // 下書き保存のハンドラー
-  const handleDraftSave = async () => {
-    if (!userBranchId) {
-      toast.show({ message: 'ユーザーブランチIDが取得できません', type: 'error' });
-      return;
-    }
-
+  const handleSaveAsDraft = async () => {
     try {
-      await client.user_branches._userBranchId(userBranchId).$put({
-        body: {
-          is_active: false,
-          user_branch_id: userBranchId
-        }
-      });
+      await client.user_branches._userBranchId(userBranchId!).$delete();
 
       toast.show({ message: '下書きを保存しました', type: 'success' });
       
@@ -247,7 +237,7 @@ export default function DocumentsPage(): JSX.Element {
               </button>
               <button
                 className="px-4 py-2 bg-[#B1B1B1] rounded-md hover:bg-[#8A8A8A] focus:outline-none flex items-center"
-                onClick={handleDraftSave}
+                onClick={handleSaveAsDraft}
               >
                 下書き保存
               </button>

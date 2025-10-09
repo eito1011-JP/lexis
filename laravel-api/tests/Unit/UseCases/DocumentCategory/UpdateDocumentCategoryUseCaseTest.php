@@ -71,7 +71,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -242,7 +242,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -297,7 +297,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -360,7 +360,7 @@ class UpdateDocumentCategoryUseCaseTest extends TestCase
     {
         // Arrange
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 

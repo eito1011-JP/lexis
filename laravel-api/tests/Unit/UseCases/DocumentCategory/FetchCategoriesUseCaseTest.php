@@ -16,6 +16,7 @@ use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\UseCases\DocumentCategory\FetchCategoriesUseCase;
+use App\Services\UserBranchService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -31,10 +32,13 @@ class FetchCategoriesUseCaseTest extends TestCase
 
     private CategoryEntity $firstEntity;
 
+    private UserBranchService $userBranchService;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->useCase = new FetchCategoriesUseCase;
+        $this->userBranchService = new UserBranchService;
 
         // 組織とユーザーを作成
         $this->organization = Organization::factory()->create();
@@ -61,9 +65,8 @@ class FetchCategoriesUseCaseTest extends TestCase
         $dto = new FetchCategoriesDto(parentEntityId: null);
 
         $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
         ]);
 
         // 最初のエンティティに関連するマージ済みカテゴリ（表示される）
@@ -108,7 +111,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($dto, $this->user);
+        $result = $this->useCase->execute($dto, $this->user, $this->userBranchService);
 
         // Assert
         // user_branchが存在しない場合、MERGEDステータスのカテゴリのみが返される
@@ -124,9 +127,8 @@ class FetchCategoriesUseCaseTest extends TestCase
     public function test_returns_draft_and_unedited_merged_categories_when_active_user_branch_exists_without_edit_session(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -185,7 +187,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($dto, $this->user);
+        $result = $this->useCase->execute($dto, $this->user, $this->userBranchService);
 
         // Assert
         $this->assertCount(2, $result);
@@ -202,9 +204,8 @@ class FetchCategoriesUseCaseTest extends TestCase
     public function test_returns_categories_from_organization_entity(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -249,7 +250,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($dto, $this->user);
+        $result = $this->useCase->execute($dto, $this->user, $this->userBranchService);
 
         // Assert
         $this->assertCount(2, $result);
@@ -264,9 +265,8 @@ class FetchCategoriesUseCaseTest extends TestCase
     public function test_categories_are_retrieved_in_created_at_ascending_order(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -329,7 +329,7 @@ class FetchCategoriesUseCaseTest extends TestCase
             'current_version_id' => $category2->id,
         ]);
         // Act
-        $result = $this->useCase->execute($dto, $this->user);
+        $result = $this->useCase->execute($dto, $this->user, $this->userBranchService);
 
         // Assert
         $this->assertCount(3, $result);
@@ -344,9 +344,8 @@ class FetchCategoriesUseCaseTest extends TestCase
     public function test_latest_draft_category_with_user_branch(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -390,7 +389,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($dto, $this->user);
+        $result = $this->useCase->execute($dto, $this->user, $this->userBranchService);
 
         // Assert
         $this->assertCount(1, $result);
@@ -410,13 +409,11 @@ class FetchCategoriesUseCaseTest extends TestCase
     {
         // Arrange
         $previousUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => false,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -469,7 +466,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($dto, $this->user);
+        $result = $this->useCase->execute($dto, $this->user, $this->userBranchService);
 
         // Assert
         $this->assertCount(2, $result);
@@ -486,9 +483,8 @@ class FetchCategoriesUseCaseTest extends TestCase
     public function test_returns_draft_category_after_activate_user_branch(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
-            'is_active' => true,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
         ]);
 
@@ -540,7 +536,7 @@ class FetchCategoriesUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($dto, $this->user);
+        $result = $this->useCase->execute($dto, $this->user, $this->userBranchService);
 
         // Assert
         $this->assertCount(1, $result);

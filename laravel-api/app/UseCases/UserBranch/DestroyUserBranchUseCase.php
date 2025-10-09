@@ -9,6 +9,7 @@ use App\Models\CategoryEntity;
 use App\Models\CategoryVersion;
 use App\Models\DocumentEntity;
 use App\Models\DocumentVersion;
+use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +20,10 @@ use Exception;
  */
 class DestroyUserBranchUseCase
 {
+    public function __construct(
+        private UserBranchService $userBranchService
+    ) {}
+
     /**
      * ユーザーブランチを物理削除
      *
@@ -30,7 +35,13 @@ class DestroyUserBranchUseCase
     public function execute(DestroyUserBranchDto $dto): array
     {
         try {
-            $activeUserBranch = $dto->user->userBranches()->where('id', $dto->userBranchId)->active()->first();
+            // アクティブなユーザーブランチを取得
+            $organizationId = $dto->user->organizationMember->organization_id;
+            $activeUserBranch = $this->userBranchService->findActiveUserBranch(
+                $dto->userBranchId,
+                $organizationId,
+                $dto->user->id
+            );
 
             if (! $activeUserBranch) {
                 throw new NotFoundException();
@@ -72,4 +83,3 @@ class DestroyUserBranchUseCase
         }
     }
 }
-

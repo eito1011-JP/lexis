@@ -70,9 +70,8 @@ class UpdatePullRequestUseCaseTest extends TestCase
 
         // ユーザーブランチの作成
         $this->userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
             'branch_name' => 'test-branch',
         ]);
 
@@ -379,9 +378,8 @@ class UpdatePullRequestUseCaseTest extends TestCase
         // 別の組織のプルリクエストを作成
         $anotherOrganization = Organization::factory()->create();
         $anotherUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $anotherOrganization->id,
-            'is_active' => false,
             'branch_name' => 'another-branch',
         ]);
 

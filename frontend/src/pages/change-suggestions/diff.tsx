@@ -579,12 +579,7 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
       case 're_edit_proposal':
         try {
           // プルリクエストデータからユーザーブランチIDを取得
-            await client.user_branches._userBranchId(pullRequestData.user_branch_id).$put({
-              body: {
-                is_active: true,
-                user_branch_id: pullRequestData.user_branch_id
-              }
-            });
+            await client.user_branches._userBranchId(pullRequestData.user_branch_id).$delete();
 
           // 変更提案の再編集画面に遷移
           navigate(

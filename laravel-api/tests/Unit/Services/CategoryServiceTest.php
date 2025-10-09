@@ -12,6 +12,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\CategoryService;
+use App\Services\UserBranchService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -31,13 +32,16 @@ class CategoryServiceTest extends TestCase
 
     private CategoryVersion $mergedCategory;
 
+    private UserBranchService $userBranchService;
+
     private EditStartVersion $mergedCategoryEditStartVersion;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->service = new CategoryService;
+        $this->userBranchService = new UserBranchService();
+        $this->service = new CategoryService($this->userBranchService);
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
@@ -184,10 +188,9 @@ class CategoryServiceTest extends TestCase
     public function test_get_category_by_work_context_with_active_user_branch_returns_draft_category(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $draftCategory = CategoryVersion::factory()->create([
@@ -231,10 +234,9 @@ class CategoryServiceTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
+        $otherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $otherUser->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $draftCategory = CategoryVersion::factory()->create([
@@ -272,10 +274,9 @@ class CategoryServiceTest extends TestCase
     public function test_get_category_by_work_context_with_edit_start_version_returns_current_version(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $currentCategory = CategoryVersion::factory()->create([
@@ -313,10 +314,9 @@ class CategoryServiceTest extends TestCase
     public function test_get_category_by_work_context_with_edit_start_version_returns_descendant_current_version(): void
     {
         // Arrange
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $parentCategory = CategoryVersion::factory()->create([
@@ -378,15 +378,13 @@ class CategoryServiceTest extends TestCase
     {
         // Arrange
         $previousUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
         ]);
         // アクティブなユーザーブランチを作成
-        $userBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $userBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         // 同じentity_idで2つ目のマージ済みカテゴリを作成（同じカテゴリの別バージョン）

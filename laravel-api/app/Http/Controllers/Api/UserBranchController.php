@@ -4,14 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Dto\UseCase\UserBranch\DestroyUserBranchDto;
-use App\Dto\UseCase\UserBranch\UpdateUserBranchDto;
 use App\Http\Requests\Api\UserBranch\DestroyUserBranchRequest;
 use App\Http\Requests\Api\UserBranch\FetchDiffRequest;
-use App\Http\Requests\Api\UserBranch\UpdateUserBranchRequest;
 use App\Services\DocumentDiffService;
+use App\Services\UserBranchService;
 use App\UseCases\UserBranch\DestroyUserBranchUseCase;
 use App\UseCases\UserBranch\FetchDiffUseCase;
-use App\UseCases\UserBranch\UpdateUserBranchUseCase;
 use Exception;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Http\JsonResponse;
@@ -28,51 +26,51 @@ class UserBranchController extends ApiBaseController
 
     protected DestroyUserBranchUseCase $destroyUserBranchUseCase;
 
-    protected UpdateUserBranchUseCase $updateUserBranchUseCase;
+    protected UserBranchService $userBranchService;
 
     public function __construct(
         DocumentDiffService $documentDiffService,
         FetchDiffUseCase $fetchDiffUseCase,
         DestroyUserBranchUseCase $destroyUserBranchUseCase,
-        UpdateUserBranchUseCase $updateUserBranchUseCase
+        UserBranchService $userBranchService
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->fetchDiffUseCase = $fetchDiffUseCase;
         $this->destroyUserBranchUseCase = $destroyUserBranchUseCase;
-        $this->updateUserBranchUseCase = $updateUserBranchUseCase;
+        $this->userBranchService = $userBranchService;
     }
 
     /**
      * Git差分チェック
      */
-    public function hasUserChanges(Request $request): JsonResponse
+    public function hasUserChanges(): JsonResponse
     {
         try {
             // Cookieセッションからユーザー情報を取得
             $loginUser = $this->user();
 
             if (! $loginUser) {
-                return response()->json([
-                    'error' => '認証されていません',
-                ], 401);
+                return $this->sendError(
+                    ErrorType::CODE_AUTHENTICATION_FAILED,
+                    __('errors.MSG_AUTHENTICATION_FAILED'),
+                    ErrorType::STATUS_AUTHENTICATION_FAILED,
+                );
             }
 
-            // アクティブなユーザーブランチを取得
-            $activeBranch = $loginUser->userBranches()->active()->first();
-
-            $hasUserChanges = ! is_null($activeBranch);
-            $userBranchId = $hasUserChanges ? $activeBranch->id : null;
+            // アクティブなユーザーブランチセッションを取得
+            $activeSession = $this->userBranchService->hasUserActiveBranchSession($loginUser, $loginUser->organizationMember->organization_id);
 
             return response()->json([
-                'has_user_changes' => $hasUserChanges,
-                'user_branch_id' => $userBranchId,
+                'has_user_changes' => $activeSession ? true : false,
+                'user_branch_id' => $activeSession ? $activeSession->id : null,
             ]);
-        } catch (\Exception $e) {
-            Log::error('Error checking document versions: '.$e->getMessage());
-
-            return response()->json([
-                'error' => 'Internal server error',
-            ], 500);
+        } catch (Exception) {
+            return $this->sendError(
+                ErrorType::CODE_INTERNAL_ERROR,
+                __('errors.MSG_INTERNAL_ERROR'),
+                ErrorType::STATUS_INTERNAL_ERROR,
+                LogLevel::ERROR,
+            );
         }
     }
 
@@ -107,48 +105,6 @@ class UserBranchController extends ApiBaseController
         }
     }
 
-    /**
-     * ユーザーブランチを更新
-     */
-    public function update(UpdateUserBranchRequest $request): JsonResponse
-    {
-        try {
-            $user = $this->user();
-
-            if (! $user) {
-                return $this->sendError(
-                    ErrorType::CODE_AUTHENTICATION_FAILED,
-                    __('errors.MSG_AUTHENTICATION_FAILED'),
-                    ErrorType::STATUS_AUTHENTICATION_FAILED,
-                );
-            }
-
-            // UseCaseを実行
-            $validatedData = $request->validated();
-            $dto = new UpdateUserBranchDto(
-                $validatedData['user_branch_id'],
-                $validatedData['is_active'],
-                $user
-            );
-            $this->updateUserBranchUseCase->execute($dto);
-
-            return response()->json();
-
-        } catch (NotFoundException) {
-            return $this->sendError(
-                ErrorType::CODE_NOT_FOUND,
-                __('errors.MSG_NOT_FOUND'),
-                ErrorType::STATUS_NOT_FOUND,
-            );
-        } catch (Exception) {
-            return $this->sendError(
-                ErrorType::CODE_INTERNAL_ERROR,
-                __('errors.MSG_INTERNAL_ERROR'),
-                ErrorType::STATUS_INTERNAL_ERROR,
-                LogLevel::ERROR,
-            );
-        }
-    }
     
     /**
      * ユーザーブランチを削除
@@ -188,57 +144,6 @@ class UserBranchController extends ApiBaseController
                 ErrorType::STATUS_INTERNAL_ERROR,
                 LogLevel::ERROR,
             );
-        }
-    }
-
-    /**
-     * ブランチスナップショット初期化
-     */
-    public static function initBranchSnapshot(int $userId, string $email): void
-    {
-        try {
-            // 最新のコミットハッシュを取得（GitHub APIを使用）
-            $latestCommit = self::findLatestCommit();
-
-            $timestamp = date('Ymd');
-            $branchName = "feature/{$email}_{$timestamp}";
-
-            // user_branchesテーブルに新しいブランチを挿入
-            DB::table('user_branches')->insert([
-                'user_id' => $userId,
-                'branch_name' => $branchName,
-                'snapshot_commit' => $latestCommit,
-                'is_active' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('ブランチスナップショット初期化エラー: '.$e->getMessage());
-
-            throw new \Exception('ブランチの作成に失敗しました');
-        }
-    }
-
-    /**
-     * 最新のコミットハッシュを取得
-     */
-    private static function findLatestCommit(): string
-    {
-        try {
-            // GitHub APIを使用して最新のコミットハッシュを取得
-            // 実際の実装ではGitHub APIクライアントを使用
-            $githubToken = config('services.github.token');
-            $githubOwner = config('services.github.owner');
-            $githubRepo = config('services.github.repo');
-
-            // 簡易的な実装（実際にはGitHub APIを使用）
-            return 'latest_commit_hash';
-
-        } catch (\Exception $e) {
-            Log::error('GitHub APIエラー: '.$e->getMessage());
-
-            throw new \Exception('最新のコミット取得に失敗しました');
         }
     }
 }
