@@ -64,19 +64,19 @@ class User extends Authenticatable
     }
 
     /**
-     * ユーザーブランチとのリレーション
+     * ユーザーブランチセッションとのリレーション
      */
-    public function userBranches()
+    public function userBranchSessions()
     {
-        return $this->hasMany(UserBranch::class);
+        return $this->hasMany(UserBranchSession::class);
     }
 
     /**
-     * ドキュメントバージョンとのリレーション
+     * ユーザーブランチとのリレーション（作成者として）
      */
-    public function documentVersions()
+    public function createdUserBranches()
     {
-        return $this->hasMany(DocumentVersion::class);
+        return $this->hasMany(UserBranch::class, 'creator_id');
     }
 
     /**

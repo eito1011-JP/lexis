@@ -13,24 +13,31 @@ class UserBranch extends Model
     protected $table = 'user_branches';
 
     protected $fillable = [
-        'user_id',
+        'creator_id',
         'branch_name',
-        'is_active',
         'organization_id',
         'created_at',
         'updated_at',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        // is_activeカラムは削除されたため、castsからも削除
     ];
 
     /**
-     * アクティブなブランチのスコープ
+     * ユーザーブランチセッションとのリレーション
      */
-    public function scopeActive($query)
+    public function sessions()
     {
-        return $query->where('is_active', Flag::TRUE);
+        return $this->hasMany(UserBranchSession::class);
+    }
+
+    /**
+     * アクティブなセッションとのリレーション（現在のセッション）
+     */
+    public function activeSession()
+    {
+        return $this->hasOne(UserBranchSession::class);
     }
 
     /**
@@ -42,11 +49,11 @@ class UserBranch extends Model
     }
 
     /**
-     * ユーザーとのリレーション
+     * ユーザーとのリレーション（作成者）
      */
-    public function user()
+    public function creator()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'creator_id');
     }
 
     /**
@@ -87,15 +94,5 @@ class UserBranch extends Model
     public function pullRequests()
     {
         return $this->hasMany(PullRequest::class);
-    }
-
-    /**
-     * ユーザーブランチを非アクティブにする
-     *
-     * @param  UserBranch  $this  アクティブなユーザーブランチ
-     */
-    public function deactivate()
-    {
-        $this->is_active = Flag::FALSE;
     }
 }
