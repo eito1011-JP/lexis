@@ -85,4 +85,18 @@ class UserBranchService extends BaseService
             })
             ->first();
     }
+
+    /**
+     * 指定されたユーザーブランチのユーザーブランチセッションを削除
+     *
+     * @param  UserBranch  $userBranch  ユーザーブランチ
+     * @param  int  $userId  ユーザーID
+     * @return void
+     */
+    public function deleteUserBranchSessions(UserBranch $userBranch, int $userId): void
+    {
+        UserBranchSession::where('user_branch_id', $userBranch->id)
+            ->where('user_id', $userId)
+            ->delete();
+    }
 }

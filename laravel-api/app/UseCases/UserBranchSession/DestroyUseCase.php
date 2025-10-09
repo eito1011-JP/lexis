@@ -4,9 +4,8 @@ namespace App\UseCases\UserBranchSession;
 
 use App\Dto\UseCase\UserBranchSession\DestroyDto;
 use App\Models\UserBranch;
-use App\Models\UserBranchSession;
+use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
@@ -15,6 +14,14 @@ use Exception;
  */
 class DestroyUseCase
 {
+    /**
+     * @param UserBranchService $userBranchService
+     */
+    public function __construct(
+        private UserBranchService $userBranchService
+    ) {
+    }
+
     /**
      * ユーザーブランチセッションを削除
      *
@@ -41,9 +48,7 @@ class DestroyUseCase
                 throw new NotFoundException();
             }
 
-            UserBranchSession::where('user_branch_id', $userBranch->id)
-                ->where('user_id', $dto->user->id)
-                ->delete();
+            $this->userBranchService->deleteUserBranchSessions($userBranch, $dto->user->id);
         } catch (Exception $e) {
             Log::error($e);
             throw $e;
