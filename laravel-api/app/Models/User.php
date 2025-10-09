@@ -56,14 +56,6 @@ class User extends Authenticatable
     }
 
     /**
-     * セッションとのリレーション
-     */
-    public function sessions()
-    {
-        return $this->hasMany(Session::class);
-    }
-
-    /**
      * ユーザーブランチセッションとのリレーション
      */
     public function userBranchSessions()
