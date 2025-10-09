@@ -9,11 +9,13 @@ use App\Models\EditStartVersion;
 use App\Models\User;
 use App\Models\UserBranch;
 use Illuminate\Database\Eloquent\Collection;
+use App\Services\UserBranchService;
 
 class DocumentService
 {
     public function __construct(
-        private CategoryService $CategoryService
+        private CategoryService $CategoryService,
+        private UserBranchService $userBranchService
     ) {}
 
     /**
@@ -27,8 +29,9 @@ class DocumentService
         int $categoryEntityId,
         User $user,
     ): Collection {
-        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+        // ユーザーのアクティブブランチを取得
         $organizationId = $user->organizationMember->organization_id;
+        $activeUserBranch = $this->userBranchService->hasUserActiveBranchSession($user, $organizationId);
         $documents = new Collection();
 
         // 直下のドキュメントを取得
@@ -67,7 +70,8 @@ class DocumentService
         User $user,
     ): ?DocumentVersion {
         // ユーザーのアクティブブランチを取得
-        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+        $organizationId = $user->organizationMember->organization_id;
+        $activeUserBranch = $this->userBranchService->hasUserActiveBranchSession($user, $organizationId);
 
         $baseQuery = DocumentVersion::where('entity_id', $documentEntityId)
             ->where('organization_id', $user->organizationMember->organization_id);

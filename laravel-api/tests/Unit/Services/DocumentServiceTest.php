@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\CategoryService;
 use App\Services\DocumentService;
+use App\Services\UserBranchService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use PHPUnit\Framework\Attributes\Test;
@@ -35,12 +36,14 @@ class DocumentServiceTest extends TestCase
 
     private DocumentEntity $documentEntity;
 
+    private UserBranchService $userBranchService;
+
     protected function setUp(): void
     {
         parent::setUp();
-
-        $CategoryService = $this->createMock(CategoryService::class);
-        $this->service = new DocumentService($CategoryService);
+        $this->userBranchService = new UserBranchService();
+        $CategoryService = new CategoryService($this->userBranchService);
+        $this->service = new DocumentService($CategoryService, $this->userBranchService);
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
@@ -362,7 +365,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new \Illuminate\Database\Eloquent\Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -418,7 +421,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new \Illuminate\Database\Eloquent\Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -494,7 +497,7 @@ class DocumentServiceTest extends TestCase
             return new Collection();
         });
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -527,7 +530,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -606,7 +609,7 @@ class DocumentServiceTest extends TestCase
                 return new Collection();
             });
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -674,7 +677,7 @@ class DocumentServiceTest extends TestCase
                 return new Collection();
             });
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -734,7 +737,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -795,7 +798,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -821,7 +824,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -872,7 +875,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
@@ -925,7 +928,7 @@ class DocumentServiceTest extends TestCase
         $categoryServiceMock->method('getChildCategoriesByWorkContext')
             ->willReturn(new Collection());
 
-        $service = new DocumentService($categoryServiceMock);
+        $service = new DocumentService($categoryServiceMock, $this->userBranchService);
 
         // Act
         $result = $service->getDescendantDocumentsByWorkContext(
