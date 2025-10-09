@@ -61,7 +61,7 @@ class CategoryEntityController extends ApiBaseController
 
             // DTOを作成してUseCaseを実行
             $dto = FetchCategoriesDto::fromRequest($request->validated());
-            $categories = $useCase->execute($dto, $user);
+            $categories = $useCase->execute($dto, $user, $this->userBranchService);
 
             return response()->json([
                 'categories' => $categories,

@@ -8,7 +8,7 @@ use App\Enums\EditStartVersionTargetType;
 use App\Models\CategoryVersion;
 use App\Models\EditStartVersion;
 use App\Models\User;
-use App\Models\UserBranch;
+use App\Services\UserBranchService;
 use Illuminate\Database\Eloquent\Collection;
 
 class FetchCategoriesUseCase
@@ -19,10 +19,10 @@ class FetchCategoriesUseCase
      * @param  FetchCategoriesDto  $dto  リクエストDTO
      * @param  User  $user  認証ユーザー
      */
-    public function execute(FetchCategoriesDto $dto, User $user): Collection
+    public function execute(FetchCategoriesDto $dto, User $user, UserBranchService $userBranchService): Collection
     {
         // ユーザーのアクティブブランチを取得
-        $activeUserBranch = UserBranch::where('user_id', $user->id)->active()->first();
+        $activeUserBranch = $userBranchService->findActiveUserBranch($user->id, $user->organizationMember->organization_id, $user->id);
 
         if (! $activeUserBranch) {
             // アクティブなユーザーブランチがない場合：MERGEDステータスのみ取得

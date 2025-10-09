@@ -51,10 +51,9 @@ class DocumentServiceTest extends TestCase
             'joined_at' => now(),
         ]);
 
-        $this->activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $this->activeUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $this->documentEntity = DocumentEntity::factory()->create([
@@ -70,9 +69,8 @@ class DocumentServiceTest extends TestCase
         $this->activeUserBranch->delete();
 
         $previousUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
         ]);
 
         // mergedは所得される
@@ -258,10 +256,9 @@ class DocumentServiceTest extends TestCase
     public function 他のユーザーブランチの_draftは取得されない(): void
     {
         // Arrange
-        $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => User::factory()->create()->id,
+        $otherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => User::factory()->create()->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $mergedDocument = DocumentVersion::factory()->create([
@@ -760,10 +757,9 @@ class DocumentServiceTest extends TestCase
     {
         // Arrange: 他ユーザーブランチの DRAFT/PUSHED が子孫にある
         $otherUser = User::factory()->create();
-        $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
+        $otherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $otherUser->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         $categoryEntity = CategoryEntity::factory()->create([
@@ -951,9 +947,8 @@ class DocumentServiceTest extends TestCase
 
         $otherUser = User::factory()->create();
         $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
+            'creator_id' => $otherUser->id,
             'organization_id' => $this->organization->id,
-            'is_active' => false,
         ]);
         $firstMergedDocument = DocumentVersion::factory()->create([
             'entity_id' => $this->documentEntity->id,
@@ -989,10 +984,9 @@ class DocumentServiceTest extends TestCase
             'current_version_id' => $secondMergedDocument->id,
         ]);
 
-        $activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $activeUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => true,
         ]);
 
         // ドラフトドキュメントを作成（2つ目のマージ済みドキュメントの編集版）

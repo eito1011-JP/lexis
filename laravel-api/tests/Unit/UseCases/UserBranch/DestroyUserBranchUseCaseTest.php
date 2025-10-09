@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\UseCases\UserBranch;
 
-use App\Consts\Flag;
 use App\Dto\UseCase\UserBranch\DestroyUserBranchDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
@@ -50,10 +49,9 @@ class DestroyUserBranchUseCaseTest extends TestCase
         ]);
 
         // アクティブなユーザーブランチを作成
-        $this->activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $this->activeUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => Flag::TRUE,
         ]);
     }
 
@@ -94,9 +92,8 @@ class DestroyUserBranchUseCaseTest extends TestCase
     {
         // Arrange
         $inactiveUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => Flag::FALSE,
         ]);
 
         $dto = new DestroyUserBranchDto(
@@ -111,7 +108,6 @@ class DestroyUserBranchUseCaseTest extends TestCase
         // 非アクティブなブランチは削除されていないことを確認
         $this->assertDatabaseHas('user_branches', [
             'id' => $inactiveUserBranch->id,
-            'is_active' => Flag::FALSE,
         ]);
     }
 
@@ -125,10 +121,9 @@ class DestroyUserBranchUseCaseTest extends TestCase
             'organization_id' => $this->organization->id,
         ]);
 
-        $anotherUserBranch = UserBranch::factory()->create([
-            'user_id' => $anotherUser->id,
+        $anotherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $anotherUser->id,
             'organization_id' => $this->organization->id,
-            'is_active' => Flag::TRUE,
         ]);
 
         $dto = new DestroyUserBranchDto(
@@ -143,7 +138,7 @@ class DestroyUserBranchUseCaseTest extends TestCase
         // 他のユーザーのブランチは削除されていないことを確認
         $this->assertDatabaseHas('user_branches', [
             'id' => $anotherUserBranch->id,
-            'user_id' => $anotherUser->id,
+            'creator_id' => $anotherUser->id,
         ]);
     }
 
@@ -151,10 +146,9 @@ class DestroyUserBranchUseCaseTest extends TestCase
     public function execute_deletes_only_specified_user_branch_when_multiple_active_branches_exist(): void
     {
         // Arrange
-        $secondActiveUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+        $secondActiveUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => Flag::TRUE,
         ]);
 
         $dto = new DestroyUserBranchDto(
@@ -174,7 +168,6 @@ class DestroyUserBranchUseCaseTest extends TestCase
         // 2つ目のブランチは削除されていないことを確認
         $this->assertDatabaseHas('user_branches', [
             'id' => $secondActiveUserBranch->id,
-            'is_active' => Flag::TRUE,
         ]);
     }
 
@@ -197,7 +190,7 @@ class DestroyUserBranchUseCaseTest extends TestCase
         ]);
 
         // 削除カウントの確認
-        $remainingBranches = UserBranch::where('user_id', $this->user->id)->count();
+        $remainingBranches = UserBranch::where('creator_id', $this->user->id)->count();
         $this->assertEquals(0, $remainingBranches);
     }
 
@@ -493,10 +486,9 @@ class DestroyUserBranchUseCaseTest extends TestCase
             'organization_id' => $otherOrganization->id,
         ]);
 
-        $otherUserBranch = UserBranch::factory()->create([
-            'user_id' => $otherUser->id,
+        $otherUserBranch = UserBranch::factory()->withActiveSession()->create([
+            'creator_id' => $otherUser->id,
             'organization_id' => $otherOrganization->id,
-            'is_active' => Flag::TRUE,
         ]);
 
         $otherDocumentEntity = DocumentEntity::factory()->create([
