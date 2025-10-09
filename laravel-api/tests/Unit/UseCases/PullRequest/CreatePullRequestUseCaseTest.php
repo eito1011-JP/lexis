@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\UseCases\PullRequest;
 
-use App\Consts\Flag;
 use App\Dto\UseCase\PullRequest\CreatePullRequestDto;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;

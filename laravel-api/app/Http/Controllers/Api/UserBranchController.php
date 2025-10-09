@@ -7,6 +7,7 @@ use App\Dto\UseCase\UserBranch\DestroyUserBranchDto;
 use App\Http\Requests\Api\UserBranch\DestroyUserBranchRequest;
 use App\Http\Requests\Api\UserBranch\FetchDiffRequest;
 use App\Services\DocumentDiffService;
+use App\Services\UserBranchService;
 use App\UseCases\UserBranch\DestroyUserBranchUseCase;
 use App\UseCases\UserBranch\FetchDiffUseCase;
 use Exception;
@@ -25,14 +26,18 @@ class UserBranchController extends ApiBaseController
 
     protected DestroyUserBranchUseCase $destroyUserBranchUseCase;
 
+    protected UserBranchService $userBranchService;
+
     public function __construct(
         DocumentDiffService $documentDiffService,
         FetchDiffUseCase $fetchDiffUseCase,
-        DestroyUserBranchUseCase $destroyUserBranchUseCase
+        DestroyUserBranchUseCase $destroyUserBranchUseCase,
+        UserBranchService $userBranchService
     ) {
         $this->documentDiffService = $documentDiffService;
         $this->fetchDiffUseCase = $fetchDiffUseCase;
         $this->destroyUserBranchUseCase = $destroyUserBranchUseCase;
+        $this->userBranchService = $userBranchService;
     }
 
     /**
@@ -53,13 +58,11 @@ class UserBranchController extends ApiBaseController
             }
 
             // アクティブなユーザーブランチセッションを取得
-            $activeSession = $loginUser->userBranchSessions()->first();
-
-            $userBranchId = $activeSession ? $activeSession->user_branch_id : null;
+            $activeSession = $this->userBranchService->hasUserActiveBranchSession($loginUser, $loginUser->organizationMember->organization_id);
 
             return response()->json([
                 'has_user_changes' => $activeSession ? true : false,
-                'user_branch_id' => $userBranchId,
+                'user_branch_id' => $activeSession ? $activeSession->id : null,
             ]);
         } catch (Exception) {
             return $this->sendError(

@@ -5,6 +5,7 @@ namespace App\UseCases\User;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 
 class UserMeUseCase
@@ -14,7 +15,7 @@ class UserMeUseCase
      *
      * @return array{user: User, organization: Organization|null, activeUserBranch: UserBranch|null}
      */
-    public function execute(User $user): array
+    public function execute(User $user, UserBranchService $userBranchService): array
     {
         $userInfo = $user->with(['organizationMember.organization', 'userBranchSessions'])->find($user->id);
 
@@ -29,11 +30,8 @@ class UserMeUseCase
             throw new NotFoundException();
         }
 
-        // アクティブなユーザーブランチを取得（最初のセッションのブランチ）
-        $activeUserBranch = $userInfo->userBranchSessions()
-            ->with('userBranch')
-            ->first()
-            ?->userBranch;
+        // アクティブなユーザーブランチを取得
+        $activeUserBranch = $userBranchService->hasUserActiveBranchSession($user, $organization->id);
 
         return [
             'user' => $userInfo,

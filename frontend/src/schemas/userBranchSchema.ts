@@ -9,10 +9,6 @@ export const updateUserBranchSchema = z.object({
     .number()
     .int()
     .positive('ユーザーブランチIDは正の整数である必要があります'),
-  is_active: z
-    .boolean({
-      message: 'アクティブ状態はtrue/falseで指定してください',
-    }),
 });
 
 export type UpdateUserBranchFormData = z.infer<typeof updateUserBranchSchema>;

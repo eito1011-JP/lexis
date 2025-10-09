@@ -33,7 +33,7 @@ class CreatePullRequestUseCase
      *
      * @param  CreatePullRequestDto  $dto  プルリクエスト作成DTO
      * @param  User  $user  認証済みユーザー
-     * @return array プルリクエスト作成結果
+     * @return PullRequest プルリクエスト作成結果
      *
      * @throws \Exception
      */

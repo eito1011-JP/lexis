@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Models\UserBranchSession;
 use App\UseCases\User\UserMeUseCase;
+use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use PHPUnit\Framework\Attributes\Test;
@@ -19,9 +20,12 @@ class UserMeUseCaseTest extends TestCase
 
     private UserMeUseCase $useCase;
 
+    private UserBranchService $userBranchService;
+
     protected function setUp(): void
     {
         parent::setUp();
+        $this->userBranchService = new UserBranchService();
         $this->useCase = new UserMeUseCase();
     }
 
@@ -46,7 +50,7 @@ class UserMeUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($user);
+        $result = $this->useCase->execute($user, $this->userBranchService);
 
         // Assert
         $this->assertIsArray($result);
@@ -69,7 +73,7 @@ class UserMeUseCaseTest extends TestCase
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
-        $this->useCase->execute($user);
+        $this->useCase->execute($user, $this->userBranchService);
     }
 
     #[Test]
@@ -81,7 +85,7 @@ class UserMeUseCaseTest extends TestCase
 
         // Act & Assert
         $this->expectException(\ErrorException::class);
-        $this->useCase->execute($user);
+        $this->useCase->execute($user, $this->userBranchService);
     }
 
     #[Test]
@@ -101,7 +105,7 @@ class UserMeUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($user);
+        $result = $this->useCase->execute($user, $this->userBranchService);
 
         // Assert
         $this->assertIsArray($result);
@@ -145,7 +149,7 @@ class UserMeUseCaseTest extends TestCase
         ]);
 
         // Act
-        $result = $this->useCase->execute($user);
+        $result = $this->useCase->execute($user, $this->userBranchService);
 
         // Assert
         $this->assertIsArray($result);
@@ -168,7 +172,7 @@ class UserMeUseCaseTest extends TestCase
         // ユーザーブランチを一切作成しない
 
         // Act
-        $result = $this->useCase->execute($user);
+        $result = $this->useCase->execute($user, $this->userBranchService);
 
         // Assert
         $this->assertIsArray($result);

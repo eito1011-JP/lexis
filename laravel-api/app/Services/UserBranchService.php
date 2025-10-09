@@ -19,16 +19,11 @@ class UserBranchService extends BaseService
     public function fetchOrCreateActiveBranch(User $user, int $organizationId): int
     {
         // アクティブなユーザーブランチセッションを確認（リレーション経由）
-        $activeUserBranchSession = $user->userBranchSessions()
-            ->with(['userBranch' => function ($query) use ($organizationId) {
-                $query->where('organization_id', $organizationId);
-            }])
-            ->orderByCreatedAtDesc()
-            ->first();
+        $activeUserBranchSession = $this->hasUserActiveBranchSession($user, $organizationId);
 
         // アクティブなセッションが存在し、組織IDが一致する場合はそのブランチIDを返す
-        if ($activeUserBranchSession && $activeUserBranchSession->userBranch) {
-            return $activeUserBranchSession->userBranch->id;
+        if ($activeUserBranchSession) {
+            return $activeUserBranchSession->id;
         }
 
         // アクティブなブランチが存在しない場合は新しいブランチを作成

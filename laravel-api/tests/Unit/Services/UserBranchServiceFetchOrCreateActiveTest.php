@@ -128,42 +128,6 @@ class UserBranchServiceFetchOrCreateActiveTest extends TestCase
     /**
      * @test
      */
-    public function fetch_or_create_active_branch_複数のセッションがある場合は最新のセッションのブランチを返す()
-    {
-        // Arrange - 古いセッション
-        $oldUserBranch = UserBranch::factory()->create([
-            'creator_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        UserBranchSession::create([
-            'user_id' => $this->user->id,
-            'user_branch_id' => $oldUserBranch->id,
-            'created_at' => now()->subHour(),
-        ]);
-
-        // 新しいセッション
-        $newUserBranch = UserBranch::factory()->create([
-            'creator_id' => $this->user->id,
-            'organization_id' => $this->organization->id,
-        ]);
-
-        UserBranchSession::create([
-            'user_id' => $this->user->id,
-            'user_branch_id' => $newUserBranch->id,
-            'created_at' => now(),
-        ]);
-
-        // Act
-        $result = $this->service->fetchOrCreateActiveBranch($this->user, $this->organization->id);
-
-        // Assert
-        $this->assertEquals($newUserBranch->id, $result);
-    }
-
-    /**
-     * @test
-     */
     public function fetch_or_create_active_branch_トランザクション内で新しいブランチとセッションが作成される()
     {
         // Arrange

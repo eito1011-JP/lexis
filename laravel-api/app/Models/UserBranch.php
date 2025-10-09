@@ -21,7 +21,6 @@ class UserBranch extends Model
     ];
 
     protected $casts = [
-        // is_activeカラムは削除されたため、castsからも削除
     ];
 
     /**
