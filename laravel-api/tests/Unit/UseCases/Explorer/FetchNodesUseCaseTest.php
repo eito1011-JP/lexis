@@ -24,6 +24,7 @@ use App\UseCases\Explorer\FetchNodesUseCase;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
+use App\Services\UserBranchService;
 
 class FetchNodesUseCaseTest extends TestCase
 {
@@ -40,8 +41,9 @@ class FetchNodesUseCaseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $categoryService = new CategoryService();
-        $documentService = new DocumentService($categoryService);
+        $userBranchService = new UserBranchService();
+        $categoryService = new CategoryService($userBranchService);
+        $documentService = new DocumentService($categoryService, $userBranchService);
         $this->useCase = new FetchNodesUseCase(
             $categoryService,
             $documentService
