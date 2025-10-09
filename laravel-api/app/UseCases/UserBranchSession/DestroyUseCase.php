@@ -1,27 +1,29 @@
 <?php
 
-namespace App\UseCases\UserBranch;
+namespace App\UseCases\UserBranchSession;
 
-use App\Dto\UseCase\UserBranch\UpdateUserBranchDto;
+use App\Dto\UseCase\UserBranchSession\DestroyDto;
 use App\Models\UserBranch;
+use App\Models\UserBranchSession;
 use Http\Discovery\Exception\NotFoundException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
 /**
- * ユーザーブランチ更新のユースケース
+ * ユーザーブランチセッション削除のユースケース
  */
-class UpdateUserBranchUseCase
+class DestroyUseCase
 {
     /**
-     * ユーザーブランチのis_activeを更新
+     * ユーザーブランチセッションを削除
      *
-     * @param UpdateUserBranchDto $dto DTO
-     * @return UserBranch 更新結果
+     * @param DestroyDto $dto DTO
+     * @return void
      *
      * @throws NotFoundException ユーザーブランチが見つからない場合
      */
-    public function execute(UpdateUserBranchDto $dto): UserBranch
+    public function execute(DestroyDto $dto): void
     {
         try {
             $organizationId = $dto->user->organizationMember->organization_id;
@@ -32,7 +34,6 @@ class UpdateUserBranchUseCase
 
             // 指定されたユーザーブランチを取得
             $userBranch = UserBranch::where('id', $dto->userBranchId)
-                ->where('user_id', $dto->user->id)
                 ->where('organization_id', $organizationId)
                 ->first();
 
@@ -40,11 +41,9 @@ class UpdateUserBranchUseCase
                 throw new NotFoundException();
             }
 
-            // is_activeを更新
-            $userBranch->update(['is_active' => $dto->isActive]);
-            $userBranch->refresh();
-
-            return $userBranch;
+            UserBranchSession::where('user_branch_id', $userBranch->id)
+                ->where('user_id', $dto->user->id)
+                ->delete();
         } catch (Exception $e) {
             Log::error($e);
             throw $e;

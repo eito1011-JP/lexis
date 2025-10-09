@@ -27,20 +27,22 @@ class UserBranchFactory extends Factory
     public function definition(): array
     {
         return [
-            'user_id' => User::factory(),
+            'creator_id' => User::factory(),
             'branch_name' => $this->faker->word(),
-            'is_active' => true,
             'organization_id' => Organization::factory(),
         ];
     }
 
     /**
-     * Indicate that the user branch is inactive.
+     * アクティブなセッションを持つユーザーブランチを作成
      */
-    public function inactive(): static
+    public function withActiveSession(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'is_active' => false,
-        ]);
+        return $this->afterCreating(function (UserBranch $userBranch) {
+            $userBranch->sessions()->create([
+                'user_id' => $userBranch->creator_id,
+                'user_branch_id' => $userBranch->id,
+            ]);
+        });
     }
 }

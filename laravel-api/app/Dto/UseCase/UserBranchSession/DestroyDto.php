@@ -1,24 +1,22 @@
 <?php
 
-namespace App\Dto\UseCase\UserBranch;
+namespace App\Dto\UseCase\UserBranchSession;
 
 use App\Models\User;
 
 /**
- * ユーザーブランチ更新のDTO
+ * ユーザーブランチセッション削除のDTO
  */
-class UpdateUserBranchDto
+class DestroyDto
 {
     /**
      * コンストラクタ
      *
      * @param int $userBranchId ユーザーブランチID
-     * @param bool $isActive アクティブ状態
      * @param User $user 認証済みユーザー
      */
     public function __construct(
         public readonly int $userBranchId,
-        public readonly bool $isActive,
         public readonly User $user
     ) {
     }
