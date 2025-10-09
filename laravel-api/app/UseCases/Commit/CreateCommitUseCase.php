@@ -3,8 +3,7 @@
 namespace App\UseCases\Commit;
 
 use App\Dto\UseCase\Commit\CreateCommitDto;
-use App\Exceptions\AuthenticationException;
-use App\Exceptions\NotFoundException;
+use Http\Discovery\Exception\NotFoundException;
 use App\Enums\PullRequestStatus;
 use App\Models\CategoryVersion;
 use App\Models\Commit;
@@ -13,6 +12,7 @@ use App\Models\EditStartVersion;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Services\CommitService;
+use App\Services\UserBranchService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -23,6 +23,7 @@ class CreateCommitUseCase
 {
     public function __construct(
         private CommitService $commitService,
+        private UserBranchService $userBranchService,
     ) {}
 
     /**
@@ -47,9 +48,7 @@ class CreateCommitUseCase
             }
 
             // 2. status = openedなPR特定（user_branchも一緒に取得）
-            $pullRequest = PullRequest::with(['userBranch' => function ($query) {
-                $query->active();
-            }])
+            $pullRequest = PullRequest::with('userBranch')
                 ->where('id', $dto->pullRequestId)
                 ->where('organization_id', $organizationId)
                 ->where('status', PullRequestStatus::OPENED->value)
@@ -60,14 +59,14 @@ class CreateCommitUseCase
             }
 
             // 3. user_branchを取得してアクティブか確認
-            $userBranch = $pullRequest->userBranch;
+            $activeUserBranch = $this->userBranchService->findActiveUserBranch($pullRequest->user_branch_id, $organizationId, $user->id);
 
-            if (! $userBranch) {
+            if (! $activeUserBranch) {
                 throw new NotFoundException();
             }
 
             // 5. 該当user_branchでcommit_id = nullのedit_start_versionsを取得
-            $editStartVersions = EditStartVersion::where('user_branch_id', $userBranch->id)
+            $editStartVersions = EditStartVersion::where('user_branch_id', $activeUserBranch->id)
                 ->whereNull('commit_id')
                 ->get();
 
@@ -79,7 +78,7 @@ class CreateCommitUseCase
             $commit = $this->commitService->createCommit(
                 $user,
                 $pullRequest,
-                $userBranch,
+                $activeUserBranch,
                 $editStartVersions,
                 $dto->message
             );

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\CommitChangeType;
 use App\Enums\PullRequestActivityAction;
 use App\Models\ActivityLogOnPullRequest;
 use App\Models\Commit;
@@ -110,7 +111,7 @@ class CommitService extends BaseService
         $isTitleChanged = false;
         $isDescriptionChanged = false;
 
-        if ($changeType === 'updated' && $originalVersion && $currentVersion) {
+        if ($changeType === CommitChangeType::UPDATED && $originalVersion && $currentVersion) {
             $isTitleChanged = $originalVersion->title !== $currentVersion->title;
             $isDescriptionChanged = $originalVersion->description !== $currentVersion->description;
         }
@@ -122,7 +123,7 @@ class CommitService extends BaseService
         return [
             'commit_id' => $commitId,
             $entityIdKey => $editStartVersion->entity_id,
-            'change_type' => $changeType,
+            'change_type' => $changeType->value,
             'is_title_changed' => $isTitleChanged,
             'is_description_changed' => $isDescriptionChanged,
             'first_original_version_id' => $editStartVersion->original_version_id,
@@ -138,17 +139,17 @@ class CommitService extends BaseService
      * @param  mixed  $originalVersion  オリジナルバージョン
      * @param  mixed  $currentVersion  カレントバージョン
      */
-    private function determineChangeType($originalVersion, $currentVersion): string
+    private function determineChangeType($originalVersion, $currentVersion): CommitChangeType
     {
         if (! $originalVersion && $currentVersion) {
-            return 'created';
+            return CommitChangeType::CREATED;
         }
 
         if ($originalVersion && ! $currentVersion) {
-            return 'deleted';
+            return CommitChangeType::DELETED;
         }
 
-        return 'updated';
+        return CommitChangeType::UPDATED;
     }
 
     /**
