@@ -15,6 +15,7 @@ use App\Models\OrganizationMember;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Services\UserBranchService;
 use App\UseCases\UserBranch\DestroyUserBranchUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -37,7 +38,8 @@ class DestroyUserBranchUseCaseTest extends TestCase
     {
         parent::setUp();
 
-        $this->useCase = new DestroyUserBranchUseCase();
+        $userBranchService = new UserBranchService();
+        $this->useCase = new DestroyUserBranchUseCase($userBranchService);
 
         // テストデータの準備
         $this->organization = Organization::factory()->create();

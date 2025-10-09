@@ -38,6 +38,7 @@ class FetchCategoriesUseCaseTest extends TestCase
     {
         parent::setUp();
         $this->useCase = new FetchCategoriesUseCase;
+        $this->userBranchService = new UserBranchService;
 
         // 組織とユーザーを作成
         $this->organization = Organization::factory()->create();

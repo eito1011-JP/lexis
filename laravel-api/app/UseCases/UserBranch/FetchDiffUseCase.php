@@ -4,13 +4,15 @@ namespace App\UseCases\UserBranch;
 
 use App\Models\User;
 use App\Services\DocumentDiffService;
+use App\Services\UserBranchService;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Support\Facades\Log;
 
 class FetchDiffUseCase
 {
     public function __construct(
-        private DocumentDiffService $documentDiffService
+        private DocumentDiffService $documentDiffService,
+        private UserBranchService $userBranchService
     ) {}
 
     /**
@@ -21,22 +23,25 @@ class FetchDiffUseCase
     public function execute(User $user, int $userBranchId): array
     {
         try {
-            $userBranch = $user->userBranches()
-                ->active()
-                ->where('id', $userBranchId)
-                ->first();
+            // アクティブなユーザーブランチを取得
+            $organizationId = $user->organizationMember->organization_id;
+            $userBranch = $this->userBranchService->findActiveUserBranch(
+                $userBranchId,
+                $organizationId,
+                $user->id
+            );
 
             if (! $userBranch) {
                 throw new NotFoundException();
             }
 
             // ユーザーブランチと関連データを一括取得
-            $userBranch->with([
+            $userBranch->load([
                 'editStartVersions',
                 'editStartVersions.originalDocumentVersion',
                 'editStartVersions.currentDocumentVersion',
-                'editStartVersions.originalCategory',
-                'editStartVersions.currentCategory',
+                'editStartVersions.originalCategoryVersion',
+                'editStartVersions.currentCategoryVersion',
             ]);
 
             // 差分データを生成

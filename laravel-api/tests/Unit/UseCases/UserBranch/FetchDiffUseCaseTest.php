@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\UseCases\UserBranch;
 
-use App\Consts\Flag;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\DocumentCategoryStatus;
 use App\Models\CategoryEntity;
@@ -16,6 +15,7 @@ use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\UserBranchSession;
 use App\Services\DocumentDiffService;
+use App\Services\UserBranchService;
 use App\UseCases\UserBranch\FetchDiffUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -51,7 +51,8 @@ class FetchDiffUseCaseTest extends TestCase
     {
         parent::setUp();
         $this->documentDiffService = Mockery::mock(DocumentDiffService::class);
-        $this->useCase = new FetchDiffUseCase($this->documentDiffService);
+        $userBranchService = new UserBranchService();
+        $this->useCase = new FetchDiffUseCase($this->documentDiffService, $userBranchService);
 
         // 組織とユーザーを作成
         $this->organization = Organization::factory()->create();
