@@ -33,7 +33,7 @@ class ShowPullRequestUseCase
         try {
         // 1. プルリクエストを取得（status = opened or conflict）
         $pullRequest = PullRequest::with([
-            'userBranch.user',
+            'userBranch.creator',
             'userBranch.editStartVersions',
             'userBranch.editStartVersions.originalDocumentVersion',
             'userBranch.editStartVersions.currentDocumentVersion',
@@ -102,8 +102,8 @@ class ShowPullRequestUseCase
             'title' => $pullRequest->title,
             'description' => $pullRequest->description,
             'status' => $pullRequest->status,
-            'author_nickname' => $pullRequest->userBranch->user->nickname,
-            'author_email' => $pullRequest->userBranch->user->email,
+            'author_nickname' => $pullRequest->userBranch->creator->nickname,
+            'author_email' => $pullRequest->userBranch->creator->email,
             'reviewers' => $reviewers,
             'created_at' => $pullRequest->created_at,
             'activity_logs' => $activityLogsData,

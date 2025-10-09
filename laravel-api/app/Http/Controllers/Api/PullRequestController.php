@@ -150,11 +150,11 @@ class PullRequestController extends ApiBaseController
             $defaultStatuses = [PullRequestStatus::OPENED->value, PullRequestStatus::CONFLICT->value];
             $statuses = $statusFilters ? $statusFilters : $defaultStatuses;
 
-            $query = PullRequest::with('userBranch.user')
+            $query = PullRequest::with('userBranch.creator')
                 ->whereIn('status', $statuses)
                 ->orderByDesc('created_at')
                 ->when($email, function ($query) use ($email) {
-                    return $query->whereHas('userBranch.user', function ($q) use ($email) {
+                    return $query->whereHas('userBranch.creator', function ($q) use ($email) {
                         $q->where('email', 'like', $email.'%');
                     });
                 });
@@ -177,7 +177,7 @@ class PullRequestController extends ApiBaseController
                     'id' => $pullRequest->id,
                     'title' => $pullRequest->title,
                     'status' => $pullRequest->status,
-                    'email' => $pullRequest->userBranch->user->email ?? null,
+                    'email' => $pullRequest->userBranch->creator->email ?? null,
                     'github_url' => $pullRequest->github_url,
                     'created_at' => $pullRequest->created_at,
                 ];
