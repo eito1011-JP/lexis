@@ -6,6 +6,7 @@ use App\Models\Organization;
 use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Models\UserBranchSession;
 use App\UseCases\User\UserMeUseCase;
 use Http\Discovery\Exception\NotFoundException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -35,9 +36,13 @@ class UserMeUseCaseTest extends TestCase
             'organization_id' => $organization->id,
         ]);
         $activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $user->id,
+            'creator_id' => $user->id,
             'organization_id' => $organization->id,
-            'is_active' => true,
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $activeUserBranch->id,
         ]);
 
         // Act
@@ -54,7 +59,6 @@ class UserMeUseCaseTest extends TestCase
         $this->assertEquals($user->id, $result['user']->id);
         $this->assertEquals($organization->id, $result['organization']->id);
         $this->assertEquals($activeUserBranch->id, $result['activeUserBranch']->id);
-        $this->assertTrue($result['activeUserBranch']->is_active);
     }
 
     #[Test]
@@ -90,9 +94,9 @@ class UserMeUseCaseTest extends TestCase
             'user_id' => $user->id,
             'organization_id' => $organization->id,
         ]);
-        // 非アクティブなユーザーブランチのみ作成
-        UserBranch::factory()->inactive()->create([
-            'user_id' => $user->id,
+        // 非アクティブなユーザーブランチのみ作成（セッションなし）
+        UserBranch::factory()->create([
+            'creator_id' => $user->id,
             'organization_id' => $organization->id,
         ]);
 
@@ -119,16 +123,25 @@ class UserMeUseCaseTest extends TestCase
         ]);
         // 複数のアクティブなユーザーブランチを作成
         $firstActiveBranch = UserBranch::factory()->create([
-            'user_id' => $user->id,
+            'creator_id' => $user->id,
             'organization_id' => $organization->id,
-            'is_active' => true,
             'created_at' => now()->subDays(2),
         ]);
-        UserBranch::factory()->create([
+        
+        UserBranchSession::create([
             'user_id' => $user->id,
+            'user_branch_id' => $firstActiveBranch->id,
+        ]);
+
+        $secondActiveBranch = UserBranch::factory()->create([
+            'creator_id' => $user->id,
             'organization_id' => $organization->id,
-            'is_active' => true,
             'created_at' => now()->subDay(),
+        ]);
+        
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $secondActiveBranch->id,
         ]);
 
         // Act
@@ -140,7 +153,6 @@ class UserMeUseCaseTest extends TestCase
         $this->assertInstanceOf(UserBranch::class, $result['activeUserBranch']);
         // first()は最初に見つかった1つを返すことを確認
         $this->assertNotNull($result['activeUserBranch']);
-        $this->assertTrue($result['activeUserBranch']->is_active);
     }
 
     #[Test]

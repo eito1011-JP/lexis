@@ -16,7 +16,7 @@ class UserMeUseCase
      */
     public function execute(User $user): array
     {
-        $userInfo = $user->with(['organizationMember.organization', 'userBranches'])->find($user->id);
+        $userInfo = $user->with(['organizationMember.organization', 'userBranchSessions'])->find($user->id);
 
         if (!$userInfo) {
             throw new NotFoundException();
@@ -29,8 +29,11 @@ class UserMeUseCase
             throw new NotFoundException();
         }
 
-        // アクティブなユーザーブランチを取得
-        $activeUserBranch = $userInfo->userBranches()->active()->first();
+        // アクティブなユーザーブランチを取得（最初のセッションのブランチ）
+        $activeUserBranch = $userInfo->userBranchSessions()
+            ->with('userBranch')
+            ->first()
+            ?->userBranch;
 
         return [
             'user' => $userInfo,

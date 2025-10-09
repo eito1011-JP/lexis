@@ -19,6 +19,7 @@ use App\Models\PullRequest;
 use App\Models\PullRequestReviewer;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Models\UserBranchSession;
 use App\Services\OrganizationService;
 use App\Services\UserBranchService;
 use App\UseCases\PullRequest\CreatePullRequestUseCase;
@@ -83,10 +84,14 @@ class CreatePullRequestUseCaseTest extends TestCase
 
         // アクティブなユーザーブランチの作成
         $this->activeUserBranch = UserBranch::factory()->create([
-            'user_id' => $this->user->id,
+            'creator_id' => $this->user->id,
             'organization_id' => $this->organization->id,
-            'is_active' => Flag::TRUE,
             'branch_name' => 'test-branch',
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->activeUserBranch->id,
         ]);
     }
 
@@ -97,8 +102,8 @@ class CreatePullRequestUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new CreatePullRequestDto(
-            organizationId: $this->organization->id,
             userBranchId: $this->activeUserBranch->id,
+            organizationId: $this->organization->id,
             title: 'Test Pull Request',
             description: 'Test Description',
             reviewers: []
@@ -148,8 +153,13 @@ class CreatePullRequestUseCaseTest extends TestCase
         $this->userBranchService
             ->shouldReceive('findActiveUserBranch')
             ->once()
-            ->with($this->activeUserBranch->id)
+            ->with($this->activeUserBranch->id, $this->organization->id, $this->user->id)
             ->andReturn($this->activeUserBranch);
+
+        $this->userBranchService
+            ->shouldReceive('deleteUserBranchSessions')
+            ->once()
+            ->with($this->activeUserBranch, $this->user->id);
 
         // Act
         $pullRequest = $this->useCase->execute($dto, $this->user);
@@ -169,10 +179,6 @@ class CreatePullRequestUseCaseTest extends TestCase
         // category_versionsのステータスが更新されているか確認
         $categoryVersion->refresh();
         $this->assertEquals(DocumentCategoryStatus::PUSHED->value, $categoryVersion->status);
-
-        // user_branchが非アクティブになっているか確認
-        $this->activeUserBranch->refresh();
-        $this->assertEquals(Flag::FALSE, $this->activeUserBranch->is_active);
 
         // レビュアーが作成されていないことを確認
         $reviewers = PullRequestReviewer::where('pull_request_id', $pullRequest->id)->get();
@@ -201,8 +207,8 @@ class CreatePullRequestUseCaseTest extends TestCase
         ]);
 
         $dto = new CreatePullRequestDto(
-            organizationId: $this->organization->id,
             userBranchId: $this->activeUserBranch->id,
+            organizationId: $this->organization->id,
             title: 'Test Pull Request',
             description: 'Test Description',
             reviewers: ['reviewer1@example.com', 'reviewer2@example.com']
@@ -252,8 +258,13 @@ class CreatePullRequestUseCaseTest extends TestCase
         $this->userBranchService
             ->shouldReceive('findActiveUserBranch')
             ->once()
-            ->with($this->activeUserBranch->id)
+            ->with($this->activeUserBranch->id, $this->organization->id, $this->user->id)
             ->andReturn($this->activeUserBranch);
+
+        $this->userBranchService
+            ->shouldReceive('deleteUserBranchSessions')
+            ->once()
+            ->with($this->activeUserBranch, $this->user->id);
 
         // Act
         $pullRequest = $this->useCase->execute($dto, $this->user);
@@ -277,8 +288,8 @@ class CreatePullRequestUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new CreatePullRequestDto(
-            organizationId: $this->organization->id,
             userBranchId: $this->activeUserBranch->id,
+            organizationId: $this->organization->id,
             title: 'Test Pull Request',
             description: 'Test Description',
             reviewers: []
@@ -303,8 +314,8 @@ class CreatePullRequestUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new CreatePullRequestDto(
-            organizationId: $this->organization->id,
             userBranchId: $this->activeUserBranch->id,
+            organizationId: $this->organization->id,
             title: 'Test Pull Request',
             description: 'Test Description',
             reviewers: []
@@ -319,7 +330,7 @@ class CreatePullRequestUseCaseTest extends TestCase
         $this->userBranchService
             ->shouldReceive('findActiveUserBranch')
             ->once()
-            ->with($this->activeUserBranch->id)
+            ->with($this->activeUserBranch->id, $this->organization->id, $this->user->id)
             ->andThrow(new NotFoundException());
 
         // Act & Assert
@@ -334,8 +345,8 @@ class CreatePullRequestUseCaseTest extends TestCase
     {
         // Arrange
         $dto = new CreatePullRequestDto(
-            organizationId: $this->organization->id,
             userBranchId: $this->activeUserBranch->id,
+            organizationId: $this->organization->id,
             title: 'Test Pull Request',
             description: 'Test Description',
             reviewers: ['nonexistent@example.com']
@@ -385,8 +396,13 @@ class CreatePullRequestUseCaseTest extends TestCase
         $this->userBranchService
             ->shouldReceive('findActiveUserBranch')
             ->once()
-            ->with($this->activeUserBranch->id)
+            ->with($this->activeUserBranch->id, $this->organization->id, $this->user->id)
             ->andReturn($this->activeUserBranch);
+
+        $this->userBranchService
+            ->shouldReceive('deleteUserBranchSessions')
+            ->once()
+            ->with($this->activeUserBranch, $this->user->id);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
@@ -408,8 +424,8 @@ class CreatePullRequestUseCaseTest extends TestCase
         ]);
 
         $dto = new CreatePullRequestDto(
-            organizationId: $this->organization->id,
             userBranchId: $this->activeUserBranch->id,
+            organizationId: $this->organization->id,
             title: 'Test Pull Request',
             description: 'Test Description',
             reviewers: ['reviewer1@example.com', 'nonexistent@example.com']
@@ -459,8 +475,13 @@ class CreatePullRequestUseCaseTest extends TestCase
         $this->userBranchService
             ->shouldReceive('findActiveUserBranch')
             ->once()
-            ->with($this->activeUserBranch->id)
+            ->with($this->activeUserBranch->id, $this->organization->id, $this->user->id)
             ->andReturn($this->activeUserBranch);
+
+        $this->userBranchService
+            ->shouldReceive('deleteUserBranchSessions')
+            ->once()
+            ->with($this->activeUserBranch, $this->user->id);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);

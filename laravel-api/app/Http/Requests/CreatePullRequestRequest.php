@@ -23,7 +23,7 @@ class CreatePullRequestRequest extends FormRequest
     {
         return [
             'organization_id' => 'required|integer|exists:organizations,id',
-            'user_branch_id' => 'required|integer|exists:user_branches,id,is_active,1',
+            'user_branch_id' => 'required|integer|exists:user_branches,id',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'reviewers' => 'nullable|array|max:15',
