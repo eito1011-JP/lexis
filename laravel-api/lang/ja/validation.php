@@ -316,6 +316,7 @@ return [
         'reviewers.*' => 'レビュアーのメールアドレス',
         'token' => 'トークン',
         'pull_request_id' => 'プルリクエストID',
+        'message' => 'コミットメッセージ',
     ],
     'comment' => [
         'content' => [
@@ -327,6 +328,18 @@ return [
             'required' => 'プルリクエストIDは必須です',
             'integer' => 'プルリクエストIDは数値で入力してください',
             'exists' => '指定されたプルリクエストが見つかりません',
+        ],
+    ],
+    'commit' => [
+        'message' => [
+            'required' => '編集内容のメモは必須です',
+            'string' => '編集内容のメモは文字列で入力してください',
+            'max' => '編集内容のメモは50文字以内で入力してください',
+        ],
+        'pull_request_id' => [
+            'required' => 'プルリクエストIDは必須です',
+            'integer' => 'プルリクエストIDは整数である必要があります',
+            'exists' => '指定されたプルリクエストが存在しません',
         ],
     ],
     'unique_slug_in_same_parent' => ':slugは既に同じカテゴリ内で使われています',
