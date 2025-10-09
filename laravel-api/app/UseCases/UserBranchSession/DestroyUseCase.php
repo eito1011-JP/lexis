@@ -26,7 +26,7 @@ class DestroyUseCase
     public function execute(DestroyDto $dto): void
     {
         try {
-            $organizationId = $dto->user->organizationMember->organization_id;
+            $organizationId = $dto->user->organizationMember?->organization_id;
 
             if (! $organizationId) {
                 throw new NotFoundException();
