@@ -27,17 +27,9 @@ class UserBranch extends Model
     /**
      * ユーザーブランチセッションとのリレーション
      */
-    public function sessions()
+    public function userBranchSessions()
     {
         return $this->hasMany(UserBranchSession::class);
-    }
-
-    /**
-     * アクティブなセッションとのリレーション（現在のセッション）
-     */
-    public function activeSession()
-    {
-        return $this->hasOne(UserBranchSession::class);
     }
 
     /**

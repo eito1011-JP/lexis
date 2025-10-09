@@ -77,8 +77,8 @@ class UserBranchService extends BaseService
     public function findActiveUserBranch(int $userBranchId, int $organizationId, int $userId): ?UserBranch
     {
         // アクティブなセッションが存在するユーザーブランチを取得
-        return UserBranch::with('sessions')
-            ->whereHas('sessions', function ($query) use ($userBranchId, $organizationId, $userId) {
+        return UserBranch::with('userBranchSessions')
+            ->whereHas('userBranchSessions', function ($query) use ($userBranchId, $organizationId, $userId) {
                 $query->where('organization_id', $organizationId);
                 $query->where('user_id', $userId);
                 $query->where('user_branch_id', $userBranchId);
