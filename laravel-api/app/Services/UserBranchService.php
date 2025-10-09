@@ -78,10 +78,10 @@ class UserBranchService extends BaseService
     {
         // アクティブなセッションが存在するユーザーブランチを取得
         return UserBranch::with('userBranchSessions')
-            ->whereHas('userBranchSessions', function ($query) use ($userBranchId, $organizationId, $userId) {
-                $query->where('organization_id', $organizationId);
+            ->where('id', $userBranchId)
+            ->where('organization_id', $organizationId)
+            ->whereHas('userBranchSessions', function ($query) use ($userId) {
                 $query->where('user_id', $userId);
-                $query->where('user_branch_id', $userBranchId);
             })
             ->first();
     }

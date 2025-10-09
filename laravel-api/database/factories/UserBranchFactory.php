@@ -39,7 +39,7 @@ class UserBranchFactory extends Factory
     public function withActiveSession(): static
     {
         return $this->afterCreating(function (UserBranch $userBranch) {
-            $userBranch->sessions()->create([
+            $userBranch->userBranchSessions()->create([
                 'user_id' => $userBranch->creator_id,
                 'user_branch_id' => $userBranch->id,
             ]);

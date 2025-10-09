@@ -72,6 +72,14 @@ class User extends Authenticatable
     }
 
     /**
+     * ユーザーブランチとのリレーション（セッションを通じて）
+     */
+    public function userBranches()
+    {
+        return $this->belongsToMany(UserBranch::class, 'user_branch_sessions');
+    }
+
+    /**
      * レビュアーとして参加しているプルリクエストとのリレーション
      */
     public function reviewingPullRequests()
