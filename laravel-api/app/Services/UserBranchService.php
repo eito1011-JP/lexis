@@ -65,6 +65,24 @@ class UserBranchService extends BaseService
     }
 
     /**
+     * ユーザーがアクティブなブランチセッションを持っているか
+     *
+     * @param  User  $user  ユーザー
+     * @param  int  $organizationId  組織ID
+     * @return UserBranch|null アクティブなユーザーブランチセッションを持っているか検証。存在しない場合はnull
+     */
+    public function hasUserActiveBranchSession(User $user, int $organizationId): ?UserBranch
+    {
+        $activeUserBranchSession = $user->userBranchSessions()
+            ->with(['userBranch' => function ($query) use ($organizationId) {
+                $query->where('organization_id', $organizationId);
+            }])
+            ->first();
+
+        return $activeUserBranchSession?->userBranch;
+    }
+
+    /**
      * ユーザーブランチを取得し、アクティブでない場合は例外をスロー
      *
      * @param  int  $userBranchId  ユーザーブランチID

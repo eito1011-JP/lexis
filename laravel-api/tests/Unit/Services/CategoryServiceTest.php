@@ -12,6 +12,7 @@ use App\Models\OrganizationMember;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Services\CategoryService;
+use App\Services\UserBranchService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -31,13 +32,16 @@ class CategoryServiceTest extends TestCase
 
     private CategoryVersion $mergedCategory;
 
+    private UserBranchService $userBranchService;
+
     private EditStartVersion $mergedCategoryEditStartVersion;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->service = new CategoryService;
+        $this->userBranchService = new UserBranchService();
+        $this->service = new CategoryService($this->userBranchService);
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
