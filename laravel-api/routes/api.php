@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ActivityLogOnPullRequestController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\CommitController;
 use App\Http\Controllers\Api\CategoryEntityController;
 use App\Http\Controllers\Api\DocumentEntityController;
 use App\Http\Controllers\Api\EmailAuthnController;
@@ -91,6 +92,9 @@ Route::middleware('auth:api')->group(function () {
     Route::prefix('comments')->group(function () {
         Route::post('/', [CommentController::class, 'store']);
     });
+
+    // コミット関連
+    Route::resource('commits', CommitController::class, ['only' => ['store']]);
 
     // ドキュメント関連
     Route::resource('document-entities', DocumentEntityController::class);

@@ -13,6 +13,7 @@ class EditStartVersion extends Model
 
     protected $fillable = [
         'user_branch_id',
+        'commit_id',
         'target_type',
         'entity_id',
         'original_version_id',
@@ -22,6 +23,8 @@ class EditStartVersion extends Model
     ];
 
     protected $casts = [
+        'user_branch_id' => 'integer',
+        'commit_id' => 'integer',
         'entity_id' => 'integer',
         'original_version_id' => 'integer',
         'current_version_id' => 'integer',
@@ -33,6 +36,14 @@ class EditStartVersion extends Model
     public function userBranch()
     {
         return $this->belongsTo(UserBranch::class, 'user_branch_id');
+    }
+
+    /**
+     * コミットとのリレーション
+     */
+    public function commit()
+    {
+        return $this->belongsTo(Commit::class, 'commit_id');
     }
 
     /**
@@ -75,7 +86,7 @@ class EditStartVersion extends Model
         if ($this->original_version_id === $this->current_version_id) {
             return null;
         }
-        
+
         switch ($this->target_type) {
             case 'document':
                 return $this->originalDocumentVersion()->withTrashed()->first();

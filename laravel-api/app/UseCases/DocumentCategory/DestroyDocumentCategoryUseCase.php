@@ -103,8 +103,8 @@ class DestroyDocumentCategoryUseCase
             $documentVersionsData = [];
             $categoryVersionsData = [];
             $editStartVersionsData = [];
-            $draftDocumentIds = [];
-            $draftCategoryIds = [];
+            $draftAndPushedDocumentIds = [];
+            $draftAndPushedCategoryIds = [];
 
             // ドキュメントバージョンのデータ準備
             foreach ($documents as $document) {
@@ -123,9 +123,9 @@ class DestroyDocumentCategoryUseCase
                     'updated_at' => $now,
                 ];
 
-                // DRAFTステータスのドキュメントIDを収集
-                if ($document->status === DocumentStatus::DRAFT->value) {
-                    $draftDocumentIds[] = $document->id;
+                // DRAFTステータスまたはPUSHEDステータスのドキュメントIDを収集
+                if ($document->status === DocumentStatus::DRAFT->value || $document->status === DocumentStatus::PUSHED->value) {
+                    $draftAndPushedDocumentIds[] = $document->id;
                 }
             }
 
@@ -145,9 +145,9 @@ class DestroyDocumentCategoryUseCase
                     'updated_at' => $now,
                 ];
 
-                // DRAFTステータスのカテゴリIDを収集
-                if ($category->status === DocumentCategoryStatus::DRAFT->value) {
-                    $draftCategoryIds[] = $category->id;
+                // DRAFTステータスまたはPUSHEDステータスのカテゴリIDを収集
+                if ($category->status === DocumentCategoryStatus::DRAFT->value || $category->status === DocumentCategoryStatus::PUSHED->value) {
+                    $draftAndPushedCategoryIds[] = $category->id;
                 }
             }
 
@@ -166,9 +166,9 @@ class DestroyDocumentCategoryUseCase
                 'updated_at' => $now,
             ];
 
-            // DRAFTステータスの場合は削除対象に追加
-            if ($existingCategory->status === DocumentCategoryStatus::DRAFT->value) {
-                $draftCategoryIds[] = $existingCategory->id;
+            // DRAFTステータスまたはPUSHEDステータスの場合は削除対象に追加
+            if ($existingCategory->status === DocumentCategoryStatus::DRAFT->value || $existingCategory->status === DocumentCategoryStatus::PUSHED->value) {
+                $draftAndPushedCategoryIds[] = $existingCategory->id;
             }
 
             // 11. DocumentVersionsを一括作成
@@ -272,13 +272,19 @@ class DestroyDocumentCategoryUseCase
                 );
             }
 
-            // 16. DRAFTステータスのレコードを一括削除
-            if (! empty($draftDocumentIds)) {
-                DocumentVersion::whereIn('id', $draftDocumentIds)->delete();
+            // 16. DRAFTステータスまたはPUSHEDステータスのレコードを一括削除（論理削除）
+            if (! empty($draftAndPushedDocumentIds)) {
+                DocumentVersion::whereIn('id', $draftAndPushedDocumentIds)->update([
+                    'is_deleted' => Flag::TRUE,
+                    'deleted_at' => $now,
+                ]);
             }
 
-            if (! empty($draftCategoryIds)) {
-                CategoryVersion::whereIn('id', $draftCategoryIds)->delete();
+            if (! empty($draftAndPushedCategoryIds)) {
+                CategoryVersion::whereIn('id', $draftAndPushedCategoryIds)->update([
+                    'is_deleted' => Flag::TRUE,
+                    'deleted_at' => $now,
+                ]);
             }
 
             DB::commit();

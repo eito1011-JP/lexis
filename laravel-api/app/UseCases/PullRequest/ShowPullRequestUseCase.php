@@ -62,7 +62,6 @@ class ShowPullRequestUseCase
             'comment:id,content,created_at',
             'fixRequest:id,token,created_at',
             'reviewer:id,nickname,email',
-            'pullRequestEditSession:id,token,created_at',
         ])
             ->where('pull_request_id', $dto->pullRequestId)
             ->orderBy('created_at', 'asc')

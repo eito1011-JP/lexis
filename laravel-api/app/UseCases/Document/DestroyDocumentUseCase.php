@@ -99,7 +99,7 @@ class DestroyDocumentUseCase
             ]);
 
             // 9. 既存ドキュメントがDRAFTステータスの場合は削除
-            if ($existingDocument->status === DocumentStatus::DRAFT->value) {
+            if ($existingDocument->status === DocumentStatus::DRAFT->value || $existingDocument->status === DocumentStatus::PUSHED->value) {
                 $existingDocument->delete();
             }
 

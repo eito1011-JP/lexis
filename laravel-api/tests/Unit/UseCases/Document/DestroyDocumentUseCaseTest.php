@@ -271,6 +271,60 @@ class DestroyDocumentUseCaseTest extends TestCase
     }
 
     #[\PHPUnit\Framework\Attributes\Test]
+    public function test_execute_with_pushed_document_deletes_existing_document(): void
+    {
+        // Arrange
+        // PUSHEDステータスの既存ドキュメントを作成
+        $pushedDocument = DocumentVersion::factory()->create([
+            'entity_id' => $this->documentEntity->id,
+            'organization_id' => $this->organization->id,
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+            'category_entity_id' => $this->categoryEntity->id,
+            'status' => DocumentStatus::PUSHED->value,
+            'title' => 'Pushed Document',
+            'description' => 'Pushed description',
+        ]);
+
+        $pushedDocumentEditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'original_version_id' => $pushedDocument->id,
+            'current_version_id' => $pushedDocument->id,
+        ]);
+
+        $dto = new DestroyDocumentDto(
+            document_entity_id: $this->documentEntity->id,
+        );
+
+        $this->userBranchService
+            ->shouldReceive('fetchOrCreateActiveBranch')
+            ->once()
+            ->with($this->user, $this->organization->id)
+            ->andReturn($this->userBranch->id);
+
+        $this->documentService
+            ->shouldReceive('getDocumentByWorkContext')
+            ->once()
+            ->with($this->documentEntity->id, $this->user)
+            ->andReturn($pushedDocument);
+
+        // Act
+        $result = $this->useCase->execute($dto, $this->user);
+
+        // Assert
+        $this->assertInstanceOf(DocumentVersion::class, $result);
+        $this->assertEquals(Flag::TRUE, $result->is_deleted);
+        $this->assertNotNull($result->deleted_at);
+
+        // PUSHEDドキュメントが削除されていることを確認
+        $this->assertSoftDeleted('document_versions', [
+            'id' => $pushedDocument->id,
+        ]);
+    }
+
+
+    #[\PHPUnit\Framework\Attributes\Test]
     public function test_execute_throws_not_found_exception_when_user_has_no_organization(): void
     {
         // Arrange

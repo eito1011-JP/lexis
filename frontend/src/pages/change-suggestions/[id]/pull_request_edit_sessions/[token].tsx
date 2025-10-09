@@ -2,11 +2,11 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { client } from '@/api/client';
-import { Toast } from '@/components/admin/Toast';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { diffStyles } from '@/styles/diffStyles';
 import { makeDiff, cleanupSemantic } from '@sanity/diff-match-patch';
+import { useToast } from '@/contexts/ToastContext';
 
 // 新しい仕様に基づく型定義
 type DocumentVersion = {
@@ -361,11 +361,11 @@ const SlugBreadcrumb: React.FC<{ slug: string }> = ({ slug }) => {
 export default function PullRequestEditSessionDetailPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const { token } = useParams<{ token: string }>();
+  const toast = useToast();
 
   const [diffData, setDiffData] = useState<EditSessionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     const fetchEditDiff = async () => {
@@ -384,10 +384,7 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
       } catch (err: any) {
         console.error('編集差分取得エラー:', err);
         setError('編集差分の取得に失敗しました');
-        setToast({
-          message: '編集差分の取得に失敗しました',
-          type: 'error',
-        });
+        toast.show({ message: '編集差分の取得に失敗しました', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -466,7 +463,6 @@ export default function PullRequestEditSessionDetailPage(): JSX.Element {
     <AdminLayout title="変更提案編集詳細">
       <style>{markdownStyles}</style>
       <style>{diffStyles}</style>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="mb-20 w-full rounded-lg relative">
         {/* ヘッダー */}

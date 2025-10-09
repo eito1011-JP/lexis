@@ -9,6 +9,7 @@ enum PullRequestActivityAction: string
     case ASSIGNED_REVIEWER = 'assigned_reviewer';
     case REVIEWER_APPROVED = 'reviewer_approved';
     case COMMENTED = 'commented';
+    case COMMIT_CREATED = 'commit_created';
     case PULL_REQUEST_MERGED = 'pull_request_merged';
     case PULL_REQUEST_CLOSED = 'pull_request_closed';
     case PULL_REQUEST_REOPENED = 'pull_request_reopened';
@@ -25,6 +26,7 @@ enum PullRequestActivityAction: string
             self::ASSIGNED_REVIEWER => 'レビュワーが設定されました',
             self::REVIEWER_APPROVED => '変更提案が承認されました',
             self::COMMENTED => 'コメントが投稿されました',
+            self::COMMIT_CREATED => 'コミットが作成されました',
             self::PULL_REQUEST_MERGED => 'プルリクエストがマージされました',
             self::PULL_REQUEST_CLOSED => 'プルリクエストがクローズされました',
             self::PULL_REQUEST_REOPENED => 'プルリクエストが再オープンされました',

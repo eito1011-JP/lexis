@@ -2,12 +2,12 @@ import AdminLayout from '@/components/admin/layout';
 import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Toast } from '@/components/admin/Toast';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { markdownStyles } from '@/styles/markdownContent';
 import { diffStyles } from '@/styles/diffStyles';
 import { client } from '@/api/client';
 import { makeDiff, cleanupSemantic } from '@sanity/diff-match-patch';
+import { useToast } from '@/contexts/ToastContext';
 
 // 差分データの型定義
 type DiffItem = {
@@ -258,6 +258,7 @@ export default function FixRequestDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
   // クエリパラメータからtokenを取得
   const searchParams = new URLSearchParams(location.search);
   const token = searchParams.get('token');
@@ -265,7 +266,6 @@ export default function FixRequestDetailPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // 修正リクエスト差分データ取得
   const fetchFixRequestDiff = async () => {
@@ -309,7 +309,7 @@ export default function FixRequestDetailPage(): JSX.Element {
   // 修正リクエスト適用処理
   const handleApplyFixRequest = async () => {
     if (!id || !token) {
-      setToast({ message: '必要なパラメータが不足しています', type: 'error' });
+      toast.show({ message: '必要なパラメータが不足しています', type: 'error' });
       return;
     }
 
@@ -320,12 +320,12 @@ export default function FixRequestDetailPage(): JSX.Element {
           token: token,
         }
       });
-      setToast({ message: '修正リクエストが正常に適用されました', type: 'success' });
+      toast.show({ message: '修正リクエストが正常に適用されました', type: 'success' });
 
       navigate(`/change-suggestions/${id}`);
     } catch (err: any) {
       console.error('修正リクエスト適用エラー:', err);
-      setToast({ message: '修正リクエストの適用に失敗しました', type: 'error' });
+      toast.show({ message: '修正リクエストの適用に失敗しました', type: 'error' });
     } finally {
       setApplying(false);
     }
@@ -429,7 +429,6 @@ export default function FixRequestDetailPage(): JSX.Element {
     <AdminLayout title="修正リクエスト詳細">
       <style>{markdownStyles}</style>
       <style>{diffStyles}</style>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div className="mb-20 w-full rounded-lg relative">
         {/* ヘッダー */}

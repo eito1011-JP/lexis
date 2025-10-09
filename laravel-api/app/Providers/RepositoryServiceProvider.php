@@ -5,9 +5,7 @@ namespace App\Providers;
 use App\Repositories\DocumentVersionRepository;
 use App\Repositories\Interfaces\DocumentVersionRepositoryInterface;
 use App\Repositories\Interfaces\PreUserRepositoryInterface;
-use App\Repositories\Interfaces\PullRequestEditSessionRepositoryInterface;
 use App\Repositories\PreUserRepository;
-use App\Repositories\PullRequestEditSessionRepository;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -22,12 +20,6 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // PullRequestEditSession Repository バインディング
-        $this->app->bind(
-            PullRequestEditSessionRepositoryInterface::class,
-            PullRequestEditSessionRepository::class
-        );
-
         // DocumentVersion Repository バインディング
         $this->app->bind(
             DocumentVersionRepositoryInterface::class,

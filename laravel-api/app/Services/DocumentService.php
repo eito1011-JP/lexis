@@ -103,10 +103,10 @@ class DocumentService
             }
         }
 
-            // 初回編集の場合：DRAFTとMERGEDステータスを取得（最新のものを優先）
+            // 初回編集の場合：DRAFTとPUSHEDとMERGEDステータスを取得（最新のものを優先）
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->where('status', DocumentStatus::DRAFT->value)
+                    $q1->whereIn('status', [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value])
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentStatus::MERGED->value);
             })->orderBy('created_at', 'desc')->first();
@@ -129,7 +129,7 @@ class DocumentService
 
             return $baseQuery->where(function ($query) use ($activeUserBranch) {
                 $query->where(function ($q1) use ($activeUserBranch) {
-                    $q1->where('status', DocumentStatus::DRAFT->value)
+                    $q1->whereIn('status', [DocumentStatus::DRAFT->value, DocumentStatus::PUSHED->value])
                         ->where('user_branch_id', $activeUserBranch->id);
                 })->orWhere('status', DocumentStatus::MERGED->value);
             })->get();

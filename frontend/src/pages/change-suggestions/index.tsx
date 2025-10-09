@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { client } from '@/api/client';
 import { ThreeDots } from '@/components/icon/common/ThreeDots';
-import { Toast } from '@/components/admin/Toast';
 import { formatDateTime } from '@/utils/date';
 import { Comment } from '@/components/icon/common/Comment';
 import { Merged } from '@/components/icon/common/Merged';
 import { Merge } from '@/components/icon/common/Merge';
+import { useToast } from '@/contexts/ToastContext';
 
 // カテゴリの型定義
 type Category = {
@@ -44,6 +44,7 @@ type ChangeProposal = {
  * 変更提案一覧ページコンポーネント
  */
 export default function ChangeSuggestionsPage(): JSX.Element {
+  const toast = useToast();
   const [changeProposals, setChangeProposals] = useState<ChangeProposal[]>([]);
   const [changeProposalsLoading, setChangeProposalsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -52,9 +53,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
   const [documentToDelete, setDocumentToDelete] = useState<DocumentItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error'>('success');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'completed'>('all');
   const [pendingCount, setPendingCount] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
@@ -136,9 +134,7 @@ export default function ChangeSuggestionsPage(): JSX.Element {
       window.location.reload();
 
       // トーストメッセージを表示
-      setToastMessage('ドキュメントが削除されました');
-      setToastType('success');
-      setShowToast(true);
+      toast.show({ message: 'ドキュメントが削除されました', type: 'success' });
     } catch (err) {
       console.error('ドキュメント削除エラー:', err);
       setDeleteError('ドキュメントの削除中にエラーが発生しました');
@@ -409,11 +405,6 @@ export default function ChangeSuggestionsPage(): JSX.Element {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Toast */}
-      {showToast && (
-        <Toast message={toastMessage} type={toastType} onClose={() => setShowToast(false)} />
       )}
     </AdminLayout>
   );
