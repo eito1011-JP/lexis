@@ -4,9 +4,8 @@
 export type Methods = {
   post: {
     reqBody: {
-      token: string;
       password: string;
-      nickname: string;
+      email: string;
     };
     resBody: {
       success: boolean;
