@@ -29,7 +29,7 @@ class PullRequestFactory extends Factory
     {
         return [
             'user_branch_id' => UserBranch::factory(),
-            'title' => $this->faker->sentence(),
+            'title' => $this->faker->sentence(3), // 3単語の短い文に制限
             'description' => $this->faker->paragraph(),
             'status' => PullRequestStatus::OPENED->value,
             'organization_id' => Organization::factory(),

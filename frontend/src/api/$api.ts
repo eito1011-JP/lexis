@@ -27,6 +27,7 @@ import type { Methods as Methods_1o4qvb5 } from './pull-requests/_id@number/conf
 import type { Methods as Methods_1ndlm46 } from './pull-requests/_id@number/fix-request';
 import type { Methods as Methods_1czorqh } from './pull-requests/_id@number/merge';
 import type { Methods as Methods_11i5tqy } from './pull-requests/_id@number/update';
+import type { Methods as Methods_113936e } from './user-branch-sessions';
 import type { Methods as Methods_vxa6jd } from './user-branches/_userBranchId@number';
 import type { Methods as Methods_10ka6um } from './user-branches/diff';
 import type { Methods as Methods_1fr3md7 } from './user-branches/has-changes';
@@ -58,10 +59,11 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
   const PATH21 = '/fix-request';
   const PATH22 = '/merge';
   const PATH23 = '/update';
-  const PATH24 = '/user-branches';
-  const PATH25 = '/user-branches/diff';
-  const PATH26 = '/user-branches/has-changes';
-  const PATH27 = '/users/me';
+  const PATH24 = '/user-branch-sessions';
+  const PATH25 = '/user-branches';
+  const PATH26 = '/user-branches/diff';
+  const PATH27 = '/user-branches/has-changes';
+  const PATH28 = '/users/me';
   const GET = 'GET';
   const POST = 'POST';
   const PUT = 'PUT';
@@ -409,12 +411,19 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
       $path: (option?: { method?: 'get' | undefined; query: Methods_1tql4u2['get']['query'] } | undefined) =>
         `${prefix}${PATH15}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
     },
+    user_branch_sessions: {
+      post: (option: { body: Methods_113936e['post']['reqBody'], config?: T | undefined }) =>
+        fetch<Methods_113936e['post']['resBody']>(prefix, PATH24, POST, option).json(),
+      $post: (option: { body: Methods_113936e['post']['reqBody'], config?: T | undefined }) =>
+        fetch<Methods_113936e['post']['resBody']>(prefix, PATH24, POST, option).json().then(r => r.body),
+      $path: () => `${prefix}${PATH24}`,
+    },
     user_branches: {
       /**
        * DELETE /api/user-branches/:userBranchId
        */
       _userBranchId: (val1: number) => {
-        const prefix1 = `${PATH24}/${val1}`;
+        const prefix1 = `${PATH25}/${val1}`;
 
         return {
           delete: (option?: { config?: T | undefined } | undefined) =>
@@ -429,30 +438,30 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
        */
       diff: {
         get: (option: { query: Methods_10ka6um['get']['query'], config?: T | undefined }) =>
-          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH25, GET, option).json(),
+          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH26, GET, option).json(),
         $get: (option: { query: Methods_10ka6um['get']['query'], config?: T | undefined }) =>
-          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH25, GET, option).json().then(r => r.body),
+          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH26, GET, option).json().then(r => r.body),
         $path: (option?: { method?: 'get' | undefined; query: Methods_10ka6um['get']['query'] } | undefined) =>
-          `${prefix}${PATH25}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
+          `${prefix}${PATH26}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
       },
       /**
        * GET /api/user-branches/has-changes
        */
       has_changes: {
         get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_1fr3md7['get']['resBody']>(prefix, PATH26, GET, option).json(),
+          fetch<Methods_1fr3md7['get']['resBody']>(prefix, PATH27, GET, option).json(),
         $get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_1fr3md7['get']['resBody']>(prefix, PATH26, GET, option).json().then(r => r.body),
-        $path: () => `${prefix}${PATH26}`,
+          fetch<Methods_1fr3md7['get']['resBody']>(prefix, PATH27, GET, option).json().then(r => r.body),
+        $path: () => `${prefix}${PATH27}`,
       },
     },
     users: {
       me: {
         get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH27, GET, option).json(),
+          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH28, GET, option).json(),
         $get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH27, GET, option).json().then(r => r.body),
-        $path: () => `${prefix}${PATH27}`,
+          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH28, GET, option).json().then(r => r.body),
+        $path: () => `${prefix}${PATH28}`,
       },
     },
   };

@@ -111,6 +111,11 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/diff', [UserBranchController::class, 'fetchDiff']);
     });
 
+    // ユーザーブランチセッション関連
+    Route::prefix('user-branch-sessions')->group(function () {
+        Route::post('/', [UserBranchSessionController::class, 'store']);
+    });
+
     // 修正リクエスト関連
     Route::prefix('fix-requests')->group(function () {
         Route::get('/{token}', [FixRequestController::class, 'fetchFixRequestDiff']);

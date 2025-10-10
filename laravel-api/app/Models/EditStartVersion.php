@@ -83,15 +83,15 @@ class EditStartVersion extends Model
      */
     public function getOriginalObject()
     {
-        if ($this->original_version_id === $this->current_version_id) {
+        if (! $this->original_version_id) {
             return null;
         }
 
         switch ($this->target_type) {
             case 'document':
-                return $this->originalDocumentVersion()->withTrashed()->first();
+                return DocumentVersion::withTrashed()->find($this->original_version_id);
             case 'category':
-                return $this->originalCategoryVersion()->withTrashed()->first();
+                return CategoryVersion::withTrashed()->find($this->original_version_id);
             default:
                 return null;
         }
@@ -104,9 +104,9 @@ class EditStartVersion extends Model
     {
         switch ($this->target_type) {
             case 'document':
-                return $this->currentDocumentVersion()->withTrashed()->first();
+                return DocumentVersion::withTrashed()->find($this->current_version_id);
             case 'category':
-                return $this->currentCategoryVersion()->withTrashed()->first();
+                return CategoryVersion::withTrashed()->find($this->current_version_id);
             default:
                 return null;
         }

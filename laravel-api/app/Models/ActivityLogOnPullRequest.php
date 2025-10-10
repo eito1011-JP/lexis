@@ -14,6 +14,7 @@ class ActivityLogOnPullRequest extends Model
         'pull_request_id',
         'comment_id',
         'reviewer_id',
+        'commit_id',
         'action',
         'old_pull_request_title',
         'new_pull_request_title',

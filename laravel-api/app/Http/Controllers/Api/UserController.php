@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Consts\ErrorType;
 use App\Models\DocumentVersion;
+use App\Services\UserBranchService;
 use App\UseCases\User\UserMeUseCase;
 use Exception;
 use Illuminate\Http\JsonResponse;
@@ -11,7 +12,8 @@ use Illuminate\Http\JsonResponse;
 class UserController extends ApiBaseController
 {
     public function __construct(
-        private UserMeUseCase $userMeUseCase
+        private UserMeUseCase $userMeUseCase,
+        private UserBranchService $userBranchService
     ) {}
 
     /**
@@ -40,7 +42,7 @@ class UserController extends ApiBaseController
                 );
             }
 
-            $result = $this->userMeUseCase->execute($user);
+            $result = $this->userMeUseCase->execute($user, $this->userBranchService);
 
             return response()->json([
                 'user' => $result['user'],

@@ -28,9 +28,8 @@ export default function AdminPage(): ReactElement {
     try {
       await client.auth.pre_users.$post({
         body: {
-          token: '', // TODO: 実際のトークンを取得
           password: data.password,
-          nickname: data.email, // TODO: nicknameフィールドの適切な値を設定
+          email: data.email,
         }
       });
 

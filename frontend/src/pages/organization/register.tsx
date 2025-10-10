@@ -54,7 +54,6 @@ export default function OrganizationRegisterPage(): React.ReactElement {
     setLoading(true);
     
     try {
-      // organization_uuidとtokenを含むリクエストをaxiosで送信
       await axios.post('/organizations', {
         organization_uuid: data.organization_uuid,
         organization_name: data.organization_name,
@@ -89,6 +88,7 @@ export default function OrganizationRegisterPage(): React.ReactElement {
         <div className="w-full max-w-[500px] bg-[#0A0A0A] border-[1px] border-[#B1B1B1] rounded-xl p-12">
           <h2 className="text-white text-2xl font-bold text-center mb-10">組織名を入力してください</h2>
           <form onSubmit={handleSubmit(onSubmit)}>
+            <input type="hidden" {...register('token')} value={token} />
             <div className="mb-6">
               <label className="block text-white mb-2 font-bold">組織ID</label>
               <input

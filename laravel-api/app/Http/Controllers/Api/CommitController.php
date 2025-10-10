@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Consts\ErrorType;
 use App\Dto\UseCase\Commit\CreateCommitDto;
 use App\Exceptions\AuthenticationException;
-use App\Exceptions\NotFoundException;
 use App\Http\Requests\Api\Commit\StoreRequest;
 use App\UseCases\Commit\CreateCommitUseCase;
 use Illuminate\Http\JsonResponse;
 use Psr\Log\LogLevel;
+use Http\Discovery\Exception\NotFoundException;
 
 /**
  * コミットコントローラー

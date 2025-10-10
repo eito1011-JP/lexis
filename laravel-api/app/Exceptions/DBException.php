@@ -23,9 +23,9 @@ class DBException extends BaseException
 
     public function toResponse($request): JsonResponse
     {
-        $this->setErrorCode(ErrorType::CODE_DATABASE_ERROR);
-        $this->setErrorMessage(__('errors.MSG_DATABASE_ERROR'));
-        $this->setStatusCode(ErrorType::STATUS_DATABASE_ERROR);
+        $this->setErrorCode(ErrorType::CODE_DB_ERROR);
+        $this->setErrorMessage(__('errors.MSG_DB_ERROR'));
+        $this->setStatusCode(ErrorType::STATUS_DB_ERROR);
 
         return parent::toResponse($request);
     }

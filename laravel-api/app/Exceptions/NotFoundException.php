@@ -8,9 +8,9 @@ use App\Consts\ErrorType;
 use Illuminate\Http\JsonResponse;
 
 /**
- * 対象ドキュメントが見つからない場合の例外
+ * リソース未発見エラーの例外
  */
-class TargetDocumentNotFoundException extends BaseException
+class NotFoundException extends BaseException
 {
     public function toResponse($request): JsonResponse
     {
@@ -19,14 +19,5 @@ class TargetDocumentNotFoundException extends BaseException
         $this->setStatusCode(ErrorType::STATUS_NOT_FOUND);
 
         return parent::toResponse($request);
-    }
-
-    /**
-     * 例外をログに記録する際の処理
-     */
-    public function report(): bool
-    {
-        // この例外は通常のビジネスロジックエラーのため、ログに記録しない
-        return false;
     }
 }

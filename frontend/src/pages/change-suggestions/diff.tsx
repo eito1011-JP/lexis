@@ -25,6 +25,7 @@ import { TABS } from '@/types/diff';
 import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
+import { useToast } from '@/contexts/ToastContext';
 
 // プラスアイコンコンポーネント
 const PlusIcon = ({ className }: { className?: string }) => (
@@ -458,9 +459,9 @@ const SmartDiffValue = ({
 export default function ChangeSuggestionDiffPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [pullRequestData, setPullRequestData] = useState<PullRequestDetailResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('changes');
   const [conflictStatus] = useState<{
     mergeable: boolean | null;
@@ -507,55 +508,28 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
   useEffect(() => {
     const fetchData = async () => {
       if (!id) {
-        setError('プルリクエストIDが指定されていません');
-        return;
+        toast.show({
+          message: 'プルリクエストIDが指定されていません',
+          type: 'error',
+        });
       }
 
       try {
-        const data = await fetchPullRequestDetail(id);
+        const data = await fetchPullRequestDetail(Number(id));
         console.log('data', data);
         setPullRequestData(data);
       } catch (err) {
         console.error('プルリクエスト詳細取得エラー:', err);
-        setError('プルリクエスト詳細の取得に失敗しました');
+        toast.show({
+          message: 'プルリクエスト詳細の取得に失敗しました',
+          type: 'error',
+        });
       } finally {
       }
     };
 
     fetchData();
   }, [id]);
-
-  // エラー表示
-  if (error) {
-    return (
-      <AdminLayout 
-        title="エラー"
-        sidebar={true}
-        showDocumentSideContent={false}
-      >
-        <div className="flex flex-col items-center justify-center h-full">
-          <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-200">
-            <div className="flex items-center">
-              <svg
-                className="w-5 h-5 mr-2 text-red-300"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{error}</span>
-            </div>
-          </div>
-        </div>
-      </AdminLayout>
-    );
-  }
 
   if (!pullRequestData) {
     return (
@@ -573,35 +547,49 @@ export default function ChangeSuggestionDiffPage(): JSX.Element {
 
   // 確認アクションの処理
   const handleConfirmationAction = async () => {
-    if (!id) return;
+    if (!id || !pullRequestData) return;
 
     switch (selectedConfirmationAction) {
       case 're_edit_proposal':
         try {
-          // プルリクエストデータからユーザーブランチIDを取得
-            await client.user_branches._userBranchId(pullRequestData.user_branch_id).$delete();
+          // ユーザーブランチセッションを作成
+          await client.user_branch_sessions.$post({
+            body: {
+              pull_request_id: Number(id),
+            },
+          });
 
           // 変更提案の再編集画面に遷移
-          navigate(
-            `/documents`
-          );
-        } catch (error) {
-          console.error('ユーザーブランチ更新エラー:', error);
-          setError('ユーザーブランチの更新に失敗しました');
+          navigate(`/documents`);
+        } catch (error: any) {
+          console.error('セッション作成エラー:', error);
+          
+          // 409エラー（別のユーザーが編集中）の場合
+          if (error.response?.status === 409) {
+            const errorMessage = error.response?.data?.error?.message || '他のユーザーが編集中です';
+            toast.show({
+              message: errorMessage,
+              type: 'error',
+            });
+          } else {
+            toast.show({
+              message: '再編集に失敗しました',
+              type: 'error',
+            });
+          }
         }
         break;
       case 'approve_changes':
         try {
-          const result = await approvePullRequest(id);
-          if (result.success) {
-            // 承認成功時にアクティビティページに遷移
-            window.location.href = `/change-suggestions/${id}`;
-          } else {
-            setError(result.error || '変更の承認に失敗しました');
-          }
+          await approvePullRequest(id);
+          
+            navigate(`/change-suggestions/${id}`);
         } catch (err) {
           console.error('承認エラー:', err);
-          setError('変更の承認に失敗しました');
+          toast.show({
+            message: '変更の承認に失敗しました',
+            type: 'error',
+          });
         }
         break;
     }
