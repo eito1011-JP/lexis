@@ -27,8 +27,6 @@ class DocumentEntityFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
-            'is_deleted' => false,
-            'deleted_at' => null,
         ];
     }
 }
