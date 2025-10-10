@@ -2,8 +2,12 @@
 
 namespace Tests\Unit\UseCases\User;
 
+use App\Enums\PullRequestStatus;
+use App\Models\Commit;
+use App\Models\EditStartVersion;
 use App\Models\Organization;
 use App\Models\OrganizationMember;
+use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
 use App\Models\UserBranchSession;
@@ -57,12 +61,14 @@ class UserMeUseCaseTest extends TestCase
         $this->assertArrayHasKey('user', $result);
         $this->assertArrayHasKey('organization', $result);
         $this->assertArrayHasKey('activeUserBranch', $result);
+        $this->assertArrayHasKey('nextAction', $result);
         $this->assertInstanceOf(User::class, $result['user']);
         $this->assertInstanceOf(Organization::class, $result['organization']);
         $this->assertInstanceOf(UserBranch::class, $result['activeUserBranch']);
         $this->assertEquals($user->id, $result['user']->id);
         $this->assertEquals($organization->id, $result['organization']->id);
         $this->assertEquals($activeUserBranch->id, $result['activeUserBranch']->id);
+        $this->assertNull($result['nextAction']);
     }
 
     #[Test]
@@ -110,7 +116,9 @@ class UserMeUseCaseTest extends TestCase
         // Assert
         $this->assertIsArray($result);
         $this->assertArrayHasKey('activeUserBranch', $result);
+        $this->assertArrayHasKey('nextAction', $result);
         $this->assertNull($result['activeUserBranch']);
+        $this->assertNull($result['nextAction']);
         $this->assertInstanceOf(User::class, $result['user']);
         $this->assertInstanceOf(Organization::class, $result['organization']);
     }
@@ -154,9 +162,11 @@ class UserMeUseCaseTest extends TestCase
         // Assert
         $this->assertIsArray($result);
         $this->assertArrayHasKey('activeUserBranch', $result);
+        $this->assertArrayHasKey('nextAction', $result);
         $this->assertInstanceOf(UserBranch::class, $result['activeUserBranch']);
         // first()は最初に見つかった1つを返すことを確認
         $this->assertNotNull($result['activeUserBranch']);
+        $this->assertNull($result['nextAction']);
     }
 
     #[Test]
@@ -177,8 +187,170 @@ class UserMeUseCaseTest extends TestCase
         // Assert
         $this->assertIsArray($result);
         $this->assertArrayHasKey('activeUserBranch', $result);
+        $this->assertArrayHasKey('nextAction', $result);
         $this->assertNull($result['activeUserBranch']);
+        $this->assertNull($result['nextAction']);
         $this->assertInstanceOf(User::class, $result['user']);
         $this->assertInstanceOf(Organization::class, $result['organization']);
+    }
+
+    #[Test]
+    public function execute_returns_null_next_action_when_no_uncommitted_changes_exist(): void
+    {
+        // Arrange
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+        $activeUserBranch = UserBranch::factory()->create([
+            'creator_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $activeUserBranch->id,
+        ]);
+
+        // コミットを作成
+        $commit = Commit::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'user_id' => $user->id,
+        ]);
+
+        // commit_idがnullではないedit_start_versionを作成
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'commit_id' => $commit->id, // コミット済み
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($user, $this->userBranchService);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('nextAction', $result);
+        $this->assertNull($result['nextAction']);
+    }
+
+    #[Test]
+    public function execute_returns_create_initial_commit_when_uncommitted_changes_exist_and_no_opened_pr(): void
+    {
+        // Arrange
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+        $activeUserBranch = UserBranch::factory()->create([
+            'creator_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $activeUserBranch->id,
+        ]);
+
+        // commit_idがnullのedit_start_versionを作成（未コミットの変更）
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'commit_id' => null,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($user, $this->userBranchService);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('nextAction', $result);
+        $this->assertEquals('create_initial_commit', $result['nextAction']);
+    }
+
+    #[Test]
+    public function execute_returns_create_subsequent_commit_when_uncommitted_changes_and_opened_pr_exist(): void
+    {
+        // Arrange
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+        $activeUserBranch = UserBranch::factory()->create([
+            'creator_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $activeUserBranch->id,
+        ]);
+
+        // commit_idがnullのedit_start_versionを作成（未コミットの変更）
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'commit_id' => null,
+        ]);
+
+        // OPENEDステータスのプルリクエストを作成
+        PullRequest::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'organization_id' => $organization->id,
+            'status' => PullRequestStatus::OPENED->value,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($user, $this->userBranchService);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('nextAction', $result);
+        $this->assertEquals('create_subsequent_commit', $result['nextAction']);
+    }
+
+    #[Test]
+    public function execute_returns_create_initial_commit_when_uncommitted_changes_exist_and_pr_is_closed(): void
+    {
+        // Arrange
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+        $activeUserBranch = UserBranch::factory()->create([
+            'creator_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $activeUserBranch->id,
+        ]);
+
+        // commit_idがnullのedit_start_versionを作成（未コミットの変更）
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'commit_id' => null,
+        ]);
+
+        // CLOSEDステータスのプルリクエストを作成
+        PullRequest::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'organization_id' => $organization->id,
+            'status' => PullRequestStatus::CLOSED->value,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($user, $this->userBranchService);
+
+        // Assert
+        $this->assertIsArray($result);
+        $this->assertArrayHasKey('nextAction', $result);
+        $this->assertEquals('create_initial_commit', $result['nextAction']);
     }
 }

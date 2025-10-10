@@ -38,6 +38,7 @@ export interface UserMeResponse {
   user: User;
   organization: Organization;
   activeUserBranch: ActiveUserBranch | null;
+  nextAction: 'create_initial_commit' | 'create_subsequent_commit' | null;
 }
 
 export type Methods = {

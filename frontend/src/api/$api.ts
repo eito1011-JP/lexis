@@ -30,7 +30,6 @@ import type { Methods as Methods_11i5tqy } from './pull-requests/_id@number/upda
 import type { Methods as Methods_113936e } from './user-branch-sessions';
 import type { Methods as Methods_vxa6jd } from './user-branches/_userBranchId@number';
 import type { Methods as Methods_10ka6um } from './user-branches/diff';
-import type { Methods as Methods_1fr3md7 } from './user-branches/has-changes';
 import type { Methods as Methods_jzr18p } from './users/me';
 
 const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
@@ -62,8 +61,7 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
   const PATH24 = '/user-branch-sessions';
   const PATH25 = '/user-branches';
   const PATH26 = '/user-branches/diff';
-  const PATH27 = '/user-branches/has-changes';
-  const PATH28 = '/users/me';
+  const PATH27 = '/users/me';
   const GET = 'GET';
   const POST = 'POST';
   const PUT = 'PUT';
@@ -444,24 +442,14 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
         $path: (option?: { method?: 'get' | undefined; query: Methods_10ka6um['get']['query'] } | undefined) =>
           `${prefix}${PATH26}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
       },
-      /**
-       * GET /api/user-branches/has-changes
-       */
-      has_changes: {
-        get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_1fr3md7['get']['resBody']>(prefix, PATH27, GET, option).json(),
-        $get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_1fr3md7['get']['resBody']>(prefix, PATH27, GET, option).json().then(r => r.body),
-        $path: () => `${prefix}${PATH27}`,
-      },
     },
     users: {
       me: {
         get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH28, GET, option).json(),
+          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH27, GET, option).json(),
         $get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH28, GET, option).json().then(r => r.body),
-        $path: () => `${prefix}${PATH28}`,
+          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH27, GET, option).json().then(r => r.body),
+        $path: () => `${prefix}${PATH27}`,
       },
     },
   };

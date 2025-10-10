@@ -48,6 +48,7 @@ class UserController extends ApiBaseController
                 'user' => $result['user'],
                 'organization' => $result['organization'],
                 'activeUserBranch' => $result['activeUserBranch'],
+                'nextAction' => $result['nextAction'],
             ]);
         } catch (Exception) {
             return $this->sendError(

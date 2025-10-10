@@ -2,6 +2,7 @@
 
 namespace App\UseCases\User;
 
+use App\Enums\PullRequestStatus;
 use App\Models\Organization;
 use App\Models\User;
 use App\Models\UserBranch;
@@ -13,7 +14,7 @@ class UserMeUseCase
     /**
      * ユーザー情報、組織情報、ユーザーブランチ情報を取得
      *
-     * @return array{user: User, organization: Organization|null, activeUserBranch: UserBranch|null}
+     * @return array{user: User, organization: Organization|null, activeUserBranch: UserBranch|null, nextAction: string|null}
      */
     public function execute(User $user, UserBranchService $userBranchService): array
     {
@@ -33,10 +34,46 @@ class UserMeUseCase
         // アクティブなユーザーブランチを取得
         $activeUserBranch = $userBranchService->hasUserActiveBranchSession($user, $organization->id);
 
+        // next actionを決定
+        $nextAction = $this->determineNextAction($activeUserBranch);
+
         return [
             'user' => $userInfo,
             'organization' => $organization,
             'activeUserBranch' => $activeUserBranch,
+            'nextAction' => $nextAction,
         ];
+    }
+
+    /**
+     * 次のアクションを決定
+     *
+     * @param UserBranch|null $activeUserBranch アクティブなユーザーブランチ
+     * @return string|null 次のアクション
+     */
+    private function determineNextAction(?UserBranch $activeUserBranch): ?string
+    {
+        if (!$activeUserBranch) {
+            return null;
+        }
+
+        // commit_id = nullのedit_start_versionsの差分をチェック
+        $hasUncommittedChanges = $activeUserBranch->editStartVersions()
+            ->whereNull('commit_id')
+            ->exists();
+
+        if (!$hasUncommittedChanges) {
+            return null;
+        }
+
+        $hasOpenedPullRequest = $activeUserBranch->pullRequests()
+            ->where('status', PullRequestStatus::OPENED->value)
+            ->exists();
+
+        if ($hasOpenedPullRequest) {
+            return 'create_subsequent_commit';
+        } else {
+            return 'create_initial_commit';
+        }
     }
 }

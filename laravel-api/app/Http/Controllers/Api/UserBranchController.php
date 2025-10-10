@@ -41,40 +41,6 @@ class UserBranchController extends ApiBaseController
     }
 
     /**
-     * Git差分チェック
-     */
-    public function hasUserChanges(): JsonResponse
-    {
-        try {
-            // Cookieセッションからユーザー情報を取得
-            $loginUser = $this->user();
-
-            if (! $loginUser) {
-                return $this->sendError(
-                    ErrorType::CODE_AUTHENTICATION_FAILED,
-                    __('errors.MSG_AUTHENTICATION_FAILED'),
-                    ErrorType::STATUS_AUTHENTICATION_FAILED,
-                );
-            }
-
-            // アクティブなユーザーブランチセッションを取得
-            $activeSession = $this->userBranchService->hasUserActiveBranchSession($loginUser, $loginUser->organizationMember->organization_id);
-
-            return response()->json([
-                'has_user_changes' => $activeSession ? true : false,
-                'user_branch_id' => $activeSession ? $activeSession->id : null,
-            ]);
-        } catch (Exception) {
-            return $this->sendError(
-                ErrorType::CODE_INTERNAL_ERROR,
-                __('errors.MSG_INTERNAL_ERROR'),
-                ErrorType::STATUS_INTERNAL_ERROR,
-                LogLevel::ERROR,
-            );
-        }
-    }
-
-    /**
      * Git差分取得
      */
     public function fetchDiff(FetchDiffRequest $request): JsonResponse

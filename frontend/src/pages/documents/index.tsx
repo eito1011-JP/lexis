@@ -9,7 +9,6 @@ import { useUserMe } from '@/hooks/useUserMe';
 import { useCategories } from '@/hooks/useCategories';
 import { useCategoryDetail } from '@/hooks/useCategoryDetail';
 import { useDocumentDetail } from '@/hooks/useDocumentDetail';
-import { useUserBranchChanges } from '@/hooks/useUserBranchChanges';
 import { client } from '@/api/client';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -19,11 +18,10 @@ import { useToast } from '@/contexts/ToastContext';
  */
 export default function DocumentsPage(): JSX.Element {
   const navigate = useNavigate();
-  const { mutate: mutateUserMe } = useUserMe();
+  const { data: userMeData, mutate: mutateUserMe } = useUserMe();
   const toast = useToast();
   const [selectedSideContentCategory, setSelectedSideContentCategory] = useState<number | null>(null);
   const [selectedDocumentEntityId, setSelectedDocumentEntityId] = useState<number | null>(null);
-  const [showDiffConfirmModal, setShowDiffConfirmModal] = useState(false);
   const [showDiscardConfirmModal, setShowDiscardConfirmModal] = useState(false);
   
   // DocumentSideContentのrefresh関数用のref
@@ -33,7 +31,10 @@ export default function DocumentsPage(): JSX.Element {
   const { categories, isLoading: categoriesLoading, mutate: mutateCategories } = useCategories(null);
   const { categoryDetail, isLoading: categoryLoading, mutate: mutateCategoryDetail } = useCategoryDetail(selectedSideContentCategory);
   const { documentDetail: docDetail, isLoading: documentLoading, mutate: mutateDocumentDetail } = useDocumentDetail(selectedDocumentEntityId);
-  const { hasUserChanges, userBranchId, mutate: mutateUserBranchChanges } = useUserBranchChanges();
+
+  const nextAction = userMeData?.nextAction;
+  const userBranchId = userMeData?.activeUserBranch?.id;
+  const hasUserChanges = nextAction === 'create_initial_commit' || nextAction === 'create_subsequent_commit';
 
   // ローディング状態の統合
   const loading = categoriesLoading || categoryLoading || documentLoading;
@@ -81,7 +82,6 @@ export default function DocumentsPage(): JSX.Element {
       // activeUserBranchが変更されるため、これにより全てのキャッシュキーが変更され
       // カテゴリ、ドキュメントの詳細が自動的に新しいデータで再取得される
       await mutateUserMe();
-      await mutateUserBranchChanges();
       
       // サイドバーのDocumentSideContentを更新
       if (documentSideContentRefreshRef.current) {
@@ -154,7 +154,14 @@ export default function DocumentsPage(): JSX.Element {
               <button
                 className="flex items-center px-3 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => {
-                  setShowDiffConfirmModal(true);
+                  if (userBranchId) {
+                    navigate(`/documents/diff?user_branch_id=${userBranchId}`);
+                  } else {
+                    toast.show({ 
+                      message: '差分データの取得に失敗しました。ページを再読み込みしてください。', 
+                      type: 'error' 
+                    });
+                  }
                 }}
                 disabled={!hasUserChanges}
               >
@@ -172,7 +179,7 @@ export default function DocumentsPage(): JSX.Element {
                     d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
                   ></path>
                 </svg>
-                <span>差分提出</span>
+                <span>差分確認</span>
               </button>
             </div>
           </div>
@@ -240,45 +247,6 @@ export default function DocumentsPage(): JSX.Element {
                 onClick={handleSaveAsDraft}
               >
                 下書き保存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 差分提出確認モーダル */}
-      {showDiffConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-6 rounded-lg w-full max-w-md">
-            <h2 className="text-xl font-bold mb-4">変更内容を提出</h2>
-
-            <p className="mb-4 text-gray-300">
-              作成した変更内容をレビュー用に提出します。よろしいですか？
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 bg-gray-800 rounded-md hover:bg-gray-700 focus:outline-none"
-                onClick={() => setShowDiffConfirmModal(false)}
-              >
-                キャンセル
-              </button>
-              <button
-                className="px-4 py-2 bg-[#3832A5] rounded-md hover:bg-[#28227A] focus:outline-none flex items-center"
-                onClick={() => {
-                  if (userBranchId) {
-                    window.location.href = `/documents/diff?user_branch_id=${userBranchId}`;
-                  } else {
-                    // user_branch_idが取得できない場合はエラーメッセージを表示
-                    toast.show({ 
-                      message: '差分データの取得に失敗しました。ページを再読み込みしてください。', 
-                      type: 'error' 
-                    });
-                    setShowDiffConfirmModal(false);
-                  }
-                }}
-              >
-                差分確認画面へ
               </button>
             </div>
           </div>
