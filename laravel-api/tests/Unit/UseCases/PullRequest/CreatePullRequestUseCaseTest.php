@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Models\UserBranch;
 use App\Models\UserBranchSession;
 use App\Services\OrganizationService;
+use App\Services\CommitService;
 use App\Services\UserBranchService;
 use App\UseCases\PullRequest\CreatePullRequestUseCase;
 use Http\Discovery\Exception\NotFoundException;
@@ -39,6 +40,9 @@ class CreatePullRequestUseCaseTest extends TestCase
     /** @var \Mockery\MockInterface&UserBranchService */
     private UserBranchService $userBranchService;
 
+    /** @var \Mockery\MockInterface&CommitService */
+    private CommitService $commitService;
+
     private User $user;
 
     private Organization $organization;
@@ -52,11 +56,13 @@ class CreatePullRequestUseCaseTest extends TestCase
         // モックの作成
         $this->organizationService = Mockery::mock(OrganizationService::class);
         $this->userBranchService = Mockery::mock(UserBranchService::class);
+        $this->commitService = Mockery::mock(CommitService::class);
 
         // UseCaseのインスタンス化
         $this->useCase = new CreatePullRequestUseCase(
             $this->organizationService,
-            $this->userBranchService
+            $this->userBranchService,
+            $this->commitService
         );
 
         // テストデータのセットアップ
@@ -159,6 +165,11 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->shouldReceive('deleteUserBranchSessions')
             ->once()
             ->with($this->activeUserBranch, $this->user->id);
+
+        $this->commitService
+            ->shouldReceive('createCommitFromUserBranch')
+            ->once()
+            ->andReturn(null);
 
         // Act
         $pullRequest = $this->useCase->execute($dto, $this->user);
@@ -264,6 +275,11 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->shouldReceive('deleteUserBranchSessions')
             ->once()
             ->with($this->activeUserBranch, $this->user->id);
+
+        $this->commitService
+            ->shouldReceive('createCommitFromUserBranch')
+            ->once()
+            ->andReturn(null);
 
         // Act
         $pullRequest = $this->useCase->execute($dto, $this->user);
@@ -403,6 +419,11 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->once()
             ->with($this->activeUserBranch, $this->user->id);
 
+        $this->commitService
+            ->shouldReceive('createCommitFromUserBranch')
+            ->once()
+            ->andReturn(null);
+
         // Act & Assert
         $this->expectException(NotFoundException::class);
         $this->useCase->execute($dto, $this->user);
@@ -481,6 +502,11 @@ class CreatePullRequestUseCaseTest extends TestCase
             ->shouldReceive('deleteUserBranchSessions')
             ->once()
             ->with($this->activeUserBranch, $this->user->id);
+
+        $this->commitService
+            ->shouldReceive('createCommitFromUserBranch')
+            ->once()
+            ->andReturn(null);
 
         // Act & Assert
         $this->expectException(NotFoundException::class);
