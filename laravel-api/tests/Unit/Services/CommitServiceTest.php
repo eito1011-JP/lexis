@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Services;
 
+use App\Consts\Flag;
 use App\Enums\CommitChangeType;
 use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
@@ -122,7 +123,7 @@ class CommitServiceTest extends TestCase
         CommitDocumentDiff::factory()->create([
             'commit_id' => $previousCommit->id,
             'document_entity_id' => $documentEntity->id,
-            'change_type' => CommitChangeType::UPDATED->value,
+            'change_type' => CommitChangeType::CREATED->value,
             'is_title_changed' => true,
             'is_description_changed' => true,
             'first_original_version_id' => $originalVersion->id,
@@ -210,6 +211,30 @@ class CommitServiceTest extends TestCase
             'description' => 'Original Description',
         ]);
 
+        $previousCommit = Commit::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => $previousCommit->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'entity_id' => $categoryEntity->id,
+            'original_version_id' => $originalVersion->id,
+            'current_version_id' => $originalVersion->id,
+        ]);
+
+        CommitCategoryDiff::factory()->create([
+            'commit_id' => $previousCommit->id,
+            'category_entity_id' => $categoryEntity->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $originalVersion->id,
+            'last_current_version_id' => $originalVersion->id,
+        ]);
+
         $currentVersion = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity->id,
             'organization_id' => $this->organization->id,
@@ -246,6 +271,7 @@ class CommitServiceTest extends TestCase
         $this->assertDatabaseHas('commits', [
             'id' => $result->id,
             'user_id' => $this->user->id,
+            'parent_commit_id' => $previousCommit->id,
             'user_branch_id' => $this->userBranch->id,
             'message' => 'Test commit message',
         ]);
@@ -280,14 +306,33 @@ class CommitServiceTest extends TestCase
     public function createCommit_should_create_commit_without_parent_commit(): void
     {
         // Arrange
-        $editStartVersions = collect();
+        $documentEntity = DocumentEntity::factory()->create([
+            'organization_id' => $this->organization->id,
+        ]);
+
+        $originalVersion = DocumentVersion::factory()->create([
+            'entity_id' => $documentEntity->id,
+            'organization_id' => $this->organization->id,
+            'status' => DocumentStatus::DRAFT->value,
+            'title' => 'Original Title',
+            'description' => 'Original Description',
+        ]);
+
+        $editStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => null,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'entity_id' => $documentEntity->id,
+            'original_version_id' => $originalVersion->id,
+            'current_version_id' => $originalVersion->id,
+        ]);
 
         // Act
         $result = $this->service->createCommit(
             $this->user,
             $this->pullRequest,
             $this->userBranch,
-            $editStartVersions,
+            collect([$editStartVersion]),
             'Test commit message'
         );
 
@@ -303,123 +348,14 @@ class CommitServiceTest extends TestCase
             'message' => 'Test commit message',
         ]);
 
-        $this->assertDatabaseHas('activity_log_on_pull_requests', [
-            'commit_id' => $result->id,
-            'user_id' => $this->user->id,
-            'action' => PullRequestActivityAction::COMMIT_CREATED->value,
-            'pull_request_id' => $this->pullRequest->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function createCommit_should_create_commit_with_parent_commit(): void
-    {
-        // Arrange
-        $parentCommit = Commit::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'user_id' => $this->user->id,
-            'created_at' => now()->subHour(),
-        ]);
-
-        $editStartVersions = collect();
-
-        // Act
-        $result = $this->service->createCommit(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            $editStartVersions,
-            'Test commit message'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Commit::class, $result);
-        
-        $this->assertDatabaseHas('commits', [
-            'id' => $result->id,
-            'parent_commit_id' => $parentCommit->id,
-            'user_id' => $this->user->id,
-            'user_branch_id' => $this->userBranch->id,
-            'message' => 'Test commit message',
-        ]);
-
-        $this->assertDatabaseHas('activity_log_on_pull_requests', [
-            'commit_id' => $result->id,
-            'user_id' => $this->user->id,
-            'action' => PullRequestActivityAction::COMMIT_CREATED->value,
-            'pull_request_id' => $this->pullRequest->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function createCommit_should_create_document_diffs_when_edit_start_versions_exist(): void
-    {
-        // Arrange
-        $documentEntity = DocumentEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $originalVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-        ]);
-
-        $currentVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::DRAFT->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Updated Title',
-            'description' => 'Updated Description',
-        ]);
-
-        $editStartVersion = EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => null,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-            'original_version_id' => $originalVersion->id,
-            'current_version_id' => $currentVersion->id,
-        ]);
-
-        $editStartVersions = collect([$editStartVersion]);
-
-        // Act
-        $result = $this->service->createCommit(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            $editStartVersions,
-            'Test commit message'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Commit::class, $result);
-        
-        $this->assertDatabaseHas('commits', [
-            'id' => $result->id,
-            'user_id' => $this->user->id,
-            'user_branch_id' => $this->userBranch->id,
-            'message' => 'Test commit message',
-        ]);
-
         $this->assertDatabaseHas('commit_document_diffs', [
             'commit_id' => $result->id,
             'document_entity_id' => $documentEntity->id,
-            'change_type' => CommitChangeType::UPDATED->value,
-            'is_title_changed' => true,
-            'is_description_changed' => true,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
             'first_original_version_id' => $originalVersion->id,
-            'last_current_version_id' => $currentVersion->id,
+            'last_current_version_id' => $originalVersion->id,
         ]);
 
         $this->assertDatabaseHas('edit_start_versions', [
@@ -437,88 +373,6 @@ class CommitServiceTest extends TestCase
         ]);
     }
 
-    /**
-     * @test
-     */
-    public function createCommit_should_create_category_diffs_when_edit_start_versions_exist(): void
-    {
-        // Arrange
-        $categoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $originalVersion = CategoryVersion::factory()->create([
-            'entity_id' => $categoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::MERGED->value,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-        ]);
-
-        $currentVersion = CategoryVersion::factory()->create([
-            'entity_id' => $categoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Updated Title',
-            'description' => 'Updated Description',
-        ]);
-
-        $editStartVersion = EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => null,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'entity_id' => $categoryEntity->id,
-            'original_version_id' => $originalVersion->id,
-            'current_version_id' => $currentVersion->id,
-        ]);
-
-        $editStartVersions = collect([$editStartVersion]);
-
-        // Act
-        $result = $this->service->createCommit(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            $editStartVersions,
-            'Test commit message'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Commit::class, $result);
-        
-        $this->assertDatabaseHas('commits', [
-            'id' => $result->id,
-            'user_id' => $this->user->id,
-            'user_branch_id' => $this->userBranch->id,
-            'message' => 'Test commit message',
-        ]);
-
-        $this->assertDatabaseHas('commit_category_diffs', [
-            'commit_id' => $result->id,
-            'category_entity_id' => $categoryEntity->id,
-            'change_type' => CommitChangeType::UPDATED->value,
-            'is_title_changed' => true,
-            'is_description_changed' => true,
-            'first_original_version_id' => $originalVersion->id,
-            'last_current_version_id' => $currentVersion->id,
-        ]);
-
-        $this->assertDatabaseHas('edit_start_versions', [
-            'id' => $editStartVersion->id,
-            'commit_id' => $result->id,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'entity_id' => $categoryEntity->id,
-        ]);
-
-        $this->assertDatabaseHas('activity_log_on_pull_requests', [
-            'commit_id' => $result->id,
-            'user_id' => $this->user->id,
-            'action' => PullRequestActivityAction::COMMIT_CREATED->value,
-            'pull_request_id' => $this->pullRequest->id,
-        ]);
-    }
 
     /**
      * @test
@@ -548,14 +402,12 @@ class CommitServiceTest extends TestCase
             'current_version_id' => $currentVersion->id,
         ]);
 
-        $editStartVersions = collect([$editStartVersion]);
-
         // Act
         $result = $this->service->createCommit(
             $this->user,
             $this->pullRequest,
             $this->userBranch,
-            $editStartVersions,
+            collect([$editStartVersion]),
             'Test commit message'
         );
 
@@ -566,6 +418,7 @@ class CommitServiceTest extends TestCase
         $this->assertDatabaseHas('commits', [
             'id' => $result->id,
             'user_id' => $this->user->id,
+            'parent_commit_id' => null,
             'user_branch_id' => $this->userBranch->id,
             'message' => 'Test commit message',
         ]);
@@ -576,6 +429,8 @@ class CommitServiceTest extends TestCase
             'change_type' => CommitChangeType::CREATED->value,
             'is_title_changed' => false,
             'is_description_changed' => false,
+            'first_original_version_id' => $currentVersion->id,
+            'last_current_version_id' => $currentVersion->id,
         ]);
 
         $this->assertDatabaseHas('edit_start_versions', [
@@ -611,6 +466,30 @@ class CommitServiceTest extends TestCase
             'description' => 'Original Description',
         ]);
 
+        $previousCommit = Commit::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => $previousCommit->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'entity_id' => $documentEntity->id,
+            'original_version_id' => $originalVersion->id,
+            'current_version_id' => $originalVersion->id,
+        ]);
+
+        CommitDocumentDiff::factory()->create([
+            'commit_id' => $previousCommit->id,
+            'document_entity_id' => $documentEntity->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $originalVersion->id,
+            'last_current_version_id' => $originalVersion->id,
+        ]);
+
         $currentVersion = DocumentVersion::factory()->create([
             'entity_id' => $documentEntity->id,
             'organization_id' => $this->organization->id,
@@ -618,7 +497,7 @@ class CommitServiceTest extends TestCase
             'user_branch_id' => $this->userBranch->id,
             'title' => 'Deleted Document',
             'description' => 'Deleted Description',
-            'is_deleted' => true,
+            'is_deleted' => Flag::TRUE,
         ]);
 
         $editStartVersion = EditStartVersion::factory()->create([
@@ -630,14 +509,12 @@ class CommitServiceTest extends TestCase
             'current_version_id' => $currentVersion->id,
         ]);
 
-        $editStartVersions = collect([$editStartVersion]);
-
         // Act
         $result = $this->service->createCommit(
             $this->user,
             $this->pullRequest,
             $this->userBranch,
-            $editStartVersions,
+            collect([$editStartVersion]),
             'Test commit message'
         );
 
@@ -647,7 +524,8 @@ class CommitServiceTest extends TestCase
         
         $this->assertDatabaseHas('commits', [
             'id' => $result->id,
-            'user_id' => $this->user->id,
+            'user_id' => $this->user->id,   
+            'parent_commit_id' => $previousCommit->id,
             'user_branch_id' => $this->userBranch->id,
             'message' => 'Test commit message',
         ]);
@@ -655,165 +533,11 @@ class CommitServiceTest extends TestCase
         $this->assertDatabaseHas('commit_document_diffs', [
             'commit_id' => $result->id,
             'document_entity_id' => $documentEntity->id,
-        ]);
-
-        $this->assertDatabaseHas('edit_start_versions', [
-            'id' => $editStartVersion->id,
-            'commit_id' => $result->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-        ]);
-
-        $this->assertDatabaseHas('activity_log_on_pull_requests', [
-            'commit_id' => $result->id,
-            'user_id' => $this->user->id,
-            'action' => PullRequestActivityAction::COMMIT_CREATED->value,
-            'pull_request_id' => $this->pullRequest->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function createCommit_should_detect_deleted_change_type_when_entity_is_deleted(): void
-    {
-        // Arrange
-        $documentEntity = DocumentEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-            'is_deleted' => true,
-        ]);
-
-        $originalVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-        ]);
-
-        $currentVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::DRAFT->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Current Title',
-            'description' => 'Current Description',
-            'is_deleted' => true,
-        ]);
-
-        $editStartVersion = EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => null,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-            'original_version_id' => $originalVersion->id,
-            'current_version_id' => $currentVersion->id,
-        ]);
-
-        $editStartVersions = collect([$editStartVersion]);
-
-        // Act
-        $result = $this->service->createCommit(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            $editStartVersions,
-            'Test commit message'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Commit::class, $result);
-        
-        $this->assertDatabaseHas('commits', [
-            'id' => $result->id,
-            'user_id' => $this->user->id,
-            'user_branch_id' => $this->userBranch->id,
-            'message' => 'Test commit message',
-        ]);
-
-        $this->assertDatabaseHas('commit_document_diffs', [
-            'commit_id' => $result->id,
-            'document_entity_id' => $documentEntity->id,
-        ]);
-
-        $this->assertDatabaseHas('edit_start_versions', [
-            'id' => $editStartVersion->id,
-            'commit_id' => $result->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-        ]);
-
-        $this->assertDatabaseHas('activity_log_on_pull_requests', [
-            'commit_id' => $result->id,
-            'user_id' => $this->user->id,
-            'action' => PullRequestActivityAction::COMMIT_CREATED->value,
-            'pull_request_id' => $this->pullRequest->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function createCommit_should_detect_updated_change_type_when_both_versions_exist(): void
-    {
-        // Arrange
-        $documentEntity = DocumentEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $originalVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-        ]);
-
-        $currentVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::DRAFT->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Updated Title',
-            'description' => 'Updated Description',
-        ]);
-
-        $editStartVersion = EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => null,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-            'original_version_id' => $originalVersion->id,
-            'current_version_id' => $currentVersion->id,
-        ]);
-
-        $editStartVersions = collect([$editStartVersion]);
-
-        // Act
-        $result = $this->service->createCommit(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            $editStartVersions,
-            'Test commit message'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Commit::class, $result);
-        
-        $this->assertDatabaseHas('commits', [
-            'id' => $result->id,
-            'user_id' => $this->user->id,
-            'user_branch_id' => $this->userBranch->id,
-            'message' => 'Test commit message',
-        ]);
-
-        $this->assertDatabaseHas('commit_document_diffs', [
-            'commit_id' => $result->id,
-            'document_entity_id' => $documentEntity->id,
-            'change_type' => CommitChangeType::UPDATED->value,
+            'change_type' => CommitChangeType::DELETED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $originalVersion->id,
+            'last_current_version_id' => $currentVersion->id,
         ]);
 
         $this->assertDatabaseHas('edit_start_versions', [
@@ -849,6 +573,30 @@ class CommitServiceTest extends TestCase
             'description' => 'Same Description',
         ]);
 
+        $previousCommit = Commit::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => $previousCommit->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'entity_id' => $documentEntity->id,
+            'original_version_id' => $originalVersion->id,
+            'current_version_id' => $originalVersion->id,
+        ]);
+
+        CommitDocumentDiff::factory()->create([
+            'commit_id' => $previousCommit->id,
+            'document_entity_id' => $documentEntity->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $originalVersion->id,
+            'last_current_version_id' => $originalVersion->id,
+        ]);
+
         $currentVersion = DocumentVersion::factory()->create([
             'entity_id' => $documentEntity->id,
             'organization_id' => $this->organization->id,
@@ -884,6 +632,7 @@ class CommitServiceTest extends TestCase
         
         $this->assertDatabaseHas('commits', [
             'id' => $result->id,
+            'parent_commit_id' => $previousCommit->id,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
             'message' => 'Test commit message',
@@ -894,6 +643,8 @@ class CommitServiceTest extends TestCase
             'document_entity_id' => $documentEntity->id,
             'is_title_changed' => true,
             'is_description_changed' => false,
+            'first_original_version_id' => $originalVersion->id,
+            'last_current_version_id' => $currentVersion->id,
         ]);
 
         $this->assertDatabaseHas('edit_start_versions', [
@@ -929,6 +680,30 @@ class CommitServiceTest extends TestCase
             'description' => 'Original Description',
         ]);
 
+        $previousCommit = Commit::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => $previousCommit->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'entity_id' => $documentEntity->id,
+            'original_version_id' => $originalVersion->id,
+            'current_version_id' => $originalVersion->id,
+        ]);
+
+        CommitDocumentDiff::factory()->create([
+            'commit_id' => $previousCommit->id,
+            'document_entity_id' => $documentEntity->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $originalVersion->id,
+            'last_current_version_id' => $originalVersion->id,
+        ]);
+
         $currentVersion = DocumentVersion::factory()->create([
             'entity_id' => $documentEntity->id,
             'organization_id' => $this->organization->id,
@@ -964,6 +739,7 @@ class CommitServiceTest extends TestCase
         
         $this->assertDatabaseHas('commits', [
             'id' => $result->id,
+            'parent_commit_id' => $previousCommit->id,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
             'message' => 'Test commit message',
@@ -974,6 +750,8 @@ class CommitServiceTest extends TestCase
             'document_entity_id' => $documentEntity->id,
             'is_title_changed' => false,
             'is_description_changed' => true,
+            'first_original_version_id' => $originalVersion->id,
+            'last_current_version_id' => $currentVersion->id,
         ]);
 
         $this->assertDatabaseHas('edit_start_versions', [
@@ -1008,6 +786,29 @@ class CommitServiceTest extends TestCase
             'title' => 'Doc 1 Original',
             'description' => 'Doc 1 Original Description',
         ]);
+        $previousCommit1 = Commit::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'user_id' => $this->user->id,
+        ]);
+        $docOriginal1EditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => $previousCommit1->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'entity_id' => $documentEntity1->id,
+            'original_version_id' => $docOriginal1->id,
+            'current_version_id' => $docOriginal1->id,
+        ]);
+        CommitDocumentDiff::factory()->create([
+            'commit_id' => $previousCommit1->id,
+            'document_entity_id' => $documentEntity1->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $docOriginal1->id,
+            'last_current_version_id' => $docOriginal1->id,
+        ]);
+
+        // Updated Document 1
         $docCurrent1 = DocumentVersion::factory()->create([
             'entity_id' => $documentEntity1->id,
             'organization_id' => $this->organization->id,
@@ -1016,7 +817,7 @@ class CommitServiceTest extends TestCase
             'title' => 'Doc 1 Updated',
             'description' => 'Doc 1 Updated Description',
         ]);
-        $editStartVersion1 = EditStartVersion::factory()->create([
+        $docCurrent1EditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'commit_id' => null,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
@@ -1025,7 +826,7 @@ class CommitServiceTest extends TestCase
             'current_version_id' => $docCurrent1->id,
         ]);
 
-        // Document 2
+        // Original Document 2
         $documentEntity2 = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -1036,6 +837,25 @@ class CommitServiceTest extends TestCase
             'title' => 'Doc 2 Original',
             'description' => 'Doc 2 Original Description',
         ]);
+        $docOriginal2EditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => $previousCommit1->id,
+            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
+            'entity_id' => $documentEntity2->id,
+            'original_version_id' => $docOriginal2->id,
+            'current_version_id' => $docOriginal2->id,
+        ]);
+        CommitDocumentDiff::factory()->create([
+            'commit_id' => $previousCommit1->id,
+            'document_entity_id' => $documentEntity2->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $docOriginal2->id,
+            'last_current_version_id' => $docOriginal2->id,
+        ]);
+
+        // Updated Document 2
         $docCurrent2 = DocumentVersion::factory()->create([
             'entity_id' => $documentEntity2->id,
             'organization_id' => $this->organization->id,
@@ -1044,7 +864,7 @@ class CommitServiceTest extends TestCase
             'title' => 'Doc 2 Updated',
             'description' => 'Doc 2 Updated Description',
         ]);
-        $editStartVersion2 = EditStartVersion::factory()->create([
+        $docCurrent2EditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'commit_id' => null,
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
@@ -1053,7 +873,7 @@ class CommitServiceTest extends TestCase
             'current_version_id' => $docCurrent2->id,
         ]);
 
-        // Category 1
+        // Original Category 1
         $categoryEntity1 = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -1064,6 +884,25 @@ class CommitServiceTest extends TestCase
             'title' => 'Cat 1 Original',
             'description' => 'Cat 1 Original Description',
         ]);
+        $catOriginal1EditStartVersion = EditStartVersion::factory()->create([
+            'user_branch_id' => $this->userBranch->id,
+            'commit_id' => $previousCommit1->id,
+            'target_type' => EditStartVersionTargetType::CATEGORY->value,
+            'entity_id' => $categoryEntity1->id,
+            'original_version_id' => $catOriginal1->id,
+            'current_version_id' => $catOriginal1->id,
+        ]);
+        CommitCategoryDiff::factory()->create([
+            'commit_id' => $previousCommit1->id,
+            'category_entity_id' => $categoryEntity1->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $catOriginal1->id,
+            'last_current_version_id' => $catOriginal1->id,
+        ]);
+
+        // Updated Category 1
         $catCurrent1 = CategoryVersion::factory()->create([
             'entity_id' => $categoryEntity1->id,
             'organization_id' => $this->organization->id,
@@ -1072,7 +911,7 @@ class CommitServiceTest extends TestCase
             'title' => 'Cat 1 Updated',
             'description' => 'Cat 1 Updated Description',
         ]);
-        $editStartVersion3 = EditStartVersion::factory()->create([
+        $catCurrent1EditStartVersion = EditStartVersion::factory()->create([
             'user_branch_id' => $this->userBranch->id,
             'commit_id' => null,
             'target_type' => EditStartVersionTargetType::CATEGORY->value,
@@ -1081,7 +920,7 @@ class CommitServiceTest extends TestCase
             'current_version_id' => $catCurrent1->id,
         ]);
 
-        $editStartVersions = collect([$editStartVersion1, $editStartVersion2, $editStartVersion3]);
+        $editStartVersions = collect([$docOriginal1EditStartVersion, $docCurrent1EditStartVersion, $docOriginal2EditStartVersion, $docCurrent2EditStartVersion, $catOriginal1EditStartVersion, $catCurrent1EditStartVersion]);
 
         // Act
         $result = $this->service->createCommit(
@@ -1098,6 +937,7 @@ class CommitServiceTest extends TestCase
         
         $this->assertDatabaseHas('commits', [
             'id' => $result->id,
+            'parent_commit_id' => $previousCommit1->id,
             'user_id' => $this->user->id,
             'user_branch_id' => $this->userBranch->id,
             'message' => 'Test commit message',
@@ -1110,11 +950,21 @@ class CommitServiceTest extends TestCase
         $this->assertDatabaseHas('commit_document_diffs', [
             'commit_id' => $result->id,
             'document_entity_id' => $documentEntity1->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => true,
+            'is_description_changed' => true,
+            'first_original_version_id' => $docOriginal1->id,
+            'last_current_version_id' => $docCurrent1->id,
         ]);
 
         $this->assertDatabaseHas('commit_document_diffs', [
             'commit_id' => $result->id,
             'document_entity_id' => $documentEntity2->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => true,
+            'is_description_changed' => true,
+            'first_original_version_id' => $docOriginal2->id,
+            'last_current_version_id' => $docCurrent2->id,
         ]);
 
         // Check category diffs
@@ -1124,6 +974,11 @@ class CommitServiceTest extends TestCase
         $this->assertDatabaseHas('commit_category_diffs', [
             'commit_id' => $result->id,
             'category_entity_id' => $categoryEntity1->id,
+            'change_type' => CommitChangeType::CREATED->value,
+            'is_title_changed' => false,
+            'is_description_changed' => false,
+            'first_original_version_id' => $catOriginal1->id,
+            'last_current_version_id' => $catCurrent1->id,
         ]);
 
         $this->assertDatabaseHas('activity_log_on_pull_requests', [
@@ -1132,252 +987,6 @@ class CommitServiceTest extends TestCase
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
         ]);
-    }
-
-    /**
-     * @test
-     */
-    public function createCommit_should_not_update_version_status_when_not_called_from_createCommitFromUserBranch(): void
-    {
-        // Arrange
-        $documentEntity = DocumentEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-
-        $originalVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-        ]);
-
-        $currentVersion = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::DRAFT->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Updated Title',
-            'description' => 'Updated Description',
-        ]);
-
-        $editStartVersion = EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => null,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-            'original_version_id' => $originalVersion->id,
-            'current_version_id' => $currentVersion->id,
-        ]);
-
-        $editStartVersions = collect([$editStartVersion]);
-
-        // Act
-        $result = $this->service->createCommit(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            $editStartVersions,
-            'Test commit message'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Commit::class, $result);
-        
-        $this->assertDatabaseHas('commits', [
-            'id' => $result->id,
-            'user_id' => $this->user->id,
-            'user_branch_id' => $this->userBranch->id,
-            'message' => 'Test commit message',
-        ]);
-
-        $currentVersion->refresh();
-        // createCommit is called directly, so version status should remain DRAFT
-        $this->assertEquals(DocumentStatus::DRAFT->value, $currentVersion->status);
-
-        $this->assertDatabaseHas('commit_document_diffs', [
-            'commit_id' => $result->id,
-            'document_entity_id' => $documentEntity->id,
-            'change_type' => CommitChangeType::UPDATED->value,
-            'is_title_changed' => true,
-            'is_description_changed' => true,
-            'first_original_version_id' => $originalVersion->id,
-            'last_current_version_id' => $currentVersion->id,
-        ]);
-
-        $this->assertDatabaseHas('edit_start_versions', [
-            'id' => $editStartVersion->id,
-            'commit_id' => $result->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-        ]);
-
-        $this->assertDatabaseHas('activity_log_on_pull_requests', [
-            'commit_id' => $result->id,
-            'user_id' => $this->user->id,
-            'action' => PullRequestActivityAction::COMMIT_CREATED->value,
-            'pull_request_id' => $this->pullRequest->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function createCommitFromUserBranch_should_handle_multiple_edit_start_versions_with_different_target_types(): void
-    {
-        // Arrange
-        $documentEntity = DocumentEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-        $docOriginal = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'title' => 'Document Original',
-            'description' => 'Document Original Description',
-        ]);
-        $docCurrent = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::DRAFT->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Document Updated',
-            'description' => 'Document Updated Description',
-        ]);
-
-        $categoryEntity = CategoryEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-        $catOriginal = CategoryVersion::factory()->create([
-            'entity_id' => $categoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::MERGED->value,
-            'title' => 'Category Original',
-            'description' => 'Category Original Description',
-        ]);
-        $catCurrent = CategoryVersion::factory()->create([
-            'entity_id' => $categoryEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentCategoryStatus::DRAFT->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Category Updated',
-            'description' => 'Category Updated Description',
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => null,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-            'original_version_id' => $docOriginal->id,
-            'current_version_id' => $docCurrent->id,
-        ]);
-
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => null,
-            'target_type' => EditStartVersionTargetType::CATEGORY->value,
-            'entity_id' => $categoryEntity->id,
-            'original_version_id' => $catOriginal->id,
-            'current_version_id' => $catCurrent->id,
-        ]);
-
-        // Act
-        $result = $this->service->createCommitFromUserBranch(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            'Test commit message'
-        );
-
-        // Assert
-        $this->assertNotNull($result);
-        $this->assertInstanceOf(Commit::class, $result);
-        
-        $this->assertDatabaseHas('commits', [
-            'id' => $result->id,
-            'user_id' => $this->user->id,
-            'user_branch_id' => $this->userBranch->id,
-            'message' => 'Test commit message',
-        ]);
-
-        // Check that both document and category statuses are updated
-        $docCurrent->refresh();
-        $catCurrent->refresh();
-        $this->assertEquals(DocumentStatus::PUSHED->value, $docCurrent->status);
-        $this->assertEquals(DocumentCategoryStatus::PUSHED->value, $catCurrent->status);
-
-        // Check that both diffs are created
-        $this->assertDatabaseHas('commit_document_diffs', [
-            'commit_id' => $result->id,
-            'document_entity_id' => $documentEntity->id,
-        ]);
-        
-        $this->assertDatabaseHas('commit_category_diffs', [
-            'commit_id' => $result->id,
-            'category_entity_id' => $categoryEntity->id,
-        ]);
-
-        $this->assertDatabaseHas('activity_log_on_pull_requests', [
-            'commit_id' => $result->id,
-            'user_id' => $this->user->id,
-            'action' => PullRequestActivityAction::COMMIT_CREATED->value,
-            'pull_request_id' => $this->pullRequest->id,
-        ]);
-    }
-
-    /**
-     * @test
-     */
-    public function createCommitFromUserBranch_should_ignore_edit_start_versions_with_existing_commit_id(): void
-    {
-        // Arrange
-        $existingCommit = Commit::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'user_id' => $this->user->id,
-        ]);
-
-        $documentEntity = DocumentEntity::factory()->create([
-            'organization_id' => $this->organization->id,
-        ]);
-        $docOriginal = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::MERGED->value,
-            'title' => 'Original Title',
-            'description' => 'Original Description',
-        ]);
-        $docCurrent = DocumentVersion::factory()->create([
-            'entity_id' => $documentEntity->id,
-            'organization_id' => $this->organization->id,
-            'status' => DocumentStatus::PUSHED->value,
-            'user_branch_id' => $this->userBranch->id,
-            'title' => 'Updated Title',
-            'description' => 'Updated Description',
-        ]);
-
-        // EditStartVersion with existing commit_id (should be ignored)
-        EditStartVersion::factory()->create([
-            'user_branch_id' => $this->userBranch->id,
-            'commit_id' => $existingCommit->id,
-            'target_type' => EditStartVersionTargetType::DOCUMENT->value,
-            'entity_id' => $documentEntity->id,
-            'original_version_id' => $docOriginal->id,
-            'current_version_id' => $docCurrent->id,
-        ]);
-
-        // Act
-        $result = $this->service->createCommitFromUserBranch(
-            $this->user,
-            $this->pullRequest,
-            $this->userBranch,
-            'Test commit message'
-        );
-
-        // Assert
-        // Should return null because all EditStartVersions have commit_id
-        $this->assertNull($result);
     }
 }
 
