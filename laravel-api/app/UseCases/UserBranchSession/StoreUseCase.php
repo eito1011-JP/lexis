@@ -74,13 +74,17 @@ class StoreUseCase
             }
 
             // pull_requestに紐づくuser_branchのuser_branch_sessionsを取得
-            $existingSession = UserBranchSession::lockForUpdate()
+            $existingSession = UserBranchSession::with('user:id,nickname')
+                ->lockForUpdate()
                 ->where('user_branch_id', $pullRequest->user_branch_id)
                 ->first();
 
             // すでにセッションが存在する場合はエラー
             if ($existingSession) {
-                throw new DuplicateExecutionException();
+                $editingUserNickname = $existingSession->user->nickname ?? '他のユーザー';
+                $exception = new DuplicateExecutionException();
+                $exception->setErrorMessage("{$editingUserNickname}が編集中です");
+                throw $exception;
             }
 
             // user_branch_sessionsを作成
