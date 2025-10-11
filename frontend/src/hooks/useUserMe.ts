@@ -1,5 +1,6 @@
 import useAspidaSWR from '@aspida/swr';
 import { client } from '@/api/client';
+import type { UserMeResponse } from '@/api/users/me';
 
 /**
  * どの画面からでも/api/users/meを呼び出してユーザー情報を取得できるカスタムフック
@@ -29,15 +30,18 @@ export const useUserMe = () => {
     }
   );
 
+  // dataをUserMeResponse型として型アサーション
+  const typedData = data as UserMeResponse | undefined;
+
   return {
     /** ユーザー情報、組織情報、アクティブブランチ情報 */
-    data,
+    data: typedData,
     /** ユーザー情報（短縮アクセス） */
-    user: data?.user,
+    user: typedData?.user,
     /** 組織情報（短縮アクセス） */
-    organization: data?.organization,
+    organization: typedData?.organization,
     /** アクティブなユーザーブランチ（短縮アクセス） */
-    activeUserBranch: data?.activeUserBranch,
+    activeUserBranch: typedData?.activeUserBranch,
     /** エラー情報 */
     error,
     /** ローディング状態 */

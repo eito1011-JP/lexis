@@ -7,6 +7,7 @@ import type { Methods as Methods_12vt0nz } from './auth/pre-users';
 import type { Methods as Methods_1xs246r } from './auth/signin-with-email';
 import type { Methods as Methods_10ygvz6 } from './category-entities';
 import type { Methods as Methods_1hz00if } from './category-entities/_entityId@number';
+import type { Methods as Methods_m7eodo } from './commits';
 import type { Methods as Methods_n9z2k1 } from './document-entities';
 import type { Methods as Methods_68m4j2 } from './document-entities/_entityId@number';
 import type { Methods as Methods_11eupjd } from './fix-requests/_token';
@@ -40,28 +41,29 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
   const PATH3 = '/auth/pre-users';
   const PATH4 = '/auth/signin-with-email';
   const PATH5 = '/category-entities';
-  const PATH6 = '/document-entities';
-  const PATH7 = '/fix-requests';
-  const PATH8 = '/fix-requests/apply';
-  const PATH9 = '/nodes';
-  const PATH10 = '/organizations';
-  const PATH11 = '/pull-request-edit-sessions';
-  const PATH12 = '/pull-request-edit-sessions/detail';
-  const PATH13 = '/pull-request-reviewers';
-  const PATH14 = '/resend';
-  const PATH15 = '/pull-requests';
-  const PATH16 = '/activity-log-on-pull-request';
-  const PATH17 = '/approve';
-  const PATH18 = '/close';
-  const PATH19 = '/conflict/diff';
-  const PATH20 = '/conflict/temporary';
-  const PATH21 = '/fix-request';
-  const PATH22 = '/merge';
-  const PATH23 = '/update';
-  const PATH24 = '/user-branch-sessions';
-  const PATH25 = '/user-branches';
-  const PATH26 = '/user-branches/diff';
-  const PATH27 = '/users/me';
+  const PATH6 = '/commits';
+  const PATH7 = '/document-entities';
+  const PATH8 = '/fix-requests';
+  const PATH9 = '/fix-requests/apply';
+  const PATH10 = '/nodes';
+  const PATH11 = '/organizations';
+  const PATH12 = '/pull-request-edit-sessions';
+  const PATH13 = '/pull-request-edit-sessions/detail';
+  const PATH14 = '/pull-request-reviewers';
+  const PATH15 = '/resend';
+  const PATH16 = '/pull-requests';
+  const PATH17 = '/activity-log-on-pull-request';
+  const PATH18 = '/approve';
+  const PATH19 = '/close';
+  const PATH20 = '/conflict/diff';
+  const PATH21 = '/conflict/temporary';
+  const PATH22 = '/fix-request';
+  const PATH23 = '/merge';
+  const PATH24 = '/update';
+  const PATH25 = '/user-branch-sessions';
+  const PATH26 = '/user-branches';
+  const PATH27 = '/user-branches/diff';
+  const PATH28 = '/users/me';
   const GET = 'GET';
   const POST = 'POST';
   const PUT = 'PUT';
@@ -161,6 +163,13 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
       $path: (option?: { method?: 'get' | undefined; query: Methods_10ygvz6['get']['query'] } | undefined) =>
         `${prefix}${PATH5}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
     },
+    commits: {
+      post: (option: { body: Methods_m7eodo['post']['reqBody'], config?: T | undefined }) =>
+        fetch<Methods_m7eodo['post']['resBody']>(prefix, PATH6, POST, option).json(),
+      $post: (option: { body: Methods_m7eodo['post']['reqBody'], config?: T | undefined }) =>
+        fetch<Methods_m7eodo['post']['resBody']>(prefix, PATH6, POST, option).json().then(r => r.body),
+      $path: () => `${prefix}${PATH6}`,
+    },
     /**
      * POST /api/document-entities
      */
@@ -171,7 +180,7 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
        * DELETE /api/document-entities/:entityId
        */
       _entityId: (val1: number) => {
-        const prefix1 = `${PATH6}/${val1}`;
+        const prefix1 = `${PATH7}/${val1}`;
 
         return {
           get: (option?: { config?: T | undefined } | undefined) =>
@@ -190,17 +199,17 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
         };
       },
       post: (option: { body: Methods_n9z2k1['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_n9z2k1['post']['resBody']>(prefix, PATH6, POST, option).json(),
+        fetch<Methods_n9z2k1['post']['resBody']>(prefix, PATH7, POST, option).json(),
       $post: (option: { body: Methods_n9z2k1['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_n9z2k1['post']['resBody']>(prefix, PATH6, POST, option).json().then(r => r.body),
-      $path: () => `${prefix}${PATH6}`,
+        fetch<Methods_n9z2k1['post']['resBody']>(prefix, PATH7, POST, option).json().then(r => r.body),
+      $path: () => `${prefix}${PATH7}`,
     },
     fix_requests: {
       /**
        * GET /api/fix-requests/:token
        */
       _token: (val1: number | string) => {
-        const prefix1 = `${PATH7}/${val1}`;
+        const prefix1 = `${PATH8}/${val1}`;
 
         return {
           get: (option?: { query?: Methods_11eupjd['get']['query'] | undefined, config?: T | undefined } | undefined) =>
@@ -216,10 +225,10 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
        */
       apply: {
         post: (option: { body: Methods_yifr8d['post']['reqBody'], config?: T | undefined }) =>
-          fetch<Methods_yifr8d['post']['resBody']>(prefix, PATH8, POST, option).json(),
+          fetch<Methods_yifr8d['post']['resBody']>(prefix, PATH9, POST, option).json(),
         $post: (option: { body: Methods_yifr8d['post']['reqBody'], config?: T | undefined }) =>
-          fetch<Methods_yifr8d['post']['resBody']>(prefix, PATH8, POST, option).json().then(r => r.body),
-        $path: () => `${prefix}${PATH8}`,
+          fetch<Methods_yifr8d['post']['resBody']>(prefix, PATH9, POST, option).json().then(r => r.body),
+        $path: () => `${prefix}${PATH9}`,
       },
     },
     /**
@@ -227,21 +236,21 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
      */
     nodes: {
       get: (option: { query: Methods_ymax8f['get']['query'], config?: T | undefined }) =>
-        fetch<Methods_ymax8f['get']['resBody']>(prefix, PATH9, GET, option).json(),
+        fetch<Methods_ymax8f['get']['resBody']>(prefix, PATH10, GET, option).json(),
       $get: (option: { query: Methods_ymax8f['get']['query'], config?: T | undefined }) =>
-        fetch<Methods_ymax8f['get']['resBody']>(prefix, PATH9, GET, option).json().then(r => r.body),
+        fetch<Methods_ymax8f['get']['resBody']>(prefix, PATH10, GET, option).json().then(r => r.body),
       $path: (option?: { method?: 'get' | undefined; query: Methods_ymax8f['get']['query'] } | undefined) =>
-        `${prefix}${PATH9}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
+        `${prefix}${PATH10}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
     },
     /**
      * POST /api/organizations
      */
     organizations: {
       post: (option: { body: Methods_yyj2kq['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_yyj2kq['post']['resBody']>(prefix, PATH10, POST, option).json(),
+        fetch<Methods_yyj2kq['post']['resBody']>(prefix, PATH11, POST, option).json(),
       $post: (option: { body: Methods_yyj2kq['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_yyj2kq['post']['resBody']>(prefix, PATH10, POST, option).json().then(r => r.body),
-      $path: () => `${prefix}${PATH10}`,
+        fetch<Methods_yyj2kq['post']['resBody']>(prefix, PATH11, POST, option).json().then(r => r.body),
+      $path: () => `${prefix}${PATH11}`,
     },
     /**
      * POST /api/pull-request-edit-sessions (編集セッション開始)
@@ -253,25 +262,25 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
        */
       detail: {
         get: (option: { query: Methods_1b21cg6['get']['query'], config?: T | undefined }) =>
-          fetch<Methods_1b21cg6['get']['resBody']>(prefix, PATH12, GET, option).json(),
+          fetch<Methods_1b21cg6['get']['resBody']>(prefix, PATH13, GET, option).json(),
         $get: (option: { query: Methods_1b21cg6['get']['query'], config?: T | undefined }) =>
-          fetch<Methods_1b21cg6['get']['resBody']>(prefix, PATH12, GET, option).json().then(r => r.body),
+          fetch<Methods_1b21cg6['get']['resBody']>(prefix, PATH13, GET, option).json().then(r => r.body),
         $path: (option?: { method?: 'get' | undefined; query: Methods_1b21cg6['get']['query'] } | undefined) =>
-          `${prefix}${PATH12}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
+          `${prefix}${PATH13}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
       },
       post: (option: { body: Methods_1a7bieq['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_1a7bieq['post']['resBody']>(prefix, PATH11, POST, option).json(),
+        fetch<Methods_1a7bieq['post']['resBody']>(prefix, PATH12, POST, option).json(),
       $post: (option: { body: Methods_1a7bieq['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_1a7bieq['post']['resBody']>(prefix, PATH11, POST, option).json().then(r => r.body),
+        fetch<Methods_1a7bieq['post']['resBody']>(prefix, PATH12, POST, option).json().then(r => r.body),
       patch: (option: { body: Methods_1a7bieq['patch']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_1a7bieq['patch']['resBody']>(prefix, PATH11, PATCH, option).json(),
+        fetch<Methods_1a7bieq['patch']['resBody']>(prefix, PATH12, PATCH, option).json(),
       $patch: (option: { body: Methods_1a7bieq['patch']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_1a7bieq['patch']['resBody']>(prefix, PATH11, PATCH, option).json().then(r => r.body),
-      $path: () => `${prefix}${PATH11}`,
+        fetch<Methods_1a7bieq['patch']['resBody']>(prefix, PATH12, PATCH, option).json().then(r => r.body),
+      $path: () => `${prefix}${PATH12}`,
     },
     pull_request_reviewers: {
       _userId: (val1: number) => {
-        const prefix1 = `${PATH13}/${val1}`;
+        const prefix1 = `${PATH14}/${val1}`;
 
         return {
           /**
@@ -279,23 +288,23 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
            */
           resend: {
             patch: (option: { body: Methods_1low71x['patch']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_1low71x['patch']['resBody']>(prefix, `${prefix1}${PATH14}`, PATCH, option).json(),
+              fetch<Methods_1low71x['patch']['resBody']>(prefix, `${prefix1}${PATH15}`, PATCH, option).json(),
             $patch: (option: { body: Methods_1low71x['patch']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_1low71x['patch']['resBody']>(prefix, `${prefix1}${PATH14}`, PATCH, option).json().then(r => r.body),
-            $path: () => `${prefix}${prefix1}${PATH14}`,
+              fetch<Methods_1low71x['patch']['resBody']>(prefix, `${prefix1}${PATH15}`, PATCH, option).json().then(r => r.body),
+            $path: () => `${prefix}${prefix1}${PATH15}`,
           },
         };
       },
       get: (option?: { query?: Methods_qivt1s['get']['query'] | undefined, config?: T | undefined } | undefined) =>
-        fetch<Methods_qivt1s['get']['resBody']>(prefix, PATH13, GET, option).json(),
+        fetch<Methods_qivt1s['get']['resBody']>(prefix, PATH14, GET, option).json(),
       $get: (option?: { query?: Methods_qivt1s['get']['query'] | undefined, config?: T | undefined } | undefined) =>
-        fetch<Methods_qivt1s['get']['resBody']>(prefix, PATH13, GET, option).json().then(r => r.body),
+        fetch<Methods_qivt1s['get']['resBody']>(prefix, PATH14, GET, option).json().then(r => r.body),
       post: (option: { body: Methods_qivt1s['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_qivt1s['post']['resBody']>(prefix, PATH13, POST, option).json(),
+        fetch<Methods_qivt1s['post']['resBody']>(prefix, PATH14, POST, option).json(),
       $post: (option: { body: Methods_qivt1s['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_qivt1s['post']['resBody']>(prefix, PATH13, POST, option).json().then(r => r.body),
+        fetch<Methods_qivt1s['post']['resBody']>(prefix, PATH14, POST, option).json().then(r => r.body),
       $path: (option?: { method?: 'get' | undefined; query: Methods_qivt1s['get']['query'] } | undefined) =>
-        `${prefix}${PATH13}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
+        `${prefix}${PATH14}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
     },
     /**
      * GET /api/pull-requests
@@ -306,7 +315,7 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
        * GET /api/pull-requests/:id
        */
       _id: (val1: number) => {
-        const prefix1 = `${PATH15}/${val1}`;
+        const prefix1 = `${PATH16}/${val1}`;
 
         return {
           /**
@@ -314,30 +323,30 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
            */
           activity_log_on_pull_request: {
             get: (option?: { config?: T | undefined } | undefined) =>
-              fetch<Methods_1r8wpr7['get']['resBody']>(prefix, `${prefix1}${PATH16}`, GET, option).json(),
+              fetch<Methods_1r8wpr7['get']['resBody']>(prefix, `${prefix1}${PATH17}`, GET, option).json(),
             $get: (option?: { config?: T | undefined } | undefined) =>
-              fetch<Methods_1r8wpr7['get']['resBody']>(prefix, `${prefix1}${PATH16}`, GET, option).json().then(r => r.body),
-            $path: () => `${prefix}${prefix1}${PATH16}`,
+              fetch<Methods_1r8wpr7['get']['resBody']>(prefix, `${prefix1}${PATH17}`, GET, option).json().then(r => r.body),
+            $path: () => `${prefix}${prefix1}${PATH17}`,
           },
           /**
            * PATCH /api/pull-requests/:id/approve
            */
           approve: {
             patch: (option?: { config?: T | undefined } | undefined) =>
-              fetch<Methods_1p42mtc['patch']['resBody']>(prefix, `${prefix1}${PATH17}`, PATCH, option).json(),
+              fetch<Methods_1p42mtc['patch']['resBody']>(prefix, `${prefix1}${PATH18}`, PATCH, option).json(),
             $patch: (option?: { config?: T | undefined } | undefined) =>
-              fetch<Methods_1p42mtc['patch']['resBody']>(prefix, `${prefix1}${PATH17}`, PATCH, option).json().then(r => r.body),
-            $path: () => `${prefix}${prefix1}${PATH17}`,
+              fetch<Methods_1p42mtc['patch']['resBody']>(prefix, `${prefix1}${PATH18}`, PATCH, option).json().then(r => r.body),
+            $path: () => `${prefix}${prefix1}${PATH18}`,
           },
           /**
            * PATCH /api/pull-requests/:id/close
            */
           close: {
             patch: (option?: { config?: T | undefined } | undefined) =>
-              fetch<Methods_1cgboht['patch']['resBody']>(prefix, `${prefix1}${PATH18}`, PATCH, option).json(),
+              fetch<Methods_1cgboht['patch']['resBody']>(prefix, `${prefix1}${PATH19}`, PATCH, option).json(),
             $patch: (option?: { config?: T | undefined } | undefined) =>
-              fetch<Methods_1cgboht['patch']['resBody']>(prefix, `${prefix1}${PATH18}`, PATCH, option).json().then(r => r.body),
-            $path: () => `${prefix}${prefix1}${PATH18}`,
+              fetch<Methods_1cgboht['patch']['resBody']>(prefix, `${prefix1}${PATH19}`, PATCH, option).json().then(r => r.body),
+            $path: () => `${prefix}${prefix1}${PATH19}`,
           },
           conflict: {
             /**
@@ -345,20 +354,20 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
              */
             diff: {
               get: (option?: { config?: T | undefined } | undefined) =>
-                fetch<Methods_1yinjm9['get']['resBody']>(prefix, `${prefix1}${PATH19}`, GET, option).json(),
+                fetch<Methods_1yinjm9['get']['resBody']>(prefix, `${prefix1}${PATH20}`, GET, option).json(),
               $get: (option?: { config?: T | undefined } | undefined) =>
-                fetch<Methods_1yinjm9['get']['resBody']>(prefix, `${prefix1}${PATH19}`, GET, option).json().then(r => r.body),
-              $path: () => `${prefix}${prefix1}${PATH19}`,
+                fetch<Methods_1yinjm9['get']['resBody']>(prefix, `${prefix1}${PATH20}`, GET, option).json().then(r => r.body),
+              $path: () => `${prefix}${prefix1}${PATH20}`,
             },
             /**
              * POST /api/pull-requests/:id/conflict/temporary
              */
             temporary: {
               post: (option: { body: Methods_1o4qvb5['post']['reqBody'], config?: T | undefined }) =>
-                fetch<Methods_1o4qvb5['post']['resBody']>(prefix, `${prefix1}${PATH20}`, POST, option).json(),
+                fetch<Methods_1o4qvb5['post']['resBody']>(prefix, `${prefix1}${PATH21}`, POST, option).json(),
               $post: (option: { body: Methods_1o4qvb5['post']['reqBody'], config?: T | undefined }) =>
-                fetch<Methods_1o4qvb5['post']['resBody']>(prefix, `${prefix1}${PATH20}`, POST, option).json().then(r => r.body),
-              $path: () => `${prefix}${prefix1}${PATH20}`,
+                fetch<Methods_1o4qvb5['post']['resBody']>(prefix, `${prefix1}${PATH21}`, POST, option).json().then(r => r.body),
+              $path: () => `${prefix}${prefix1}${PATH21}`,
             },
           },
           /**
@@ -366,30 +375,30 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
            */
           fix_request: {
             post: (option: { body: Methods_1ndlm46['post']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_1ndlm46['post']['resBody']>(prefix, `${prefix1}${PATH21}`, POST, option).json(),
+              fetch<Methods_1ndlm46['post']['resBody']>(prefix, `${prefix1}${PATH22}`, POST, option).json(),
             $post: (option: { body: Methods_1ndlm46['post']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_1ndlm46['post']['resBody']>(prefix, `${prefix1}${PATH21}`, POST, option).json().then(r => r.body),
-            $path: () => `${prefix}${prefix1}${PATH21}`,
+              fetch<Methods_1ndlm46['post']['resBody']>(prefix, `${prefix1}${PATH22}`, POST, option).json().then(r => r.body),
+            $path: () => `${prefix}${prefix1}${PATH22}`,
           },
           /**
            * PUT /api/pull-requests/:id/merge
            */
           merge: {
             put: (option: { body: Methods_1czorqh['put']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_1czorqh['put']['resBody']>(prefix, `${prefix1}${PATH22}`, PUT, option).json(),
+              fetch<Methods_1czorqh['put']['resBody']>(prefix, `${prefix1}${PATH23}`, PUT, option).json(),
             $put: (option: { body: Methods_1czorqh['put']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_1czorqh['put']['resBody']>(prefix, `${prefix1}${PATH22}`, PUT, option).json().then(r => r.body),
-            $path: () => `${prefix}${prefix1}${PATH22}`,
+              fetch<Methods_1czorqh['put']['resBody']>(prefix, `${prefix1}${PATH23}`, PUT, option).json().then(r => r.body),
+            $path: () => `${prefix}${prefix1}${PATH23}`,
           },
           /**
            * PATCH /api/pull-requests/:id/update
            */
           update: {
             patch: (option: { body: Methods_11i5tqy['patch']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_11i5tqy['patch']['resBody']>(prefix, `${prefix1}${PATH23}`, PATCH, option).json(),
+              fetch<Methods_11i5tqy['patch']['resBody']>(prefix, `${prefix1}${PATH24}`, PATCH, option).json(),
             $patch: (option: { body: Methods_11i5tqy['patch']['reqBody'], config?: T | undefined }) =>
-              fetch<Methods_11i5tqy['patch']['resBody']>(prefix, `${prefix1}${PATH23}`, PATCH, option).json().then(r => r.body),
-            $path: () => `${prefix}${prefix1}${PATH23}`,
+              fetch<Methods_11i5tqy['patch']['resBody']>(prefix, `${prefix1}${PATH24}`, PATCH, option).json().then(r => r.body),
+            $path: () => `${prefix}${prefix1}${PATH24}`,
           },
           get: (option?: { config?: T | undefined } | undefined) =>
             fetch<Methods_6qcpcm['get']['resBody']>(prefix, prefix1, GET, option).json(),
@@ -399,29 +408,29 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
         };
       },
       get: (option?: { query?: Methods_1tql4u2['get']['query'] | undefined, config?: T | undefined } | undefined) =>
-        fetch<Methods_1tql4u2['get']['resBody']>(prefix, PATH15, GET, option).json(),
+        fetch<Methods_1tql4u2['get']['resBody']>(prefix, PATH16, GET, option).json(),
       $get: (option?: { query?: Methods_1tql4u2['get']['query'] | undefined, config?: T | undefined } | undefined) =>
-        fetch<Methods_1tql4u2['get']['resBody']>(prefix, PATH15, GET, option).json().then(r => r.body),
+        fetch<Methods_1tql4u2['get']['resBody']>(prefix, PATH16, GET, option).json().then(r => r.body),
       post: (option: { body: Methods_1tql4u2['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_1tql4u2['post']['resBody']>(prefix, PATH15, POST, option).json(),
+        fetch<Methods_1tql4u2['post']['resBody']>(prefix, PATH16, POST, option).json(),
       $post: (option: { body: Methods_1tql4u2['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_1tql4u2['post']['resBody']>(prefix, PATH15, POST, option).json().then(r => r.body),
+        fetch<Methods_1tql4u2['post']['resBody']>(prefix, PATH16, POST, option).json().then(r => r.body),
       $path: (option?: { method?: 'get' | undefined; query: Methods_1tql4u2['get']['query'] } | undefined) =>
-        `${prefix}${PATH15}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
+        `${prefix}${PATH16}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
     },
     user_branch_sessions: {
       post: (option: { body: Methods_113936e['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_113936e['post']['resBody']>(prefix, PATH24, POST, option).json(),
+        fetch<Methods_113936e['post']['resBody']>(prefix, PATH25, POST, option).json(),
       $post: (option: { body: Methods_113936e['post']['reqBody'], config?: T | undefined }) =>
-        fetch<Methods_113936e['post']['resBody']>(prefix, PATH24, POST, option).json().then(r => r.body),
-      $path: () => `${prefix}${PATH24}`,
+        fetch<Methods_113936e['post']['resBody']>(prefix, PATH25, POST, option).json().then(r => r.body),
+      $path: () => `${prefix}${PATH25}`,
     },
     user_branches: {
       /**
        * DELETE /api/user-branches/:userBranchId
        */
       _userBranchId: (val1: number) => {
-        const prefix1 = `${PATH25}/${val1}`;
+        const prefix1 = `${PATH26}/${val1}`;
 
         return {
           delete: (option?: { config?: T | undefined } | undefined) =>
@@ -436,20 +445,20 @@ const api = <T>({ baseURL, fetch }: AspidaClient<T>) => {
        */
       diff: {
         get: (option: { query: Methods_10ka6um['get']['query'], config?: T | undefined }) =>
-          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH26, GET, option).json(),
+          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH27, GET, option).json(),
         $get: (option: { query: Methods_10ka6um['get']['query'], config?: T | undefined }) =>
-          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH26, GET, option).json().then(r => r.body),
+          fetch<Methods_10ka6um['get']['resBody']>(prefix, PATH27, GET, option).json().then(r => r.body),
         $path: (option?: { method?: 'get' | undefined; query: Methods_10ka6um['get']['query'] } | undefined) =>
-          `${prefix}${PATH26}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
+          `${prefix}${PATH27}${option && option.query ? `?${dataToURLString(option.query)}` : ''}`,
       },
     },
     users: {
       me: {
         get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH27, GET, option).json(),
+          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH28, GET, option).json(),
         $get: (option?: { config?: T | undefined } | undefined) =>
-          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH27, GET, option).json().then(r => r.body),
-        $path: () => `${prefix}${PATH27}`,
+          fetch<Methods_jzr18p['get']['resBody']>(prefix, PATH28, GET, option).json().then(r => r.body),
+        $path: () => `${prefix}${PATH28}`,
       },
     },
   };
