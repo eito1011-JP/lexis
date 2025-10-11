@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\DB;
  */
 class CommitService extends BaseService
 {
+    public function __construct(
+        private UserBranchService $userBranchService
+    ) {}
     /**
      * ユーザーブランチの編集内容からコミットを作成（EditStartVersionsの取得と更新を含む）
      *
@@ -106,6 +109,8 @@ class CommitService extends BaseService
             // 5. 取得したedit_start_versionsを元にcommit_document_diffs & commit_categories_diffsをbulk insert
             $this->createCommitDiffs($commit, $editStartVersions);
 
+
+            $this->userBranchService->deleteUserBranchSessions($userBranch, $user->id);
             return $commit;
         });
     }

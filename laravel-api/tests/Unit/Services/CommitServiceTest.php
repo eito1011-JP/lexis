@@ -10,7 +10,6 @@ use App\Enums\DocumentCategoryStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\EditStartVersionTargetType;
 use App\Enums\PullRequestActivityAction;
-use App\Models\ActivityLogOnPullRequest;
 use App\Models\CategoryEntity;
 use App\Models\CategoryVersion;
 use App\Models\Commit;
@@ -24,7 +23,9 @@ use App\Models\OrganizationMember;
 use App\Models\PullRequest;
 use App\Models\User;
 use App\Models\UserBranch;
+use App\Models\UserBranchSession;
 use App\Services\CommitService;
+use App\Services\UserBranchService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -46,7 +47,8 @@ class CommitServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new CommitService();
+        $userBranchService = new UserBranchService();
+        $this->service = new CommitService($userBranchService);
 
         $this->organization = Organization::factory()->create();
         $this->user = User::factory()->create();
@@ -91,6 +93,12 @@ class CommitServiceTest extends TestCase
     public function createCommitFromUserBranch_should_create_commit_when_edit_start_versions_exist(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -191,6 +199,12 @@ class CommitServiceTest extends TestCase
             'target_type' => EditStartVersionTargetType::DOCUMENT->value,
             'entity_id' => $documentEntity->id,
         ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
     }
 
     /**
@@ -199,6 +213,12 @@ class CommitServiceTest extends TestCase
     public function createCommitFromUserBranch_should_update_category_version_status_from_draft_to_pushed(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         $categoryEntity = CategoryEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -298,6 +318,12 @@ class CommitServiceTest extends TestCase
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
         ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
     }
 
     /**
@@ -306,6 +332,12 @@ class CommitServiceTest extends TestCase
     public function createCommit_should_create_commit_without_parent_commit(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -371,6 +403,12 @@ class CommitServiceTest extends TestCase
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
         ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
     }
 
 
@@ -380,6 +418,12 @@ class CommitServiceTest extends TestCase
     public function createCommit_should_detect_created_change_type_when_original_is_null(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -446,6 +490,12 @@ class CommitServiceTest extends TestCase
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
         ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
     }
 
     /**
@@ -454,6 +504,12 @@ class CommitServiceTest extends TestCase
     public function createCommit_should_detect_deleted_change_type_when_current_version_is_deleted(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -553,6 +609,12 @@ class CommitServiceTest extends TestCase
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
         ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
     }
 
     /**
@@ -561,6 +623,12 @@ class CommitServiceTest extends TestCase
     public function createCommit_should_detect_title_changes(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -660,6 +728,12 @@ class CommitServiceTest extends TestCase
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
         ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
     }
 
     /**
@@ -668,6 +742,12 @@ class CommitServiceTest extends TestCase
     public function createCommit_should_detect_description_changes(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         $documentEntity = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
         ]);
@@ -767,6 +847,12 @@ class CommitServiceTest extends TestCase
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
         ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
     }
 
     /**
@@ -775,6 +861,12 @@ class CommitServiceTest extends TestCase
     public function createCommit_should_handle_multiple_document_and_category_diffs(): void
     {
         // Arrange
+        // UserBranchSessionを作成
+        UserBranchSession::create([
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
+        ]);
+
         // Document 1
         $documentEntity1 = DocumentEntity::factory()->create([
             'organization_id' => $this->organization->id,
@@ -986,6 +1078,12 @@ class CommitServiceTest extends TestCase
             'user_id' => $this->user->id,
             'action' => PullRequestActivityAction::COMMIT_CREATED->value,
             'pull_request_id' => $this->pullRequest->id,
+        ]);
+
+        // UserBranchSessionが削除されていることを確認
+        $this->assertDatabaseMissing('user_branch_sessions', [
+            'user_id' => $this->user->id,
+            'user_branch_id' => $this->userBranch->id,
         ]);
     }
 }
