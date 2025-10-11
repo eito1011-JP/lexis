@@ -1,21 +1,17 @@
 import AdminLayout from '@/components/admin/layout';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import type { JSX } from 'react';
 import { client } from '@/api/client';
 import { Folder } from '@/components/icon/common/Folder';
 import React from 'react';
 import { markdownToHtml } from '@/utils/markdownToHtml';
 import { DocumentDetailed } from '@/components/icon/common/DocumentDetailed';
-import { Settings } from '@/components/icon/common/Settings';
 import { Breadcrumb } from '@/components/common/Breadcrumb';
-import { createPullRequest, type DiffItem as ApiDiffItem } from '@/api/pullRequestHelpers';
-import { markdownStyles } from '@/styles/markdownContent';
-import { useToast } from '@/contexts/ToastContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { type BreadcrumbItem } from '@/api/categoryHelpers';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { createPullRequestSchema, CreatePullRequestFormData } from '@/schemas';
+import { markdownStyles } from '@/styles/markdownContent';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { SubmitChangesForm } from '@/components/diff/SubmitChangesForm';
+import { useUserMe } from '@/hooks/useUserMe';
 
 type FieldChangeInfo = {
   status: 'added' | 'deleted' | 'modified' | 'unchanged';
@@ -423,65 +419,7 @@ export default function DiffPage(): JSX.Element {
   const userBranchId = searchParams.get('user_branch_id');
   const [diffData, setDiffData] = useState<DiffResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedReviewers, setSelectedReviewers] = useState<number[]>([]);
-  const [showReviewerModal, setShowReviewerModal] = useState(false);
-  const [reviewerSearch, setReviewerSearch] = useState('');
-  const reviewerModalRef = useRef<HTMLDivElement | null>(null);
-  const [users, setUsers] = useState<any[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const { show } = useToast();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<CreatePullRequestFormData>({
-    resolver: zodResolver(createPullRequestSchema),
-    mode: 'onBlur',
-    defaultValues: {
-      title: '',
-      description: '',
-      reviewers: [],
-    },
-  });
-
-  const prTitle = watch('title');
-  const prDescription = watch('description');
-  // ユーザー一覧を取得する関数
-  const handleFetchUser = async (searchEmail?: string) => {
-    setLoadingUsers(true);
-    try {
-      const query = searchEmail ? { email: searchEmail } : undefined;
-      const response = await client.pull_request_reviewers.$get({ query });
-      setUsers(response.users || []);
-    } catch (error) {
-      console.error('ユーザー取得エラー:', error);
-      setUsers([]);
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  // レビュアーモーダルが表示された時にユーザー一覧を取得
-  useEffect(() => {
-    if (showReviewerModal) {
-      handleFetchUser();
-    }
-  }, [showReviewerModal]);
-
-  // レビュアー検索時の処理
-  useEffect(() => {
-    if (showReviewerModal && reviewerSearch) {
-      const timeoutId = setTimeout(() => {
-        handleFetchUser(reviewerSearch);
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [reviewerSearch, showReviewerModal]);
 
   useEffect(() => {
     const fetchDiff = async () => {
@@ -510,10 +448,6 @@ export default function DiffPage(): JSX.Element {
           organization_id: response.organization_id || 0
         };
         setDiffData(diffResponse);
-        
-        // フォームにデータを設定
-        setValue('user_branch_id', diffResponse.user_branch_id);
-        setValue('organization_id', diffResponse.organization_id);
       } catch (err) {
         console.error('差分取得エラー:', err);
         setError('差分データの取得に失敗しました');
@@ -524,76 +458,6 @@ export default function DiffPage(): JSX.Element {
 
     fetchDiff();
   }, [navigate, userBranchId]);
-
-  useEffect(() => {
-    if (!showReviewerModal) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (reviewerModalRef.current && !reviewerModalRef.current.contains(event.target as Node)) {
-        setShowReviewerModal(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showReviewerModal]);
-
-  // PR作成のハンドラー
-  const onSubmitPR = async (data: CreatePullRequestFormData) => {
-    setIsSubmitting(true);
-
-    try {
-      if (!diffData) {
-        show({ message: '差分データが見つかりません', type: 'error' });
-        navigate('/documents');
-        return;
-      }
-
-      // レビュアーのメールアドレスを取得
-      const reviewerEmails =
-        selectedReviewers.length > 0
-          ? users.filter(user => selectedReviewers.includes(user.id)).map(user => user.email)
-          : undefined;
-
-      // デバッグログ
-      console.log('送信データ:', {
-        organization_id: diffData.organization_id,
-        user_branch_id: diffData.user_branch_id,
-        title: data.title,
-        description: data.description || 'このPRはハンドブックの更新を含みます。',
-        reviewers: reviewerEmails,
-        selectedReviewers,
-        users: users.map(u => ({ id: u.id, email: u.email })),
-      });
-
-      // PRタイトル・説明をAPIに渡す
-      await createPullRequest({
-        organization_id: diffData.organization_id,
-        user_branch_id: diffData.user_branch_id,
-        title: data.title,
-        description: data.description || 'このPRはハンドブックの更新を含みます。',
-        reviewers: reviewerEmails,
-      });
-
-      show({ message: '差分の提出が完了しました', type: 'success' });
-
-      // 成功時のみ画面遷移
-      navigate('/documents');
-
-
-    } catch (err: any) {
-      console.error('差分提出エラー:', err);
-      
-      // バリデーションエラーの場合
-      if (err.response && err.response.status === 422) {
-        show({ message: '入力内容に不備があります。各項目を確認してください。', type: 'error' });
-      } else {
-        show({ message: '差分の提出中にエラーが発生しました', type: 'error' });
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   // セッション確認中はローディング表示
   if (isLoading) {
@@ -665,151 +529,11 @@ export default function DiffPage(): JSX.Element {
     <AdminLayout title="差分確認">
       <style>{markdownStyles}</style>
       <div className="flex flex-col h-full">
-
-        {/* PR作成セクション（画像のようなデザイン） */}
-        <div className="mb-20 w-full rounded-lg relative">
-          {/* タイトル入力欄とレビュアーを重ねて配置 */}
-          <div className="mb-6 relative w-full">
-            <div className="mb-6 relative max-w-3xl w-full">
-              <label className="block text-white text-base font-medium mb-3">タイトル</label>
-              <input
-                type="text"
-                {...register('title')}
-                className={`w-full px-4 py-3 pr-40 rounded-lg border ${errors.title ? 'border-red-500' : 'border-gray-600'} text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`}
-                placeholder=""
-                disabled={isSubmitting}
-              />
-              {/* タイトルのバリデーションエラー */}
-              {errors.title && (
-                <div className="mt-2 text-red-400 text-sm">{errors.title.message}</div>
-              )}
-            </div>
-
-            <div className="absolute right-0 top-0 flex flex-col items-start mr-20">
-              <div className="flex items-center gap-40 relative" ref={reviewerModalRef}>
-                <span className="text-white text-base font-bold">レビュアー</span>
-                <Settings
-                  className="w-5 h-5 text-gray-300 ml-2 cursor-pointer"
-                  onClick={() => setShowReviewerModal(v => !v)}
-                />
-                {showReviewerModal && (
-                  <div className="absolute left-0 top-full z-50 mt-2 w-full bg-[#181A1B] rounded-xl border border-gray-700 shadow-2xl">
-                    <div className="flex flex-col">
-                      <div className="px-5 pt-5 pb-2 border-b border-gray-700">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-white font-semibold text-base">
-                            最大15人までリクエストできます
-                          </span>
-                        </div>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 rounded bg-[#222426] border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                          placeholder="Type or choose a user"
-                          value={reviewerSearch}
-                          onChange={e => setReviewerSearch(e.target.value)}
-                          autoFocus
-                        />
-                      </div>
-                      {/* Suggestionsセクション */}
-                      <div className="px-5 pt-3">
-                        <div className="text-xs text-gray-400 font-semibold mb-2">Suggestions</div>
-                        {loadingUsers ? (
-                          <div className="text-gray-500 text-sm py-2">読み込み中...</div>
-                        ) : users.length === 0 ? (
-                          <div className="text-gray-500 text-sm py-2">ユーザーが見つかりません</div>
-                        ) : (
-                          users
-                            .filter(user =>
-                              user.email.toLowerCase().includes(reviewerSearch.toLowerCase())
-                            )
-                            .map(user => (
-                              <div
-                                key={user.id}
-                                className={`flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-[#23272d] ${selectedReviewers.includes(user.id) ? 'bg-[#23272d]' : ''}`}
-                                onClick={() =>
-                                  setSelectedReviewers(
-                                    selectedReviewers.includes(user.id)
-                                      ? selectedReviewers.filter(id => id !== user.id)
-                                      : [...selectedReviewers, user.id]
-                                  )
-                                }
-                              >
-                                <span className="text-2xl">👤</span>
-                                <div className="flex-1 min-w-0">
-                                  <div className="text-white font-medium leading-tight">
-                                    {user.email}
-                                  </div>
-                                  <div className="text-xs text-gray-400 truncate">
-                                    {user.role || 'editor'}
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              {selectedReviewers.length === 0 ? (
-                <p className="text-white text-base font-medium mt-5 text-sm">レビュアーなし</p>
-              ) : (
-                <div className="mt-5">
-                  <div className="space-y-1">
-                    {selectedReviewers.map(reviewerId => {
-                      const user = users.find(u => u.id === reviewerId);
-                      return user ? (
-                        <div key={reviewerId} className="flex items-center gap-2 text-sm">
-                          <span className="text-xl">👤</span>
-                          <span className="text-gray-300">{user.email}</span>
-                        </div>
-                      ) : null;
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-            <div className="mb-8">
-              <div className="mb-6 relative max-w-3xl w-full">
-                <label className="block text-white text-base font-medium mb-3 max-w-3xl">
-                  本文
-                </label>
-                <textarea
-                  {...register('description')}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
-                  placeholder=""
-                  rows={5}
-                  disabled={isSubmitting}
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-4 justify-end max-w-3xl">
-              <button
-                className="px-6 py-2.5 bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none text-white font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={() => (window.location.href = '/documents')}
-                disabled={isSubmitting}
-              >
-                戻る
-              </button>
-              <button
-                type="button"
-                className="px-6 py-2.5 bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none flex items-center text-white font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleSubmit(onSubmitPR)}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                    <span>差分を提出中...</span>
-                  </>
-                ) : (
-                  <span>差分を提出する</span>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* 差分提出フォーム */}
+        <SubmitChangesForm
+          organizationId={diffData.organization_id}
+          userBranchId={diffData.user_branch_id}
+        />
 
         {/* 変更されたカテゴリの詳細 */}
         {categoryDiffs.length > 0 && (

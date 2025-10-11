@@ -69,6 +69,8 @@ class UserMeUseCaseTest extends TestCase
         $this->assertEquals($organization->id, $result['organization']->id);
         $this->assertEquals($activeUserBranch->id, $result['activeUserBranch']->id);
         $this->assertNull($result['nextAction']);
+        // pullRequestsリレーションがロードされていることを確認
+        $this->assertTrue($result['activeUserBranch']->relationLoaded('pullRequests'));
     }
 
     #[Test]
@@ -352,5 +354,116 @@ class UserMeUseCaseTest extends TestCase
         $this->assertIsArray($result);
         $this->assertArrayHasKey('nextAction', $result);
         $this->assertEquals('create_initial_commit', $result['nextAction']);
+    }
+
+    #[Test]
+    public function execute_loads_only_opened_pull_requests_when_active_branch_exists(): void
+    {
+        // Arrange
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+        $activeUserBranch = UserBranch::factory()->create([
+            'creator_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $activeUserBranch->id,
+        ]);
+
+        // OPENEDステータスのプルリクエストを作成
+        PullRequest::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'organization_id' => $organization->id,
+            'status' => PullRequestStatus::OPENED->value,
+        ]);
+
+        // CLOSEDステータスのプルリクエストを作成
+        PullRequest::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'organization_id' => $organization->id,
+            'status' => PullRequestStatus::CLOSED->value,
+        ]);
+
+        // MERGEDステータスのプルリクエストを作成
+        PullRequest::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'organization_id' => $organization->id,
+            'status' => PullRequestStatus::MERGED->value,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($user, $this->userBranchService);
+
+        // Assert
+        $this->assertInstanceOf(UserBranch::class, $result['activeUserBranch']);
+        // pullRequestsリレーションがロードされていることを確認
+        $this->assertTrue($result['activeUserBranch']->relationLoaded('pullRequests'));
+        // OPENED状態のプルリクエストのみがロードされていることを確認
+        $this->assertCount(1, $result['activeUserBranch']->pullRequests);
+        $this->assertEquals(PullRequestStatus::OPENED->value, $result['activeUserBranch']->pullRequests->first()->status);
+    }
+
+    #[Test]
+    public function execute_loads_empty_pull_requests_when_no_opened_pr_exists(): void
+    {
+        // Arrange
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+        $activeUserBranch = UserBranch::factory()->create([
+            'creator_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+
+        UserBranchSession::create([
+            'user_id' => $user->id,
+            'user_branch_id' => $activeUserBranch->id,
+        ]);
+
+        // CLOSEDステータスのプルリクエストのみ作成
+        PullRequest::factory()->create([
+            'user_branch_id' => $activeUserBranch->id,
+            'organization_id' => $organization->id,
+            'status' => PullRequestStatus::CLOSED->value,
+        ]);
+
+        // Act
+        $result = $this->useCase->execute($user, $this->userBranchService);
+
+        // Assert
+        $this->assertInstanceOf(UserBranch::class, $result['activeUserBranch']);
+        // pullRequestsリレーションがロードされていることを確認
+        $this->assertTrue($result['activeUserBranch']->relationLoaded('pullRequests'));
+        // OPENED状態のプルリクエストがないため、空のコレクションであることを確認
+        $this->assertCount(0, $result['activeUserBranch']->pullRequests);
+    }
+
+    #[Test]
+    public function execute_does_not_load_pull_requests_when_no_active_branch_exists(): void
+    {
+        // Arrange
+        $organization = Organization::factory()->create();
+        $user = User::factory()->create();
+        OrganizationMember::factory()->create([
+            'user_id' => $user->id,
+            'organization_id' => $organization->id,
+        ]);
+        // アクティブなブランチを作成しない
+
+        // Act
+        $result = $this->useCase->execute($user, $this->userBranchService);
+
+        // Assert
+        $this->assertNull($result['activeUserBranch']);
+        $this->assertNull($result['nextAction']);
     }
 }

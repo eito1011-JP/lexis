@@ -29,6 +29,12 @@ export interface ActiveUserBranch {
   branch_name: string;
   created_at: string;
   updated_at: string;
+  pull_requests?: Array<{
+    id: number;
+    status: string;
+    title: string;
+    description?: string;
+  }>;
 }
 
 /**

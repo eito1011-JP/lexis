@@ -34,6 +34,13 @@ class UserMeUseCase
         // アクティブなユーザーブランチを取得
         $activeUserBranch = $userBranchService->hasUserActiveBranchSession($user, $organization->id);
 
+        // アクティブなユーザーブランチがある場合、pullRequestsをロード
+        if ($activeUserBranch) {
+            $activeUserBranch->load(['pullRequests' => function ($query) {
+                $query->where('status', PullRequestStatus::OPENED->value);
+            }]);
+        }
+
         // next actionを決定
         $nextAction = $this->determineNextAction($activeUserBranch);
 

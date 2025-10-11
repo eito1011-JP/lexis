@@ -11,4 +11,5 @@ export * from './userBranchSchema';
 export * from './fixRequestSchema';
 export * from './activityLogSchema';
 export * from './reviewerSchema';
+export * from './commitSchema';
 
