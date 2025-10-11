@@ -42,7 +42,7 @@ export const SubmitChangesForm = ({
   const [loadingUsers, setLoadingUsers] = useState(false);
   const { show } = useToast();
   const navigate = useNavigate();
-  const { data: userData } = useUserMe();
+  const { data: userData, mutate: mutateUserMe } = useUserMe();
 
   const nextAction = userData?.nextAction as 'create_initial_commit' | 'create_subsequent_commit' | null | undefined;
 
@@ -153,8 +153,11 @@ export const SubmitChangesForm = ({
         reviewers: reviewerEmails,
       });
 
+      // ユーザー情報を更新してサイドコンテンツをリフレッシュ
+      await mutateUserMe();
+
       show({ message: '差分の提出が完了しました', type: 'success' });
-      navigate('/documents');
+      navigate(`/change-suggestions/${pullRequestId}`);
     } catch (err: any) {
       console.error('差分提出エラー:', err);
 
@@ -195,8 +198,11 @@ export const SubmitChangesForm = ({
         },
       });
 
+      // ユーザー情報を更新してサイドコンテンツをリフレッシュ
+      await mutateUserMe();
+
       show({ message: 'コミットの提出が完了しました', type: 'success' });
-      navigate('/documents');
+      navigate(`/change-suggestions/${pullRequestId}/diff`);
     } catch (err: any) {
       console.error('コミット提出エラー:', err);
 
